@@ -1,0 +1,11 @@
+Buchungsart:;Alle Buchungen
+Konto:;CHXXXXXXXXXXXXXXXXXXX
+Währung:;CHF
+Buchungsdatum;Avisierungstext;Gutschrift in CHF;Lastschrift in CHF;Valuta;Saldo in CHF
+2020-11-02;"Desc1";;-140.00;2020-11-03;
+2020-11-05;"Desc2";;-35.55;2020-11-06;17566.87
+2020-11-07;"Desc3";1.00;;2020-11-08;17902.42
+2020-11-16;"Desc4";;-11.00;2020-11-17;
+
+Disclaimer:
+Dies ist kein durch PostFinance AG erstelltes Dokument. PostFinance AG ist nicht verantwortlich für den Inhalt.

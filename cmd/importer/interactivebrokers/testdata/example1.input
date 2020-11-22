@@ -1,0 +1,13 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,BrokerName,Interactive Brokers
+Statement,Data,BrokerAddress,
+Statement,Data,Title,Activity Statement
+Statement,Data,Period,"January 1, 2020 - April 22, 2020"
+Account Information,Data,Base Currency,CHF
+Open Positions,Data,Summary,Stocks,USD,AAPL,10,1,100.00,100.00,100.00,100.00,100.00,100.00,
+Forex Balances,Data,Forex,CHF,CHF,320.072033121,1,-320.072033121,1,320.072033121,0,
+Trades,Data,Order,Stocks,USD,AAPL,"2020-04-12, 10:17:49",7,10.00,10.00,-1.00,-1.00,0,0,40.425,O
+Trades,Data,Order,Forex,USD,CHF.USD,"2020-03-21, 11:17:34","-4,59",1.03371,,449.38889,-1.1,,,,3.446,
+Deposits & Withdrawals,Data,CHF,2020-01-20,Electronic Fund Transfer,1000
+Dividends,Data,USD,2020-02-13,AAPL(US0378331005) Cash Dividend USD 0.77 per Share (Ordinary Dividend),10.00
+Withholding Tax,Data,USD,2020-02-13,AAPL(US0378331005) Cash Dividend USD 0.77 per Share - US Tax,-1.23,

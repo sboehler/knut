@@ -17,7 +17,6 @@ package balance
 import (
 	"bufio"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -33,15 +32,33 @@ import (
 	"go.uber.org/multierr"
 )
 
-// Cmd is the balance command.
-var Cmd = &cobra.Command{
-	Use:   "balance",
-	Short: "create a balance sheet",
-	Long:  `Compute a balance for a date or set of dates.`,
+// CreateCmd creates the command.
+func CreateCmd() *cobra.Command {
 
-	Args: cobra.ExactValidArgs(1),
+	// Cmd is the balance command.
+	c := &cobra.Command{
+		Use:   "balance",
+		Short: "create a balance sheet",
+		Long:  `Compute a balance for a date or set of dates.`,
 
-	RunE: run,
+		Args: cobra.ExactValidArgs(1),
+
+		RunE: run,
+	}
+	c.Flags().StringP("from", "", "", "from date")
+	c.Flags().BoolP("diff", "d", false, "diff")
+	c.Flags().BoolP("show-commodities", "s", false, "Show commodities on their own rows")
+	c.Flags().StringP("to", "", "", "to date")
+	c.Flags().BoolP("daily", "", false, "daily")
+	c.Flags().BoolP("weekly", "", false, "weekly")
+	c.Flags().BoolP("monthly", "", false, "monthly")
+	c.Flags().BoolP("quarterly", "", false, "quarterly")
+	c.Flags().BoolP("yearly", "", false, "yearly")
+	c.Flags().StringArrayP("val", "v", []string{}, "valuate in the given commodity")
+	c.Flags().StringArrayP("collapse", "c", []string{}, "<regex>,<level>")
+	c.Flags().StringP("account", "", "", "filter accounts with a regex")
+	c.Flags().StringP("commodity", "", "", "filter commodities with a regex")
+	return c
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -49,26 +66,14 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := createBalance(o); err != nil {
+	if err := createBalance(cmd, o); err != nil {
 		return err
 	}
 	return nil
 }
 
 func init() {
-	Cmd.Flags().StringP("from", "", "", "from date")
-	Cmd.Flags().BoolP("diff", "d", false, "diff")
-	Cmd.Flags().BoolP("show-commodities", "s", false, "Show commodities on their own rows")
-	Cmd.Flags().StringP("to", "", "", "to date")
-	Cmd.Flags().BoolP("daily", "", false, "daily")
-	Cmd.Flags().BoolP("weekly", "", false, "weekly")
-	Cmd.Flags().BoolP("monthly", "", false, "monthly")
-	Cmd.Flags().BoolP("quarterly", "", false, "quarterly")
-	Cmd.Flags().BoolP("yearly", "", false, "yearly")
-	Cmd.Flags().StringArrayP("val", "v", []string{}, "valuate in the given commodity")
-	Cmd.Flags().StringArrayP("collapse", "c", []string{}, "<regex>,<level>")
-	Cmd.Flags().StringP("account", "", "", "filter accounts with a regex")
-	Cmd.Flags().StringP("commodity", "", "", "filter commodities with a regex")
+
 }
 
 func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
@@ -246,7 +251,7 @@ func createReportOptions(o *options) report.Options {
 	}
 }
 
-func createBalance(opts *options) error {
+func createBalance(cmd *cobra.Command, opts *options) error {
 	ch, err := parser.Parse(opts.File)
 	if err != nil {
 		return err
@@ -267,7 +272,7 @@ func createBalance(opts *options) error {
 	if err != nil {
 		return err
 	}
-	out := bufio.NewWriter(os.Stdout)
+	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 	report.NewRenderer(opts.ShowCommodities).Render(r).Render(out)
 	return nil

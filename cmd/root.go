@@ -28,26 +28,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// RootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "knut",
-	Short: "knut is a plain text accounting tool",
-	Long:  `knut is a plain text accounting tool for tracking personal finances and investments.`,
+// CreateCmd creates the command.
+func CreateCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "knut",
+		Short: "knut is a plain text accounting tool",
+		Long:  `knut is a plain text accounting tool for tracking personal finances and investments.`,
+	}
+	c.AddCommand(balance.CreateCmd())
+	c.AddCommand(importer.Cmd)
+	c.AddCommand(prices.Cmd)
+	c.AddCommand(format.Cmd)
+	c.AddCommand(infer.Cmd)
+	return c
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+// This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprint(rootCmd.ErrOrStderr(), err)
+	c := CreateCmd()
+	if err := c.Execute(); err != nil {
+		fmt.Fprint(c.ErrOrStderr(), err)
 		os.Exit(1)
 	}
-}
-
-func init() {
-	rootCmd.AddCommand(balance.Cmd)
-	rootCmd.AddCommand(importer.Cmd)
-	rootCmd.AddCommand(prices.Cmd)
-	rootCmd.AddCommand(format.Cmd)
-	rootCmd.AddCommand(infer.Cmd)
 }

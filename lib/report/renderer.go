@@ -32,6 +32,8 @@ type Renderer struct {
 	report          *Report
 }
 
+const indent = 2
+
 // NewRenderer creates a new report renderer.
 func NewRenderer(showCommodities bool, rounding int32, thousands bool) *Renderer {
 	return &Renderer{
@@ -100,11 +102,11 @@ func (rn *Renderer) renderSegment(s *Segment) {
 	}
 
 	// render subsegments
-	rn.indent = rn.indent + 2
+	rn.indent += indent
 	for _, ss := range s.Subsegments {
 		rn.renderSegment(ss)
 	}
-	rn.indent = rn.indent - 2
+	rn.indent -= indent
 }
 
 func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
@@ -114,7 +116,7 @@ func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
 	}
 
 	// add one row per commodity in this position
-	rn.indent = rn.indent + 2
+	rn.indent += indent
 	for _, commodity := range rn.report.Commodities {
 		if amounts, ok := segment.Positions[commodity]; ok {
 			row := rn.table.AddRow().AddIndented(commodity.String(), rn.indent)
@@ -132,7 +134,7 @@ func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
 	for _, ss := range segment.Subsegments {
 		rn.renderSegmentWithCommodities(ss)
 	}
-	rn.indent = rn.indent - 2
+	rn.indent -= indent
 }
 
 var k = decimal.RequireFromString("1000")

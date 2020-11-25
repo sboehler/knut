@@ -89,7 +89,7 @@ func (rn *Renderer) renderSegment(s *Segment) {
 		if a.IsZero() {
 			header.AddEmpty()
 		} else {
-			header.AddText(a.String(), table.Right)
+			header.AddText(a.StringFixed(2), table.Right)
 		}
 	}
 
@@ -117,7 +117,7 @@ func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
 				if v.IsZero() {
 					row.AddEmpty()
 				} else {
-					row.AddText(v.String(), table.Right)
+					row.AddText(v.StringFixed(2), table.Right)
 				}
 			}
 		}

@@ -2,6 +2,8 @@ include "USD.prices"
 include "AAPL.prices"
 
 * Open Accounts
+
+2019-12-31 open Equity:Equity
 2019-12-31 open Assets:BankAccount
 2019-12-31 open Assets:Portfolio
 

@@ -99,12 +99,15 @@ func create(name string) (*Account, error) {
 	return nil, fmt.Errorf("invalid account name: %q", name)
 }
 
-var valuationAccount *Account
-var tbdAccount *Account
+var valuationAccount, retainedEarningsAccount, tbdAccount *Account
 
 func init() {
 	var err error
-	valuationAccount, err = Get("Equity:Equity")
+	valuationAccount, err = Get("Equity:Valuation")
+	if err != nil {
+		panic("Could not create valuationAccount")
+	}
+	retainedEarningsAccount, err = Get("Equity:RetainedEarnings")
 	if err != nil {
 		panic("Could not create valuationAccount")
 	}
@@ -117,6 +120,11 @@ func init() {
 // ValuationAccount returns the account for automatic valuation bookings.
 func ValuationAccount() *Account {
 	return valuationAccount
+}
+
+// RetainedEarningsAccount returns the account for automatic valuation bookings.
+func RetainedEarningsAccount() *Account {
+	return retainedEarningsAccount
 }
 
 // TBDAccount returns the TBD account.

@@ -30,19 +30,23 @@ import (
 
 // Balance represents a balance for accounts at the given date.
 type Balance struct {
-	Date             time.Time
-	Positions        map[model.CommodityAccount]amount.Amount
-	Account          map[*accounts.Account]bool
-	Prices           prices.Prices
-	Valuations       []*commodities.Commodity
-	NormalizedPrices []prices.NormalizedPrices
+	Date                   time.Time
+	Positions              map[model.CommodityAccount]amount.Amount
+	Account                map[*accounts.Account]bool
+	Prices                 prices.Prices
+	Valuations             []*commodities.Commodity
+	NormalizedPrices       []prices.NormalizedPrices
+	CloseIncomeAndExpenses bool
 }
 
 // New creates a new balance.
 func New(valuations []*commodities.Commodity) *Balance {
 	return &Balance{
-		Positions:        map[model.CommodityAccount]amount.Amount{},
-		Account:          map[*accounts.Account]bool{accounts.ValuationAccount(): true},
+		Positions: make(map[model.CommodityAccount]amount.Amount),
+		Account: map[*accounts.Account]bool{
+			accounts.ValuationAccount():        true,
+			accounts.RetainedEarningsAccount(): true,
+		},
 		Prices:           prices.Prices{},
 		Valuations:       valuations,
 		NormalizedPrices: make([]prices.NormalizedPrices, len(valuations)),
@@ -51,14 +55,12 @@ func New(valuations []*commodities.Commodity) *Balance {
 
 // Copy deeply copies the balance
 func (b *Balance) Copy() *Balance {
-	nb := &Balance{
-		Positions: map[model.CommodityAccount]amount.Amount{},
-		Account:   map[*accounts.Account]bool{accounts.ValuationAccount(): true},
-		Prices:    b.Prices.Copy(),
-		// the following fields are immutable
-		Valuations:       b.Valuations,
-		NormalizedPrices: b.NormalizedPrices,
-	}
+	nb := New(b.Valuations)
+	nb.Prices = b.Prices.Copy()
+
+	// immutable
+	nb.NormalizedPrices = b.NormalizedPrices
+
 	nb.Date = b.Date
 	for pos, val := range b.Positions {
 		nb.Positions[pos] = val
@@ -106,6 +108,13 @@ func (b *Balance) Update(step *ledger.Step) error {
 		if err := b.valuateTransaction(t); err != nil {
 			return err
 		}
+	}
+
+	// close income and expense accounts if necessary
+	if b.CloseIncomeAndExpenses {
+		closingTransactions := b.computeClosingTransactions()
+		step.Transactions = append(step.Transactions, closingTransactions...)
+		b.CloseIncomeAndExpenses = false
 	}
 
 	// compute and append valuation transactions
@@ -158,6 +167,30 @@ func (b *Balance) bookTransaction(t *model.Transaction) error {
 		b.Positions[drPos] = b.Positions[drPos].Plus(posting.Amount)
 	}
 	return nil
+}
+
+func (b *Balance) computeClosingTransactions() []*model.Transaction {
+	var result []*model.Transaction
+	for pos, va := range b.Positions {
+		at := pos.Account().Type()
+		if at != accounts.INCOME && at != accounts.EXPENSES {
+			continue
+		}
+		result = append(result, &model.Transaction{
+			Directive:   model.NewDirective(model.Range{}, b.Date),
+			Description: fmt.Sprintf("Closing %v to retained earnings", pos),
+			Tags:        nil,
+			Postings: []*model.Posting{
+				{
+					Amount:    va,
+					Commodity: pos.Commodity(),
+					Credit:    pos.Account(),
+					Debit:     accounts.RetainedEarningsAccount(),
+				},
+			},
+		})
+	}
+	return result
 }
 
 // computeValuationTransactions checks whether the valuation for the positions

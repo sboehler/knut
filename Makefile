@@ -6,7 +6,7 @@ doc:
 	go run scripts/builddoc.go > README.md
 
 build:
-	go build 
+	go build
 
 test:
 	go test -v ./...

@@ -58,6 +58,7 @@ func CreateCmd() *cobra.Command {
 	c.Flags().StringArrayP("collapse", "c", []string{}, "<regex>,<level>")
 	c.Flags().StringP("account", "", "", "filter accounts with a regex")
 	c.Flags().StringP("commodity", "", "", "filter commodities with a regex")
+	c.Flags().BoolP("close", "", false, "close income and expenses accounts after every period")
 	return c
 }
 
@@ -97,6 +98,10 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 	if err != nil {
 		return nil, err
 	}
+	close, err := cmd.Flags().GetBool("close")
+	if err != nil {
+		return nil, err
+	}
 	period, err := parsePeriod(cmd, "period")
 	if err != nil {
 		return nil, err
@@ -125,6 +130,7 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 		FilterCommodities: filterCommodities,
 		Period:            period,
 		Collapse:          collapse,
+		Close:             close,
 	}, nil
 }
 
@@ -209,6 +215,7 @@ type options struct {
 	FilterAccounts    string
 	FilterCommodities string
 	Collapse          []report.Collapse
+	Close             bool
 }
 
 func createLedgerOptions(o *options) ledger.Options {
@@ -261,7 +268,7 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 		return err
 	}
 	l := lb.Build()
-	b, err := process(opts.Valuations, createDateSeries(opts, l), l)
+	b, err := process(opts.Valuations, createDateSeries(opts, l), opts.Close, l)
 	if err != nil {
 		return err
 	}
@@ -286,7 +293,7 @@ type Options struct {
 
 // process processes the ledger and creates valuations for the given commodities
 // and returning balances for the given dates.
-func process(commodities []*commodities.Commodity, dates []time.Time, l ledger.Ledger) ([]*balance.Balance, error) {
+func process(commodities []*commodities.Commodity, dates []time.Time, close bool, l ledger.Ledger) ([]*balance.Balance, error) {
 	balances := make([]*balance.Balance, 0, len(dates))
 	balance := balance.New(commodities)
 	step := 0
@@ -300,6 +307,7 @@ func process(commodities []*commodities.Commodity, dates []time.Time, l ledger.L
 		cur := balance.Copy()
 		cur.Date = date
 		balances = append(balances, cur)
+		balance.CloseIncomeAndExpenses = close
 	}
 	return balances, nil
 }

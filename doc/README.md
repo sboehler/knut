@@ -17,11 +17,11 @@ investing.
 - [About knut](#about-knut)
 - [Table of contents](#table-of-contents)
 - [Commands](#commands)
-  - [Printing a balance](#printing-a-balance)
+  - [Print a balance](#print-a-balance)
     - [Basic balance](#basic-balance)
     - [Monthly balance in CHF](#monthly-balance-in-chf)
     - [Monthly income statement in CHF](#monthly-income-statement-in-chf)
-  - [Fetching prices](#fetching-prices)
+  - [Fetch quotes](#fetch-quotes)
   - [Infer accounts](#infer-accounts)
   - [Format the journal](#format-the-journal)
   - [Import transactions](#import-transactions)
@@ -34,7 +34,7 @@ investing.
 {{ .Commands.help }}
 ```
 
-## Printing a balance
+## Print a balance
 
 knut has a powerful balance command, with various options to tune the result.
 
@@ -63,7 +63,7 @@ TODO: option to reverse signs
 {{ .Commands.IncomeMonthlyCHF}}
 ```
 
-## Fetching prices
+## Fetch quotes
 
 knut price sources are configured in yaml format:
 ```

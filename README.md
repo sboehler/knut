@@ -28,11 +28,11 @@ $ knut balance -v CHF -c0,(Income|Expenses|Equity) --monthly --from 2020-01-01 -
 - [About knut](#about-knut)
 - [Table of contents](#table-of-contents)
 - [Commands](#commands)
-  - [Printing a balance](#printing-a-balance)
+  - [Print a balance](#print-a-balance)
     - [Basic balance](#basic-balance)
     - [Monthly balance in CHF](#monthly-balance-in-chf)
     - [Monthly income statement in CHF](#monthly-income-statement-in-chf)
-  - [Fetching prices](#fetching-prices)
+  - [Fetch quotes](#fetch-quotes)
   - [Infer accounts](#infer-accounts)
   - [Format the journal](#format-the-journal)
   - [Import transactions](#import-transactions)
@@ -63,7 +63,7 @@ Use "knut [command] --help" for more information about a command.
 
 ```
 
-## Printing a balance
+## Print a balance
 
 knut has a powerful balance command, with various options to tune the result.
 
@@ -170,7 +170,7 @@ $ knut balance -v CHF --monthly --to 2020-04-01 -c0,(Assets|Liabilities) --diff 
 
 ```
 
-## Fetching prices
+## Fetch quotes
 
 knut price sources are configured in yaml format:
 ```

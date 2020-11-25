@@ -303,13 +303,13 @@ func (p CommodityAccount) Commodity() *commodities.Commodity {
 
 // Less establishes a partial ordering of commodity accounts.
 func (p CommodityAccount) Less(p1 CommodityAccount) bool {
-	if p.account.String() == p1.account.String() {
-		return p.commodity.String() < p1.commodity.String()
+	if p.account.Type() != p1.account.Type() {
+		return p.account.Type() < p1.account.Type()
 	}
-	if p.account.Type() == p1.account.Type() {
+	if p.account.String() != p1.account.String() {
 		return p.account.String() < p1.account.String()
 	}
-	return p.account.Type() < p1.account.Type()
+	return p.commodity.String() < p1.commodity.String()
 }
 
 // Position is a position.

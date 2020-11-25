@@ -15,8 +15,11 @@
 package report
 
 import (
+	"fmt"
+
 	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/table"
+	"github.com/shopspring/decimal"
 )
 
 // Renderer renders a report.
@@ -25,14 +28,16 @@ type Renderer struct {
 	indent          int
 	showCommodities bool
 	rounding        int32
+	thousands       bool
 	report          *Report
 }
 
 // NewRenderer creates a new report renderer.
-func NewRenderer(showCommodities bool, rounding int32) *Renderer {
+func NewRenderer(showCommodities bool, rounding int32, thousands bool) *Renderer {
 	return &Renderer{
 		showCommodities: showCommodities,
 		rounding:        rounding,
+		thousands:       thousands,
 	}
 }
 
@@ -90,7 +95,7 @@ func (rn *Renderer) renderSegment(s *Segment) {
 		if amount.IsZero() {
 			header.AddEmpty()
 		} else {
-			header.AddText(amount.StringFixed(rn.rounding), table.Right)
+			header.AddText(rn.format(amount), table.Right)
 		}
 	}
 
@@ -117,7 +122,7 @@ func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
 				if amount.IsZero() {
 					row.AddEmpty()
 				} else {
-					row.AddText(amount.StringFixed(rn.rounding), table.Right)
+					row.AddText(rn.format(amount), table.Right)
 				}
 			}
 		}
@@ -128,4 +133,13 @@ func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
 		rn.renderSegmentWithCommodities(ss)
 	}
 	rn.indent = rn.indent - 2
+}
+
+var k = decimal.RequireFromString("1000")
+
+func (rn *Renderer) format(d decimal.Decimal) string {
+	if rn.thousands {
+		return fmt.Sprintf("%sk", d.DivRound(k, rn.rounding).StringFixed(rn.rounding))
+	}
+	return d.StringFixed(rn.rounding)
 }

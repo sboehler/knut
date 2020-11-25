@@ -60,6 +60,7 @@ func CreateCmd() *cobra.Command {
 	c.Flags().StringP("commodity", "", "", "filter commodities with a regex")
 	c.Flags().BoolP("close", "", false, "close income and expenses accounts after every period")
 	c.Flags().Int32P("digits", "", 0, "round to number of digits")
+	c.Flags().BoolP("thousands", "k", false, "show numbers in units of 1000")
 	return c
 }
 
@@ -123,6 +124,10 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 	if err != nil {
 		return nil, err
 	}
+	thousands, err := cmd.Flags().GetBool("thousands")
+	if err != nil {
+		return nil, err
+	}
 
 	return &options{
 		File:              args[0],
@@ -137,6 +142,7 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 		Collapse:          collapse,
 		Close:             close,
 		RoundDigits:       digits,
+		Thousands:         thousands,
 	}, nil
 }
 
@@ -223,6 +229,7 @@ type options struct {
 	Collapse          []report.Collapse
 	Close             bool
 	RoundDigits       int32
+	Thousands         bool
 }
 
 func createLedgerOptions(o *options) ledger.Options {
@@ -288,7 +295,7 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	report.NewRenderer(opts.ShowCommodities, opts.RoundDigits).Render(r).Render(out)
+	report.NewRenderer(opts.ShowCommodities, opts.RoundDigits, opts.Thousands).Render(r).Render(out)
 	return nil
 }
 

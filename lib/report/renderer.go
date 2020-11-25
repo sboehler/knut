@@ -41,6 +41,13 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	rn.indent = 0
 	rn.report = r
 
+	var render func(s *Segment)
+	if rn.showCommodities {
+		render = rn.renderSegmentWithCommodities
+	} else {
+		render = rn.renderSegment
+	}
+
 	// sep
 	rn.table.AddSeparatorRow()
 
@@ -55,25 +62,14 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 
 	// values
 	for _, s := range r.Segments {
-		if rn.showCommodities {
-			rn.renderSegmentWithCommodities(s)
-		} else {
-			rn.renderSegment(s)
-		}
+		render(s)
 		rn.table.AddSeparatorRow()
 	}
 	// totals
-	if rn.showCommodities {
-		rn.renderSegmentWithCommodities(&Segment{
-			Key:       "Total",
-			Positions: r.Positions,
-		})
-	} else {
-		rn.renderSegment(&Segment{
-			Key:       "Total",
-			Positions: r.Positions,
-		})
-	}
+	render(&Segment{
+		Key:       "Total",
+		Positions: r.Positions,
+	})
 	rn.table.AddSeparatorRow()
 
 	return rn.table

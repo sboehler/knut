@@ -121,3 +121,10 @@ func (v Vec) Add(u Vec) {
 		v.Values[i] = v.Values[i].Add(a)
 	}
 }
+
+// Neg mutably negates the given vector.
+func (v Vec) Neg() {
+	for i := range v.Values {
+		v.Values[i] = v.Values[i].Neg()
+	}
+}

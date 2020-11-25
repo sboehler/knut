@@ -36,10 +36,10 @@ func CreateCmd() *cobra.Command {
 		Long:  `knut is a plain text accounting tool for tracking personal finances and investments.`,
 	}
 	c.AddCommand(balance.CreateCmd())
-	c.AddCommand(importer.Cmd)
-	c.AddCommand(prices.Cmd)
-	c.AddCommand(format.Cmd)
-	c.AddCommand(infer.Cmd)
+	c.AddCommand(importer.CreateCmd())
+	c.AddCommand(prices.CreateCmd())
+	c.AddCommand(format.CreateCmd())
+	c.AddCommand(infer.CreateCmd())
 	return c
 }
 

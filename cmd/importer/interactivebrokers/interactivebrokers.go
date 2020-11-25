@@ -55,7 +55,7 @@ func CreateCmd() *cobra.Command {
 }
 
 func init() {
-	importer.Cmd.AddCommand(CreateCmd())
+	importer.Register(CreateCmd)
 }
 
 type options struct {

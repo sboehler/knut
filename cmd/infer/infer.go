@@ -31,21 +31,20 @@ import (
 	"github.com/sboehler/knut/lib/parser"
 )
 
-// Cmd is the import command.
-var Cmd = &cobra.Command{
-	Use:   "infer",
-	Short: "Auto-assign accounts in a journal",
-	Long: `Build a Bayes model using the supplied training file and apply it to replace
-the indicated account in the target file. Training file and target file may be the same.`,
-	Args: cobra.ExactValidArgs(1),
+// CreateCmd creates the command.
+func CreateCmd() *cobra.Command {
+	cmd := cobra.Command{
+		Use:   "infer",
+		Short: "Auto-assign accounts in a journal",
+		Long: `Build a Bayes model using the supplied training file and apply it to replace
+		the indicated account in the target file. Training file and target file may be the same.`,
+		Args: cobra.ExactValidArgs(1),
 
-	RunE: run,
-}
-
-func init() {
-	Cmd.Flags().StringP("account", "a", "TBD", "account name")
-	Cmd.Flags().StringP("training-file", "t", "", "the journal file with existing data")
-
+		RunE: run,
+	}
+	cmd.Flags().StringP("account", "a", "TBD", "account name")
+	cmd.Flags().StringP("training-file", "t", "", "the journal file with existing data")
+	return &cmd
 }
 
 type directive interface {

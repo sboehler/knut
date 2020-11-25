@@ -51,7 +51,7 @@ func CreateCmd() *cobra.Command {
 }
 
 func init() {
-	importer.Cmd.AddCommand(CreateCmd())
+	importer.Register(CreateCmd)
 }
 
 func run(cmd *cobra.Command, args []string) error {

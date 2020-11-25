@@ -29,13 +29,15 @@ import (
 	"github.com/sboehler/knut/lib/parser"
 )
 
-// Cmd is the import command.
-var Cmd = &cobra.Command{
-	Use:   "format",
-	Short: "Format the given journal",
-	Long:  `Format the given journal in-place. Any white space and comments between directives is preserved.`,
+// CreateCmd creates the command.
+func CreateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "format",
+		Short: "Format the given journal",
+		Long:  `Format the given journal in-place. Any white space and comments between directives is preserved.`,
 
-	RunE: run,
+		RunE: run,
+	}
 }
 
 type directive interface {

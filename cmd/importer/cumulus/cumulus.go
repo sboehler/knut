@@ -53,7 +53,7 @@ using the default options and saving it to CSV. This importer will parse the una
 }
 
 func init() {
-	importer.Cmd.AddCommand(CreateCmd())
+	importer.Register(CreateCmd)
 }
 
 func run(cmd *cobra.Command, args []string) error {

@@ -18,8 +18,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Cmd is the import command.
-var Cmd = &cobra.Command{
-	Use:   "import",
-	Short: "Import financial account statements",
+// CreateCmd is the import command.
+func CreateCmd() *cobra.Command {
+	cmd := cobra.Command{
+		Use:   "import",
+		Short: "Import financial account statements",
+	}
+	for _, constructor := range importers {
+		cmd.AddCommand(constructor())
+	}
+	return &cmd
+}
+
+var importers []func() *cobra.Command
+
+// Register registers an importer constructor.
+func Register(f func() *cobra.Command) {
+	importers = append(importers, f)
 }

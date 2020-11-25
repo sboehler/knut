@@ -34,15 +34,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Cmd is the import command.
-var Cmd = &cobra.Command{
-	Use:   "fetch",
-	Short: "Fetch quotes from Yahoo! Finance",
-	Long:  `Fetch quotes from Yahoo! Finance based on the supplied configuration in yaml format. See doc/prices.yaml for an example.`,
+// CreateCmd creates the command.
+func CreateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "fetch",
+		Short: "Fetch quotes from Yahoo! Finance",
+		Long:  `Fetch quotes from Yahoo! Finance based on the supplied configuration in yaml format. See doc/prices.yaml for an example.`,
 
-	Args: cobra.ExactValidArgs(1),
+		Args: cobra.ExactValidArgs(1),
 
-	RunE: run,
+		RunE: run,
+	}
 }
 
 func run(cmd *cobra.Command, args []string) error {

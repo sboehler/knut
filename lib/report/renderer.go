@@ -24,13 +24,15 @@ type Renderer struct {
 	table           *table.Table
 	indent          int
 	showCommodities bool
+	rounding        int32
 	report          *Report
 }
 
 // NewRenderer creates a new report renderer.
-func NewRenderer(showCommodities bool) *Renderer {
+func NewRenderer(showCommodities bool, rounding int32) *Renderer {
 	return &Renderer{
 		showCommodities: showCommodities,
+		rounding:        rounding,
 	}
 }
 
@@ -85,11 +87,10 @@ func (rn *Renderer) renderSegment(s *Segment) {
 	}
 	// fill header cells with total values
 	for _, amount := range total.Values {
-		a := amount.Round(2)
-		if a.IsZero() {
+		if amount.IsZero() {
 			header.AddEmpty()
 		} else {
-			header.AddText(a.StringFixed(2), table.Right)
+			header.AddText(amount.StringFixed(rn.rounding), table.Right)
 		}
 	}
 
@@ -113,11 +114,10 @@ func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
 		if amounts, ok := segment.Positions[commodity]; ok {
 			row := rn.table.AddRow().AddIndented(commodity.String(), rn.indent)
 			for _, amount := range amounts.Values {
-				v := amount.Round(2)
-				if v.IsZero() {
+				if amount.IsZero() {
 					row.AddEmpty()
 				} else {
-					row.AddText(v.StringFixed(2), table.Right)
+					row.AddText(amount.StringFixed(rn.rounding), table.Right)
 				}
 			}
 		}

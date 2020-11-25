@@ -59,6 +59,14 @@ func (t *Table) AddSeparatorRow() {
 	}
 }
 
+// AddEmptyRow adds a separator row.
+func (t *Table) AddEmptyRow() {
+	c := t.AddRow()
+	for i := 0; i < t.Width(); i++ {
+		c.addCell(emptyCell{})
+	}
+}
+
 // Render renders this table to a string.
 func (t *Table) Render(w io.StringWriter) {
 	widths := make([]int, t.Width())

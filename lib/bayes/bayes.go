@@ -15,10 +15,11 @@
 package bayes
 
 import (
-	"github.com/sboehler/knut/lib/model"
-	"github.com/sboehler/knut/lib/model/accounts"
 	"math"
 	"strings"
+
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/accounts"
 )
 
 // Model is a model trained from a journal
@@ -117,8 +118,7 @@ func dedup(ss []string) map[string]bool {
 }
 
 func tokenize(trx *model.Transaction, posting *model.Posting, account *accounts.Account) []string {
-	tokens := strings.Split(trx.Description, " ")
-	tokens = append(tokens, posting.Commodity.String(), posting.Amount.String())
+	tokens := append(strings.Fields(trx.Description), posting.Commodity.String(), posting.Amount.String())
 	if posting.Tag != nil {
 		tokens = append(tokens, posting.Tag.String())
 	}
@@ -130,7 +130,7 @@ func tokenize(trx *model.Transaction, posting *model.Posting, account *accounts.
 	}
 	result := make([]string, 0, len(tokens))
 	for _, token := range tokens {
-		result = append(result, strings.ToLower(strings.TrimSpace(token)))
+		result = append(result, strings.ToLower(token))
 	}
 	return result
 }

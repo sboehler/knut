@@ -189,7 +189,7 @@ type Transaction struct {
 // WriteTo pretty-prints a transaction.
 func (t Transaction) WriteTo(b io.Writer) (int64, error) {
 	var n int64
-	c, err := fmt.Fprintf(b, "%s %q", t.Date().Format("2006-01-02"), t.Description)
+	c, err := fmt.Fprintf(b, `%s "%s"`, t.Date().Format("2006-01-02"), t.Description)
 	n += int64(c)
 	if err != nil {
 		return n, err
@@ -243,7 +243,7 @@ type Include struct {
 
 // WriteTo pretty-prints an include directive
 func (i Include) WriteTo(w io.Writer) (int64, error) {
-	n, err := fmt.Fprintf(w, "include %q", i.Path)
+	n, err := fmt.Fprintf(w, `include "%s"`, i.Path)
 	return int64(n), err
 }
 

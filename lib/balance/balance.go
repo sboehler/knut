@@ -141,7 +141,7 @@ func (b *Balance) Update(step *ledger.Step) error {
 	// close accounts
 	for _, c := range step.Closings {
 		if _, isOpen := b.Account[c.Account]; !isOpen {
-			return fmt.Errorf("Account %v is not open", c)
+			return fmt.Errorf("(%d) %s: Closing account %v is not open", c.Pos.Start, c.Date(), c.Account)
 		}
 		for pos, amount := range b.Positions {
 			if pos.Account() == c.Account && !amount.Amount().IsZero() {
@@ -156,10 +156,10 @@ func (b *Balance) Update(step *ledger.Step) error {
 func (b *Balance) bookTransaction(t *model.Transaction) error {
 	for _, posting := range t.Postings {
 		if _, isOpen := b.Account[posting.Credit]; !isOpen {
-			return fmt.Errorf("Account %v is not open", t)
+			return fmt.Errorf("(%d) %s: Account %s is not open", t.Pos.Start, t.Date(), posting.Credit)
 		}
 		if _, isOpen := b.Account[posting.Debit]; !isOpen {
-			return fmt.Errorf("Account %v is not open", t)
+			return fmt.Errorf("(%d) %s: Account %s is not open", t.Pos.Start, t.Date(), posting.Debit)
 		}
 		crPos := model.NewCommodityAccount(posting.Credit, posting.Commodity)
 		drPos := model.NewCommodityAccount(posting.Debit, posting.Commodity)
@@ -264,7 +264,7 @@ func (b *Balance) processBalanceAssertion(a *model.Assertion) error {
 	pos := model.NewCommodityAccount(a.Account, a.Commodity)
 	va, ok := b.Positions[pos]
 	if !ok || !va.Amount().Equal(a.Amount) {
-		return fmt.Errorf("Balance assertion failed: Expected %v, got %v", a, va)
+		return fmt.Errorf("(%d) %s: Balance assertion failed: Expected %s to have %s %s, but has %s %s", a.Position().Start, a.Date(), a.Account, a.Amount, a.Commodity, va.Amount(), pos.Commodity())
 	}
 	return nil
 }

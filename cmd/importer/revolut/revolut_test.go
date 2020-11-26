@@ -12,20 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package revolut
 
 import (
-	"github.com/sboehler/knut/cmd"
+	"fmt"
+	"testing"
 
-	// enable importers here
-	_ "github.com/sboehler/knut/cmd/importer/cumulus"
-	_ "github.com/sboehler/knut/cmd/importer/interactivebrokers"
-	_ "github.com/sboehler/knut/cmd/importer/postfinance"
-	_ "github.com/sboehler/knut/cmd/importer/revolut"
-	_ "github.com/sboehler/knut/cmd/importer/swisscard"
-	_ "github.com/sboehler/knut/cmd/importer/swissquote"
+	"github.com/sebdah/goldie/v2"
+
+	"github.com/sboehler/knut/cmd/cmdtest"
 )
 
-func main() {
-	cmd.Execute()
+func TestGolden(t *testing.T) {
+	tests := []string{
+		"example1",
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test, func(t *testing.T) {
+			t.Parallel()
+			g := goldie.New(t)
+			args := []string{"--account", "Assets:Accounts:Revolut", fmt.Sprintf("testdata/%s.input", test)}
+			got := cmdtest.Run(t, CreateCmd(), args)
+			g.Assert(t, test, got)
+		})
+	}
 }

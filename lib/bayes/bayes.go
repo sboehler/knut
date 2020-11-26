@@ -93,7 +93,7 @@ func (m *Model) Infer(trx *model.Transaction, tbd *accounts.Account) {
 		var selected *accounts.Account
 		max := math.Inf(-1)
 		for a, score := range scores {
-			if score > max {
+			if score > max && a != posting.Credit && a != posting.Debit {
 				selected = a
 				max = score
 			}

@@ -261,25 +261,6 @@ func (a Assertion) WriteTo(w io.Writer) (int64, error) {
 	return int64(n), err
 }
 
-func checkTrx(t *Transaction) error {
-	if len(t.Postings)%2 == 1 {
-		return fmt.Errorf("%v: Uneven number of postings", t.Position())
-	}
-	m := map[string]int{}
-	for _, p := range t.Postings {
-		m[p.Amount.Amount().Abs().String()]++
-	}
-	if len(m) != len(t.Postings)/2 {
-		return fmt.Errorf("%v: Strange map %v", t.Position(), m)
-	}
-	for _, c := range m {
-		if c != 2 {
-			return fmt.Errorf("%v: Invalid count %v", t.Position(), m)
-		}
-	}
-	return nil
-}
-
 // CommodityAccount represents a position.
 type CommodityAccount struct {
 	account   *accounts.Account

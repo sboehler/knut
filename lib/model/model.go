@@ -261,6 +261,20 @@ func (a Assertion) WriteTo(w io.Writer) (int64, error) {
 	return int64(n), err
 }
 
+// Value represents a value directive.
+type Value struct {
+	Directive
+	Account   *accounts.Account
+	Amount    decimal.Decimal
+	Commodity *commodities.Commodity
+}
+
+// WriteTo pretty-prints an assertion directive.
+func (a Value) WriteTo(w io.Writer) (int64, error) {
+	n, err := fmt.Fprintf(w, "%s value %s %s %s", a.Date().Format("2006-01-02"), a.Account, a.Amount, a.Commodity)
+	return int64(n), err
+}
+
 // CommodityAccount represents a position.
 type CommodityAccount struct {
 	account   *accounts.Account

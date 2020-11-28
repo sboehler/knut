@@ -26,6 +26,7 @@ type Step struct {
 	Date         time.Time
 	Prices       []*model.Price
 	Assertions   []*model.Assertion
+	Values       []*model.Value
 	Openings     []*model.Open
 	Transactions []*model.Transaction
 	Closings     []*model.Close
@@ -69,6 +70,11 @@ func (l Ledger) WriteTo(w io.Writer) (int64, error) {
 		}
 		for _, t := range step.Transactions {
 			if err := write(w, t, &n); err != nil {
+				return n, err
+			}
+		}
+		for _, v := range step.Values {
+			if err := write(w, v, &n); err != nil {
 				return n, err
 			}
 		}

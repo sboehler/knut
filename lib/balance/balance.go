@@ -103,18 +103,29 @@ func (b *Balance) Update(step *ledger.Step) error {
 		b.Account[o.Account] = true
 	}
 
-	// valuate transactions
+	// valuate and book journal transactions
 	for _, t := range step.Transactions {
 		if err := b.valuateTransaction(t); err != nil {
 			return err
 		}
+		if err := b.bookTransaction(t); err != nil {
+			return err
+		}
 	}
 
-	// close income and expense accounts if necessary
-	if b.CloseIncomeAndExpenses {
-		closingTransactions := b.computeClosingTransactions()
-		step.Transactions = append(step.Transactions, closingTransactions...)
-		b.CloseIncomeAndExpenses = false
+	// create and book value transactions
+	for _, v := range step.Values {
+		t, err := b.processValue(v)
+		if err != nil {
+			return err
+		}
+		step.Transactions = append(step.Transactions, t)
+		if err := b.valuateTransaction(t); err != nil {
+			return err
+		}
+		if err := b.bookTransaction(t); err != nil {
+			return err
+		}
 	}
 
 	// compute and append valuation transactions
@@ -125,10 +136,22 @@ func (b *Balance) Update(step *ledger.Step) error {
 	step.Transactions = append(step.Transactions, valTrx...)
 
 	// book transactions
-	for _, t := range step.Transactions {
+	for _, t := range valTrx {
 		if err := b.bookTransaction(t); err != nil {
 			return err
 		}
+	}
+
+	// close income and expense accounts if necessary
+	if b.CloseIncomeAndExpenses {
+		closingTransactions := b.computeClosingTransactions()
+		step.Transactions = append(step.Transactions, closingTransactions...)
+		for _, t := range closingTransactions {
+			if err := b.bookTransaction(t); err != nil {
+				return err
+			}
+		}
+		b.CloseIncomeAndExpenses = false
 	}
 
 	// process balance assertions
@@ -258,6 +281,25 @@ func (b *Balance) valuateTransaction(t *model.Transaction) error {
 		posting.Amount = amount.New(posting.Amount.Amount(), valuations)
 	}
 	return nil
+}
+
+func (b *Balance) processValue(v *model.Value) (*model.Transaction, error) {
+	if _, isOpen := b.Account[v.Account]; !isOpen {
+		return nil, fmt.Errorf("(%d) %s: Account %s is not open", v.Pos.Start, v.Date(), v.Account)
+	}
+	pos := model.NewCommodityAccount(v.Account, v.Commodity)
+	va, ok := b.Positions[pos]
+	if !ok {
+		va = amount.New(decimal.Zero, nil)
+	}
+	return &model.Transaction{
+		Directive:   model.NewDirective(model.Range{}, v.Date()),
+		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
+		Tags:        nil,
+		Postings: []*model.Posting{
+			model.NewPosting(accounts.ValuationAccount(), v.Account, pos.Commodity(), v.Amount.Sub(va.Amount()), nil),
+		},
+	}, nil
 }
 
 func (b *Balance) processBalanceAssertion(a *model.Assertion) error {

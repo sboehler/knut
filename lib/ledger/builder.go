@@ -58,6 +58,8 @@ func (b *Builder) Process(results <-chan interface{}) error {
 			err = b.AddTransaction(t)
 		case *model.Assertion:
 			err = b.AddAssertion(t)
+		case *model.Value:
+			err = b.AddValue(t)
 		case *model.Close:
 			b.AddClosing(t)
 		default:
@@ -147,5 +149,20 @@ func (b *Builder) AddAssertion(a *model.Assertion) error {
 	}
 	s := b.getOrCreate(a.Date())
 	s.Assertions = append(s.Assertions, a)
+	return nil
+}
+
+// AddValue adds an value directive.
+func (b *Builder) AddValue(a *model.Value) error {
+	matched, err := regexp.MatchString(b.options.AccountsFilter, a.Account.String())
+	if !matched || err != nil {
+		return err
+	}
+	matched, err = regexp.MatchString(b.options.CommoditiesFilter, a.Commodity.String())
+	if !matched || err != nil {
+		return err
+	}
+	s := b.getOrCreate(a.Date())
+	s.Values = append(s.Values, a)
 	return nil
 }

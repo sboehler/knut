@@ -118,6 +118,8 @@ func (p *Parser) parseDirective() (interface{}, error) {
 		result, err = p.parsePrice(d)
 	case 'b':
 		result, err = p.parseBalanceAssertion(d)
+	case 'v':
+		result, err = p.parseValue(d)
 	default:
 		return nil, fmt.Errorf("expected directive, got %c", p.current())
 	}
@@ -320,6 +322,39 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*model.Assertion, error) {
 		return nil, err
 	}
 	return &model.Assertion{
+		Directive: model.NewDirective(p.getRange(), d),
+		Account:   account,
+		Amount:    amount,
+		Commodity: commodity,
+	}, nil
+}
+
+func (p *Parser) parseValue(d time.Time) (*model.Value, error) {
+	if err := p.scanner.ParseString("value"); err != nil {
+		return nil, err
+	}
+	if err := p.consumeWhitespace1(); err != nil {
+		return nil, err
+	}
+	account, err := scanner.ParseAccount(p.scanner)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consumeWhitespace1(); err != nil {
+		return nil, err
+	}
+	amount, err := scanner.ParseDecimal(p.scanner)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consumeWhitespace1(); err != nil {
+		return nil, err
+	}
+	commodity, err := scanner.ParseCommodity(p.scanner)
+	if err != nil {
+		return nil, err
+	}
+	return &model.Value{
 		Directive: model.NewDirective(p.getRange(), d),
 		Account:   account,
 		Amount:    amount,

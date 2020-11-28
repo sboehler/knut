@@ -16,6 +16,8 @@ package report
 
 import (
 	"fmt"
+	"strings"
+	"unicode"
 
 	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/table"
@@ -141,7 +143,34 @@ var k = decimal.RequireFromString("1000")
 
 func (rn *Renderer) format(d decimal.Decimal) string {
 	if rn.thousands {
-		return fmt.Sprintf("%sk", d.DivRound(k, rn.rounding).StringFixed(rn.rounding))
+		d = d.DivRound(k, rn.rounding)
 	}
-	return d.StringFixed(rn.rounding)
+	s := addThousandsSep(d.StringFixed(rn.rounding))
+	if rn.thousands {
+		s = fmt.Sprintf("%sk", s)
+	}
+	return s
+}
+
+func addThousandsSep(d string) string {
+	index := strings.Index(d, ".")
+	if index < 0 {
+		index = len(d)
+	}
+	b := strings.Builder{}
+	ok := false
+	for i, ch := range d {
+		if i >= index && ch != '-' {
+			b.WriteString(d[i:])
+			break
+		}
+		if (index-i)%3 == 0 && ok {
+			b.WriteRune(',')
+		}
+		b.WriteRune(ch)
+		if unicode.IsDigit(ch) {
+			ok = true
+		}
+	}
+	return b.String()
 }

@@ -2,7 +2,7 @@ package report
 
 import "testing"
 
-func TestFmt2(t *testing.T) {
+func TestAddThousandsSep(t *testing.T) {
 	tests := []struct {
 		input, want string
 	}{

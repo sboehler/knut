@@ -224,6 +224,7 @@ Available Commands:
   ch.postfinance        Import Postfinance CSV account statements
   ch.swisscard          Import Swisscard credit card statements
   ch.swissquote         Import Swissquote account reports
+  ch.viac               Import VIAC values from JSON files
   revolut               Import Revolut CSV account statements
   us.interactivebrokers Import Interactive Brokers account reports
 

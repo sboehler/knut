@@ -24,7 +24,13 @@ investing.
     - [Infer accounts](#infer-accounts)
     - [Format the journal](#format-the-journal)
     - [Import transactions](#import-transactions)
-  - [Example journal](#example-journal)
+  - [File format](#file-format)
+    - [Open and close](#open-and-close)
+    - [Transactions](#transactions)
+    - [Balance assertions](#balance-assertions)
+    - [Value directive](#value-directive)
+    - [Prices](#prices)
+    - [Include directives](#include-directives)
 
 ## Commands
 
@@ -100,14 +106,72 @@ knut has a few built-in importers for statements from Swiss banks:
 {{ .Commands.HelpImport }}
 ```
 
-## Example journal
+## File format
 
-The journal consists of a set of directives and comments. Directives are prices, account
-openings, transactions, balance assertions, and account closings. Comments start with either `#` or `*`.
+An accounting journal in knut is represented as a sequence of plain-text directives. The journal consists of a set of directives and comments. Directives are prices, account openings, transactions, value directives, balance assertions, and account closings. Lines starting with either `#` (comment) or `*` (org-mode title) are ignored. Files can include other files using an include directive. The order of the directives in the journal file is not important, they are always evaluated by date.
 
-Postings in transactions are written as `<credit account> <debit account> <amount> <commodity>`. One can think of money flowing from the left.
+The following is an example for a knut journal:
 
 ```text
 # doc/example.knut
 {{ .ExampleFile }}
 ```
+
+### Open and close
+
+An account consists of a sequence of segments, separated by ':'. The first segment must be one of Assets, Liabilities, Equity, Income, Expenses or TBD. Before an account can be used in a transaction, for example, it must be opened using an open directive:
+
+`YYYY-MM-DD open <account name>`
+
+Once an account is not needed anymore, it can be close, to prevent further bookings. An account can only be closed if its balance is zero at the closing time.
+
+`YYYY-MM-DD close <account name>`
+
+### Transactions
+
+A transaction describes the flow of money between multiple accounts. Transaction always balance by design in knut.
+
+```text
+YYYY-MM-DD "<description>"
+<credit account> <debit account> <amount> <commodity>
+<credit account> <debit account> <amount> <commodity>
+...
+```
+
+A transaction starts with a date, followed by a description withing double quotes on the same line. It must have one or more bookings on the lines immediately following. Every booking references two accounts, a credit account (first) and a debit account (second). The amount is usually a positive numbers, and the semantics is that money "flows from left to right".
+
+The transaction syntaxt deviates from similar tools like ledger or beancount for several reasons:
+
+- It ensures that a transaction always balances, which is not guaranteed by formats where each booking references only one account.
+- It creates unambigous flows between two accounts, which is helpful when analyzing the flows of money.
+- The representation is more compact.
+
+### Balance assertions
+
+It is often helpful to check whether the balance at a date corresponds to an expected value, for example a value given by a bank account statement. A balance assertion in knut performs this check and reports an error if the check fails:
+
+`YYYY-MM-DD balance <account> <amount> <commodity>`
+
+### Value directive
+
+Value directives can be used to declare a certain account balance at a specific date. When encountering a value directive during evaluation, beans will automatically generate a transaction wich makes sure that the balance matches the indicated value. The generated transaction always has exactly one booking, and the two accounts are the given account and a special Equity:Valuation account.
+
+`YYYY-MM-DD value <account> <amount> <commodity>`
+
+Value directives are handy in particular for modeling investment portfolios, where it is too much work to model every individual trade, for example in an automated trading system. In such a situation, declare inflows and outflows of the investment as usual, and provide value directives for any day the value of the investment can be established (ideally daily). knut will automatically generate transaction representing the value changes of the investment, after considering any given bookings affecting the account.
+
+### Prices
+
+knut has a power valuation engine, which can be used to create balance sheets in any currency or security which has pricing information. Prices are declared using price directives:
+
+`YYYY-MM-DD price <commodity> <price> <target_commodity>`
+
+For example, `2020-10-03 price AAPL 45 USD` declares that AAPL cost 45 USD on 2020-10-03 (you wish...). knut is smart enough to derive indirect prices. For example, knut can print a balance with an AAPL position in CHF if a price for USD in CHF and a price for AAPL in USD exists. Prices are automatically inverted, as needed. knut will always use the latest available price for every given day. If a valuation is requried for a date before the first price is given, an error is reported.
+
+### Include directives
+
+Income directives can be used to split a journal across a set of files. The given path is interpreted relative to the location of the file where the include directive appears.
+
+`include "<relative path>"`
+
+It is entirely a matter of preference whether to use large files or a set of smaller files. knut ignores lines starting with '\*', so those with a [powerful editor](http://www.emacs.org) can use org-mode to fold sections of a file, making it easy to manage files with tens of thousands of lines.

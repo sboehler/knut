@@ -2,10 +2,7 @@
 
 > there are 29 knuts in a sickle
 
-knut is a plain-text, double-entry accounting tool for the command line. It
-produces various reports based on simple accounting directives in a [text file](#example-journal).
-knut is written in Go, and its primary use cases are personal finance and
-investing.
+knut is a plain-text, double-entry accounting tool for the command line. It produces various reports based on simple accounting directives in a [text file](#file-format). knut is written in Go, and its primary use cases are personal finance and investing.
 
 ```text
 $ knut balance -v CHF -c0,(Income|Expenses|Equity) --monthly --from 2020-01-01 --to 2020-04-01 doc/example.knut
@@ -314,7 +311,7 @@ An account consists of a sequence of segments, separated by ':'. The first segme
 
 `YYYY-MM-DD open <account name>`
 
-Once an account is not needed anymore, it can be close, to prevent further bookings. An account can only be closed if its balance is zero at the closing time.
+Once an account is not needed anymore, it can be closed, to prevent further bookings. An account can only be closed if its balance is zero at the closing time.
 
 `YYYY-MM-DD close <account name>`
 

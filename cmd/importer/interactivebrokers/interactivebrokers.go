@@ -218,11 +218,11 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	proceeds, err := decimal.NewFromString(r[9])
+	proceeds, err := decimal.NewFromString(strings.ReplaceAll(r[10], ",", ""))
 	if err != nil {
 		return false, err
 	}
-	fee, err := decimal.NewFromString(r[10])
+	fee, err := decimal.NewFromString(r[11])
 	if err != nil {
 		return false, err
 	}
@@ -379,7 +379,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 		Directive:   model.NewDirective(model.Range{}, date),
 		Description: desc,
 		Postings: []*model.Posting{
-			model.NewPosting(p.options.account, p.options.tax, currency, amt, nil),
+			model.NewPosting(p.options.tax, p.options.account, currency, amt, nil),
 			model.NewPosting(p.options.tax, p.options.tax, security, decimal.Zero, nil),
 		},
 	})

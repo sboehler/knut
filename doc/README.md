@@ -1,5 +1,7 @@
 # knut - a plain text accounting tool
 
+![Go](https://github.com/sboehler/knut/workflows/Go/badge.svg)
+
 > there are 29 knuts in a sickle
 
 knut is a plain-text, double-entry accounting tool for the command line. It produces various reports based on simple accounting directives in a [text file](#file-format). knut is written in Go, and its primary use cases are personal finance and investing.

@@ -15,9 +15,11 @@
 package swisscard
 
 import (
-	"github.com/sboehler/knut/cmd/cmdtest"
 	"fmt"
+	"path"
 	"testing"
+
+	"github.com/sboehler/knut/cmd/cmdtest"
 
 	"github.com/sebdah/goldie/v2"
 )
@@ -31,7 +33,11 @@ func TestGolden(t *testing.T) {
 		t.Run(test, func(t *testing.T) {
 			t.Parallel()
 			g := goldie.New(t)
-			args := []string{"--account", "Liabilities:CreditCard", fmt.Sprintf("testdata/%s.input", test)}
+			args := []string{
+				"--account",
+				"Liabilities:CreditCard",
+				path.Join("testdata", fmt.Sprintf("%s.input", test)),
+			}
 			got := cmdtest.Run(t, CreateCmd(), args)
 			g.Assert(t, test, got)
 		})

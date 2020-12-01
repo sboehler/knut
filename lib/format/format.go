@@ -15,9 +15,10 @@
 package format
 
 import (
-	"github.com/sboehler/knut/lib/model"
 	"fmt"
 	"io"
+
+	"github.com/sboehler/knut/lib/model"
 )
 
 type iter interface {

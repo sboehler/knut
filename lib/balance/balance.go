@@ -258,7 +258,7 @@ func (b *Balance) computeValuationDiff(pos model.CommodityAccount, va amount.Amo
 		v1 := va.Valuation(i)
 		v2, err := np.Valuate(pos.Commodity(), va.Amount())
 		if err != nil {
-			return nil, false, fmt.Errorf("Should not hapen - no valuation found")
+			return nil, false, fmt.Errorf("Should not happen - no valuation found")
 		}
 		if !v1.Equal(v2) {
 			diffs[i] = v2.Sub(v1)

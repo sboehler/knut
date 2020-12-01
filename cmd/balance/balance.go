@@ -164,7 +164,7 @@ func parseDate(cmd *cobra.Command, arg string) (*time.Time, error) {
 		return nil, err
 	}
 	t, err := time.Parse("2006-01-02", s)
-	return &t, nil
+	return &t, err
 }
 
 func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {

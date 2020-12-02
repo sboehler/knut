@@ -100,7 +100,7 @@ knut price sources are configured in yaml format:
 {{ .PricesFile }}
 ```
 
-Once configured, prices can simply be updated:
+Once configured, prices can be updated with one command:
 
 ```text
 knut fetch doc/prices.yaml

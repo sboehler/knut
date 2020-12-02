@@ -20,29 +20,37 @@ import (
 	"unicode"
 
 	"github.com/sboehler/knut/lib/amount"
+	"github.com/sboehler/knut/lib/model/accounts"
+	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/table"
 	"github.com/shopspring/decimal"
 )
 
 // Renderer renders a report.
 type Renderer struct {
-	table           *table.Table
-	indent          int
-	showCommodities bool
-	rounding        int32
-	thousands       bool
-	report          *Report
+	// the configuration of this Renderer
+	config Config
+	// the report which is to be rendered
+	negate bool
+	report *Report
+	// the table which is being built
+	table *table.Table
+	// the current indentation level
+	indent int
+}
+
+// Config configures a Renderer.
+type Config struct {
+	Rounding    int32
+	Commodities bool
+	Thousands   bool
 }
 
 const indent = 2
 
 // NewRenderer creates a new report renderer.
-func NewRenderer(showCommodities bool, rounding int32, thousands bool) *Renderer {
-	return &Renderer{
-		showCommodities: showCommodities,
-		rounding:        rounding,
-		thousands:       thousands,
-	}
+func NewRenderer(config Config) *Renderer {
+	return &Renderer{config: config}
 }
 
 // Render renders a report.
@@ -53,7 +61,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	rn.report = r
 
 	var render func(s *Segment)
-	if rn.showCommodities {
+	if rn.config.Commodities {
 		render = rn.renderSegmentWithCommodities
 	} else {
 		render = rn.renderSegment
@@ -67,18 +75,57 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	for _, d := range r.Dates {
 		header.AddText(d.Format("2006-01-02"), table.Center)
 	}
-
 	// sep
 	rn.table.AddSeparatorRow()
 
+	var g1, g2 []*Segment
+
+	for _, at := range accounts.AccountTypes {
+		s, ok := rn.report.Segments[at]
+		if !ok {
+			continue
+		}
+		if at == accounts.ASSETS || at == accounts.LIABILITIES {
+			g1 = append(g1, s)
+		} else {
+			g2 = append(g2, s)
+		}
+	}
+
 	// values
-	for _, s := range r.Segments {
-		render(s)
+	if len(g1) > 0 {
+		for _, s := range g1 {
+			render(s)
+			rn.table.AddEmptyRow()
+		}
+
+		totals := map[*commodities.Commodity]amount.Vec{}
+		for _, s := range g1 {
+			s.sum(totals)
+		}
+		render(&Segment{Key: "Total", Positions: totals})
+		rn.table.AddSeparatorRow()
+
+	}
+	if len(g2) > 0 {
+		rn.negate = true
+		for _, s := range g2 {
+			render(s)
+			rn.table.AddEmptyRow()
+		}
+		totals := map[*commodities.Commodity]amount.Vec{}
+		for _, s := range g2 {
+			s.sum(totals)
+		}
+		render(&Segment{Key: "Total", Positions: totals})
+
+		rn.negate = false
 		rn.table.AddSeparatorRow()
 	}
+
 	// totals
 	render(&Segment{
-		Key:       "Total",
+		Key:       "Delta",
 		Positions: r.Positions,
 	})
 	rn.table.AddSeparatorRow()
@@ -93,6 +140,9 @@ func (rn *Renderer) renderSegment(s *Segment) {
 	total := amount.NewVec(len(rn.report.Dates))
 	for _, amounts := range s.Positions {
 		total.Add(amounts)
+	}
+	if rn.negate {
+		total.Neg()
 	}
 	// fill header cells with total values
 	for _, amount := range total.Values {
@@ -142,11 +192,11 @@ func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
 var k = decimal.RequireFromString("1000")
 
 func (rn *Renderer) format(d decimal.Decimal) string {
-	if rn.thousands {
-		d = d.DivRound(k, rn.rounding)
+	if rn.config.Thousands {
+		d = d.DivRound(k, rn.config.Rounding)
 	}
-	s := addThousandsSep(d.StringFixed(rn.rounding))
-	if rn.thousands {
+	s := addThousandsSep(d.StringFixed(rn.config.Rounding))
+	if rn.config.Thousands {
 		s = fmt.Sprintf("%sk", s)
 	}
 	return s

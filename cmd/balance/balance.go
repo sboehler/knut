@@ -17,6 +17,7 @@ package balance
 import (
 	"bufio"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -195,6 +196,8 @@ func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {
 	return result, errors
 }
 
+var defaultRegex = regexp.MustCompile("")
+
 func parseCollapse(cmd *cobra.Command, name string) ([]report.Collapse, error) {
 	collapse, err := cmd.Flags().GetStringArray(name)
 	if err != nil {
@@ -207,9 +210,11 @@ func parseCollapse(cmd *cobra.Command, name string) ([]report.Collapse, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Expected integer level, got %q (error: %v)", s[0], err)
 		}
-		regex := ""
+		regex := defaultRegex
 		if len(s) == 2 {
-			regex = s[1]
+			if regex, err = regexp.Compile(s[1]); err != nil {
+				return nil, err
+			}
 		}
 		res = append(res, report.Collapse{Level: l, Regex: regex})
 	}
@@ -295,7 +300,8 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	report.NewRenderer(opts.ShowCommodities, opts.RoundDigits, opts.Thousands).Render(r).Render(out)
+
+	report.NewRenderer(report.Config{Commodities: opts.ShowCommodities, Rounding: opts.RoundDigits, Thousands: opts.Thousands}).Render(r).Render(out)
 	return nil
 }
 

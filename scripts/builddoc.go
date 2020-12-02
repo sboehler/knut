@@ -72,14 +72,30 @@ func createConfig() (*config, error) {
 	c.Commands["HelpImport"] = run([]string{"import", "--help"})
 
 	c.Commands["BalanceIntro"] = run([]string{"balance",
-		"-v", "CHF", `-c0,(Income|Expenses|Equity)`, "--monthly", "--from",
+		"-v", "CHF", "--monthly", "--from",
 		"2020-01-01", "--to", "2020-04-01", "doc/example.knut",
+	})
+	c.Commands["FilterAccount"] = run([]string{"balance",
+		"-v", "CHF", "--monthly", "--from",
+		"2020-01-01", "--to", "2020-04-01", "--diff", "--account", "Portfolio", "doc/example.knut",
+	})
+	c.Commands["FilterCommodity"] = run([]string{"balance",
+		"-v", "CHF", "--monthly", "--from",
+		"2020-01-01", "--to", "2020-04-01", "--diff", "--commodity", "AAPL", "doc/example.knut",
+	})
+	c.Commands["Collapse"] = run([]string{"balance",
+		"-v", "CHF", "--monthly", "--from",
+		"2020-01-01", "--to", "2020-04-01", "--diff", "-c0,(Income|Expenses)", "doc/example.knut",
+	})
+	c.Commands["Collapse1"] = run([]string{"balance",
+		"-v", "CHF", "--monthly", "--from",
+		"2020-01-01", "--to", "2020-04-01", "--diff", "-c1,(Income|Expenses|Equity)", "doc/example.knut",
 	})
 	c.Commands["BalanceMonthlyCHF"] = run([]string{"balance",
 		"-v", "CHF", "--monthly", "--to", "2020-04-01", "doc/example.knut",
 	})
-	c.Commands["IncomeMonthlyCHF"] = run([]string{"balance",
-		"-v", "CHF", "--monthly", "--to", "2020-04-01", "-c0,(Assets|Liabilities)", "--diff", "doc/example.knut",
+	c.Commands["BalanceMonthlyUSD"] = run([]string{"balance",
+		"-v", "USD", "--monthly", "--to", "2020-04-01", "doc/example.knut",
 	})
 	c.Commands["BalanceBasic"] = run([]string{"balance", "doc/example.knut"})
 	return c, nil

@@ -57,6 +57,9 @@ func (t AccountType) String() string {
 	return ""
 }
 
+// AccountTypes is an array with the ordered accont types.
+var AccountTypes = []AccountType{ASSETS, LIABILITIES, EQUITY, INCOME, EXPENSES, TBD}
+
 var accountTypes = map[string]AccountType{
 	"TBD":         TBD,
 	"Assets":      ASSETS,

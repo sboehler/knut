@@ -32,7 +32,7 @@ import (
 type Report struct {
 	Dates       []time.Time
 	Options     Options
-	Segments    []*Segment
+	Segments    map[accounts.AccountType]*Segment
 	Commodities []*commodities.Commodity
 	Positions   map[*commodities.Commodity]amount.Vec
 }
@@ -46,7 +46,7 @@ type Options struct {
 // Collapse is a rule for collapsing (shortening) accounts.
 type Collapse struct {
 	Level int
-	Regex string
+	Regex *regexp.Regexp
 }
 
 // NewReport creates a new report.
@@ -61,12 +61,13 @@ func NewReport(options Options, bal []*balance.Balance) (*Report, error) {
 	// collect arrays of amounts by commodity account, across balances
 	sortedPos := mergePositions(positions)
 	// compute the segments
-	segment, err := buildSegments(options, sortedPos)
-	if err != nil {
-		return nil, err
-	}
+	segments := buildSegments(options, sortedPos)
+
 	// compute totals
-	totals := segment.sum(nil)
+	totals := map[*commodities.Commodity]amount.Vec{}
+	for _, s := range segments {
+		s.sum(totals)
+	}
 
 	// compute sorted commodities
 	commodities := make([]*commodities.Commodity, 0, len(totals))
@@ -81,7 +82,7 @@ func NewReport(options Options, bal []*balance.Balance) (*Report, error) {
 		Dates:       dates,
 		Commodities: commodities,
 		Options:     options,
-		Segments:    segment.Subsegments,
+		Segments:    segments,
 		Positions:   totals,
 	}, nil
 }
@@ -112,32 +113,32 @@ func mergePositions(positions []map[model.CommodityAccount]decimal.Decimal) []mo
 	return res
 }
 
-func buildSegments(o Options, positions []model.Position) (*Segment, error) {
-	toplevel := NewSegment("")
+func buildSegments(o Options, positions []model.Position) map[accounts.AccountType]*Segment {
+	result := make(map[accounts.AccountType]*Segment)
 	for _, position := range positions {
-		k, err := shorten(o.Collapse, position.Account())
-		if err != nil {
-			return nil, err
-		}
+		at := position.Account().Type()
+		k := shorten(o.Collapse, position.Account())
 		// Any positions with zero keys should end up in totals.
 		if len(k) > 0 {
-			toplevel.insert(k, position)
+			s, ok := result[at]
+			if !ok {
+				s = NewSegment(at.String())
+				result[at] = s
+			}
+			s.insert(k[1:], position)
 		}
 	}
-	return toplevel, nil
+	return result
 }
 
 // shorten shortens the given account according to the given rules.
-func shorten(c []Collapse, a *accounts.Account) ([]string, error) {
+func shorten(c []Collapse, a *accounts.Account) []string {
 	s := a.Split()
 	for _, c := range c {
-		matched, err := regexp.MatchString(c.Regex, a.String())
-		if err != nil {
-			return nil, err
-		}
+		matched := c.Regex.MatchString(a.String())
 		if matched && len(s) > c.Level {
 			s = s[:c.Level]
 		}
 	}
-	return s, nil
+	return s
 }

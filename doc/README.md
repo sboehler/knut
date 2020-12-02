@@ -50,7 +50,7 @@ commodities per account.
 {{ .Commands.BalanceBasic }}
 ```
 
-#### Monthly balance in CHF
+#### Monthly balance in a given commodity
 
 If prices are available, knut can valuate the balance in any of the available commodities. And the result is guaranteed to balance:
 
@@ -58,12 +58,37 @@ If prices are available, knut can valuate the balance in any of the available co
 {{ .Commands.BalanceMonthlyCHF }}
 ```
 
-#### Monthly income statement in CHF
-
-TODO: option to reverse signs
+It balances in any currency:
 
 ```text
-{{ .Commands.IncomeMonthlyCHF}}
+{{ .Commands.BalanceMonthlyUSD }}
+```
+
+
+#### Filter transactions by account or commodity
+
+Use `--diff` to look into period differences. Use `--account` to filter for transactions affecting a single account, or `--commodity` to filter for transactions which affect a commodity. Both `--account` and `--commodity` take regular expressions, to select multiple matches. 
+
+```text
+{{ .Commands.FilterAccount}}
+```
+
+```text
+{{ .Commands.FilterCommodity}}
+```
+
+#### Collapse accounts
+
+Use `-c` to collapse accounts matching a certain regex. This can be used to completely hide an account (`-c0` - its positions will show up in the delta):
+
+```text
+{{ .Commands.Collapse}}
+```
+
+Alternatively, with a number > 0, subaccounts will be aggregated:
+
+```text
+{{ .Commands.Collapse1}}
 ```
 
 ### Fetch quotes

@@ -7,7 +7,7 @@
 knut is a plain-text, double-entry accounting tool for the command line. It produces various reports based on simple accounting directives in a [text file](#file-format). knut is written in Go, and its primary use cases are personal finance and investing.
 
 ```text
-$ knut balance -v CHF --monthly --from 2020-01-01 --to 2020-04-01 doc/example.knut
+$ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 doc/example.knut
 +---------------+------------+------------+------------+------------+------------+
 |    Account    | 2019-12-31 | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
 +---------------+------------+------------+------------+------------+------------+
@@ -147,7 +147,7 @@ $ knut balance doc/example.knut
 If prices are available, knut can valuate the balance in any of the available commodities. And the result is guaranteed to balance:
 
 ```text
-$ knut balance -v CHF --monthly --to 2020-04-01 doc/example.knut
+$ knut balance -v CHF --months --to 2020-04-01 doc/example.knut
 +---------------+------------+------------+------------+------------+------------+------------+
 |    Account    | 2019-11-30 | 2019-12-31 | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
 +---------------+------------+------------+------------+------------+------------+------------+
@@ -180,7 +180,7 @@ $ knut balance -v CHF --monthly --to 2020-04-01 doc/example.knut
 It balances in any currency:
 
 ```text
-$ knut balance -v USD --monthly --to 2020-04-01 doc/example.knut
+$ knut balance -v USD --months --to 2020-04-01 doc/example.knut
 +---------------+------------+------------+------------+------------+------------+------------+
 |    Account    | 2019-11-30 | 2019-12-31 | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
 +---------------+------------+------------+------------+------------+------------+------------+
@@ -215,7 +215,7 @@ $ knut balance -v USD --monthly --to 2020-04-01 doc/example.knut
 Use `--diff` to look into period differences. Use `--account` to filter for transactions affecting a single account, or `--commodity` to filter for transactions which affect a commodity. Both `--account` and `--commodity` take regular expressions, to select multiple matches.
 
 ```text
-$ knut balance -v CHF --monthly --from 2020-01-01 --to 2020-04-01 --diff --account Portfolio doc/example.knut
+$ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff --account Portfolio doc/example.knut
 +---------------+------------+------------+------------+------------+
 |    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
 +---------------+------------+------------+------------+------------+
@@ -241,7 +241,7 @@ $ knut balance -v CHF --monthly --from 2020-01-01 --to 2020-04-01 --diff --accou
 ```
 
 ```text
-$ knut balance -v CHF --monthly --from 2020-01-01 --to 2020-04-01 --diff --commodity AAPL doc/example.knut
+$ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff --commodity AAPL doc/example.knut
 +-------------+------------+------------+------------+------------+
 |   Account   | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
 +-------------+------------+------------+------------+------------+
@@ -270,7 +270,7 @@ $ knut balance -v CHF --monthly --from 2020-01-01 --to 2020-04-01 --diff --commo
 Use `-c` to collapse accounts matching a certain regex. This can be used to completely hide an account (`-c0` - its positions will show up in the delta):
 
 ```text
-$ knut balance -v CHF --monthly --from 2020-01-01 --to 2020-04-01 --diff -c0,(Income|Expenses) doc/example.knut
+$ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff -c0,(Income|Expenses) doc/example.knut
 +---------------+------------+------------+------------+------------+
 |    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
 +---------------+------------+------------+------------+------------+
@@ -295,7 +295,7 @@ $ knut balance -v CHF --monthly --from 2020-01-01 --to 2020-04-01 --diff -c0,(In
 Alternatively, with a number > 0, subaccounts will be aggregated:
 
 ```text
-$ knut balance -v CHF --monthly --from 2020-01-01 --to 2020-04-01 --diff -c1,(Income|Expenses|Equity) doc/example.knut
+$ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff -c1,(Income|Expenses|Equity) doc/example.knut
 +---------------+------------+------------+------------+------------+
 |    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
 +---------------+------------+------------+------------+------------+

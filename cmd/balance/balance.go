@@ -47,14 +47,15 @@ func CreateCmd() *cobra.Command {
 		RunE: run,
 	}
 	c.Flags().StringP("from", "", "", "from date")
+	c.Flags().StringP("to", "", "", "to date")
+	c.Flags().IntP("last", "l", 0, "last n periods")
 	c.Flags().BoolP("diff", "d", false, "diff")
 	c.Flags().BoolP("show-commodities", "s", false, "Show commodities on their own rows")
-	c.Flags().StringP("to", "", "", "to date")
-	c.Flags().BoolP("daily", "", false, "daily")
+	c.Flags().BoolP("days", "", false, "days")
 	c.Flags().BoolP("weekly", "", false, "weekly")
-	c.Flags().BoolP("monthly", "", false, "monthly")
-	c.Flags().BoolP("quarterly", "", false, "quarterly")
-	c.Flags().BoolP("yearly", "", false, "yearly")
+	c.Flags().BoolP("months", "", false, "months")
+	c.Flags().BoolP("quarters", "", false, "quarters")
+	c.Flags().BoolP("years", "", false, "years")
 	c.Flags().StringArrayP("val", "v", []string{}, "valuate in the given commodity")
 	c.Flags().StringArrayP("collapse", "c", []string{}, "<regex>,<level>")
 	c.Flags().StringP("account", "", "", "filter accounts with a regex")
@@ -86,6 +87,10 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 		return nil, err
 	}
 	to, err := parseDate(cmd, "to")
+	if err != nil {
+		return nil, err
+	}
+	last, err := cmd.Flags().GetInt("last")
 	if err != nil {
 		return nil, err
 	}
@@ -134,6 +139,7 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 		File:              args[0],
 		From:              from,
 		To:                to,
+		Last:              last,
 		Valuations:        valuations,
 		Diff:              diff,
 		ShowCommodities:   showCommodities || len(valuations) == 0,
@@ -173,11 +179,11 @@ func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {
 		name   string
 		period date.Period
 	}{
-		{"daily", date.Daily},
+		{"days", date.Daily},
 		{"weekly", date.Weekly},
-		{"monthly", date.Monthly},
-		{"quarterly", date.Quarterly},
-		{"yearly", date.Yearly}}
+		{"months", date.Monthly},
+		{"quarters", date.Quarterly},
+		{"years", date.Yearly}}
 	var (
 		errors error
 		result *date.Period
@@ -225,6 +231,7 @@ type options struct {
 	File              string
 	From              *time.Time
 	To                *time.Time
+	Last              int
 	ShowCommodities   bool
 	Diff              bool
 	Period            *date.Period
@@ -245,24 +252,25 @@ func createLedgerOptions(o *options) ledger.Options {
 }
 
 func createDateSeries(o *options, l ledger.Ledger) []time.Time {
-	if o.From == nil {
-		if d, ok := l.MinDate(); ok {
-			o.From = &d
-		} else {
-			return nil
-		}
+	var from, to time.Time
+	if o.From != nil {
+		from = *o.From
+	} else if d, ok := l.MinDate(); ok {
+		from = d
+	} else {
+		return nil
 	}
-	if o.To == nil {
-		if d, ok := l.MaxDate(); ok {
-			o.To = &d
-		} else {
-			return nil
-		}
+	if o.To != nil {
+		to = *o.To
+	} else if d, ok := l.MaxDate(); ok {
+		to = d
+	} else {
+		return nil
 	}
 	if o.Period != nil {
-		return date.Series(*o.From, *o.To, *o.Period)
+		return date.Series(from, to, *o.Period)
 	}
-	return []time.Time{*o.From, *o.To}
+	return []time.Time{from, to}
 }
 
 func createReportOptions(o *options) report.Options {
@@ -293,6 +301,9 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 	}
 	if opts.Diff {
 		b = balance.Diffs(b)
+	}
+	if opts.Last > 0 && opts.Last < len(b) {
+		b = b[len(b)-opts.Last:]
 	}
 	r, err := report.NewReport(createReportOptions(opts), b)
 	if err != nil {

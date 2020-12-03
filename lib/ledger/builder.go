@@ -25,27 +25,37 @@ import (
 
 // Builder maps dates to steps
 type Builder struct {
-	options Options
-	steps   map[time.Time]*Step
+	accountFilter, commodityFilter *regexp.Regexp
+	steps                          map[time.Time]*Step
 }
 
 // Options represents configuration options for creating a ledger.
 type Options struct {
-	AccountsFilter    string
-	CommoditiesFilter string
+	AccountsFilter, CommoditiesFilter *regexp.Regexp
 }
 
 // NewBuilder creates a new builder.
 func NewBuilder(options Options) *Builder {
+	var af, cf *regexp.Regexp
+	if options.AccountsFilter != nil {
+		af = options.AccountsFilter
+	} else {
+		af = regexp.MustCompile("")
+	}
+	if options.CommoditiesFilter != nil {
+		cf = options.CommoditiesFilter
+	} else {
+		cf = regexp.MustCompile("")
+	}
 	return &Builder{
-		options: options,
-		steps:   make(map[time.Time]*Step),
+		accountFilter:   af,
+		commodityFilter: cf,
+		steps:           make(map[time.Time]*Step),
 	}
 }
 
 // Process creates a new ledger from the results channel.
 func (b *Builder) Process(results <-chan interface{}) error {
-	var err error
 	for res := range results {
 		switch t := res.(type) {
 		case error:
@@ -55,18 +65,15 @@ func (b *Builder) Process(results <-chan interface{}) error {
 		case *model.Price:
 			b.AddPrice(t)
 		case *model.Transaction:
-			err = b.AddTransaction(t)
+			b.AddTransaction(t)
 		case *model.Assertion:
-			err = b.AddAssertion(t)
+			b.AddAssertion(t)
 		case *model.Value:
-			err = b.AddValue(t)
+			b.AddValue(t)
 		case *model.Close:
 			b.AddClosing(t)
 		default:
-			err = fmt.Errorf("Unknown: %v", t)
-		}
-		if err != nil {
-			return err
+			return fmt.Errorf("Unknown: %v", t)
 		}
 	}
 	return nil
@@ -95,28 +102,16 @@ func (b *Builder) getOrCreate(d time.Time) *Step {
 }
 
 // AddTransaction adds a transaction directive.
-func (b *Builder) AddTransaction(t *model.Transaction) error {
-	var (
-		matchedCredit, matchedDebit, matchedCommodity bool
-		err                                           error
-	)
+func (b *Builder) AddTransaction(t *model.Transaction) {
 	for _, p := range t.Postings {
-		if matchedCredit, err = regexp.MatchString(b.options.AccountsFilter, p.Credit.String()); err != nil {
-			return err
-		}
-		if matchedDebit, err = regexp.MatchString(b.options.AccountsFilter, p.Debit.String()); err != nil {
-			return err
-		}
-		if matchedCommodity, err = regexp.MatchString(b.options.CommoditiesFilter, p.Commodity.String()); err != nil {
-			return err
-		}
-		if (matchedCredit || matchedDebit) && matchedCommodity {
+		if (b.accountFilter.MatchString(p.Credit.String()) ||
+			b.accountFilter.MatchString(p.Debit.String())) &&
+			b.commodityFilter.MatchString(p.Commodity.String()) {
 			s := b.getOrCreate(t.Date())
 			s.Transactions = append(s.Transactions, t)
-			break
+			return
 		}
 	}
-	return nil
 }
 
 // AddOpening adds an open directive.
@@ -138,31 +133,25 @@ func (b *Builder) AddPrice(p *model.Price) {
 }
 
 // AddAssertion adds an assertion directive.
-func (b *Builder) AddAssertion(a *model.Assertion) error {
-	matched, err := regexp.MatchString(b.options.AccountsFilter, a.Account.String())
-	if !matched || err != nil {
-		return err
+func (b *Builder) AddAssertion(a *model.Assertion) {
+	if !b.accountFilter.MatchString(a.Account.String()) {
+		return
 	}
-	matched, err = regexp.MatchString(b.options.CommoditiesFilter, a.Commodity.String())
-	if !matched || err != nil {
-		return err
+	if !b.commodityFilter.MatchString(a.Commodity.String()) {
+		return
 	}
 	s := b.getOrCreate(a.Date())
 	s.Assertions = append(s.Assertions, a)
-	return nil
 }
 
 // AddValue adds an value directive.
-func (b *Builder) AddValue(a *model.Value) error {
-	matched, err := regexp.MatchString(b.options.AccountsFilter, a.Account.String())
-	if !matched || err != nil {
-		return err
+func (b *Builder) AddValue(a *model.Value) {
+	if !b.accountFilter.MatchString(a.Account.String()) {
+		return
 	}
-	matched, err = regexp.MatchString(b.options.CommoditiesFilter, a.Commodity.String())
-	if !matched || err != nil {
-		return err
+	if !b.commodityFilter.MatchString(a.Commodity.String()) {
+		return
 	}
 	s := b.getOrCreate(a.Date())
 	s.Values = append(s.Values, a)
-	return nil
 }

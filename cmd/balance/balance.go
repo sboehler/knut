@@ -244,11 +244,19 @@ type options struct {
 	Thousands         bool
 }
 
-func createLedgerOptions(o *options) ledger.Options {
-	return ledger.Options{
-		AccountsFilter:    o.FilterAccounts,
-		CommoditiesFilter: o.FilterCommodities,
+func createLedgerOptions(o *options) (ledger.Options, error) {
+	af, err := regexp.Compile(o.FilterAccounts)
+	if err != nil {
+		return ledger.Options{}, err
 	}
+	cf, err := regexp.Compile(o.FilterCommodities)
+	if err != nil {
+		return ledger.Options{}, err
+	}
+	return ledger.Options{
+		AccountsFilter:    af,
+		CommoditiesFilter: cf,
+	}, nil
 }
 
 func createDateSeries(o *options, l ledger.Ledger) []time.Time {
@@ -290,7 +298,11 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 	if err != nil {
 		return err
 	}
-	lb := ledger.NewBuilder(createLedgerOptions(opts))
+	lo, err := createLedgerOptions(opts)
+	if err != nil {
+		return err
+	}
+	lb := ledger.NewBuilder(lo)
 	if err := lb.Process(ch); err != nil {
 		return err
 	}

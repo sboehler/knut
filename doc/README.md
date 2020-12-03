@@ -17,8 +17,9 @@ knut is a plain-text, double-entry accounting tool for the command line. It prod
   - [Commands](#commands)
     - [Print a balance](#print-a-balance)
       - [Basic balance](#basic-balance)
-      - [Monthly balance in CHF](#monthly-balance-in-chf)
-      - [Monthly income statement in CHF](#monthly-income-statement-in-chf)
+      - [Monthly balance in a given commodity](#monthly-balance-in-a-given-commodity)
+      - [Filter transactions by account or commodity](#filter-transactions-by-account-or-commodity)
+      - [Collapse accounts](#collapse-accounts)
     - [Fetch quotes](#fetch-quotes)
     - [Infer accounts](#infer-accounts)
     - [Format the journal](#format-the-journal)
@@ -64,10 +65,9 @@ It balances in any currency:
 {{ .Commands.BalanceMonthlyUSD }}
 ```
 
-
 #### Filter transactions by account or commodity
 
-Use `--diff` to look into period differences. Use `--account` to filter for transactions affecting a single account, or `--commodity` to filter for transactions which affect a commodity. Both `--account` and `--commodity` take regular expressions, to select multiple matches. 
+Use `--diff` to look into period differences. Use `--account` to filter for transactions affecting a single account, or `--commodity` to filter for transactions which affect a commodity. Both `--account` and `--commodity` take regular expressions, to select multiple matches.
 
 ```text
 {{ .Commands.FilterAccount}}

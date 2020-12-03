@@ -44,8 +44,9 @@ $ knut balance -v CHF --monthly --from 2020-01-01 --to 2020-04-01 doc/example.kn
   - [Commands](#commands)
     - [Print a balance](#print-a-balance)
       - [Basic balance](#basic-balance)
-      - [Monthly balance in CHF](#monthly-balance-in-chf)
-      - [Monthly income statement in CHF](#monthly-income-statement-in-chf)
+      - [Monthly balance in a given commodity](#monthly-balance-in-a-given-commodity)
+      - [Filter transactions by account or commodity](#filter-transactions-by-account-or-commodity)
+      - [Collapse accounts](#collapse-accounts)
     - [Fetch quotes](#fetch-quotes)
     - [Infer accounts](#infer-accounts)
     - [Format the journal](#format-the-journal)
@@ -209,10 +210,9 @@ $ knut balance -v USD --monthly --to 2020-04-01 doc/example.knut
 
 ```
 
-
 #### Filter transactions by account or commodity
 
-Use `--diff` to look into period differences. Use `--account` to filter for transactions affecting a single account, or `--commodity` to filter for transactions which affect a commodity. Both `--account` and `--commodity` take regular expressions, to select multiple matches. 
+Use `--diff` to look into period differences. Use `--account` to filter for transactions affecting a single account, or `--commodity` to filter for transactions which affect a commodity. Both `--account` and `--commodity` take regular expressions, to select multiple matches.
 
 ```text
 $ knut balance -v CHF --monthly --from 2020-01-01 --to 2020-04-01 --diff --account Portfolio doc/example.knut
@@ -336,7 +336,7 @@ knut price sources are configured in yaml format:
 
 ```
 
-Once configured, prices can simply be updated:
+Once configured, prices can be updated with one command:
 
 ```text
 knut fetch doc/prices.yaml

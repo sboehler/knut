@@ -141,9 +141,7 @@ func (rn *Renderer) renderSegment(s *Segment) {
 	for _, amounts := range s.Positions {
 		total.Add(amounts)
 	}
-	if rn.negate {
-		total.Neg()
-	}
+
 	// fill header cells with total values
 	for _, amount := range total.Values {
 		if amount.IsZero() {
@@ -192,6 +190,9 @@ func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
 var k = decimal.RequireFromString("1000")
 
 func (rn *Renderer) format(d decimal.Decimal) string {
+	if rn.negate {
+		d = d.Neg()
+	}
 	if rn.config.Thousands {
 		d = d.DivRound(k, rn.config.Rounding)
 	}

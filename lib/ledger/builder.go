@@ -103,14 +103,18 @@ func (b *Builder) getOrCreate(d time.Time) *Step {
 
 // AddTransaction adds a transaction directive.
 func (b *Builder) AddTransaction(t *model.Transaction) {
+	var filtered = make([]*model.Posting, 0, len(t.Postings))
 	for _, p := range t.Postings {
 		if (b.accountFilter.MatchString(p.Credit.String()) ||
 			b.accountFilter.MatchString(p.Debit.String())) &&
 			b.commodityFilter.MatchString(p.Commodity.String()) {
-			s := b.getOrCreate(t.Date())
-			s.Transactions = append(s.Transactions, t)
-			return
+			filtered = append(filtered, p)
 		}
+	}
+	if len(filtered) > 0 {
+		t.Postings = filtered
+		s := b.getOrCreate(t.Date())
+		s.Transactions = append(s.Transactions, t)
 	}
 }
 

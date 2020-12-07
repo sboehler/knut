@@ -15,8 +15,7 @@
 package table
 
 import (
-	"io"
-	"unicode/utf8"
+	"github.com/shopspring/decimal"
 )
 
 // CellType is the type of a table cell.
@@ -67,62 +66,6 @@ func (t *Table) AddEmptyRow() {
 	}
 }
 
-// Render renders this table to a string.
-func (t *Table) Render(w io.StringWriter) {
-	widths := make([]int, t.Width())
-	for _, r := range t.rows {
-		for i, c := range r.cells {
-			if widths[i] < c.length() {
-				widths[i] = c.length()
-			}
-		}
-	}
-	groups := map[int]int{}
-	for i, w := range widths {
-		if groups[t.columns[i]] < w {
-			groups[t.columns[i]] = w
-		}
-	}
-	for i, w := range widths {
-		if w < groups[i] {
-			widths[i] = groups[i]
-		}
-	}
-	for _, r := range t.rows {
-		if r.cells[0].isSep() {
-			w.WriteString("+-")
-		} else {
-			w.WriteString("| ")
-		}
-
-		for i, c := range r.cells {
-			c.render(widths[i], w)
-			if i < len(r.cells)-1 {
-				w.WriteString(createSep(c, r.cells[i+1]))
-			}
-		}
-		if r.cells[len(r.cells)-1].isSep() {
-			w.WriteString("-+\n")
-		} else {
-			w.WriteString(" |\n")
-		}
-	}
-	w.WriteString("\n")
-}
-
-func createSep(c1, c2 cell) string {
-	switch {
-	case c1.isSep() && c2.isSep():
-		return "-+-"
-	case c1.isSep():
-		return "-+ "
-	case c2.isSep():
-		return " +-"
-	default:
-		return " | "
-	}
-}
-
 // Row is a table row.
 type Row struct {
 	cells []cell
@@ -141,21 +84,30 @@ func (r *Row) AddEmpty() *Row {
 // AddText adds a text cell.
 func (r *Row) AddText(content string, align Alignment) *Row {
 	r.addCell(textCell{
-		content,
-		align,
+		Indent:  0,
+		Content: content,
+		Align:   align,
 	})
+	return r
+}
+
+// AddNumber adds a number cell.
+func (r *Row) AddNumber(n decimal.Decimal) *Row {
+	r.addCell(numberCell{n})
 	return r
 }
 
 // AddIndented adds an indented cell.
 func (r *Row) AddIndented(content string, indent int) *Row {
-	r.addCell(indentedCell{content, indent})
+	r.addCell(textCell{
+		Content: content,
+		Indent:  indent,
+		Align:   Left,
+	})
 	return r
 }
 
 type cell interface {
-	length() int
-	render(int, io.StringWriter)
 	isSep() bool
 }
 
@@ -171,92 +123,35 @@ const (
 	Center
 )
 
-// indentedCell is a cell with an indent.
-type indentedCell struct {
-	Content string
-	Indent  int
-}
-
-func (t indentedCell) length() int {
-	return t.Indent + utf8.RuneCountInString(t.Content)
-}
-
-func (t indentedCell) render(l int, b io.StringWriter) {
-	for i := 0; i < t.Indent; i++ {
-		b.WriteString(" ")
-	}
-	b.WriteString(t.Content)
-	for i := 0; i < l-utf8.RuneCountInString(t.Content)-t.Indent; i++ {
-		b.WriteString(" ")
-	}
-}
-
-func (t indentedCell) isSep() bool {
-	return false
-}
-
 // textCell is a cell containing text.
 type textCell struct {
 	Content string
 	Align   Alignment
-}
-
-func (t textCell) length() int {
-	return utf8.RuneCountInString(t.Content)
-}
-
-func (t textCell) render(l int, s io.StringWriter) {
-	var before int
-	switch t.Align {
-	case Left:
-		before = 0
-	case Right:
-		before = l - utf8.RuneCountInString(t.Content)
-	case Center:
-		before = (l - utf8.RuneCountInString(t.Content)) / 2
-	}
-
-	for i := 0; i < before; i++ {
-		s.WriteString(" ")
-	}
-	s.WriteString(t.Content)
-	for i := 0; i < l-before-utf8.RuneCountInString(t.Content); i++ {
-		s.WriteString(" ")
-	}
+	Indent  int
 }
 
 func (t textCell) isSep() bool {
 	return false
 }
 
+// textCell is a cell containing text.
+type numberCell struct {
+	n decimal.Decimal
+}
+
+func (t numberCell) isSep() bool {
+	return false
+}
+
 // SeparatorCell is a cell containing a separator.
 type SeparatorCell struct{}
 
-func (s SeparatorCell) length() int {
-	return 0
-}
-
-func (SeparatorCell) render(l int, s io.StringWriter) {
-	for i := 0; i < l; i++ {
-		s.WriteString("-")
-	}
-}
 func (SeparatorCell) isSep() bool {
 	return true
 }
 
 // emptyCell is an empty cell.
 type emptyCell struct{}
-
-func (emptyCell) length() int {
-	return 0
-}
-
-func (emptyCell) render(l int, s io.StringWriter) {
-	for i := 0; i < l; i++ {
-		s.WriteString(" ")
-	}
-}
 
 func (emptyCell) isSep() bool {
 	return false

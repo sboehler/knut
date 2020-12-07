@@ -28,6 +28,7 @@ import (
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/report"
+	"github.com/sboehler/knut/lib/table"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
@@ -63,6 +64,7 @@ func CreateCmd() *cobra.Command {
 	c.Flags().BoolP("close", "", false, "close income and expenses accounts after every period")
 	c.Flags().Int32P("digits", "", 0, "round to number of digits")
 	c.Flags().BoolP("thousands", "k", false, "show numbers in units of 1000")
+	c.Flags().BoolP("color", "", false, "print output in color")
 	return c
 }
 
@@ -134,6 +136,10 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 	if err != nil {
 		return nil, err
 	}
+	color, err := cmd.Flags().GetBool("color")
+	if err != nil {
+		return nil, err
+	}
 
 	return &options{
 		File:              args[0],
@@ -150,6 +156,7 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 		Close:             close,
 		RoundDigits:       digits,
 		Thousands:         thousands,
+		Color:             color,
 	}, nil
 }
 
@@ -242,6 +249,7 @@ type options struct {
 	Close             bool
 	RoundDigits       int32
 	Thousands         bool
+	Color             bool
 }
 
 func createLedgerOptions(o *options) (ledger.Options, error) {
@@ -324,8 +332,9 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 
-	report.NewRenderer(report.Config{Commodities: opts.ShowCommodities, Rounding: opts.RoundDigits, Thousands: opts.Thousands}).Render(r).Render(out)
-	return nil
+	tb := report.NewRenderer(report.Config{Commodities: opts.ShowCommodities}).Render(r)
+
+	return table.NewConsoleRenderer(tb, opts.Color, opts.Thousands, opts.RoundDigits).Render(out)
 }
 
 // Options describes options for processing a ledger.

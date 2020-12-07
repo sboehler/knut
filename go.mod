@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/cheggaaa/pb/v3 v3.0.5
-	github.com/fatih/color v1.10.0 // indirect
+	github.com/fatih/color v1.10.0
 	github.com/google/go-cmp v0.5.2
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.0

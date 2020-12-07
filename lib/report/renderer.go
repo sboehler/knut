@@ -15,15 +15,10 @@
 package report
 
 import (
-	"fmt"
-	"strings"
-	"unicode"
-
 	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/table"
-	"github.com/shopspring/decimal"
 )
 
 // Renderer renders a report.
@@ -41,9 +36,7 @@ type Renderer struct {
 
 // Config configures a Renderer.
 type Config struct {
-	Rounding    int32
 	Commodities bool
-	Thousands   bool
 }
 
 const indent = 2
@@ -147,7 +140,10 @@ func (rn *Renderer) renderSegment(s *Segment) {
 		if amount.IsZero() {
 			header.AddEmpty()
 		} else {
-			header.AddText(rn.format(amount), table.Right)
+			if rn.negate {
+				amount = amount.Neg()
+			}
+			header.AddNumber(amount)
 		}
 	}
 
@@ -174,7 +170,10 @@ func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
 				if amount.IsZero() {
 					row.AddEmpty()
 				} else {
-					row.AddText(rn.format(amount), table.Right)
+					if rn.negate {
+						amount = amount.Neg()
+					}
+					row.AddNumber(amount)
 				}
 			}
 		}
@@ -185,43 +184,4 @@ func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
 		rn.renderSegmentWithCommodities(ss)
 	}
 	rn.indent -= indent
-}
-
-var k = decimal.RequireFromString("1000")
-
-func (rn *Renderer) format(d decimal.Decimal) string {
-	if rn.negate {
-		d = d.Neg()
-	}
-	if rn.config.Thousands {
-		d = d.DivRound(k, rn.config.Rounding)
-	}
-	s := addThousandsSep(d.StringFixed(rn.config.Rounding))
-	if rn.config.Thousands {
-		s = fmt.Sprintf("%sk", s)
-	}
-	return s
-}
-
-func addThousandsSep(d string) string {
-	index := strings.Index(d, ".")
-	if index < 0 {
-		index = len(d)
-	}
-	b := strings.Builder{}
-	ok := false
-	for i, ch := range d {
-		if i >= index && ch != '-' {
-			b.WriteString(d[i:])
-			break
-		}
-		if (index-i)%3 == 0 && ok {
-			b.WriteRune(',')
-		}
-		b.WriteRune(ch)
-		if unicode.IsDigit(ch) {
-			ok = true
-		}
-	}
-	return b.String()
 }

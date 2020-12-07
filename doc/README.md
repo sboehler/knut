@@ -1,4 +1,4 @@
-# knut - a plain text accounting tool
+# knut ‒ a plain text accounting tool
 
 ![Go](https://github.com/sboehler/knut/workflows/Go/badge.svg)
 
@@ -12,7 +12,7 @@ knut is a plain-text, double-entry accounting tool for the command line. It prod
 
 ## Table of contents
 
-- [knut - a plain text accounting tool](#knut---a-plain-text-accounting-tool)
+- [knut ‒ a plain text accounting tool](#knut--a-plain-text-accounting-tool)
   - [Table of contents](#table-of-contents)
   - [Commands](#commands)
     - [Print a balance](#print-a-balance)

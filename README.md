@@ -1,4 +1,4 @@
-# knut - a plain text accounting tool
+# knut ‒ a plain text accounting tool
 
 ![Go](https://github.com/sboehler/knut/workflows/Go/badge.svg)
 
@@ -39,7 +39,7 @@ $ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 doc/example.knu
 
 ## Table of contents
 
-- [knut - a plain text accounting tool](#knut---a-plain-text-accounting-tool)
+- [knut ‒ a plain text accounting tool](#knut--a-plain-text-accounting-tool)
   - [Table of contents](#table-of-contents)
   - [Commands](#commands)
     - [Print a balance](#print-a-balance)

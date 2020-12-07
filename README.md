@@ -409,44 +409,44 @@ include "AAPL.prices"
 * Opening Balances
 
 2019-12-31 "Opening balance"
-Equity:Equity Assets:BankAccount 10000 CHF
+Equity:Equity           Assets:BankAccount           10000 CHF
 
 * 2020-01
 
 2020-01-25 "Salary January 2020"
-Income:Salary Assets:BankAccount 5000 CHF
+Income:Salary           Assets:BankAccount            5000 CHF
 
 2020-01-02 "Rent January"
-Assets:BankAccount Expenses:Rent 2000 CHF
+Assets:BankAccount      Expenses:Rent                 2000 CHF
 
 2020-01-15 "Groceries"
-Assets:BankAccount Expenses:Groceries 200 CHF
+Assets:BankAccount      Expenses:Groceries             200 CHF
 
 2020-01-05 "Transfer to portfolio"
-Assets:BankAccount Assets:Portfolio 1000 CHF
+Assets:BankAccount      Assets:Portfolio              1000 CHF
 
 2020-01-06 "Currency exchange"
-Equity:Equity Assets:Portfolio 1001 USD
-Assets:Portfolio Equity:Equity 969 CHF
+Equity:Equity           Assets:Portfolio              1001 USD
+Assets:Portfolio        Equity:Equity                  969 CHF
 
 2020-01-06 "Buy 3 AAPL shares"
-Equity:Equity Assets:Portfolio 12 AAPL
-Assets:Portfolio Equity:Equity 900 USD
-Assets:Portfolio Expenses:Fees 4 USD
+Equity:Equity           Assets:Portfolio                12 AAPL
+Assets:Portfolio        Equity:Equity                  900 USD
+Assets:Portfolio        Expenses:Fees                    4 USD
 
 * 2020-02
 
 2020-02-25 "Salary January 2020"
-Income:Salary Assets:BankAccount 5000 CHF
+Income:Salary           Assets:BankAccount            5000 CHF
 
 2020-02-02 "Rent January"
-Assets:BankAccount Expenses:Rent 2000 CHF
+Assets:BankAccount      Expenses:Rent                 2000 CHF
 
 2020-02-05 "Groceries"
-Assets:BankAccount Expenses:Groceries 250 CHF
+Assets:BankAccount      Expenses:Groceries             250 CHF
 
 2020-02-25 "Groceries"
-Assets:BankAccount Expenses:Groceries 423 CHF
+Assets:BankAccount      Expenses:Groceries             423 CHF
 
 ```
 

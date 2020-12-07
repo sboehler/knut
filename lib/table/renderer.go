@@ -13,24 +13,29 @@ import (
 
 // Renderer renders a table to text.
 type Renderer struct {
-	Table     *Table
-	Color     bool
-	Thousands bool
-	Round     int32
+	Table      *Table
+	Color      bool
+	Thousands  bool
+	Round      int32
+	green, red *color.Color
 }
 
 // NewConsoleRenderer returns a new console renderer.
-func NewConsoleRenderer(t *Table, color bool, thousands bool, round int32) *Renderer {
+func NewConsoleRenderer(t *Table, enableColor bool, thousands bool, round int32) *Renderer {
 	return &Renderer{
 		Table:     t,
-		Color:     color,
+		Color:     enableColor,
 		Thousands: thousands,
 		Round:     round,
+		green:     color.New(color.FgGreen),
+		red:       color.New(color.FgRed),
 	}
 }
 
 // Render renders this table to a string.
 func (r *Renderer) Render(w io.Writer) error {
+	color.NoColor = !r.Color
+
 	widths := make([]int, r.Table.Width())
 	for _, row := range r.Table.rows {
 		for i, c := range row.cells {
@@ -116,15 +121,16 @@ func (r *Renderer) renderCell(c cell, l int, w io.Writer) error {
 		if err := writeSpace(w, before); err != nil {
 			return err
 		}
-		var spr = fmt.Fprint
-		if r.Color {
-			if t.n.LessThan(decimal.Zero) {
-				spr = color.New(color.FgRed).Fprint
-			} else {
-				spr = color.New(color.FgGreen).Fprint
-			}
+		var err error
+		switch {
+		case t.n.LessThan(decimal.Zero):
+			_, err = r.red.Fprint(w, s)
+		case t.n.Equal(decimal.Zero):
+			_, err = fmt.Fprint(w, s)
+		case t.n.GreaterThan(decimal.Zero):
+			_, err = r.green.Fprint(w, s)
 		}
-		if _, err := spr(w, s); err != nil {
+		if err != nil {
 			return err
 		}
 		return writeSpace(w, l-before-utf8.RuneCountInString(s))

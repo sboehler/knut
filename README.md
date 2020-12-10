@@ -51,6 +51,7 @@ $ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 doc/example.knu
     - [Infer accounts](#infer-accounts)
     - [Format the journal](#format-the-journal)
     - [Import transactions](#import-transactions)
+    - [Transcode to beancount](#transcode-to-beancount)
   - [File format](#file-format)
     - [Open and close](#open-and-close)
     - [Transactions](#transactions)
@@ -75,6 +76,7 @@ Available Commands:
   help        Help about any command
   import      Import financial account statements
   infer       Auto-assign accounts in a journal
+  transcode   transcode to beancount
 
 Flags:
   -h, --help   help for knut
@@ -381,6 +383,16 @@ Flags:
 Use "knut import [command] --help" for more information about a command.
 
 ```
+
+### Transcode to beancount
+
+While knut has advanced terminal-based visualization options, it lacks any web-based visualization tools. To allow the usage of the amazing tooling around the (beancount)[http://furius.ca/beancount/] ecosystem, such as (fava)[https://beancount.github.io/fava/], knut has a command to convert an entire journal into beancount's file format:
+
+```text
+knut transcode -c CHF doc/example.knut
+```
+
+This command should also allow beancount users to use knut's built-in importers.
 
 ## File format
 

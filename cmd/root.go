@@ -24,6 +24,7 @@ import (
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/cmd/infer"
 	"github.com/sboehler/knut/cmd/prices"
+	"github.com/sboehler/knut/cmd/transcode"
 
 	"github.com/spf13/cobra"
 )
@@ -40,6 +41,7 @@ func CreateCmd() *cobra.Command {
 	c.AddCommand(prices.CreateCmd())
 	c.AddCommand(format.CreateCmd())
 	c.AddCommand(infer.CreateCmd())
+	c.AddCommand(transcode.CreateCmd())
 	return c
 }
 

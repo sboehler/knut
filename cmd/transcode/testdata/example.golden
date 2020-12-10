@@ -1,0 +1,388 @@
+option "operating_currency" "CHF"
+
+2019-12-31 open Equity:Equity
+
+2019-12-31 open Assets:BankAccount
+
+2019-12-31 open Assets:Portfolio
+
+2019-12-31 open Expenses:Groceries
+
+2019-12-31 open Expenses:Fees
+
+2019-12-31 open Expenses:Rent
+
+2019-12-31 open Income:Salary
+
+2019-12-31 open Income:Dividends
+
+2019-12-31 open Equity:Valuation
+
+2019-12-31 open Equity:RetainedEarnings
+
+2019-12-31 * "Opening balance"
+  Equity:Equity -10000 CHF
+  Assets:BankAccount 10000 CHF
+
+2020-01-02 * "Rent January"
+  Assets:BankAccount -2000 CHF
+  Expenses:Rent 2000 CHF
+
+2020-01-05 * "Transfer to portfolio"
+  Assets:BankAccount -1000 CHF
+  Assets:Portfolio 1000 CHF
+
+2020-01-06 * "Currency exchange"
+  Equity:Equity -972.4514800000001 CHF
+  Assets:Portfolio 972.4514800000001 CHF
+  Assets:Portfolio -969 CHF
+  Equity:Equity 969 CHF
+
+2020-01-06 * "Buy 3 AAPL shares"
+  Equity:Equity -873.74907702672 CHF
+  Assets:Portfolio 873.74907702672 CHF
+  Assets:Portfolio -874.332 CHF
+  Equity:Equity 874.332 CHF
+  Assets:Portfolio -3.88592 CHF
+  Expenses:Fees 3.88592 CHF
+
+2020-01-06 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.0000000000001 CHF
+  Assets:Portfolio -0.0000000000001 CHF
+
+2020-01-07 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 6.7768855387199 CHF
+  Assets:Portfolio -6.7768855387199 CHF
+
+2020-01-07 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.28906 CHF
+  Assets:Portfolio -0.28906 CHF
+
+2020-01-08 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -14.2465232379598 CHF
+  Assets:Portfolio 14.2465232379598 CHF
+
+2020-01-08 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.03200999999999 CHF
+  Assets:Portfolio 0.03200999999999 CHF
+
+2020-01-09 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -22.7770449524401 CHF
+  Assets:Portfolio 22.7770449524401 CHF
+
+2020-01-09 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.42389 CHF
+  Assets:Portfolio 0.42389 CHF
+
+2020-01-10 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -1.96919408928 CHF
+  Assets:Portfolio 1.96919408928 CHF
+
+2020-01-10 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.00775999999999 CHF
+  Assets:Portfolio -0.00775999999999 CHF
+
+2020-01-13 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -19.3743860769601 CHF
+  Assets:Portfolio 19.3743860769601 CHF
+
+2020-01-13 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.00194 CHF
+  Assets:Portfolio 0.00194 CHF
+
+2020-01-14 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 14.78393514144 CHF
+  Assets:Portfolio -14.78393514144 CHF
+
+2020-01-14 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.23668 CHF
+  Assets:Portfolio -0.23668 CHF
+
+2020-01-15 * "Groceries"
+  Assets:BankAccount -200 CHF
+  Expenses:Groceries 200 CHF
+
+2020-01-15 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 7.2926949080402 CHF
+  Assets:Portfolio -7.2926949080402 CHF
+
+2020-01-15 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.35211 CHF
+  Assets:Portfolio -0.35211 CHF
+
+2020-01-16 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -8.12763107604 CHF
+  Assets:Portfolio 8.12763107604 CHF
+
+2020-01-16 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.32689 CHF
+  Assets:Portfolio -0.32689 CHF
+
+2020-01-17 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -11.2183010644801 CHF
+  Assets:Portfolio 11.2183010644801 CHF
+
+2020-01-17 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.11445999999999 CHF
+  Assets:Portfolio 0.11445999999999 CHF
+
+2020-01-20 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -3.18411281988 CHF
+  Assets:Portfolio 3.18411281988 CHF
+
+2020-01-20 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.32301000000001 CHF
+  Assets:Portfolio 0.32301000000001 CHF
+
+2020-01-21 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 6.11256171444 CHF
+  Assets:Portfolio -6.11256171444 CHF
+
+2020-01-21 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.01649 CHF
+  Assets:Portfolio 0.01649 CHF
+
+2020-01-22 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -3.6831218356799 CHF
+  Assets:Portfolio 3.6831218356799 CHF
+
+2020-01-22 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.04074 CHF
+  Assets:Portfolio 0.04074 CHF
+
+2020-01-23 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -3.1060259496001 CHF
+  Assets:Portfolio 3.1060259496001 CHF
+
+2020-01-23 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.1358 CHF
+  Assets:Portfolio -0.1358 CHF
+
+2020-01-24 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 0.6647174604 CHF
+  Assets:Portfolio -0.6647174604 CHF
+
+2020-01-24 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.2037 CHF
+  Assets:Portfolio 0.2037 CHF
+
+2020-01-25 * "Salary January 2020"
+  Income:Salary -5000 CHF
+  Assets:BankAccount 5000 CHF
+
+2020-01-27 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 26.8156994481599 CHF
+  Assets:Portfolio -26.8156994481599 CHF
+
+2020-01-27 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.04268 CHF
+  Assets:Portfolio 0.04268 CHF
+
+2020-01-28 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -25.3460272203598 CHF
+  Assets:Portfolio 25.3460272203598 CHF
+
+2020-01-28 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.00873 CHF
+  Assets:Portfolio -0.00873 CHF
+
+2020-01-29 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -22.3940367860399 CHF
+  Assets:Portfolio 22.3940367860399 CHF
+
+2020-01-29 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.30361 CHF
+  Assets:Portfolio 0.30361 CHF
+
+2020-01-30 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 1.1775798023996 CHF
+  Assets:Portfolio -1.1775798023996 CHF
+
+2020-01-30 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.0194 CHF
+  Assets:Portfolio 0.0194 CHF
+
+2020-01-31 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 45.4251175560002 CHF
+  Assets:Portfolio -45.4251175560002 CHF
+
+2020-01-31 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.36569 CHF
+  Assets:Portfolio -0.36569 CHF
+
+2020-02-02 * "Rent January"
+  Assets:BankAccount -2000 CHF
+  Expenses:Rent 2000 CHF
+
+2020-02-03 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 8.0741862055199 CHF
+  Assets:Portfolio -8.0741862055199 CHF
+
+2020-02-03 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.58685 CHF
+  Assets:Portfolio -0.58685 CHF
+
+2020-02-04 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -31.6882538164799 CHF
+  Assets:Portfolio 31.6882538164799 CHF
+
+2020-02-04 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.22698 CHF
+  Assets:Portfolio 0.22698 CHF
+
+2020-02-05 * "Groceries"
+  Assets:BankAccount -250 CHF
+  Expenses:Groceries 250 CHF
+
+2020-02-05 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -10.97520121692 CHF
+  Assets:Portfolio 10.97520121692 CHF
+
+2020-02-05 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.34629 CHF
+  Assets:Portfolio 0.34629 CHF
+
+2020-02-06 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -14.8650962470799 CHF
+  Assets:Portfolio 14.8650962470799 CHF
+
+2020-02-06 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.39091 CHF
+  Assets:Portfolio 0.39091 CHF
+
+2020-02-07 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 13.9729506407999 CHF
+  Assets:Portfolio -13.9729506407999 CHF
+
+2020-02-07 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.1164 CHF
+  Assets:Portfolio 0.1164 CHF
+
+2020-02-10 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -6.5273288402399 CHF
+  Assets:Portfolio 6.5273288402399 CHF
+
+2020-02-10 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.20952 CHF
+  Assets:Portfolio 0.20952 CHF
+
+2020-02-11 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 5.2622877410399 CHF
+  Assets:Portfolio -5.2622877410399 CHF
+
+2020-02-11 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.04268 CHF
+  Assets:Portfolio 0.04268 CHF
+
+2020-02-12 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -20.7762490224001 CHF
+  Assets:Portfolio 20.7762490224001 CHF
+
+2020-02-12 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.1455 CHF
+  Assets:Portfolio -0.1455 CHF
+
+2020-02-13 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 4.9092552523202 CHF
+  Assets:Portfolio -4.9092552523202 CHF
+
+2020-02-13 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.19012 CHF
+  Assets:Portfolio 0.19012 CHF
+
+2020-02-14 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -1.5214633704002 CHF
+  Assets:Portfolio 1.5214633704002 CHF
+
+2020-02-14 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.12804 CHF
+  Assets:Portfolio 0.12804 CHF
+
+2020-02-17 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -2.7393286011599 CHF
+  Assets:Portfolio 2.7393286011599 CHF
+
+2020-02-17 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.27257 CHF
+  Assets:Portfolio 0.27257 CHF
+
+2020-02-18 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 18.7577318408399 CHF
+  Assets:Portfolio -18.7577318408399 CHF
+
+2020-02-18 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.12512999999999 CHF
+  Assets:Portfolio -0.12512999999999 CHF
+
+2020-02-19 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -16.0154822052 CHF
+  Assets:Portfolio 16.0154822052 CHF
+
+2020-02-19 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.24249999999999 CHF
+  Assets:Portfolio 0.24249999999999 CHF
+
+2020-02-20 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 9.2131676112 CHF
+  Assets:Portfolio -9.2131676112 CHF
+
+2020-02-20 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.0582 CHF
+  Assets:Portfolio 0.0582 CHF
+
+2020-02-21 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 21.1469460093601 CHF
+  Assets:Portfolio -21.1469460093601 CHF
+
+2020-02-21 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.02522 CHF
+  Assets:Portfolio 0.02522 CHF
+
+2020-02-24 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 48.2866584767999 CHF
+  Assets:Portfolio -48.2866584767999 CHF
+
+2020-02-24 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.47724 CHF
+  Assets:Portfolio -0.47724 CHF
+
+2020-02-25 * "Salary January 2020"
+  Income:Salary -5000 CHF
+  Assets:BankAccount 5000 CHF
+
+2020-02-25 * "Groceries"
+  Assets:BankAccount -423 CHF
+  Expenses:Groceries 423 CHF
+
+2020-02-25 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 28.84647817992 CHF
+  Assets:Portfolio -28.84647817992 CHF
+
+2020-02-25 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.09118 CHF
+  Assets:Portfolio 0.09118 CHF
+
+2020-02-26 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation -10.0263496504799 CHF
+  Assets:Portfolio 10.0263496504799 CHF
+
+2020-02-26 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.37636 CHF
+  Assets:Portfolio -0.37636 CHF
+
+2020-02-27 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 55.6048383284399 CHF
+  Assets:Portfolio -55.6048383284399 CHF
+
+2020-02-27 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation -0.04753 CHF
+  Assets:Portfolio 0.04753 CHF
+
+2020-02-28 * "Valuation adjustment for (Assets:Portfolio, AAPL)"
+  Equity:Valuation 6.7340897499602 CHF
+  Assets:Portfolio -6.7340897499602 CHF
+
+2020-02-28 * "Valuation adjustment for (Assets:Portfolio, USD)"
+  Equity:Valuation 0.74108 CHF
+  Assets:Portfolio -0.74108 CHF
+

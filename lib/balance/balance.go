@@ -16,6 +16,7 @@ package balance
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/sboehler/knut/lib/amount"
@@ -248,6 +249,12 @@ func (b *Balance) computeValuationTransactions() ([]*model.Transaction, error) {
 			})
 		}
 	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Postings[0].Debit.String() != result[j].Postings[0].Debit.String() {
+			return result[i].Postings[0].Debit.String() < result[j].Postings[0].Debit.String()
+		}
+		return result[i].Postings[0].Commodity.String() < result[j].Postings[0].Commodity.String()
+	})
 	return result, nil
 }
 

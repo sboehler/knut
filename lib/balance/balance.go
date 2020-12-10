@@ -235,7 +235,7 @@ func (b *Balance) computeValuationTransactions() ([]*model.Transaction, error) {
 			// create a transaction to adjust the valuation
 			result = append(result, &model.Transaction{
 				Directive:   model.NewDirective(model.Range{}, b.Date),
-				Description: fmt.Sprintf("Valuation adjustment for %v", pos),
+				Description: fmt.Sprintf("Valuation adjustment for (%s, %s)", pos.Account(), pos.Commodity()),
 				Tags:        nil,
 				Postings: []*model.Posting{
 					{

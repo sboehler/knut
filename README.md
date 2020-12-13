@@ -386,7 +386,7 @@ Use "knut import [command] --help" for more information about a command.
 
 ### Transcode to beancount
 
-While knut has advanced terminal-based visualization options, it lacks any web-based visualization tools. To allow the usage of the amazing tooling around the (beancount)[http://furius.ca/beancount/] ecosystem, such as (fava)[https://beancount.github.io/fava/], knut has a command to convert an entire journal into beancount's file format:
+While knut has advanced terminal-based visualization options, it lacks any web-based visualization tools. To allow the usage of the amazing tooling around the [beancount](http://furius.ca/beancount/) ecosystem, such as [fava](https://beancount.github.io/fava/), knut has a command to convert an entire journal into beancount's file format:
 
 ```text
 knut transcode -c CHF doc/example.knut

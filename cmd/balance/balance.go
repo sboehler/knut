@@ -53,7 +53,7 @@ func CreateCmd() *cobra.Command {
 	c.Flags().BoolP("diff", "d", false, "diff")
 	c.Flags().BoolP("show-commodities", "s", false, "Show commodities on their own rows")
 	c.Flags().BoolP("days", "", false, "days")
-	c.Flags().BoolP("weekly", "", false, "weekly")
+	c.Flags().BoolP("weeks", "", false, "weeks")
 	c.Flags().BoolP("months", "", false, "months")
 	c.Flags().BoolP("quarters", "", false, "quarters")
 	c.Flags().BoolP("years", "", false, "years")
@@ -187,7 +187,7 @@ func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {
 		period date.Period
 	}{
 		{"days", date.Daily},
-		{"weekly", date.Weekly},
+		{"weeks", date.Weekly},
 		{"months", date.Monthly},
 		{"quarters", date.Quarterly},
 		{"years", date.Yearly}}

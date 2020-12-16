@@ -64,6 +64,7 @@ func run(cmd *cobra.Command, args []string) (errors error) {
 	srv.RegisterOnShutdown(cancel)
 
 	go func() {
+		fmt.Printf("listening on %s\n", addr)
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 			fmt.Printf("error starting server: %v", err)
 			os.Exit(1)

@@ -26,9 +26,9 @@ import (
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
+	"go.uber.org/multierr"
 
 	"github.com/cheggaaa/pb/v3"
-	"github.com/hashicorp/go-multierror"
 	"github.com/natefinch/atomic"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -57,7 +57,7 @@ func run(cmd *cobra.Command, args []string) error {
 	var errors error
 	go func() {
 		for err = range errCh {
-			errors = multierror.Append(err, errors)
+			errors = multierr.Append(err, errors)
 		}
 	}()
 	concurrency := 5

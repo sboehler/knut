@@ -1,5 +1,5 @@
 2020-01-20 "Deposit 1000 CHF"
-TBD                     Assets:IB                     1000 CHF
+Expenses:TBD            Assets:IB                     1000 CHF
 
 2020-02-13 "AAPL(US0378331005) Cash Dividend USD 0.77 per Share (Ordinary Dividend)"
 Income:Dividends        Assets:IB                       10 USD

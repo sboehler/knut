@@ -25,10 +25,8 @@ import (
 type AccountType int
 
 const (
-	// TBD is an account which has not yet been determined.
-	TBD AccountType = iota
 	// ASSETS represents an asset account.
-	ASSETS
+	ASSETS AccountType = iota
 	// LIABILITIES represents a liability account.
 	LIABILITIES
 	// EQUITY represents an equity account.
@@ -41,8 +39,6 @@ const (
 
 func (t AccountType) String() string {
 	switch t {
-	case TBD:
-		return "TBD"
 	case ASSETS:
 		return "Assets"
 	case LIABILITIES:
@@ -58,10 +54,9 @@ func (t AccountType) String() string {
 }
 
 // AccountTypes is an array with the ordered accont types.
-var AccountTypes = []AccountType{ASSETS, LIABILITIES, EQUITY, INCOME, EXPENSES, TBD}
+var AccountTypes = []AccountType{ASSETS, LIABILITIES, EQUITY, INCOME, EXPENSES}
 
 var accountTypes = map[string]AccountType{
-	"TBD":         TBD,
 	"Assets":      ASSETS,
 	"Liabilities": LIABILITIES,
 	"Equity":      EQUITY,
@@ -114,9 +109,9 @@ func init() {
 	if err != nil {
 		panic("Could not create valuationAccount")
 	}
-	tbdAccount, err = Get("TBD")
+	tbdAccount, err = Get("Expenses:TBD")
 	if err != nil {
-		panic("Could not create TBD account")
+		panic("Could not create Expenses:TBD account")
 	}
 }
 

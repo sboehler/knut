@@ -47,10 +47,10 @@ func CreateCmd() *cobra.Command {
 		RunE: run,
 	}
 	cmd.Flags().StringP("account", "a", "", "account name")
-	cmd.Flags().StringP("interest", "i", "TBD", "account name of the interest expense account")
-	cmd.Flags().StringP("dividend", "d", "TBD", "account name of the dividend account")
-	cmd.Flags().StringP("tax", "t", "TBD", "account name of the withholding tax account")
-	cmd.Flags().StringP("fee", "f", "TBD", "account name of the fee account")
+	cmd.Flags().StringP("interest", "i", "Expenses:TBD", "account name of the interest expense account")
+	cmd.Flags().StringP("dividend", "d", "Expenses:TBD", "account name of the dividend account")
+	cmd.Flags().StringP("tax", "t", "Expenses:TBD", "account name of the withholding tax account")
+	cmd.Flags().StringP("fee", "f", "Expenses:TBD", "account name of the fee account")
 	return &cmd
 }
 

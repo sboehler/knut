@@ -86,8 +86,6 @@ func ParseAccountType(b *Scanner) (accounts.AccountType, error) {
 		return 0, err
 	}
 	switch s {
-	case "TBD":
-		return accounts.TBD, nil
 	case "Assets":
 		return accounts.ASSETS, nil
 	case "Liabilities":

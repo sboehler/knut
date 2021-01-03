@@ -499,7 +499,7 @@ It is often helpful to check whether the balance at a date corresponds to an exp
 
 ### Value directive
 
-Value directives can be used to declare a certain account balance at a specific date. When encountering a value directive during evaluation, beans will automatically generate a transaction wich makes sure that the balance matches the indicated value. The generated transaction always has exactly one booking, and the two accounts are the given account and a special Equity:Valuation account.
+Value directives can be used to declare a certain account balance at a specific date. When encountering a value directive during evaluation, knut will automatically generate a transaction wich makes sure that the balance matches the indicated value. The generated transaction always has exactly one booking, and the two accounts are the given account and a special Equity:Valuation account.
 
 `YYYY-MM-DD value <account> <amount> <commodity>`
 

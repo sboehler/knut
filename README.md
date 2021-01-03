@@ -485,7 +485,7 @@ YYYY-MM-DD "<description>"
 
 A transaction starts with a date, followed by a description withing double quotes on the same line. It must have one or more bookings on the lines immediately following. Every booking references two accounts, a credit account (first) and a debit account (second). The amount is usually a positive numbers, and the semantics is that money "flows from left to right".
 
-The transaction syntaxt deviates from similar tools like ledger or beancount for several reasons:
+The transaction syntax deviates from similar tools like ledger or beancount for several reasons:
 
 - It ensures that a transaction always balances, which is not guaranteed by formats where each booking references only one account.
 - It creates unambigous flows between two accounts, which is helpful when analyzing the flows of money.

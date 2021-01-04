@@ -52,6 +52,7 @@ $ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 doc/example.knu
     - [Format the journal](#format-the-journal)
     - [Import transactions](#import-transactions)
     - [Transcode to beancount](#transcode-to-beancount)
+  - [Editor support](#editor-support)
   - [File format](#file-format)
     - [Open and close](#open-and-close)
     - [Transactions](#transactions)
@@ -393,6 +394,10 @@ knut transcode -c CHF doc/example.knut
 ```
 
 This command should also allow beancount users to use knut's built-in importers.
+
+## Editor support
+
+There is an experimental [Visual Studio Code extension](https://github.com/sboehler/language-knut) which provides syntax highlighting, code folding and an outline view.
 
 ## File format
 

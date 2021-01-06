@@ -61,7 +61,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	s, err := scanner.New(strings.NewReader(accountName))
+	s, err := scanner.New(strings.NewReader(accountName), "")
 	if err != nil {
 		return err
 	}

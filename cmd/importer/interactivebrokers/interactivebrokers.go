@@ -106,7 +106,7 @@ func getAccountFlag(cmd *cobra.Command, flag string) (*accounts.Account, error) 
 	if err != nil {
 		return nil, err
 	}
-	s, err := scanner.New(strings.NewReader(name))
+	s, err := scanner.New(strings.NewReader(name), "")
 	if err != nil {
 		return nil, err
 	}

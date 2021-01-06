@@ -20,7 +20,7 @@ import (
 )
 
 func TestNewScanner(t *testing.T) {
-	r, err := New(strings.NewReader(""))
+	r, err := New(strings.NewReader(""), "")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -31,7 +31,7 @@ func TestNewScanner(t *testing.T) {
 
 func TestWithoutBacktracking(t *testing.T) {
 	s := "foobar"
-	b, err := New(strings.NewReader(s))
+	b, err := New(strings.NewReader(s), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestWithoutBacktracking(t *testing.T) {
 
 func TestBacktracking(t *testing.T) {
 	s := "foobar"
-	b, err := New(strings.NewReader(s))
+	b, err := New(strings.NewReader(s), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestBacktracking(t *testing.T) {
 
 func TestBacktrackingAndCommitWithShorterString(t *testing.T) {
 	s := "foobar"
-	b, err := New(strings.NewReader(s))
+	b, err := New(strings.NewReader(s), "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -55,7 +55,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	accountScanner, err := scanner.New(strings.NewReader(accountName))
+	accountScanner, err := scanner.New(strings.NewReader(accountName), "")
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	scanner, err := scanner.New(bufio.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)))
+	scanner, err := scanner.New(bufio.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)), args[0])
 	if err != nil {
 		return err
 	}

@@ -35,14 +35,17 @@ type Scanner struct {
 	bufpos int
 	// Position is the current position in the stream.
 	Position int
+	// Path is the file path.
+	Path string
 }
 
 // New creates a new Scanner.
-func New(r io.RuneReader) (*Scanner, error) {
+func New(r io.RuneReader, path string) (*Scanner, error) {
 	b := &Scanner{
 		reader:   r,
 		buffer:   make([]rune, 1),
 		Position: -1,
+		Path:     path,
 	}
 	if err := b.Advance(); err != nil {
 		return nil, err

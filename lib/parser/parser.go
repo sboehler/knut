@@ -43,8 +43,8 @@ func (p *Parser) getRange() model.Range {
 }
 
 // New creates a new parser
-func New(r io.RuneReader) (*Parser, error) {
-	s, err := scanner.New(r)
+func New(path string, r io.RuneReader) (*Parser, error) {
+	s, err := scanner.New(r, path)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func Open(path string) (*Parser, error) {
 	if err != nil {
 		return nil, err
 	}
-	return New(bufio.NewReader(f))
+	return New(path, bufio.NewReader(f))
 }
 
 // current returns the current rune.
@@ -79,7 +79,11 @@ func (p *Parser) next() (interface{}, error) {
 		case p.current() == 'i':
 			return p.parseInclude()
 		case unicode.IsDigit(p.current()):
-			return p.parseDirective()
+			d, err := p.parseDirective()
+			if err != nil {
+				return nil, fmt.Errorf("%s:%v: %v", p.scanner.Path, p.scanner.Position, err)
+			}
+			return d, nil
 		case p.current() != scanner.EOF:
 			return nil, fmt.Errorf("%v: unexpected character: %v", p.scanner.Position, p.current())
 		}
@@ -126,9 +130,6 @@ func (p *Parser) parseDirective() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consumeRestOfWhitespaceLine(); err != nil {
-		return nil, err
-	}
 	return result, nil
 }
 
@@ -164,7 +165,7 @@ func (p *Parser) parseTransaction(d time.Time) (*model.Transaction, error) {
 
 func (p *Parser) parsePostings() ([]*model.Posting, error) {
 	var postings []*model.Posting
-	for unicode.IsLetter(p.current()) {
+	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		crAccount, err := scanner.ParseAccount(p.scanner)
 		if err != nil {
 			return nil, err
@@ -393,7 +394,7 @@ func (p *Parser) consumeNewline() error {
 
 func (p *Parser) consumeWhitespace1() error {
 	if !isWhitespaceOrNewline(p.current()) && p.current() != scanner.EOF {
-		return fmt.Errorf("expected whitespace, got %c", p.current())
+		return fmt.Errorf("%s:%v: expected whitespace, got %c", p.scanner.Path, p.scanner.Position, p.current())
 	}
 	return p.scanner.ConsumeWhile(isWhitespace)
 }

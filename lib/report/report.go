@@ -96,11 +96,18 @@ func mergePositions(positions []map[model.CommodityAccount]decimal.Decimal) []mo
 	}
 	res := make([]model.Position, 0, len(commodityAccounts))
 	for ca := range commodityAccounts {
-		vec := amount.NewVec(len(positions))
+		var (
+			vec   = amount.NewVec(len(positions))
+			empty = true
+		)
 		for i, p := range positions {
-			if value, exists := p[ca]; exists {
+			if value, exists := p[ca]; exists && !value.IsZero() {
 				vec.Values[i] = value
+				empty = false
 			}
+		}
+		if empty {
+			continue
 		}
 		res = append(res, model.Position{
 			CommodityAccount: ca,

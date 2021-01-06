@@ -19,6 +19,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"unicode/utf8"
 )
 
 // AccountType is the type of an account.
@@ -89,8 +90,8 @@ func create(name string) (*Account, error) {
 			name:        name,
 		}
 		accounts[name] = a
-		if maxLength < len(name) {
-			maxLength = len(name)
+		if maxLength < utf8.RuneCountInString(name) {
+			maxLength = utf8.RuneCountInString(name)
 		}
 		return a, nil
 	}
@@ -164,7 +165,7 @@ func (a Account) WriteTo(w io.Writer) (int64, error) {
 func (a Account) RightPad() string {
 	b := strings.Builder{}
 	b.WriteString(a.name)
-	for i := len(a.name); i < maxLength; i++ {
+	for i := utf8.RuneCountInString(a.name); i < maxLength; i++ {
 		b.WriteRune(' ')
 	}
 	return b.String()

@@ -34,43 +34,54 @@ type nextFunc func() (interface{}, error)
 
 // Format formats the directives returned by p.
 func Format(ch <-chan interface{}, src io.RuneReader, dest io.Writer) error {
-	srcPos := 0
+	var directives []directive
 	for n := range ch {
 		switch d := n.(type) {
 		case error:
-			if d == io.EOF {
-				// make sure the file ends with a newline
-				_, err := dest.Write([]byte(string('\n')))
-				return err
-			}
 			return d
-
 		case directive:
-			// copy text before directive from src to dest
-			for i := srcPos; i < d.Position().Start; i++ {
-				r, _, err := src.ReadRune()
-				if err != nil {
-					return err
-				}
-				if _, err := dest.Write([]byte(string(r))); err != nil {
-					return err
-				}
-			}
-			// seek forward over directive in src
-			for i := d.Position().Start; i < d.Position().End; i++ {
-				if _, _, err := src.ReadRune(); err != nil {
-					return err
-				}
-			}
-			// write directive to dst
-			if _, err := d.WriteTo(dest); err != nil {
-				return err
-			}
-			// update srcPos
-			srcPos = d.Position().End
+			directives = append(directives, d)
 		default:
 			return fmt.Errorf("invalid directive: %v", d)
 		}
 	}
-	return nil
+
+	srcPos := 0
+	for _, d := range directives {
+		// copy text before directive from src to dest
+		for i := srcPos; i < d.Position().Start; i++ {
+			r, _, err := src.ReadRune()
+			if err != nil {
+				return err
+			}
+			if _, err := dest.Write([]byte(string(r))); err != nil {
+				return err
+			}
+		}
+		// seek forward over directive in src
+		for i := d.Position().Start; i < d.Position().End; i++ {
+			if _, _, err := src.ReadRune(); err != nil {
+				return err
+			}
+		}
+		// write directive to dst
+		if _, err := d.WriteTo(dest); err != nil {
+			return err
+		}
+		// update srcPos
+		srcPos = d.Position().End
+	}
+
+	for {
+		r, _, err := src.ReadRune()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if _, err := io.WriteString(dest, string(r)); err != nil {
+			return err
+		}
+	}
 }

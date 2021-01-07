@@ -17,6 +17,7 @@ package balance
 import (
 	"bufio"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -45,7 +46,7 @@ func CreateCmd() *cobra.Command {
 
 		Args: cobra.ExactValidArgs(1),
 
-		RunE: run,
+		Run: run,
 	}
 	c.Flags().StringP("from", "", "", "from date")
 	c.Flags().StringP("to", "", "", "to date")
@@ -68,7 +69,14 @@ func CreateCmd() *cobra.Command {
 	return c
 }
 
-func run(cmd *cobra.Command, args []string) error {
+func run(cmd *cobra.Command, args []string) {
+	if err := execute(cmd, args); err != nil {
+		fmt.Fprintln(cmd.ErrOrStderr(), err)
+		os.Exit(1)
+	}
+}
+
+func execute(cmd *cobra.Command, args []string) error {
 	o, err := parseOptions(cmd, args)
 	if err != nil {
 		return err
@@ -77,10 +85,6 @@ func run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	return nil
-}
-
-func init() {
-
 }
 
 func parseOptions(cmd *cobra.Command, args []string) (*options, error) {

@@ -47,6 +47,9 @@ func ReadQuotedString(b *Scanner) (string, error) {
 // ParseIdentifier parses an identifier
 func ParseIdentifier(b *Scanner) (string, error) {
 	s := strings.Builder{}
+	if !(unicode.IsLetter(b.Current()) || unicode.IsDigit(b.Current())) {
+		return "", fmt.Errorf("expected identifier, got %q", b.Current())
+	}
 	for unicode.IsLetter(b.Current()) || unicode.IsDigit(b.Current()) {
 		s.WriteRune(b.Current())
 		if err := b.Advance(); err != nil {
@@ -97,7 +100,7 @@ func ParseAccountType(b *Scanner) (accounts.AccountType, error) {
 	case "Expenses":
 		return accounts.EXPENSES, nil
 	default:
-		return 0, fmt.Errorf("Expected account type, got %v", s)
+		return 0, fmt.Errorf("expected account type, got %q", s)
 	}
 }
 

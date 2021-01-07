@@ -17,6 +17,7 @@ package format
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 
 	"github.com/sboehler/knut/lib/model"
 )
@@ -51,30 +52,26 @@ func Format(ch <-chan interface{}, src reader, dest io.Writer) error {
 		}
 	}
 
-	srcPos := 0
+	srcBytePos := 0
 	for _, d := range directives {
+		p0, p1 := d.Position().Start.BytePos, d.Position().End.BytePos
+
 		// copy text before directive from src to dest
-		for i := srcPos; i < d.Position().Start; i++ {
-			r, _, err := src.ReadRune()
-			if err != nil {
-				return err
-			}
-			if _, err := dest.Write([]byte(string(r))); err != nil {
-				return err
-			}
+		if _, err := io.CopyN(dest, src, int64(p0-srcBytePos)); err != nil {
+			return err
 		}
+
 		// seek forward over directive in src
-		for i := d.Position().Start; i < d.Position().End; i++ {
-			if _, _, err := src.ReadRune(); err != nil {
-				return err
-			}
+		if _, err := ioutil.ReadAll(io.LimitReader(src, int64(p1-p0))); err != nil {
+			return err
 		}
+
 		// write directive to dst
 		if _, err := d.WriteTo(dest); err != nil {
 			return err
 		}
 		// update srcPos
-		srcPos = d.Position().End
+		srcBytePos = p1
 	}
 	_, err := io.Copy(dest, src)
 	return err

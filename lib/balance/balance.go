@@ -15,7 +15,9 @@
 package balance
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"sort"
 	"time"
 
@@ -165,7 +167,7 @@ func (b *Balance) Update(step *ledger.Step) error {
 	// close accounts
 	for _, c := range step.Closings {
 		if _, isOpen := b.Account[c.Account]; !isOpen {
-			return fmt.Errorf("(%d) %s: Closing account %v is not open", c.Pos.Start, c.Date(), c.Account)
+			return Error{c, "account is not open"}
 		}
 		for pos, amount := range b.Positions {
 			if pos.Account() == c.Account && !amount.Amount().IsZero() {
@@ -180,10 +182,10 @@ func (b *Balance) Update(step *ledger.Step) error {
 func (b *Balance) bookTransaction(t *model.Transaction) error {
 	for _, posting := range t.Postings {
 		if _, isOpen := b.Account[posting.Credit]; !isOpen {
-			return fmt.Errorf("(%d) %s: Account %s is not open", t.Pos.Start, t.Date(), posting.Credit)
+			return Error{t, fmt.Sprintf("credit account %s is not open", posting.Credit)}
 		}
 		if _, isOpen := b.Account[posting.Debit]; !isOpen {
-			return fmt.Errorf("(%d) %s: Account %s is not open", t.Pos.Start, t.Date(), posting.Debit)
+			return Error{t, fmt.Sprintf("debit account %s is not open", posting.Debit)}
 		}
 		crPos := model.NewCommodityAccount(posting.Credit, posting.Commodity)
 		drPos := model.NewCommodityAccount(posting.Debit, posting.Commodity)
@@ -281,7 +283,7 @@ func (b *Balance) valuateTransaction(t *model.Transaction) error {
 		for _, np := range b.NormalizedPrices {
 			value, err := np.Valuate(posting.Commodity, posting.Amount.Amount())
 			if err != nil {
-				return fmt.Errorf("No price found for %v in %v", posting.Commodity, np)
+				return Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
 			}
 			valuations = append(valuations, value)
 		}
@@ -292,7 +294,7 @@ func (b *Balance) valuateTransaction(t *model.Transaction) error {
 
 func (b *Balance) processValue(v *model.Value) (*model.Transaction, error) {
 	if _, isOpen := b.Account[v.Account]; !isOpen {
-		return nil, fmt.Errorf("(%d) %s: Account %s is not open", v.Pos.Start, v.Date(), v.Account)
+		return nil, Error{v, "account is not open"}
 	}
 	pos := model.NewCommodityAccount(v.Account, v.Commodity)
 	va, ok := b.Positions[pos]
@@ -310,10 +312,13 @@ func (b *Balance) processValue(v *model.Value) (*model.Transaction, error) {
 }
 
 func (b *Balance) processBalanceAssertion(a *model.Assertion) error {
+	if _, isOpen := b.Account[a.Account]; !isOpen {
+		return Error{a, "account is not open"}
+	}
 	pos := model.NewCommodityAccount(a.Account, a.Commodity)
 	va, ok := b.Positions[pos]
 	if !ok || !va.Amount().Equal(a.Amount) {
-		return fmt.Errorf("(%d) %s: Balance assertion failed: Expected %s to have %s %s, but has %s %s", a.Position().Start, a.Date(), a.Account, a.Amount, a.Commodity, va.Amount(), pos.Commodity())
+		return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va.Amount(), pos.Commodity())}
 	}
 	return nil
 }
@@ -342,4 +347,23 @@ func Diffs(bals []*Balance) []*Balance {
 		bals[i].Minus(bals[i-1])
 	}
 	return bals[1:]
+}
+
+type directive interface {
+	io.WriterTo
+	Position() model.Range
+}
+
+// Error is an error.
+type Error struct {
+	directive directive
+	msg       string
+}
+
+func (be Error) Error() string {
+	b := bytes.Buffer{}
+	fmt.Fprintf(&b, "%s:\n", be.directive.Position().Start)
+	be.directive.WriteTo(&b)
+	fmt.Fprintf(&b, "\n%s\n", be.msg)
+	return b.String()
 }

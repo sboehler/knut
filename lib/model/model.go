@@ -315,6 +315,15 @@ type Position struct {
 
 // Range describes a range in the source code.
 type Range struct {
-	Start int
-	End   int
+	Start, End FilePosition
+}
+
+// FilePosition is a position of a character in a text file.
+type FilePosition struct {
+	Path                           string
+	BytePos, RunePos, Line, Column int
+}
+
+func (p FilePosition) String() string {
+	return fmt.Sprintf("%s:%d:%d", p.Path, p.Line, p.Column)
 }

@@ -31,15 +31,19 @@ import (
 // Parser parses a journal
 type Parser struct {
 	scanner          *scanner.Scanner
-	startPos, endPos int
+	startPos, endPos model.FilePosition
 }
 
 func (p *Parser) markStart() {
-	p.startPos = p.scanner.Position
+	p.startPos = p.scanner.Position()
 }
 
 func (p *Parser) getRange() model.Range {
-	return model.Range{Start: p.startPos, End: p.scanner.Position}
+	pos := p.scanner.Position()
+	return model.Range{
+		Start: p.startPos,
+		End:   pos,
+	}
 }
 
 // New creates a new parser
@@ -69,23 +73,27 @@ func (p *Parser) current() rune {
 func (p *Parser) next() (interface{}, error) {
 	for p.current() != scanner.EOF {
 		if err := p.scanner.ConsumeWhile(isWhitespaceOrNewline); err != nil {
-			return nil, err
+			return nil, p.scanner.ParseError(err)
 		}
 		switch {
 		case p.current() == '*' || p.current() == '#':
 			if err := p.consumeComment(); err != nil {
-				return nil, err
+				return nil, p.scanner.ParseError(err)
 			}
 		case p.current() == 'i':
-			return p.parseInclude()
+			i, err := p.parseInclude()
+			if err != nil {
+				return nil, p.scanner.ParseError(err)
+			}
+			return i, nil
 		case unicode.IsDigit(p.current()):
 			d, err := p.parseDirective()
 			if err != nil {
-				return nil, fmt.Errorf("%s:%v: %v", p.scanner.Path, p.scanner.Position, err)
+				return nil, p.scanner.ParseError(err)
 			}
 			return d, nil
 		case p.current() != scanner.EOF:
-			return nil, fmt.Errorf("%v: unexpected character: %v", p.scanner.Position, p.current())
+			return nil, p.scanner.ParseError(fmt.Errorf("unexpected character: %q", p.current()))
 		}
 	}
 	return nil, io.EOF
@@ -125,7 +133,7 @@ func (p *Parser) parseDirective() (interface{}, error) {
 	case 'v':
 		result, err = p.parseValue(d)
 	default:
-		return nil, fmt.Errorf("expected directive, got %c", p.current())
+		return nil, fmt.Errorf("expected directive, got %q", p.current())
 	}
 	if err != nil {
 		return nil, err
@@ -394,7 +402,7 @@ func (p *Parser) consumeNewline() error {
 
 func (p *Parser) consumeWhitespace1() error {
 	if !isWhitespaceOrNewline(p.current()) && p.current() != scanner.EOF {
-		return fmt.Errorf("%s:%v: expected whitespace, got %c", p.scanner.Path, p.scanner.Position, p.current())
+		return fmt.Errorf("expected whitespace, got %q", p.current())
 	}
 	return p.scanner.ConsumeWhile(isWhitespace)
 }
@@ -455,7 +463,7 @@ func (p *Parser) parseLot() (*model.Lot, error) {
 				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("expected label or date, got %v", p.current())
+			return nil, fmt.Errorf("expected label or date, got %q", p.current())
 		}
 	}
 	err = p.scanner.ConsumeRune('}')

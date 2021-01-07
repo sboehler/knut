@@ -50,7 +50,7 @@ func CreateCmd() *cobra.Command {
 func Execute() {
 	c := CreateCmd()
 	if err := c.Execute(); err != nil {
-		fmt.Fprint(c.ErrOrStderr(), err)
+		fmt.Fprintln(c.ErrOrStderr(), err)
 		os.Exit(1)
 	}
 }

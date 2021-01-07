@@ -24,31 +24,39 @@ import (
 // Scanner is a backtracking reader.
 type Scanner struct {
 	reader io.RuneReader
-	// buffer contains the current backtracking buffer. Its size is always at
-	// least one.
-	buffer []rune
-	// stops is a LIFO queue of indexes into buffer. The last element
-	// is the most recent one.
-	stops []int
-	// bufpos is the current index into the buffer. When bufpos == len(bbuffer) -1,
-	// the buffer is current.
-	bufpos int
+	// current contains the current rune
+	current rune
 	// Position is the current position in the stream.
 	Position int
 	// Path is the file path.
 	Path string
+	// Position2 is the current position in the stream.
+	pos Position
+}
+
+// Position is a position of a character in a text file.
+type Position struct {
+	Path                           string
+	BytePos, RunePos, Line, Column int
 }
 
 // New creates a new Scanner.
 func New(r io.RuneReader, path string) (*Scanner, error) {
+	ch, _, err := r.ReadRune()
+	if err != nil {
+		if err != io.EOF {
+			return nil, err
+		}
+		ch = EOF
+	}
 	b := &Scanner{
 		reader:   r,
-		buffer:   make([]rune, 1),
-		Position: -1,
+		current:  ch,
+		Position: 0,
 		Path:     path,
-	}
-	if err := b.Advance(); err != nil {
-		return nil, err
+		pos: Position{
+			Path: path,
+		},
 	}
 	return b, nil
 }
@@ -63,58 +71,28 @@ func (s *Scanner) ReadRune() (r rune, size int, err error) {
 
 // Current returns the current rune.
 func (s *Scanner) Current() rune {
-	return s.buffer[s.bufpos]
+	return s.current
 }
 
 // Advance reads a rune.
 func (s *Scanner) Advance() error {
-	if s.bufpos < len(s.buffer)-1 {
-		s.bufpos++
-		s.Position++
-		return nil
-	}
-	// Invariant: s.pos == len(s.buffer) - 1
 	ch, _, err := s.reader.ReadRune()
-	if err == io.EOF {
-		ch = EOF
-		err = nil
-	}
 	if err != nil {
-		return err
-	}
-	if len(s.stops) > 0 {
-		s.buffer = append(s.buffer, ch)
-		s.bufpos++
-	} else {
-		if s.bufpos > 0 {
-			s.bufpos = 0
-			s.buffer = s.buffer[:1]
+		if err != io.EOF {
+			return err
 		}
-		s.buffer[s.bufpos] = ch
+		ch = EOF
 	}
-	s.Position++
+	s.pos.BytePos += utf8.RuneLen(s.current)
+	s.pos.RunePos++
+	if s.current == '\n' {
+		s.pos.Line++
+		s.pos.Column = 0
+	} else {
+		s.pos.Column++
+	}
+	s.current = ch
 	return nil
-}
-
-// Begin begins a backtracking transaction
-func (s *Scanner) Begin() {
-	s.stops = append(s.stops, s.bufpos)
-}
-
-// Commit commits a backtracking transaction
-func (s *Scanner) Commit() {
-	if len(s.stops) > 0 {
-		s.stops = s.stops[:len(s.stops)-1]
-	}
-}
-
-// Rollback rolls back a backtracking transactin
-func (s *Scanner) Rollback() {
-	if len(s.stops) == 0 {
-		return
-	}
-	s.Position -= (s.bufpos - s.stops[len(s.stops)-1])
-	s.bufpos = s.stops[len(s.stops)-1]
 }
 
 // EOF is a rune representing the end of a file

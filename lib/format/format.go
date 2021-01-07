@@ -32,8 +32,13 @@ type directive interface {
 
 type nextFunc func() (interface{}, error)
 
+type reader interface {
+	io.RuneReader
+	io.Reader
+}
+
 // Format formats the directives returned by p.
-func Format(ch <-chan interface{}, src io.RuneReader, dest io.Writer) error {
+func Format(ch <-chan interface{}, src reader, dest io.Writer) error {
 	var directives []directive
 	for n := range ch {
 		switch d := n.(type) {
@@ -71,17 +76,6 @@ func Format(ch <-chan interface{}, src io.RuneReader, dest io.Writer) error {
 		// update srcPos
 		srcPos = d.Position().End
 	}
-
-	for {
-		r, _, err := src.ReadRune()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if _, err := io.WriteString(dest, string(r)); err != nil {
-			return err
-		}
-	}
+	_, err := io.Copy(dest, src)
+	return err
 }

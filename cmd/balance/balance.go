@@ -58,7 +58,7 @@ func CreateCmd() *cobra.Command {
 	c.Flags().BoolP("quarters", "", false, "quarters")
 	c.Flags().BoolP("years", "", false, "years")
 	c.Flags().StringArrayP("val", "v", []string{}, "valuate in the given commodity")
-	c.Flags().StringArrayP("collapse", "c", []string{}, "<regex>,<level>")
+	c.Flags().StringArrayP("collapse", "c", []string{}, "<level>,<regex>")
 	c.Flags().StringP("account", "", "", "filter accounts with a regex")
 	c.Flags().StringP("commodity", "", "", "filter commodities with a regex")
 	c.Flags().BoolP("close", "", false, "close income and expenses accounts after every period")

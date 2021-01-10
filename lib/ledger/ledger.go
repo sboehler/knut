@@ -100,7 +100,7 @@ func NewPosting(crAccount, drAccount *accounts.Account, commodity *commodities.C
 	return &Posting{
 		Credit:    crAccount,
 		Debit:     drAccount,
-		Amount:    amount.New(amt, nil),
+		Amount:    amount.New(amt, decimal.Zero),
 		Commodity: commodity,
 	}
 }

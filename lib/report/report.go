@@ -44,8 +44,8 @@ type Position struct {
 
 // Options contains configuration options to create a report.
 type Options struct {
-	Valuation *int
-	Collapse  []Collapse
+	Value    bool
+	Collapse []Collapse
 }
 
 // Collapse is a rule for collapsing (shortening) accounts.
@@ -61,7 +61,7 @@ func NewReport(options Options, bal []*balance.Balance) (*Report, error) {
 	positions := make([]map[balance.CommodityAccount]decimal.Decimal, 0, len(bal))
 	for _, b := range bal {
 		dates = append(dates, b.Date)
-		positions = append(positions, b.GetPositions(options.Valuation))
+		positions = append(positions, b.GetPositions(options.Value))
 	}
 	// collect arrays of amounts by commodity account, across balances
 	sortedPos := mergePositions(positions)

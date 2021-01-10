@@ -26,9 +26,9 @@ func TestPlus(t *testing.T) {
 			iDec := decimal.NewFromInt(int64(i))
 			jDec := decimal.NewFromInt(int64(j))
 			wantDec := decimal.NewFromInt(int64(i + j))
-			a := New(iDec, []decimal.Decimal{iDec, iDec})
-			b := New(jDec, []decimal.Decimal{jDec, jDec})
-			want := New(wantDec, []decimal.Decimal{wantDec, wantDec})
+			a := New(iDec, iDec)
+			b := New(jDec, jDec)
+			want := New(wantDec, wantDec)
 			if got := a.Plus(b); !got.Equal(want) {
 				t.Errorf("%s + %v = %v, want %v", a, b, got, want)
 			}
@@ -42,9 +42,9 @@ func TestMinus(t *testing.T) {
 			iDec := decimal.NewFromInt(int64(i))
 			jDec := decimal.NewFromInt(int64(j))
 			wantDec := decimal.NewFromInt(int64(i - j))
-			a := New(iDec, []decimal.Decimal{iDec, iDec})
-			b := New(jDec, []decimal.Decimal{jDec, jDec})
-			want := New(wantDec, []decimal.Decimal{wantDec, wantDec})
+			a := New(iDec, iDec)
+			b := New(jDec, jDec)
+			want := New(wantDec, wantDec)
 			if got := a.Minus(b); !got.Equal(want) {
 				t.Errorf("%s + %v = %v, want %v", a, b, got, want)
 			}

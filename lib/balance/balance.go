@@ -37,28 +37,27 @@ type Balance struct {
 	Positions              map[CommodityAccount]amount.Amount
 	Account                map[*accounts.Account]bool
 	Prices                 prices.Prices
-	Valuations             []*commodities.Commodity
-	NormalizedPrices       []prices.NormalizedPrices
+	Valuation              *commodities.Commodity
+	NormalizedPrices       prices.NormalizedPrices
 	CloseIncomeAndExpenses bool
 }
 
 // New creates a new balance.
-func New(valuations []*commodities.Commodity) *Balance {
+func New(valuation *commodities.Commodity) *Balance {
 	return &Balance{
 		Positions: make(map[CommodityAccount]amount.Amount),
 		Account: map[*accounts.Account]bool{
 			accounts.ValuationAccount():        true,
 			accounts.RetainedEarningsAccount(): true,
 		},
-		Prices:           prices.Prices{},
-		Valuations:       valuations,
-		NormalizedPrices: make([]prices.NormalizedPrices, len(valuations)),
+		Prices:    prices.Prices{},
+		Valuation: valuation,
 	}
 }
 
 // Copy deeply copies the balance
 func (b *Balance) Copy() *Balance {
-	nb := New(b.Valuations)
+	nb := New(b.Valuation)
 	nb.Prices = b.Prices.Copy()
 
 	// immutable
@@ -93,9 +92,8 @@ func (b *Balance) Update(day *ledger.Day) error {
 	}
 
 	// update normalized prices
-	b.NormalizedPrices = make([]prices.NormalizedPrices, 0, len(b.NormalizedPrices))
-	for _, c := range b.Valuations {
-		b.NormalizedPrices = append(b.NormalizedPrices, b.Prices.Normalize(c))
+	if b.Valuation != nil {
+		b.NormalizedPrices = b.Prices.Normalize(b.Valuation)
 	}
 
 	// open accounts
@@ -224,17 +222,20 @@ func (b *Balance) computeClosingTransactions() []*ledger.Transaction {
 // change of the previous amount, and a transaction is created to adjust the
 // valuation.
 func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) {
+	if b.Valuation == nil {
+		return nil, nil
+	}
 	result := []*ledger.Transaction{}
 	for pos, va := range b.Positions {
 		at := pos.Account.Type()
 		if at != accounts.ASSETS && at != accounts.LIABILITIES {
 			continue
 		}
-		diffs, nonzero, err := b.computeValuationDiff(pos, va)
+		v2, err := b.NormalizedPrices.Valuate(pos.Commodity, va.Amount())
 		if err != nil {
-			return nil, err
+			panic("no valuation found")
 		}
-		if nonzero {
+		if !v2.Equal(va.Value()) {
 			// create a transaction to adjust the valuation
 			result = append(result, &ledger.Transaction{
 				Date:        b.Date,
@@ -242,7 +243,7 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 				Tags:        nil,
 				Postings: []*ledger.Posting{
 					{
-						Amount:    amount.New(decimal.Zero, diffs),
+						Amount:    amount.New(decimal.Zero, v2.Sub(va.Value())),
 						Credit:    accounts.ValuationAccount(),
 						Debit:     pos.Account,
 						Commodity: pos.Commodity,
@@ -260,34 +261,16 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 	return result, nil
 }
 
-func (b *Balance) computeValuationDiff(pos CommodityAccount, va amount.Amount) ([]decimal.Decimal, bool, error) {
-	diffs := make([]decimal.Decimal, len(b.NormalizedPrices))
-	nonzero := false
-	for i, np := range b.NormalizedPrices {
-		v1 := va.Valuation(i)
-		v2, err := np.Valuate(pos.Commodity, va.Amount())
-		if err != nil {
-			return nil, false, fmt.Errorf("Should not happen - no valuation found")
-		}
-		if !v1.Equal(v2) {
-			diffs[i] = v2.Sub(v1)
-			nonzero = true
-		}
-	}
-	return diffs, nonzero, nil
-}
-
 func (b *Balance) valuateTransaction(t *ledger.Transaction) error {
+	if b.Valuation == nil {
+		return nil
+	}
 	for _, posting := range t.Postings {
-		valuations := make([]decimal.Decimal, 0, len(b.NormalizedPrices))
-		for _, np := range b.NormalizedPrices {
-			value, err := np.Valuate(posting.Commodity, posting.Amount.Amount())
-			if err != nil {
-				return Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
-			}
-			valuations = append(valuations, value)
+		value, err := b.NormalizedPrices.Valuate(posting.Commodity, posting.Amount.Amount())
+		if err != nil {
+			return Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
 		}
-		posting.Amount = amount.New(posting.Amount.Amount(), valuations)
+		posting.Amount = amount.New(posting.Amount.Amount(), value)
 	}
 	return nil
 }
@@ -299,7 +282,7 @@ func (b *Balance) processValue(v *ledger.Value) (*ledger.Transaction, error) {
 	pos := CommodityAccount{v.Account, v.Commodity}
 	va, ok := b.Positions[pos]
 	if !ok {
-		va = amount.New(decimal.Zero, nil)
+		va = amount.New(decimal.Zero, decimal.Zero)
 	}
 	return &ledger.Transaction{
 		Date:        v.Date,
@@ -325,13 +308,13 @@ func (b *Balance) processBalanceAssertion(a *ledger.Assertion) error {
 
 // GetPositions returns the positions for the given valuation index.
 // An index of nil returns the raw counts.
-func (b *Balance) GetPositions(valuation *int) map[CommodityAccount]decimal.Decimal {
+func (b *Balance) GetPositions(value bool) map[CommodityAccount]decimal.Decimal {
 	res := make(map[CommodityAccount]decimal.Decimal, len(b.Positions))
 	for pos, amt := range b.Positions {
-		if valuation == nil {
-			res[pos] = amt.Amount()
+		if value {
+			res[pos] = amt.Value()
 		} else {
-			res[pos] = amt.Valuation(*valuation)
+			res[pos] = amt.Amount()
 		}
 	}
 	return res

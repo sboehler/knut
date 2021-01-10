@@ -58,7 +58,7 @@ func CreateCmd() *cobra.Command {
 	c.Flags().Bool("months", false, "months")
 	c.Flags().Bool("quarters", false, "quarters")
 	c.Flags().Bool("years", false, "years")
-	c.Flags().StringArrayP("val", "v", []string{}, "valuate in the given commodity")
+	c.Flags().StringP("val", "v", "", "valuate in the given commodity")
 	c.Flags().StringArrayP("collapse", "c", []string{}, "<level>,<regex>")
 	c.Flags().String("account", "", "filter accounts with a regex")
 	c.Flags().String("commodity", "", "filter commodities with a regex")
@@ -97,7 +97,7 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 	if err != nil {
 		return nil, err
 	}
-	valuations, err := parseValuations(cmd, "val")
+	valuation, err := parseValuation(cmd, "val")
 	if err != nil {
 		return nil, err
 	}
@@ -155,9 +155,9 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 		From:              from,
 		To:                to,
 		Last:              last,
-		Valuations:        valuations,
+		Valuation:         valuation,
 		Diff:              diff,
-		ShowCommodities:   showCommodities || len(valuations) == 0,
+		ShowCommodities:   showCommodities || valuation == nil,
 		FilterAccounts:    filterAccountsRegex,
 		FilterCommodities: filterCommoditiesRegex,
 		Period:            period,
@@ -169,16 +169,15 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 	}, nil
 }
 
-func parseValuations(cmd *cobra.Command, name string) ([]*commodities.Commodity, error) {
-	vals, err := cmd.Flags().GetStringArray(name)
+func parseValuation(cmd *cobra.Command, name string) (*commodities.Commodity, error) {
+	val, err := cmd.Flags().GetString(name)
 	if err != nil {
 		return nil, err
 	}
-	var valuations = make([]*commodities.Commodity, len(vals))
-	for i, v := range vals {
-		valuations[i] = commodities.Get(v)
+	if len(val) == 0 {
+		return nil, nil
 	}
-	return valuations, nil
+	return commodities.Get(val), nil
 }
 
 func parseDate(cmd *cobra.Command, arg string) (*time.Time, error) {
@@ -248,7 +247,7 @@ type options struct {
 	From, To                                       *time.Time
 	Last                                           int
 	Period                                         *date.Period
-	Valuations                                     []*commodities.Commodity
+	Valuation                                      *commodities.Commodity
 	FilterAccounts, FilterCommodities              *regexp.Regexp
 	Collapse                                       []report.Collapse
 	RoundDigits                                    int32
@@ -285,14 +284,9 @@ func createDateSeries(o *options, l ledger.Ledger) []time.Time {
 }
 
 func createReportOptions(o *options) report.Options {
-	var val *int
-	if len(o.Valuations) > 0 {
-		v := 0
-		val = &v
-	}
 	return report.Options{
-		Valuation: val,
-		Collapse:  o.Collapse,
+		Value:    o.Valuation != nil,
+		Collapse: o.Collapse,
 	}
 }
 
@@ -325,7 +319,7 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 // and returning balances for the given dates.
 func process(opts *options, l ledger.Ledger) ([]*balance.Balance, error) {
 	var (
-		b      = balance.New(opts.Valuations)
+		b      = balance.New(opts.Valuation)
 		result []*balance.Balance
 		index  int
 	)

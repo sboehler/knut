@@ -23,6 +23,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model"
@@ -215,7 +217,7 @@ func (p *Parser) parsePostings() ([]*ledger.Posting, error) {
 		}
 		postings = append(postings,
 			&ledger.Posting{
-				Amount:    amount.New(amt, nil),
+				Amount:    amount.New(amt, decimal.Zero),
 				Credit:    crAccount,
 				Debit:     drAccount,
 				Commodity: commodity,

@@ -23,13 +23,12 @@ import (
 // Amount represents an amount in some commodity, along
 // with a set of valuations.
 type Amount struct {
-	amount     decimal.Decimal
-	valuations []decimal.Decimal
+	amount, value decimal.Decimal
 }
 
 // New creates a new amount with value zero.
-func New(amount decimal.Decimal, valuations []decimal.Decimal) Amount {
-	return Amount{amount, valuations}
+func New(amount, value decimal.Decimal) Amount {
+	return Amount{amount, value}
 }
 
 // Amount returns the amount.
@@ -37,70 +36,33 @@ func (a Amount) Amount() decimal.Decimal {
 	return a.amount
 }
 
-// Valuation returns the valuation at position i. If the valuation
-// does not exist, 0 is returned.
-func (a Amount) Valuation(i int) decimal.Decimal {
-	if 0 <= i && i < len(a.valuations) {
-		return a.valuations[i]
-	}
-	return decimal.Zero
+// Value returns the value.
+func (a Amount) Value() decimal.Decimal {
+	return a.value
 }
 
 func (a Amount) String() string {
-	return fmt.Sprintf("%s %v", a.amount, a.valuations)
+	return fmt.Sprintf("%s [%s]", a.amount, a.value)
 }
 
 // Plus computes the sum of two amounts.
 func (a Amount) Plus(b Amount) Amount {
-	if len(a.valuations) < len(b.valuations) {
-		return b.Plus(a)
-	}
-	amount := a.amount.Add(b.amount)
-	if len(b.valuations) == 0 {
-		return Amount{amount, a.valuations}
-	}
-	valuations := make([]decimal.Decimal, 0, len(a.valuations))
-	for i, v := range b.valuations {
-		valuations = append(valuations, a.valuations[i].Add(v))
-	}
-	if len(a.valuations) > len(b.valuations) {
-		valuations = append(valuations, a.valuations[len(b.valuations):len(a.valuations)]...)
-	}
-	return Amount{amount, valuations}
+	return Amount{a.amount.Add(b.amount), a.value.Add(b.value)}
 }
 
 // Minus computes the difference between two amounts.
 func (a Amount) Minus(b Amount) Amount {
-	return a.Plus(b.Neg())
+	return Amount{a.amount.Sub(b.amount), a.value.Sub(b.value)}
 }
 
 // Neg computes the negation of this amount.
 func (a Amount) Neg() Amount {
-	amount := a.amount.Neg()
-	if len(a.valuations) == 0 {
-		return Amount{amount, nil}
-	}
-	valuations := make([]decimal.Decimal, 0, len(a.valuations))
-	for _, v := range a.valuations {
-		valuations = append(valuations, v.Neg())
-	}
-	return Amount{amount, valuations}
+	return Amount{a.amount.Neg(), a.value.Neg()}
 }
 
 // Equal tests if both amounts are equal.
 func (a Amount) Equal(b Amount) bool {
-	if len(a.valuations) < len(b.valuations) {
-		return b.Equal(a)
-	}
-	if !a.amount.Equal(b.amount) {
-		return false
-	}
-	for i, v := range a.valuations {
-		if !v.Equal(b.Valuation(i)) {
-			return false
-		}
-	}
-	return true
+	return a.amount.Equal(b.amount) && a.value.Equal(b.value)
 }
 
 // Vec is a vector of decimals.

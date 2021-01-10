@@ -180,7 +180,7 @@ func (p *Parser) parse() error {
 
 		postings := []*ledger.Posting{
 			{
-				Amount:    amount.New(amt.Abs(), nil),
+				Amount:    amount.New(amt.Abs(), decimal.Zero),
 				Credit:    crAccount,
 				Debit:     drAccount,
 				Commodity: commodity,

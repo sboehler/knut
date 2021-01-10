@@ -318,8 +318,7 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 	if err := lb.Process(ch); err != nil {
 		return err
 	}
-	l := lb.Build()
-	b, err := process(opts.Valuations, createDateSeries(opts, l), opts.Close, l)
+	b, err := process(opts, lb.Build())
 	if err != nil {
 		return err
 	}
@@ -341,17 +340,12 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 	return table.NewConsoleRenderer(tb, opts.Color, opts.Thousands, opts.RoundDigits).Render(out)
 }
 
-// Options describes options for processing a ledger.
-type Options struct {
-	Commodities []*commodities.Commodity
-	Dates       []time.Time
-}
-
 // process processes the ledger and creates valuations for the given commodities
 // and returning balances for the given dates.
-func process(commodities []*commodities.Commodity, dates []time.Time, close bool, l ledger.Ledger) ([]*balance.Balance, error) {
+func process(opts *options, l ledger.Ledger) ([]*balance.Balance, error) {
+	dates := createDateSeries(opts, l)
 	balances := make([]*balance.Balance, 0, len(dates))
-	balance := balance.New(commodities)
+	balance := balance.New(opts.Valuations)
 	step := 0
 	for _, date := range dates {
 		for step < len(l) && (l[step].Date == date || l[step].Date.Before(date)) {
@@ -363,7 +357,7 @@ func process(commodities []*commodities.Commodity, dates []time.Time, close bool
 		cur := balance.Copy()
 		cur.Date = date
 		balances = append(balances, cur)
-		balance.CloseIncomeAndExpenses = close
+		balance.CloseIncomeAndExpenses = opts.Close
 	}
 	return balances, nil
 }

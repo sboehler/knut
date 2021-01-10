@@ -199,8 +199,8 @@ func (p *parser) parseBooking(r []string) error {
 			return err
 		}
 		t.Postings = []*ledger.Posting{
-			ledger.NewPosting(p.account, accounts.ValuationAccount(), p.currency, amt, nil),
-			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount, nil),
+			ledger.NewPosting(p.account, accounts.ValuationAccount(), p.currency, amt),
+			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount),
 		}
 	case fxBuyRegex.MatchString(r[1]):
 		otherCommodity, otherAmount, err := parseCombiField(r[5])
@@ -208,12 +208,12 @@ func (p *parser) parseBooking(r []string) error {
 			return err
 		}
 		t.Postings = []*ledger.Posting{
-			ledger.NewPosting(p.account, accounts.ValuationAccount(), p.currency, amt, nil),
-			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg(), nil),
+			ledger.NewPosting(p.account, accounts.ValuationAccount(), p.currency, amt),
+			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg()),
 		}
 	default:
 		t.Postings = []*ledger.Posting{
-			ledger.NewPosting(p.account, accounts.TBDAccount(), p.currency, amt, nil),
+			ledger.NewPosting(p.account, accounts.TBDAccount(), p.currency, amt),
 		}
 	}
 	p.builder.AddTransaction(&t)

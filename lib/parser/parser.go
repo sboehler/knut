@@ -213,15 +213,6 @@ func (p *Parser) parsePostings() ([]*ledger.Posting, error) {
 				return nil, err
 			}
 		}
-		var tag *ledger.Tag
-		if p.current() == '#' {
-			if tag, err = p.parseTag(); err != nil {
-				return nil, err
-			}
-			if err = p.consumeWhitespace1(); err != nil {
-				return nil, err
-			}
-		}
 		postings = append(postings,
 			&ledger.Posting{
 				Amount:    amount.New(amt, nil),
@@ -229,7 +220,6 @@ func (p *Parser) parsePostings() ([]*ledger.Posting, error) {
 				Debit:     drAccount,
 				Commodity: commodity,
 				Lot:       lot,
-				Tag:       tag,
 			},
 		)
 		if err = p.consumeRestOfWhitespaceLine(); err != nil {

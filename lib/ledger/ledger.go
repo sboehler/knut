@@ -96,12 +96,11 @@ type Posting struct {
 	Credit, Debit *accounts.Account
 	Commodity     *commodities.Commodity
 	Lot           *Lot
-	Tag           *Tag
 }
 
 // NewPosting creates a new posting from the given parameters. If amount is negative, it
 // will be inverted and the accounts reversed.
-func NewPosting(crAccount, drAccount *accounts.Account, commodity *commodities.Commodity, amt decimal.Decimal, tag *Tag) *Posting {
+func NewPosting(crAccount, drAccount *accounts.Account, commodity *commodities.Commodity, amt decimal.Decimal) *Posting {
 	if amt.IsNegative() {
 		crAccount, drAccount = drAccount, crAccount
 		amt = amt.Neg()
@@ -111,7 +110,6 @@ func NewPosting(crAccount, drAccount *accounts.Account, commodity *commodities.C
 		Debit:     drAccount,
 		Amount:    amount.New(amt, nil),
 		Commodity: commodity,
-		Tag:       tag,
 	}
 }
 

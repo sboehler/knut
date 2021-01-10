@@ -150,7 +150,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		Date:        d,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(p.account, accounts.TBDAccount(), commodities.Get("CHF"), amt, nil),
+			ledger.NewPosting(p.account, accounts.TBDAccount(), commodities.Get("CHF"), amt),
 		},
 	})
 	return true, nil

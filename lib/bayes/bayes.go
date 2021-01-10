@@ -119,9 +119,6 @@ func dedup(ss []string) map[string]bool {
 
 func tokenize(trx *ledger.Transaction, posting *ledger.Posting, account *accounts.Account) []string {
 	tokens := append(strings.Fields(trx.Description), posting.Commodity.String(), posting.Amount.String())
-	if posting.Tag != nil {
-		tokens = append(tokens, posting.Tag.String())
-	}
 	if account == posting.Credit {
 		tokens = append(tokens, "credit", posting.Debit.String())
 	}

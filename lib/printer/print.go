@@ -85,13 +85,6 @@ func (p Printer) printPosting(w io.Writer, t *ledger.Posting) (int, error) {
 			return n, err
 		}
 	}
-	if t.Tag != nil {
-		c, err = fmt.Fprintf(w, " %s", t.Tag)
-		n += c
-		if err != nil {
-			return n, err
-		}
-	}
 	return n, nil
 }
 

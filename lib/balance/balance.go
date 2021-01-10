@@ -306,7 +306,7 @@ func (b *Balance) processValue(v *ledger.Value) (*ledger.Transaction, error) {
 		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
 		Tags:        nil,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(accounts.ValuationAccount(), v.Account, pos.Commodity, v.Amount.Sub(va.Amount()), nil),
+			ledger.NewPosting(accounts.ValuationAccount(), v.Account, pos.Commodity, v.Amount.Sub(va.Amount())),
 		},
 	}, nil
 }

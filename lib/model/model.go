@@ -110,7 +110,7 @@ func (t Posting) WriteTo(b io.Writer) (int64, error) {
 		return n, err
 	}
 	if t.Lot != nil {
-		c, err = b.Write([]byte{' '})
+		c, err = io.WriteString(b, " ")
 		n += int64(c)
 		if err != nil {
 			return n, err

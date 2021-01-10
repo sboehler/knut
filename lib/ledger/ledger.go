@@ -100,7 +100,7 @@ func write(w io.Writer, wr io.WriterTo, count *int64) error {
 	if err != nil {
 		return err
 	}
-	d, err := w.Write([]byte{'\n'})
+	d, err := io.WriteString(w, "\n")
 	*count += int64(d)
 	if err != nil {
 		return err

@@ -60,7 +60,7 @@ func parseRecursively(wg *sync.WaitGroup, file string, ch chan<- interface{}) {
 
 // ParseOneFile parses one file.
 func ParseOneFile(path string) (chan interface{}, error) {
-	p, err := Open(path)
+	p, err := open(path)
 	if err != nil {
 		return nil, err
 	}

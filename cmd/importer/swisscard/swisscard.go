@@ -29,7 +29,6 @@ import (
 
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
@@ -147,11 +146,11 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if amt, err = decimal.NewFromString(replacer.Replace(r[3])); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        d,
 		Description: desc,
-		Postings: []*model.Posting{
-			model.NewPosting(p.account, accounts.TBDAccount(), commodities.Get("CHF"), amt, nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(p.account, accounts.TBDAccount(), commodities.Get("CHF"), amt, nil),
 		},
 	})
 	return true, nil

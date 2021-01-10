@@ -16,7 +16,6 @@ package report
 
 import (
 	"github.com/sboehler/knut/lib/amount"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/commodities"
 )
 
@@ -36,7 +35,7 @@ func NewSegment(k string) *Segment {
 	}
 }
 
-func (s *Segment) insert(keys []string, pos model.Position) {
+func (s *Segment) insert(keys []string, pos Position) {
 	if len(keys) > 0 {
 		key := keys[0]
 		var subsegment *Segment
@@ -52,10 +51,10 @@ func (s *Segment) insert(keys []string, pos model.Position) {
 		}
 		subsegment.insert(keys[1:], pos)
 	} else {
-		if existing, ok := s.Positions[pos.Commodity()]; ok {
+		if existing, ok := s.Positions[pos.Commodity]; ok {
 			existing.Add(pos.Amounts)
 		} else {
-			s.Positions[pos.Commodity()] = pos.Amounts
+			s.Positions[pos.Commodity] = pos.Amounts
 		}
 	}
 }

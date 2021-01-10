@@ -29,7 +29,6 @@ import (
 
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
@@ -159,7 +158,7 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		p.builder.AddAssertion(&model.Assertion{
+		p.builder.AddAssertion(&ledger.Assertion{
 			Date:      date,
 			Account:   p.account,
 			Amount:    balance,
@@ -189,7 +188,7 @@ func (p *parser) parseBooking(r []string) error {
 		return fmt.Errorf("invalid record with two amounts: %v", r)
 	}
 
-	var t = model.Transaction{
+	var t = ledger.Transaction{
 		Date:        date,
 		Description: desc,
 	}
@@ -199,22 +198,22 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		t.Postings = []*model.Posting{
-			model.NewPosting(p.account, accounts.ValuationAccount(), p.currency, amt, nil),
-			model.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount, nil),
+		t.Postings = []*ledger.Posting{
+			ledger.NewPosting(p.account, accounts.ValuationAccount(), p.currency, amt, nil),
+			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount, nil),
 		}
 	case fxBuyRegex.MatchString(r[1]):
 		otherCommodity, otherAmount, err := parseCombiField(r[5])
 		if err != nil {
 			return err
 		}
-		t.Postings = []*model.Posting{
-			model.NewPosting(p.account, accounts.ValuationAccount(), p.currency, amt, nil),
-			model.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg(), nil),
+		t.Postings = []*ledger.Posting{
+			ledger.NewPosting(p.account, accounts.ValuationAccount(), p.currency, amt, nil),
+			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg(), nil),
 		}
 	default:
-		t.Postings = []*model.Posting{
-			model.NewPosting(p.account, accounts.TBDAccount(), p.currency, amt, nil),
+		t.Postings = []*ledger.Posting{
+			ledger.NewPosting(p.account, accounts.TBDAccount(), p.currency, amt, nil),
 		}
 	}
 	p.builder.AddTransaction(&t)

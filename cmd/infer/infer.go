@@ -26,6 +26,7 @@ import (
 
 	"github.com/sboehler/knut/lib/bayes"
 	"github.com/sboehler/knut/lib/format"
+	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/parser"
@@ -82,7 +83,7 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 			return
 		}
 		for d := range upstream {
-			if t, ok := d.(*model.Transaction); ok {
+			if t, ok := d.(*ledger.Transaction); ok {
 				bayesModel.Infer(t, account)
 			}
 			ch <- d
@@ -116,7 +117,7 @@ func train(file string, exclude *accounts.Account) (*bayes.Model, error) {
 		switch t := r.(type) {
 		case error:
 			return nil, t
-		case *model.Transaction:
+		case *ledger.Transaction:
 			m.Update(t)
 		}
 	}

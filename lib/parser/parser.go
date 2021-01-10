@@ -24,6 +24,7 @@ import (
 	"unicode"
 
 	"github.com/sboehler/knut/lib/amount"
+	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/scanner"
 )
@@ -141,7 +142,7 @@ func (p *Parser) parseDirective() (interface{}, error) {
 	return result, nil
 }
 
-func (p *Parser) parseTransaction(d time.Time) (*model.Transaction, error) {
+func (p *Parser) parseTransaction(d time.Time) (*ledger.Transaction, error) {
 	desc, err := scanner.ReadQuotedString(p.scanner)
 	if err != nil {
 		return nil, err
@@ -162,7 +163,7 @@ func (p *Parser) parseTransaction(d time.Time) (*model.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &model.Transaction{
+	return &ledger.Transaction{
 		Pos:         p.getRange(),
 		Date:        d,
 		Description: desc,
@@ -172,8 +173,8 @@ func (p *Parser) parseTransaction(d time.Time) (*model.Transaction, error) {
 
 }
 
-func (p *Parser) parsePostings() ([]*model.Posting, error) {
-	var postings []*model.Posting
+func (p *Parser) parsePostings() ([]*ledger.Posting, error) {
+	var postings []*ledger.Posting
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		crAccount, err := scanner.ParseAccount(p.scanner)
 		if err != nil {
@@ -203,7 +204,7 @@ func (p *Parser) parsePostings() ([]*model.Posting, error) {
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		var lot *model.Lot
+		var lot *ledger.Lot
 		if p.current() == '{' {
 			if lot, err = p.parseLot(); err != nil {
 				return nil, err
@@ -212,7 +213,7 @@ func (p *Parser) parsePostings() ([]*model.Posting, error) {
 				return nil, err
 			}
 		}
-		var tag *model.Tag
+		var tag *ledger.Tag
 		if p.current() == '#' {
 			if tag, err = p.parseTag(); err != nil {
 				return nil, err
@@ -222,7 +223,7 @@ func (p *Parser) parsePostings() ([]*model.Posting, error) {
 			}
 		}
 		postings = append(postings,
-			&model.Posting{
+			&ledger.Posting{
 				Amount:    amount.New(amt, nil),
 				Credit:    crAccount,
 				Debit:     drAccount,
@@ -238,7 +239,7 @@ func (p *Parser) parsePostings() ([]*model.Posting, error) {
 	return postings, nil
 }
 
-func (p *Parser) parseOpen(d time.Time) (*model.Open, error) {
+func (p *Parser) parseOpen(d time.Time) (*ledger.Open, error) {
 	if err := p.scanner.ParseString("open"); err != nil {
 		return nil, err
 	}
@@ -249,14 +250,14 @@ func (p *Parser) parseOpen(d time.Time) (*model.Open, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &model.Open{
+	return &ledger.Open{
 		Pos:     p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
 }
 
-func (p *Parser) parseClose(d time.Time) (*model.Close, error) {
+func (p *Parser) parseClose(d time.Time) (*ledger.Close, error) {
 	if err := p.scanner.ParseString("close"); err != nil {
 		return nil, err
 	}
@@ -267,14 +268,14 @@ func (p *Parser) parseClose(d time.Time) (*model.Close, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &model.Close{
+	return &ledger.Close{
 		Pos:     p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
 }
 
-func (p *Parser) parsePrice(d time.Time) (*model.Price, error) {
+func (p *Parser) parsePrice(d time.Time) (*ledger.Price, error) {
 	if err := p.scanner.ParseString("price"); err != nil {
 		return nil, err
 	}
@@ -300,7 +301,7 @@ func (p *Parser) parsePrice(d time.Time) (*model.Price, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &model.Price{
+	return &ledger.Price{
 		Pos:       p.getRange(),
 		Date:      d,
 		Commodity: commodity,
@@ -309,7 +310,7 @@ func (p *Parser) parsePrice(d time.Time) (*model.Price, error) {
 	}, nil
 }
 
-func (p *Parser) parseBalanceAssertion(d time.Time) (*model.Assertion, error) {
+func (p *Parser) parseBalanceAssertion(d time.Time) (*ledger.Assertion, error) {
 	if err := p.scanner.ParseString("balance"); err != nil {
 		return nil, err
 	}
@@ -334,7 +335,7 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*model.Assertion, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &model.Assertion{
+	return &ledger.Assertion{
 		Pos:       p.getRange(),
 		Date:      d,
 		Account:   account,
@@ -343,7 +344,7 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*model.Assertion, error) {
 	}, nil
 }
 
-func (p *Parser) parseValue(d time.Time) (*model.Value, error) {
+func (p *Parser) parseValue(d time.Time) (*ledger.Value, error) {
 	if err := p.scanner.ParseString("value"); err != nil {
 		return nil, err
 	}
@@ -368,7 +369,7 @@ func (p *Parser) parseValue(d time.Time) (*model.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &model.Value{
+	return &ledger.Value{
 		Pos:       p.getRange(),
 		Date:      d,
 		Account:   account,
@@ -377,7 +378,7 @@ func (p *Parser) parseValue(d time.Time) (*model.Value, error) {
 	}, nil
 }
 
-func (p *Parser) parseInclude() (*model.Include, error) {
+func (p *Parser) parseInclude() (*ledger.Include, error) {
 	p.markStart()
 	if err := p.scanner.ParseString("include"); err != nil {
 		return nil, err
@@ -389,7 +390,7 @@ func (p *Parser) parseInclude() (*model.Include, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := &model.Include{
+	result := &ledger.Include{
 		Pos:  p.getRange(),
 		Path: i,
 	}
@@ -420,7 +421,7 @@ func (p *Parser) consumeRestOfWhitespaceLine() error {
 	return p.consumeNewline()
 }
 
-func (p *Parser) parseLot() (*model.Lot, error) {
+func (p *Parser) parseLot() (*ledger.Lot, error) {
 	err := p.scanner.ConsumeRune('{')
 	if err != nil {
 		return nil, err
@@ -476,7 +477,7 @@ func (p *Parser) parseLot() (*model.Lot, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &model.Lot{
+	return &ledger.Lot{
 		Date:      d,
 		Label:     label,
 		Price:     price,
@@ -484,8 +485,8 @@ func (p *Parser) parseLot() (*model.Lot, error) {
 	}, nil
 }
 
-func (p *Parser) parseTags() ([]model.Tag, error) {
-	var tags []model.Tag
+func (p *Parser) parseTags() ([]ledger.Tag, error) {
+	var tags []ledger.Tag
 	for p.current() == '#' {
 		tag, err := p.parseTag()
 		if err != nil {
@@ -499,7 +500,7 @@ func (p *Parser) parseTags() ([]model.Tag, error) {
 	return tags, nil
 }
 
-func (p *Parser) parseTag() (*model.Tag, error) {
+func (p *Parser) parseTag() (*ledger.Tag, error) {
 	if p.current() != '#' {
 		return nil, fmt.Errorf("Expected tag, got %c", p.current())
 	}
@@ -513,7 +514,7 @@ func (p *Parser) parseTag() (*model.Tag, error) {
 		return nil, err
 	}
 	b.WriteString(i)
-	tag := model.Tag(b.String())
+	tag := ledger.Tag(b.String())
 	return &tag, nil
 }
 

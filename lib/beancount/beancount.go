@@ -20,7 +20,6 @@ import (
 	"regexp"
 
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
@@ -35,11 +34,11 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 		return err
 	}
 	l[0].Openings = append(l[0].Openings,
-		&model.Open{
+		&ledger.Open{
 			Date:    l[0].Date,
 			Account: accounts.ValuationAccount(),
 		},
-		&model.Open{
+		&ledger.Open{
 			Date:    l[0].Date,
 			Account: accounts.RetainedEarningsAccount(),
 		},
@@ -71,7 +70,7 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 	return nil
 }
 
-func writeTrx(w io.Writer, t *model.Transaction, c *commodities.Commodity) error {
+func writeTrx(w io.Writer, t *ledger.Transaction, c *commodities.Commodity) error {
 	if _, err := fmt.Fprintf(w, `%s * "%s"`, t.Date.Format("2006-01-02"), t.Description); err != nil {
 		return err
 	}
@@ -93,7 +92,7 @@ func writeTrx(w io.Writer, t *model.Transaction, c *commodities.Commodity) error
 }
 
 // WriteTo pretty-prints a posting.
-func writePosting(w io.Writer, p *model.Posting, c *commodities.Commodity) error {
+func writePosting(w io.Writer, p *ledger.Posting, c *commodities.Commodity) error {
 	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit, p.Amount.Valuation(0).Neg(), stripNonAlphanum(c)); err != nil {
 		return err
 	}

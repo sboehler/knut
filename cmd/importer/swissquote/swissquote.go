@@ -30,7 +30,6 @@ import (
 
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
@@ -237,13 +236,13 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 		qty = qty.Neg()
 	}
 	desc := fmt.Sprintf("%s %s %s x %s %s %s @ %s %s", r.orderNo, r.trxType, r.quantity, r.symbol, r.name, r.isin, r.price, r.currency)
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: desc,
-		Postings: []*model.Posting{
-			model.NewPosting(accounts.ValuationAccount(), p.options.account, r.symbol, qty, nil),
-			model.NewPosting(accounts.ValuationAccount(), p.options.account, r.currency, proceeds, nil),
-			model.NewPosting(p.options.fee, p.options.account, r.currency, fee, nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, r.symbol, qty, nil),
+			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, r.currency, proceeds, nil),
+			ledger.NewPosting(p.options.fee, p.options.account, r.currency, fee, nil),
 		},
 	})
 	return true, nil
@@ -267,12 +266,12 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		return true, nil
 	}
 	desc := fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency, r.trxType, r.netAmount, r.currency)
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: desc,
-		Postings: []*model.Posting{
-			model.NewPosting(accounts.ValuationAccount(), p.options.account, p.last.currency, p.last.netAmount, nil),
-			model.NewPosting(accounts.ValuationAccount(), p.options.account, r.currency, r.netAmount, nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, p.last.currency, p.last.netAmount, nil),
+			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, r.currency, r.netAmount, nil),
 		},
 	})
 	p.last = nil
@@ -288,14 +287,14 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 	if _, ok := w[r.trxType]; !ok {
 		return false, nil
 	}
-	postings := []*model.Posting{
-		model.NewPosting(p.options.dividend, p.options.account, r.currency, r.price, nil),
+	postings := []*ledger.Posting{
+		ledger.NewPosting(p.options.dividend, p.options.account, r.currency, r.price, nil),
 	}
 	if !r.fee.IsZero() {
-		postings = append(postings, model.NewPosting(p.options.account, p.options.tax, r.currency, r.fee, nil))
+		postings = append(postings, ledger.NewPosting(p.options.account, p.options.tax, r.currency, r.fee, nil))
 	}
 	desc := fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol, r.name, r.isin)
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: desc,
 		Postings:    postings,
@@ -307,11 +306,11 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 	if r.trxType != "Depotgebühren" {
 		return false, nil
 	}
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []*model.Posting{
-			model.NewPosting(p.options.fee, p.options.account, r.currency, r.netAmount, nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(p.options.fee, p.options.account, r.currency, r.netAmount, nil),
 		},
 	})
 	return true, nil
@@ -327,11 +326,11 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 	if _, ok := w[r.trxType]; !ok {
 		return false, nil
 	}
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []*model.Posting{
-			model.NewPosting(accounts.TBDAccount(), p.options.account, r.currency, r.netAmount, nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(accounts.TBDAccount(), p.options.account, r.currency, r.netAmount, nil),
 		},
 	})
 	return true, nil
@@ -341,22 +340,22 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 	if r.trxType != "Zins" {
 		return false, nil
 	}
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []*model.Posting{
-			model.NewPosting(p.options.interest, p.options.account, r.currency, r.netAmount, nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(p.options.interest, p.options.account, r.currency, r.netAmount, nil),
 		},
 	})
 	return true, nil
 }
 
 func (p *parser) parseCatchall(r *record) (bool, error) {
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []*model.Posting{
-			model.NewPosting(accounts.TBDAccount(), p.options.account, r.currency, r.netAmount, nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(accounts.TBDAccount(), p.options.account, r.currency, r.netAmount, nil),
 		},
 	})
 	return true, nil

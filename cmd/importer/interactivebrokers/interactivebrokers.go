@@ -29,7 +29,6 @@ import (
 
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
@@ -233,13 +232,13 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []*model.Posting{
-			model.NewPosting(accounts.ValuationAccount(), p.options.account, stock, qty.Round(2), nil),
-			model.NewPosting(accounts.ValuationAccount(), p.options.account, currency, proceeds.Round(2), nil),
-			model.NewPosting(p.options.fee, p.options.account, currency, fee.Round(2), nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, stock, qty.Round(2), nil),
+			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, currency, proceeds.Round(2), nil),
+			ledger.NewPosting(p.options.fee, p.options.account, currency, fee.Round(2), nil),
 		},
 	})
 	return true, nil
@@ -281,14 +280,14 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
-	postings := []*model.Posting{
-		model.NewPosting(accounts.ValuationAccount(), p.options.account, stock, qty.Round(2), nil),
-		model.NewPosting(accounts.ValuationAccount(), p.options.account, currency, proceeds.Round(2), nil),
+	postings := []*ledger.Posting{
+		ledger.NewPosting(accounts.ValuationAccount(), p.options.account, stock, qty.Round(2), nil),
+		ledger.NewPosting(accounts.ValuationAccount(), p.options.account, currency, proceeds.Round(2), nil),
 	}
 	if !fee.IsZero() {
-		postings = append(postings, model.NewPosting(p.options.fee, p.options.account, currency, fee.Round(2), nil))
+		postings = append(postings, ledger.NewPosting(p.options.fee, p.options.account, currency, fee.Round(2), nil))
 	}
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings:    postings,
@@ -315,11 +314,11 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Withdraw %s %s", amt, currency)
 	}
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []*model.Posting{
-			model.NewPosting(accounts.TBDAccount(), p.options.account, currency, amt, nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(accounts.TBDAccount(), p.options.account, currency, amt, nil),
 		},
 	})
 	return true, nil
@@ -345,12 +344,12 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	}
 	security := commodities.Get(symbol)
 	desc := r[4]
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []*model.Posting{
-			model.NewPosting(p.options.dividend, p.options.account, currency, amt, nil),
-			model.NewPosting(p.options.dividend, p.options.dividend, security, decimal.Zero, nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(p.options.dividend, p.options.account, currency, amt, nil),
+			ledger.NewPosting(p.options.dividend, p.options.dividend, security, decimal.Zero, nil),
 		},
 	})
 	return true, nil
@@ -376,12 +375,12 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	}
 	security := commodities.Get(symbol)
 	desc := r[4]
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []*model.Posting{
-			model.NewPosting(p.options.tax, p.options.account, currency, amt, nil),
-			model.NewPosting(p.options.tax, p.options.tax, security, decimal.Zero, nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(p.options.tax, p.options.account, currency, amt, nil),
+			ledger.NewPosting(p.options.tax, p.options.tax, security, decimal.Zero, nil),
 		},
 	})
 	return true, nil
@@ -402,11 +401,11 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 		return false, err
 	}
 	desc := r[4]
-	p.builder.AddTransaction(&model.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []*model.Posting{
-			model.NewPosting(p.options.interest, p.options.account, currency, amt, nil)},
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(p.options.interest, p.options.account, currency, amt, nil)},
 	})
 	return true, nil
 }
@@ -423,7 +422,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	p.builder.AddAssertion(&model.Assertion{
+	p.builder.AddAssertion(&ledger.Assertion{
 		Date:      p.dateTo,
 		Account:   p.options.account,
 		Commodity: symbol,
@@ -444,7 +443,7 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	p.builder.AddAssertion(&model.Assertion{
+	p.builder.AddAssertion(&ledger.Assertion{
 		Date:      p.dateTo,
 		Account:   p.options.account,
 		Commodity: symbol,

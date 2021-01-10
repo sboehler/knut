@@ -19,8 +19,6 @@ import (
 	"regexp"
 	"sort"
 	"time"
-
-	"github.com/sboehler/knut/lib/model"
 )
 
 // Builder maps dates to steps
@@ -29,7 +27,7 @@ type Builder struct {
 	steps                          map[time.Time]*Step
 }
 
-// Options represents configuration options for creating a ledger.
+// Options represents configuration options for creating a
 type Options struct {
 	AccountsFilter, CommoditiesFilter *regexp.Regexp
 }
@@ -60,17 +58,17 @@ func (b *Builder) Process(results <-chan interface{}) error {
 		switch t := res.(type) {
 		case error:
 			return t
-		case *model.Open:
+		case *Open:
 			b.AddOpening(t)
-		case *model.Price:
+		case *Price:
 			b.AddPrice(t)
-		case *model.Transaction:
+		case *Transaction:
 			b.AddTransaction(t)
-		case *model.Assertion:
+		case *Assertion:
 			b.AddAssertion(t)
-		case *model.Value:
+		case *Value:
 			b.AddValue(t)
-		case *model.Close:
+		case *Close:
 			b.AddClosing(t)
 		default:
 			return fmt.Errorf("Unknown: %v", t)
@@ -79,7 +77,7 @@ func (b *Builder) Process(results <-chan interface{}) error {
 	return nil
 }
 
-// Build creates a new ledger.
+// Build creates a new
 func (b *Builder) Build() Ledger {
 	var result = make([]*Step, 0, len(b.steps))
 	for _, s := range b.steps {
@@ -102,8 +100,8 @@ func (b *Builder) getOrCreate(d time.Time) *Step {
 }
 
 // AddTransaction adds a transaction directive.
-func (b *Builder) AddTransaction(t *model.Transaction) {
-	var filtered = make([]*model.Posting, 0, len(t.Postings))
+func (b *Builder) AddTransaction(t *Transaction) {
+	var filtered = make([]*Posting, 0, len(t.Postings))
 	for _, p := range t.Postings {
 		if (b.accountFilter.MatchString(p.Credit.String()) ||
 			b.accountFilter.MatchString(p.Debit.String())) &&
@@ -119,25 +117,25 @@ func (b *Builder) AddTransaction(t *model.Transaction) {
 }
 
 // AddOpening adds an open directive.
-func (b *Builder) AddOpening(o *model.Open) {
+func (b *Builder) AddOpening(o *Open) {
 	s := b.getOrCreate(o.Date)
 	s.Openings = append(s.Openings, o)
 }
 
 // AddClosing adds a close directive.
-func (b *Builder) AddClosing(close *model.Close) {
+func (b *Builder) AddClosing(close *Close) {
 	s := b.getOrCreate(close.Date)
 	s.Closings = append(s.Closings, close)
 }
 
 // AddPrice adds a price directive.
-func (b *Builder) AddPrice(p *model.Price) {
+func (b *Builder) AddPrice(p *Price) {
 	s := b.getOrCreate(p.Date)
 	s.Prices = append(s.Prices, p)
 }
 
 // AddAssertion adds an assertion directive.
-func (b *Builder) AddAssertion(a *model.Assertion) {
+func (b *Builder) AddAssertion(a *Assertion) {
 	if !b.accountFilter.MatchString(a.Account.String()) {
 		return
 	}
@@ -149,7 +147,7 @@ func (b *Builder) AddAssertion(a *model.Assertion) {
 }
 
 // AddValue adds an value directive.
-func (b *Builder) AddValue(a *model.Value) {
+func (b *Builder) AddValue(a *Value) {
 	if !b.accountFilter.MatchString(a.Account.String()) {
 		return
 	}

@@ -27,7 +27,6 @@ import (
 
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 	"github.com/sboehler/knut/lib/scanner"
@@ -99,7 +98,7 @@ func run(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		builder.AddValue(&model.Value{
+		builder.AddValue(&ledger.Value{
 			Date:      d,
 			Account:   account,
 			Amount:    a.Round(2),

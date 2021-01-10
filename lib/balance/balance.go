@@ -34,7 +34,7 @@ import (
 // Balance represents a balance for accounts at the given date.
 type Balance struct {
 	Date                   time.Time
-	Positions              map[model.CommodityAccount]amount.Amount
+	Positions              map[CommodityAccount]amount.Amount
 	Account                map[*accounts.Account]bool
 	Prices                 prices.Prices
 	Valuations             []*commodities.Commodity
@@ -45,7 +45,7 @@ type Balance struct {
 // New creates a new balance.
 func New(valuations []*commodities.Commodity) *Balance {
 	return &Balance{
-		Positions: make(map[model.CommodityAccount]amount.Amount),
+		Positions: make(map[CommodityAccount]amount.Amount),
 		Account: map[*accounts.Account]bool{
 			accounts.ValuationAccount():        true,
 			accounts.RetainedEarningsAccount(): true,
@@ -170,7 +170,7 @@ func (b *Balance) Update(step *ledger.Step) error {
 			return Error{c, "account is not open"}
 		}
 		for pos, amount := range b.Positions {
-			if pos.Account() == c.Account && !amount.Amount().IsZero() {
+			if pos.Account == c.Account && !amount.Amount().IsZero() {
 				return Error{c, "account has nonzero position"}
 			}
 		}
@@ -179,7 +179,7 @@ func (b *Balance) Update(step *ledger.Step) error {
 	return nil
 }
 
-func (b *Balance) bookTransaction(t *model.Transaction) error {
+func (b *Balance) bookTransaction(t *ledger.Transaction) error {
 	for _, posting := range t.Postings {
 		if _, isOpen := b.Account[posting.Credit]; !isOpen {
 			return Error{t, fmt.Sprintf("credit account %s is not open", posting.Credit)}
@@ -187,30 +187,30 @@ func (b *Balance) bookTransaction(t *model.Transaction) error {
 		if _, isOpen := b.Account[posting.Debit]; !isOpen {
 			return Error{t, fmt.Sprintf("debit account %s is not open", posting.Debit)}
 		}
-		crPos := model.NewCommodityAccount(posting.Credit, posting.Commodity)
-		drPos := model.NewCommodityAccount(posting.Debit, posting.Commodity)
+		crPos := CommodityAccount{posting.Credit, posting.Commodity}
+		drPos := CommodityAccount{posting.Debit, posting.Commodity}
 		b.Positions[crPos] = b.Positions[crPos].Minus(posting.Amount)
 		b.Positions[drPos] = b.Positions[drPos].Plus(posting.Amount)
 	}
 	return nil
 }
 
-func (b *Balance) computeClosingTransactions() []*model.Transaction {
-	var result []*model.Transaction
+func (b *Balance) computeClosingTransactions() []*ledger.Transaction {
+	var result []*ledger.Transaction
 	for pos, va := range b.Positions {
-		at := pos.Account().Type()
+		at := pos.Account.Type()
 		if at != accounts.INCOME && at != accounts.EXPENSES {
 			continue
 		}
-		result = append(result, &model.Transaction{
+		result = append(result, &ledger.Transaction{
 			Date:        b.Date,
 			Description: fmt.Sprintf("Closing %v to retained earnings", pos),
 			Tags:        nil,
-			Postings: []*model.Posting{
+			Postings: []*ledger.Posting{
 				{
 					Amount:    va,
-					Commodity: pos.Commodity(),
-					Credit:    pos.Account(),
+					Commodity: pos.Commodity,
+					Credit:    pos.Account,
 					Debit:     accounts.RetainedEarningsAccount(),
 				},
 			},
@@ -223,10 +223,10 @@ func (b *Balance) computeClosingTransactions() []*model.Transaction {
 // corresponds to the amounts. If not, the difference is due to a valuation
 // change of the previous amount, and a transaction is created to adjust the
 // valuation.
-func (b *Balance) computeValuationTransactions() ([]*model.Transaction, error) {
-	result := []*model.Transaction{}
+func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) {
+	result := []*ledger.Transaction{}
 	for pos, va := range b.Positions {
-		at := pos.Account().Type()
+		at := pos.Account.Type()
 		if at != accounts.ASSETS && at != accounts.LIABILITIES {
 			continue
 		}
@@ -236,16 +236,16 @@ func (b *Balance) computeValuationTransactions() ([]*model.Transaction, error) {
 		}
 		if nonzero {
 			// create a transaction to adjust the valuation
-			result = append(result, &model.Transaction{
+			result = append(result, &ledger.Transaction{
 				Date:        b.Date,
-				Description: fmt.Sprintf("Valuation adjustment for (%s, %s)", pos.Account(), pos.Commodity()),
+				Description: fmt.Sprintf("Valuation adjustment for (%s, %s)", pos.Account, pos.Commodity),
 				Tags:        nil,
-				Postings: []*model.Posting{
+				Postings: []*ledger.Posting{
 					{
 						Amount:    amount.New(decimal.Zero, diffs),
 						Credit:    accounts.ValuationAccount(),
-						Debit:     pos.Account(),
-						Commodity: pos.Commodity(),
+						Debit:     pos.Account,
+						Commodity: pos.Commodity,
 					},
 				},
 			})
@@ -260,12 +260,12 @@ func (b *Balance) computeValuationTransactions() ([]*model.Transaction, error) {
 	return result, nil
 }
 
-func (b *Balance) computeValuationDiff(pos model.CommodityAccount, va amount.Amount) ([]decimal.Decimal, bool, error) {
+func (b *Balance) computeValuationDiff(pos CommodityAccount, va amount.Amount) ([]decimal.Decimal, bool, error) {
 	diffs := make([]decimal.Decimal, len(b.NormalizedPrices))
 	nonzero := false
 	for i, np := range b.NormalizedPrices {
 		v1 := va.Valuation(i)
-		v2, err := np.Valuate(pos.Commodity(), va.Amount())
+		v2, err := np.Valuate(pos.Commodity, va.Amount())
 		if err != nil {
 			return nil, false, fmt.Errorf("Should not happen - no valuation found")
 		}
@@ -277,7 +277,7 @@ func (b *Balance) computeValuationDiff(pos model.CommodityAccount, va amount.Amo
 	return diffs, nonzero, nil
 }
 
-func (b *Balance) valuateTransaction(t *model.Transaction) error {
+func (b *Balance) valuateTransaction(t *ledger.Transaction) error {
 	for _, posting := range t.Postings {
 		valuations := make([]decimal.Decimal, 0, len(b.NormalizedPrices))
 		for _, np := range b.NormalizedPrices {
@@ -292,41 +292,41 @@ func (b *Balance) valuateTransaction(t *model.Transaction) error {
 	return nil
 }
 
-func (b *Balance) processValue(v *model.Value) (*model.Transaction, error) {
+func (b *Balance) processValue(v *ledger.Value) (*ledger.Transaction, error) {
 	if _, isOpen := b.Account[v.Account]; !isOpen {
 		return nil, Error{v, "account is not open"}
 	}
-	pos := model.NewCommodityAccount(v.Account, v.Commodity)
+	pos := CommodityAccount{v.Account, v.Commodity}
 	va, ok := b.Positions[pos]
 	if !ok {
 		va = amount.New(decimal.Zero, nil)
 	}
-	return &model.Transaction{
+	return &ledger.Transaction{
 		Date:        v.Date,
 		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
 		Tags:        nil,
-		Postings: []*model.Posting{
-			model.NewPosting(accounts.ValuationAccount(), v.Account, pos.Commodity(), v.Amount.Sub(va.Amount()), nil),
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(accounts.ValuationAccount(), v.Account, pos.Commodity, v.Amount.Sub(va.Amount()), nil),
 		},
 	}, nil
 }
 
-func (b *Balance) processBalanceAssertion(a *model.Assertion) error {
+func (b *Balance) processBalanceAssertion(a *ledger.Assertion) error {
 	if _, isOpen := b.Account[a.Account]; !isOpen {
 		return Error{a, "account is not open"}
 	}
-	pos := model.NewCommodityAccount(a.Account, a.Commodity)
+	pos := CommodityAccount{a.Account, a.Commodity}
 	va, ok := b.Positions[pos]
 	if !ok || !va.Amount().Equal(a.Amount) {
-		return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va.Amount(), pos.Commodity())}
+		return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va.Amount(), pos.Commodity)}
 	}
 	return nil
 }
 
 // GetPositions returns the positions for the given valuation index.
 // An index of nil returns the raw counts.
-func (b *Balance) GetPositions(valuation *int) map[model.CommodityAccount]decimal.Decimal {
-	res := make(map[model.CommodityAccount]decimal.Decimal, len(b.Positions))
+func (b *Balance) GetPositions(valuation *int) map[CommodityAccount]decimal.Decimal {
+	res := make(map[CommodityAccount]decimal.Decimal, len(b.Positions))
 	for pos, amt := range b.Positions {
 		if valuation == nil {
 			res[pos] = amt.Amount()
@@ -366,4 +366,21 @@ func (be Error) Error() string {
 	p.PrintDirective(&b, be.directive)
 	fmt.Fprintf(&b, "\n%s\n", be.msg)
 	return b.String()
+}
+
+// CommodityAccount represents a position.
+type CommodityAccount struct {
+	Account   *accounts.Account
+	Commodity *commodities.Commodity
+}
+
+// Less establishes a partial ordering of commodity accounts.
+func (p CommodityAccount) Less(p1 CommodityAccount) bool {
+	if p.Account.Type() != p1.Account.Type() {
+		return p.Account.Type() < p1.Account.Type()
+	}
+	if p.Account.String() != p1.Account.String() {
+		return p.Account.String() < p1.Account.String()
+	}
+	return p.Commodity.String() < p1.Commodity.String()
 }

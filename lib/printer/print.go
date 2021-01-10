@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 )
 
 // Printer prints directives.
@@ -15,25 +14,25 @@ type Printer struct{}
 // PrintDirective prints a directive to the given Writer.
 func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err error) {
 	switch d := directive.(type) {
-	case *model.Transaction:
+	case *ledger.Transaction:
 		return p.printTransaction(w, d)
-	case *model.Open:
+	case *ledger.Open:
 		return p.printOpen(w, d)
-	case *model.Close:
+	case *ledger.Close:
 		return p.printClose(w, d)
-	case *model.Assertion:
+	case *ledger.Assertion:
 		return p.printAssertion(w, d)
-	case *model.Include:
+	case *ledger.Include:
 		return p.printInclude(w, d)
-	case *model.Price:
+	case *ledger.Price:
 		return p.printPrice(w, d)
-	case *model.Value:
+	case *ledger.Value:
 		return p.printValue(w, d)
 	}
 	return 0, fmt.Errorf("unknown directive: %v", directive)
 }
 
-func (p Printer) printTransaction(w io.Writer, t *model.Transaction) (n int, err error) {
+func (p Printer) printTransaction(w io.Writer, t *ledger.Transaction) (n int, err error) {
 	c, err := fmt.Fprintf(w, `%s "%s"`, t.Date.Format("2006-01-02"), t.Description)
 	n += c
 	if err != nil {
@@ -67,7 +66,7 @@ func (p Printer) printTransaction(w io.Writer, t *model.Transaction) (n int, err
 }
 
 // WriteTo pretty-prints a posting.
-func (p Printer) printPosting(w io.Writer, t *model.Posting) (int, error) {
+func (p Printer) printPosting(w io.Writer, t *ledger.Posting) (int, error) {
 	var n int
 	c, err := fmt.Fprintf(w, "%s %s %s %s", t.Credit.RightPad(), t.Debit.RightPad(), leftPad(10, t.Amount.Amount().String()), t.Commodity)
 	n += c
@@ -96,7 +95,7 @@ func (p Printer) printPosting(w io.Writer, t *model.Posting) (int, error) {
 	return n, nil
 }
 
-func (p Printer) printLot(w io.Writer, l *model.Lot) (int, error) {
+func (p Printer) printLot(w io.Writer, l *ledger.Lot) (int, error) {
 	var n int
 	c, err := fmt.Fprintf(w, "{ %g %s, %s ", l.Price, l.Commodity, l.Date.Format("2006-01-02"))
 	n += c
@@ -118,27 +117,27 @@ func (p Printer) printLot(w io.Writer, l *model.Lot) (int, error) {
 	return n, nil
 }
 
-func (p Printer) printOpen(w io.Writer, o *model.Open) (int, error) {
+func (p Printer) printOpen(w io.Writer, o *ledger.Open) (int, error) {
 	return fmt.Fprintf(w, "%s open %s", o.Date.Format("2006-01-02"), o.Account)
 }
 
-func (p Printer) printClose(w io.Writer, c *model.Close) (int, error) {
+func (p Printer) printClose(w io.Writer, c *ledger.Close) (int, error) {
 	return fmt.Fprintf(w, "%s close %s", c.Date.Format("2006-01-02"), c.Account)
 }
 
-func (p Printer) printPrice(w io.Writer, pr *model.Price) (int, error) {
+func (p Printer) printPrice(w io.Writer, pr *ledger.Price) (int, error) {
 	return fmt.Fprintf(w, "%s price %s %g %s", pr.Date.Format("2006-01-02"), pr.Commodity, pr.Price, pr.Target)
 }
 
-func (p Printer) printInclude(w io.Writer, i *model.Include) (int, error) {
+func (p Printer) printInclude(w io.Writer, i *ledger.Include) (int, error) {
 	return fmt.Fprintf(w, "include \"%s\"", i.Path)
 }
 
-func (p Printer) printAssertion(w io.Writer, a *model.Assertion) (int, error) {
+func (p Printer) printAssertion(w io.Writer, a *ledger.Assertion) (int, error) {
 	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity)
 }
 
-func (p Printer) printValue(w io.Writer, v *model.Value) (int, error) {
+func (p Printer) printValue(w io.Writer, v *ledger.Value) (int, error) {
 	return fmt.Fprintf(w, "%s value %s %s %s", v.Date.Format("2006-01-02"), v.Account, v.Amount, v.Commodity)
 }
 

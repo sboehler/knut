@@ -21,7 +21,6 @@ import (
 
 	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/balance"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 
@@ -35,6 +34,12 @@ type Report struct {
 	Segments    map[accounts.AccountType]*Segment
 	Commodities []*commodities.Commodity
 	Positions   map[*commodities.Commodity]amount.Vec
+}
+
+// Position is a position.
+type Position struct {
+	balance.CommodityAccount
+	Amounts amount.Vec
 }
 
 // Options contains configuration options to create a report.
@@ -53,7 +58,7 @@ type Collapse struct {
 func NewReport(options Options, bal []*balance.Balance) (*Report, error) {
 	// compute the dates and positions array
 	dates := make([]time.Time, 0, len(bal))
-	positions := make([]map[model.CommodityAccount]decimal.Decimal, 0, len(bal))
+	positions := make([]map[balance.CommodityAccount]decimal.Decimal, 0, len(bal))
 	for _, b := range bal {
 		dates = append(dates, b.Date)
 		positions = append(positions, b.GetPositions(options.Valuation))
@@ -87,14 +92,14 @@ func NewReport(options Options, bal []*balance.Balance) (*Report, error) {
 	}, nil
 }
 
-func mergePositions(positions []map[model.CommodityAccount]decimal.Decimal) []model.Position {
-	commodityAccounts := make(map[model.CommodityAccount]bool)
+func mergePositions(positions []map[balance.CommodityAccount]decimal.Decimal) []Position {
+	commodityAccounts := make(map[balance.CommodityAccount]bool)
 	for _, p := range positions {
 		for ca := range p {
 			commodityAccounts[ca] = true
 		}
 	}
-	res := make([]model.Position, 0, len(commodityAccounts))
+	res := make([]Position, 0, len(commodityAccounts))
 	for ca := range commodityAccounts {
 		var (
 			vec   = amount.NewVec(len(positions))
@@ -109,7 +114,7 @@ func mergePositions(positions []map[model.CommodityAccount]decimal.Decimal) []mo
 		if empty {
 			continue
 		}
-		res = append(res, model.Position{
+		res = append(res, Position{
 			CommodityAccount: ca,
 			Amounts:          vec,
 		})
@@ -120,11 +125,11 @@ func mergePositions(positions []map[model.CommodityAccount]decimal.Decimal) []mo
 	return res
 }
 
-func buildSegments(o Options, positions []model.Position) map[accounts.AccountType]*Segment {
+func buildSegments(o Options, positions []Position) map[accounts.AccountType]*Segment {
 	result := make(map[accounts.AccountType]*Segment)
 	for _, position := range positions {
-		at := position.Account().Type()
-		k := shorten(o.Collapse, position.Account())
+		at := position.Account.Type()
+		k := shorten(o.Collapse, position.Account)
 		// Any positions with zero keys should end up in totals.
 		if len(k) > 0 {
 			s, ok := result[at]

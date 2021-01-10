@@ -17,7 +17,7 @@ package prices
 import (
 	"fmt"
 
-	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/commodities"
 
 	"github.com/shopspring/decimal"
@@ -35,7 +35,7 @@ func New() Prices {
 }
 
 // Insert inserts a new price.
-func (p Prices) Insert(pr *model.Price) {
+func (p Prices) Insert(pr *ledger.Price) {
 	p.addPrice(pr.Target, pr.Commodity, pr.Price)
 	p.addPrice(pr.Commodity, pr.Target, 1/pr.Price)
 }

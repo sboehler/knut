@@ -29,7 +29,6 @@ import (
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
@@ -179,7 +178,7 @@ func (p *Parser) parse() error {
 			crAccount, drAccount = p.account, accounts.TBDAccount()
 		}
 
-		postings := []*model.Posting{
+		postings := []*ledger.Posting{
 			{
 				Amount:    amount.New(amt.Abs(), nil),
 				Credit:    crAccount,
@@ -187,7 +186,7 @@ func (p *Parser) parse() error {
 				Commodity: commodity,
 			},
 		}
-		t := &model.Transaction{
+		t := &ledger.Transaction{
 			Date:        d,
 			Description: description,
 			Postings:    postings,

@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/printer"
@@ -112,12 +111,12 @@ func readConfig(path string) ([]config, error) {
 	return t, nil
 }
 
-func readFile(filepath string) (map[time.Time]*model.Price, error) {
+func readFile(filepath string) (map[time.Time]*ledger.Price, error) {
 	ch, err := parser.ParseOneFile(filepath)
 	if err != nil {
 		return nil, err
 	}
-	prices := map[time.Time]*model.Price{}
+	prices := map[time.Time]*ledger.Price{}
 	for d := range ch {
 		switch t := d.(type) {
 		case error:
@@ -125,7 +124,7 @@ func readFile(filepath string) (map[time.Time]*model.Price, error) {
 				return prices, nil
 			}
 			return nil, t
-		case *model.Price:
+		case *ledger.Price:
 			prices[t.Date] = t
 		default:
 			return nil, fmt.Errorf("Unexpected directive in prices file: %v", t)
@@ -134,14 +133,14 @@ func readFile(filepath string) (map[time.Time]*model.Price, error) {
 	return prices, nil
 }
 
-func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]*model.Price) error {
+func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]*ledger.Price) error {
 	c := yahoo.New()
 	quotes, err := c.Fetch(cfg.Symbol, t0, t1)
 	if err != nil {
 		return err
 	}
 	for _, i := range quotes {
-		results[i.Date] = &model.Price{
+		results[i.Date] = &ledger.Price{
 			Date:      i.Date,
 			Commodity: commodities.Get(cfg.Commodity),
 			Target:    commodities.Get(cfg.TargetCommodity),
@@ -151,7 +150,7 @@ func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]*model.Pric
 	return nil
 }
 
-func writeFile(prices map[time.Time]*model.Price, filepath string) error {
+func writeFile(prices map[time.Time]*ledger.Price, filepath string) error {
 	b := ledger.NewBuilder(ledger.Options{})
 	for _, price := range prices {
 		b.AddPrice(price)

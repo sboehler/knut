@@ -71,7 +71,7 @@ func (b *Builder) Process(results <-chan interface{}) error {
 		case *Close:
 			b.AddClosing(t)
 		default:
-			return fmt.Errorf("Unknown: %v", t)
+			return fmt.Errorf("unknown: %v", t)
 		}
 	}
 	return nil

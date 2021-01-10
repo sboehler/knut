@@ -40,7 +40,7 @@ func (p Printer) printTransaction(w io.Writer, t *ledger.Transaction) (n int, er
 	}
 	for _, tag := range t.Tags {
 		c, err := fmt.Fprintf(w, " %s", tag)
-		n += int(c)
+		n += c
 		if err != nil {
 			return n, err
 		}
@@ -65,7 +65,6 @@ func (p Printer) printTransaction(w io.Writer, t *ledger.Transaction) (n int, er
 	return n, nil
 }
 
-// WriteTo pretty-prints a posting.
 func (p Printer) printPosting(w io.Writer, t *ledger.Posting) (int, error) {
 	var n int
 	c, err := fmt.Fprintf(w, "%s %s %s %s", t.Credit.RightPad(), t.Debit.RightPad(), leftPad(10, t.Amount.Amount().String()), t.Commodity)
@@ -93,7 +92,7 @@ func (p Printer) printLot(w io.Writer, l *ledger.Lot) (int, error) {
 	c, err := fmt.Fprintf(w, "{ %g %s, %s ", l.Price, l.Commodity, l.Date.Format("2006-01-02"))
 	n += c
 	if err != nil {
-		return int(n), err
+		return n, err
 	}
 	if len(l.Label) > 0 {
 		c, err = fmt.Fprintf(w, "%s ", l.Label)

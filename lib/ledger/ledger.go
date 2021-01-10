@@ -61,11 +61,6 @@ func (l Ledger) MaxDate() (time.Time, bool) {
 // Tag represents a tag for a transaction or booking.
 type Tag string
 
-// String pretty-prints a tag.
-func (t Tag) String() string {
-	return string(t)
-}
-
 // Open represents an open command.
 type Open struct {
 	Pos     model.Range

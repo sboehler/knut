@@ -132,7 +132,15 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 	if err != nil {
 		return nil, err
 	}
+	filterAccountsRegex, err := regexp.Compile(filterAccounts)
+	if err != nil {
+		return nil, err
+	}
 	filterCommodities, err := cmd.Flags().GetString("commodity")
+	if err != nil {
+		return nil, err
+	}
+	filterCommoditiesRegex, err := regexp.Compile(filterCommodities)
 	if err != nil {
 		return nil, err
 	}
@@ -153,8 +161,8 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 		Valuations:        valuations,
 		Diff:              diff,
 		ShowCommodities:   showCommodities || len(valuations) == 0,
-		FilterAccounts:    filterAccounts,
-		FilterCommodities: filterCommodities,
+		FilterAccounts:    filterAccountsRegex,
+		FilterCommodities: filterCommoditiesRegex,
 		Period:            period,
 		Collapse:          collapse,
 		Close:             close,
@@ -239,36 +247,22 @@ func parseCollapse(cmd *cobra.Command, name string) ([]report.Collapse, error) {
 }
 
 type options struct {
-	File              string
-	From              *time.Time
-	To                *time.Time
-	Last              int
-	ShowCommodities   bool
-	Diff              bool
-	Period            *date.Period
-	Valuations        []*commodities.Commodity
-	FilterAccounts    string
-	FilterCommodities string
-	Collapse          []report.Collapse
-	Close             bool
-	RoundDigits       int32
-	Thousands         bool
-	Color             bool
+	File                                           string
+	From, To                                       *time.Time
+	Last                                           int
+	Period                                         *date.Period
+	Valuations                                     []*commodities.Commodity
+	FilterAccounts, FilterCommodities              *regexp.Regexp
+	Collapse                                       []report.Collapse
+	RoundDigits                                    int32
+	ShowCommodities, Diff, Close, Thousands, Color bool
 }
 
-func createLedgerOptions(o *options) (ledger.Options, error) {
-	af, err := regexp.Compile(o.FilterAccounts)
-	if err != nil {
-		return ledger.Options{}, err
-	}
-	cf, err := regexp.Compile(o.FilterCommodities)
-	if err != nil {
-		return ledger.Options{}, err
-	}
+func createLedgerOptions(o *options) ledger.Options {
 	return ledger.Options{
-		AccountsFilter:    af,
-		CommoditiesFilter: cf,
-	}, nil
+		AccountsFilter:    o.FilterAccounts,
+		CommoditiesFilter: o.FilterCommodities,
+	}
 }
 
 func createDateSeries(o *options, l ledger.Ledger) []time.Time {
@@ -310,23 +304,13 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 	if err != nil {
 		return err
 	}
-	lo, err := createLedgerOptions(opts)
+	l, err := ledger.Build(createLedgerOptions(opts), ch)
 	if err != nil {
 		return err
 	}
-	lb := ledger.NewBuilder(lo)
-	if err := lb.Process(ch); err != nil {
-		return err
-	}
-	b, err := process(opts, lb.Build())
+	b, err := process(opts, l)
 	if err != nil {
 		return err
-	}
-	if opts.Diff {
-		b = balance.Diffs(b)
-	}
-	if opts.Last > 0 && opts.Last < len(b) {
-		b = b[len(b)-opts.Last:]
 	}
 	r, err := report.NewReport(createReportOptions(opts), b)
 	if err != nil {
@@ -345,19 +329,25 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 func process(opts *options, l ledger.Ledger) ([]*balance.Balance, error) {
 	dates := createDateSeries(opts, l)
 	balances := make([]*balance.Balance, 0, len(dates))
-	balance := balance.New(opts.Valuations)
+	bal := balance.New(opts.Valuations)
 	day := 0
 	for _, date := range dates {
 		for day < len(l) && (l[day].Date == date || l[day].Date.Before(date)) {
-			if err := balance.Update(l[day]); err != nil {
+			if err := bal.Update(l[day]); err != nil {
 				return nil, err
 			}
 			day++
 		}
-		cur := balance.Copy()
+		cur := bal.Copy()
 		cur.Date = date
 		balances = append(balances, cur)
-		balance.CloseIncomeAndExpenses = opts.Close
+		bal.CloseIncomeAndExpenses = opts.Close
+	}
+	if opts.Diff {
+		balances = balance.Diffs(balances)
+	}
+	if opts.Last > 0 && opts.Last < len(balances) {
+		balances = balances[len(balances)-opts.Last:]
 	}
 	return balances, nil
 }

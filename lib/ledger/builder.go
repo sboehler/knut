@@ -21,6 +21,33 @@ import (
 	"time"
 )
 
+// Build reads directives from the given channel and
+// builds a Ledger if successful.
+func Build(options Options, results <-chan interface{}) (Ledger, error) {
+	var b = NewBuilder(options)
+	for res := range results {
+		switch t := res.(type) {
+		case error:
+			return nil, t
+		case *Open:
+			b.AddOpening(t)
+		case *Price:
+			b.AddPrice(t)
+		case *Transaction:
+			b.AddTransaction(t)
+		case *Assertion:
+			b.AddAssertion(t)
+		case *Value:
+			b.AddValue(t)
+		case *Close:
+			b.AddClosing(t)
+		default:
+			return nil, fmt.Errorf("unknown: %v", t)
+		}
+	}
+	return b.Build(), nil
+}
+
 // Builder maps dates to days
 type Builder struct {
 	accountFilter, commodityFilter *regexp.Regexp
@@ -50,31 +77,6 @@ func NewBuilder(options Options) *Builder {
 		commodityFilter: cf,
 		days:            make(map[time.Time]*Day),
 	}
-}
-
-// Process creates a new ledger from the results channel.
-func (b *Builder) Process(results <-chan interface{}) error {
-	for res := range results {
-		switch t := res.(type) {
-		case error:
-			return t
-		case *Open:
-			b.AddOpening(t)
-		case *Price:
-			b.AddPrice(t)
-		case *Transaction:
-			b.AddTransaction(t)
-		case *Assertion:
-			b.AddAssertion(t)
-		case *Value:
-			b.AddValue(t)
-		case *Close:
-			b.AddClosing(t)
-		default:
-			return fmt.Errorf("unknown: %v", t)
-		}
-	}
-	return nil
 }
 
 // Build creates a new

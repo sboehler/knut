@@ -60,11 +60,10 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	lb := ledger.NewBuilder(ledger.Options{})
-	if err := lb.Process(ch); err != nil {
+	l, err := ledger.Build(ledger.Options{}, ch)
+	if err != nil {
 		return err
 	}
-	l := lb.Build()
 	if err = process(commodity, l); err != nil {
 		return err
 	}

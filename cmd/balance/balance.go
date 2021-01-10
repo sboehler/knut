@@ -48,24 +48,24 @@ func CreateCmd() *cobra.Command {
 
 		Run: run,
 	}
-	c.Flags().StringP("from", "", "", "from date")
-	c.Flags().StringP("to", "", "", "to date")
+	c.Flags().String("from", "", "from date")
+	c.Flags().String("to", "", "to date")
 	c.Flags().IntP("last", "l", 0, "last n periods")
 	c.Flags().BoolP("diff", "d", false, "diff")
 	c.Flags().BoolP("show-commodities", "s", false, "Show commodities on their own rows")
-	c.Flags().BoolP("days", "", false, "days")
-	c.Flags().BoolP("weeks", "", false, "weeks")
-	c.Flags().BoolP("months", "", false, "months")
-	c.Flags().BoolP("quarters", "", false, "quarters")
-	c.Flags().BoolP("years", "", false, "years")
+	c.Flags().Bool("days", false, "days")
+	c.Flags().Bool("weeks", false, "weeks")
+	c.Flags().Bool("months", false, "months")
+	c.Flags().Bool("quarters", false, "quarters")
+	c.Flags().Bool("years", false, "years")
 	c.Flags().StringArrayP("val", "v", []string{}, "valuate in the given commodity")
 	c.Flags().StringArrayP("collapse", "c", []string{}, "<level>,<regex>")
-	c.Flags().StringP("account", "", "", "filter accounts with a regex")
-	c.Flags().StringP("commodity", "", "", "filter commodities with a regex")
-	c.Flags().BoolP("close", "", false, "close income and expenses accounts after every period")
-	c.Flags().Int32P("digits", "", 0, "round to number of digits")
+	c.Flags().String("account", "", "filter accounts with a regex")
+	c.Flags().String("commodity", "", "filter commodities with a regex")
+	c.Flags().Bool("close", false, "close income and expenses accounts after every period")
+	c.Flags().Int32("digits", 0, "round to number of digits")
 	c.Flags().BoolP("thousands", "k", false, "show numbers in units of 1000")
-	c.Flags().BoolP("color", "", false, "print output in color")
+	c.Flags().Bool("color", false, "print output in color")
 	return c
 }
 
@@ -81,10 +81,7 @@ func execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := createBalance(cmd, o); err != nil {
-		return err
-	}
-	return nil
+	return createBalance(cmd, o)
 }
 
 func parseOptions(cmd *cobra.Command, args []string) (*options, error) {

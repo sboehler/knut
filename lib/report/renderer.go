@@ -21,8 +21,14 @@ import (
 	"github.com/sboehler/knut/lib/table"
 )
 
-// Renderer renders a report.
-type Renderer struct {
+// Render renders a report.
+func Render(config Config, r *Report) *table.Table {
+	re := renderer{config: config}
+	return re.Render(r)
+}
+
+// renderer renders a report.
+type renderer struct {
 	// the configuration of this Renderer
 	config Config
 	// the report which is to be rendered
@@ -41,13 +47,8 @@ type Config struct {
 
 const indent = 2
 
-// NewRenderer creates a new report renderer.
-func NewRenderer(config Config) *Renderer {
-	return &Renderer{config: config}
-}
-
 // Render renders a report.
-func (rn *Renderer) Render(r *Report) *table.Table {
+func (rn *renderer) Render(r *Report) *table.Table {
 
 	rn.table = table.New(1, len(r.Dates))
 	rn.indent = 0
@@ -126,7 +127,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	return rn.table
 }
 
-func (rn *Renderer) renderSegment(s *Segment) {
+func (rn *renderer) renderSegment(s *Segment) {
 	header := rn.table.AddRow().AddIndented(s.Key, rn.indent)
 
 	// compute total value
@@ -155,7 +156,7 @@ func (rn *Renderer) renderSegment(s *Segment) {
 	rn.indent -= indent
 }
 
-func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
+func (rn *renderer) renderSegmentWithCommodities(segment *Segment) {
 	header := rn.table.AddRow().AddIndented(segment.Key, rn.indent)
 	for range rn.report.Dates {
 		header.AddEmpty()

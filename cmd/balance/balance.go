@@ -316,11 +316,11 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 	if err != nil {
 		return err
 	}
+
+	tb := report.Render(report.Config{Commodities: opts.ShowCommodities}, r)
+
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-
-	tb := report.NewRenderer(report.Config{Commodities: opts.ShowCommodities}).Render(r)
-
 	return table.NewConsoleRenderer(tb, opts.Color, opts.Thousands, opts.RoundDigits).Render(out)
 }
 

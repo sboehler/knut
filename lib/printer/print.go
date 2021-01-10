@@ -33,7 +33,7 @@ func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err 
 }
 
 func (p Printer) printTransaction(w io.Writer, t *ledger.Transaction) (n int, err error) {
-	c, err := fmt.Fprintf(w, `%s "%s"`, t.Date.Format("2006-01-02"), t.Description)
+	c, err := fmt.Fprintf(w, "%s \"%s\"", t.Date.Format("2006-01-02"), t.Description)
 	n += c
 	if err != nil {
 		return n, err
@@ -45,7 +45,7 @@ func (p Printer) printTransaction(w io.Writer, t *ledger.Transaction) (n int, er
 			return n, err
 		}
 	}
-	c, err = fmt.Fprint(w, "\n")
+	c, err = io.WriteString(w, "\n")
 	n += c
 	if err != nil {
 		return n, err
@@ -56,7 +56,7 @@ func (p Printer) printTransaction(w io.Writer, t *ledger.Transaction) (n int, er
 		if err != nil {
 			return n, err
 		}
-		c, err = fmt.Fprint(w, "\n")
+		c, err = io.WriteString(w, "\n")
 		n += c
 		if err != nil {
 			return n, err
@@ -101,7 +101,7 @@ func (p Printer) printLot(w io.Writer, l *ledger.Lot) (int, error) {
 			return n, err
 		}
 	}
-	c, err = fmt.Fprint(w, "}")
+	c, err = io.WriteString(w, "}")
 	n += c
 	if err != nil {
 		return n, err

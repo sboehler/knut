@@ -19,6 +19,9 @@ import (
 	"regexp"
 	"sort"
 	"time"
+
+	"github.com/sboehler/knut/lib/model/accounts"
+	"github.com/sboehler/knut/lib/model/commodities"
 )
 
 // Build reads directives from the given channel and
@@ -61,20 +64,9 @@ type Options struct {
 
 // NewBuilder creates a new builder.
 func NewBuilder(options Options) *Builder {
-	var af, cf *regexp.Regexp
-	if options.AccountsFilter != nil {
-		af = options.AccountsFilter
-	} else {
-		af = regexp.MustCompile("")
-	}
-	if options.CommoditiesFilter != nil {
-		cf = options.CommoditiesFilter
-	} else {
-		cf = regexp.MustCompile("")
-	}
 	return &Builder{
-		accountFilter:   af,
-		commodityFilter: cf,
+		accountFilter:   options.AccountsFilter,
+		commodityFilter: options.CommoditiesFilter,
 		days:            make(map[time.Time]*Day),
 	}
 }
@@ -103,13 +95,15 @@ func (b *Builder) getOrCreate(d time.Time) *Day {
 
 // AddTransaction adds a transaction directive.
 func (b *Builder) AddTransaction(t *Transaction) {
-	var filtered = make([]*Posting, 0, len(t.Postings))
+	var filtered []*Posting
 	for _, p := range t.Postings {
-		if (b.accountFilter.MatchString(p.Credit.String()) ||
-			b.accountFilter.MatchString(p.Debit.String())) &&
-			b.commodityFilter.MatchString(p.Commodity.String()) {
-			filtered = append(filtered, p)
+		if !b.matchAccount(p.Credit) && !b.matchAccount(p.Debit) {
+			continue
 		}
+		if !b.matchCommodity(p.Commodity) {
+			continue
+		}
+		filtered = append(filtered, p)
 	}
 	if len(filtered) > 0 {
 		t.Postings = filtered
@@ -138,10 +132,7 @@ func (b *Builder) AddPrice(p *Price) {
 
 // AddAssertion adds an assertion directive.
 func (b *Builder) AddAssertion(a *Assertion) {
-	if !b.accountFilter.MatchString(a.Account.String()) {
-		return
-	}
-	if !b.commodityFilter.MatchString(a.Commodity.String()) {
+	if !b.matchAccount(a.Account) || !b.matchCommodity(a.Commodity) {
 		return
 	}
 	s := b.getOrCreate(a.Date)
@@ -150,12 +141,17 @@ func (b *Builder) AddAssertion(a *Assertion) {
 
 // AddValue adds an value directive.
 func (b *Builder) AddValue(a *Value) {
-	if !b.accountFilter.MatchString(a.Account.String()) {
-		return
-	}
-	if !b.commodityFilter.MatchString(a.Commodity.String()) {
+	if !b.matchAccount(a.Account) || !b.matchCommodity(a.Commodity) {
 		return
 	}
 	s := b.getOrCreate(a.Date)
 	s.Values = append(s.Values, a)
+}
+
+func (b Builder) matchAccount(a *accounts.Account) bool {
+	return b.accountFilter == nil || b.accountFilter.MatchString(a.String())
+}
+
+func (b Builder) matchCommodity(c *commodities.Commodity) bool {
+	return b.commodityFilter == nil || b.commodityFilter.MatchString(c.String())
 }

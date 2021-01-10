@@ -15,7 +15,6 @@
 package ledger
 
 import (
-	"io"
 	"time"
 
 	"github.com/sboehler/knut/lib/model"
@@ -52,58 +51,4 @@ func (l Ledger) MaxDate() (time.Time, bool) {
 		return time.Time{}, false
 	}
 	return l[len(l)-1].Date, true
-}
-
-// WriteTo pretty-prints the ledger to the given writer.
-func (l Ledger) WriteTo(w io.Writer) (int64, error) {
-	var n int64
-	for _, step := range l {
-		for _, p := range step.Prices {
-			if err := write(w, p, &n); err != nil {
-				return n, err
-			}
-		}
-		for _, o := range step.Openings {
-			if err := write(w, o, &n); err != nil {
-				return n, err
-			}
-		}
-		for _, t := range step.Transactions {
-			if err := write(w, t, &n); err != nil {
-				return n, err
-			}
-		}
-		for _, v := range step.Values {
-			if err := write(w, v, &n); err != nil {
-				return n, err
-			}
-		}
-		for _, a := range step.Assertions {
-			if err := write(w, a, &n); err != nil {
-				return n, err
-			}
-		}
-		for _, c := range step.Closings {
-			if err := write(w, c, &n); err != nil {
-				return n, err
-			}
-		}
-	}
-	return n, nil
-}
-
-// Write writes the given WriterTo to the Writer, followed
-// by a blank line.
-func write(w io.Writer, wr io.WriterTo, count *int64) error {
-	c, err := wr.WriteTo(w)
-	*count += c
-	if err != nil {
-		return err
-	}
-	d, err := io.WriteString(w, "\n")
-	*count += int64(d)
-	if err != nil {
-		return err
-	}
-	return nil
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/printer"
 	"github.com/sboehler/knut/lib/scanner"
 )
 
@@ -99,7 +100,7 @@ func run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		builder.AddValue(&model.Value{
-			Directive: model.NewDirective(model.Range{}, d),
+			Date:      d,
 			Account:   account,
 			Amount:    a.Round(2),
 			Commodity: commodities.Get("CHF"),
@@ -108,7 +109,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	_, err = builder.Build().WriteTo(w)
+	_, err = printer.Printer{}.PrintLedger(w, builder.Build())
 	return err
 }
 

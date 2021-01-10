@@ -17,7 +17,6 @@ package balance
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"sort"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/prices"
+	"github.com/sboehler/knut/lib/printer"
 
 	"github.com/shopspring/decimal"
 )
@@ -171,7 +171,7 @@ func (b *Balance) Update(step *ledger.Step) error {
 		}
 		for pos, amount := range b.Positions {
 			if pos.Account() == c.Account && !amount.Amount().IsZero() {
-				return fmt.Errorf("Account %v has nonzero position", pos)
+				return Error{c, "account has nonzero position"}
 			}
 		}
 		delete(b.Account, c.Account)
@@ -203,7 +203,7 @@ func (b *Balance) computeClosingTransactions() []*model.Transaction {
 			continue
 		}
 		result = append(result, &model.Transaction{
-			Directive:   model.NewDirective(model.Range{}, b.Date),
+			Date:        b.Date,
 			Description: fmt.Sprintf("Closing %v to retained earnings", pos),
 			Tags:        nil,
 			Postings: []*model.Posting{
@@ -237,7 +237,7 @@ func (b *Balance) computeValuationTransactions() ([]*model.Transaction, error) {
 		if nonzero {
 			// create a transaction to adjust the valuation
 			result = append(result, &model.Transaction{
-				Directive:   model.NewDirective(model.Range{}, b.Date),
+				Date:        b.Date,
 				Description: fmt.Sprintf("Valuation adjustment for (%s, %s)", pos.Account(), pos.Commodity()),
 				Tags:        nil,
 				Postings: []*model.Posting{
@@ -302,7 +302,7 @@ func (b *Balance) processValue(v *model.Value) (*model.Transaction, error) {
 		va = amount.New(decimal.Zero, nil)
 	}
 	return &model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, v.Date()),
+		Date:        v.Date,
 		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
 		Tags:        nil,
 		Postings: []*model.Posting{
@@ -350,7 +350,6 @@ func Diffs(bals []*Balance) []*Balance {
 }
 
 type directive interface {
-	io.WriterTo
 	Position() model.Range
 }
 
@@ -361,9 +360,10 @@ type Error struct {
 }
 
 func (be Error) Error() string {
+	p := printer.Printer{}
 	b := bytes.Buffer{}
 	fmt.Fprintf(&b, "%s:\n", be.directive.Position().Start)
-	be.directive.WriteTo(&b)
+	p.PrintDirective(&b, be.directive)
 	fmt.Fprintf(&b, "\n%s\n", be.msg)
 	return b.String()
 }

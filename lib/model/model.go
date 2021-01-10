@@ -16,8 +16,6 @@ package model
 
 import (
 	"fmt"
-	"io"
-	"strings"
 	"time"
 
 	"github.com/sboehler/knut/lib/amount"
@@ -35,49 +33,28 @@ func (t Tag) String() string {
 	return string(t)
 }
 
-// Directive is a directive in a journal.
-type Directive struct {
-	Pos  Range
-	date time.Time
-}
-
-// NewDirective returns a new directive.
-func NewDirective(pos Range, date time.Time) Directive {
-	return Directive{pos, date}
-}
-
-// Position returns the position.
-func (d Directive) Position() Range {
-	return d.Pos
-}
-
-// Date returns the date.
-func (d Directive) Date() time.Time {
-	return d.date
-}
-
 // Open represents an open command.
 type Open struct {
-	Directive
+	Pos     Range
+	Date    time.Time
 	Account *accounts.Account
 }
 
-// WriteTo pretty-prints an open directive.
-func (o Open) WriteTo(b io.Writer) (int64, error) {
-	n, err := fmt.Fprintf(b, "%s open %s", o.Date().Format("2006-01-02"), o.Account)
-	return int64(n), err
+// Position returns the position.
+func (o Open) Position() Range {
+	return o.Pos
 }
 
 // Close represents a close command.
 type Close struct {
-	Directive
+	Pos     Range
+	Date    time.Time
 	Account *accounts.Account
 }
 
-// WriteTo pretty-prints a close directive.
-func (c Close) WriteTo(b io.Writer) (int64, error) {
-	n, err := fmt.Fprintf(b, "%s close %s", c.Date().Format("2006-01-02"), c.Account)
-	return int64(n), err
+// Position returns the position.
+func (c Close) Position() Range {
+	return c.Pos
 }
 
 // Posting represents a posting.
@@ -87,48 +64,6 @@ type Posting struct {
 	Commodity     *commodities.Commodity
 	Lot           *Lot
 	Tag           *Tag
-}
-
-func leftPad(n int, s string) string {
-	if len(s) > n {
-		return s
-	}
-	b := strings.Builder{}
-	for i := 0; i < n-len(s); i++ {
-		b.WriteRune(' ')
-	}
-	b.WriteString(s)
-	return b.String()
-}
-
-// WriteTo pretty-prints a posting.
-func (t Posting) WriteTo(b io.Writer) (int64, error) {
-	var n int64
-	c, err := fmt.Fprintf(b, "%s %s %s %s", t.Credit.RightPad(), t.Debit.RightPad(), leftPad(10, t.Amount.Amount().String()), t.Commodity)
-	n += int64(c)
-	if err != nil {
-		return n, err
-	}
-	if t.Lot != nil {
-		c, err = io.WriteString(b, " ")
-		n += int64(c)
-		if err != nil {
-			return n, err
-		}
-		d, err := t.Lot.WriteTo(b)
-		n += d
-		if err != nil {
-			return n, err
-		}
-	}
-	if t.Tag != nil {
-		c, err = fmt.Fprintf(b, " %s", t.Tag)
-		n += int64(c)
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, nil
 }
 
 // NewPosting creates a new posting from the given parameters. If amount is negative, it
@@ -155,124 +90,72 @@ type Lot struct {
 	Commodity *commodities.Commodity
 }
 
-// WriteTo pretty-prints a posting.
-func (l Lot) WriteTo(b io.Writer) (int64, error) {
-	var n int64
-	c, err := fmt.Fprintf(b, "{ %g %s, %s ", l.Price, l.Commodity, l.Date.Format("2006-01-02"))
-	n += int64(c)
-	if err != nil {
-		return int64(n), err
-	}
-	if len(l.Label) > 0 {
-		c, err = fmt.Fprintf(b, "%s ", l.Label)
-		n += int64(c)
-		if err != nil {
-			return n, err
-		}
-	}
-	c, err = fmt.Fprint(b, "}")
-	n += int64(c)
-	if err != nil {
-		return n, err
-	}
-	return n, nil
-}
-
 // Transaction represents a transaction.
 type Transaction struct {
-	Directive
+	Pos         Range
+	Date        time.Time
 	Description string
 	Tags        []Tag
 	Postings    []*Posting
 }
 
-// WriteTo pretty-prints a transaction.
-func (t Transaction) WriteTo(b io.Writer) (int64, error) {
-	var n int64
-	c, err := fmt.Fprintf(b, `%s "%s"`, t.Date().Format("2006-01-02"), t.Description)
-	n += int64(c)
-	if err != nil {
-		return n, err
-	}
-	for _, tag := range t.Tags {
-		c, err := fmt.Fprintf(b, " %s", tag)
-		n += int64(c)
-		if err != nil {
-			return n, err
-		}
-	}
-	c, err = fmt.Fprint(b, "\n")
-	n += int64(c)
-	if err != nil {
-		return n, err
-	}
-	for _, p := range t.Postings {
-		d, err := p.WriteTo(b)
-		n += int64(d)
-		if err != nil {
-			return n, err
-		}
-		c, err = fmt.Fprint(b, "\n")
-		n += int64(c)
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, nil
+// Position returns the Position.
+func (t Transaction) Position() Range {
+	return t.Pos
 }
 
 // Price represents a price command.
 type Price struct {
-	Directive
+	Pos       Range
+	Date      time.Time
 	Commodity *commodities.Commodity
 	Target    *commodities.Commodity
 	Price     float64
 }
 
-// WriteTo pretty-prints a Price directive.
-func (p Price) WriteTo(w io.Writer) (int64, error) {
-	n, err := fmt.Fprintf(w, "%s price %s %g %s", p.Date().Format("2006-01-02"), p.Commodity, p.Price, p.Target)
-	return int64(n), err
+// Position returns the Range.
+func (p Price) Position() Range {
+	return p.Pos
 }
 
 // Include represents an include directive.
 type Include struct {
-	Directive
+	Pos  Range
+	Date time.Time
 	Path string
 }
 
-// WriteTo pretty-prints an include directive
-func (i Include) WriteTo(w io.Writer) (int64, error) {
-	n, err := fmt.Fprintf(w, `include "%s"`, i.Path)
-	return int64(n), err
+// Position returns the Range.
+func (i Include) Position() Range {
+	return i.Pos
 }
 
 // Assertion represents a balance assertion.
 type Assertion struct {
-	Directive
+	Pos       Range
+	Date      time.Time
 	Account   *accounts.Account
 	Amount    decimal.Decimal
 	Commodity *commodities.Commodity
 }
 
-// WriteTo pretty-prints an assertion directive.
-func (a Assertion) WriteTo(w io.Writer) (int64, error) {
-	n, err := fmt.Fprintf(w, "%s balance %s %s %s", a.Date().Format("2006-01-02"), a.Account, a.Amount, a.Commodity)
-	return int64(n), err
+// Position returns the Range.
+func (a Assertion) Position() Range {
+	return a.Pos
 }
 
 // Value represents a value directive.
 type Value struct {
-	Directive
+	Pos       Range
+	Date      time.Time
 	Account   *accounts.Account
 	Amount    decimal.Decimal
 	Commodity *commodities.Commodity
 }
 
-// WriteTo pretty-prints an assertion directive.
-func (a Value) WriteTo(w io.Writer) (int64, error) {
-	n, err := fmt.Fprintf(w, "%s value %s %s %s", a.Date().Format("2006-01-02"), a.Account, a.Amount, a.Commodity)
-	return int64(n), err
+// Position returns the Range.
+func (v Value) Position() Range {
+	return v.Pos
 }
 
 // CommodityAccount represents a position.

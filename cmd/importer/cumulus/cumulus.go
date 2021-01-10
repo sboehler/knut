@@ -32,6 +32,7 @@ import (
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/printer"
 	"github.com/sboehler/knut/lib/scanner"
 )
 
@@ -84,7 +85,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	_, err = p.builder.Build().WriteTo(w)
+	_, err = printer.Printer{}.PrintLedger(w, p.builder.Build())
 	return err
 }
 
@@ -164,7 +165,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		return false, fmt.Errorf("row has invalid amounts: %v", r)
 	}
 	p.last = &model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, d),
+		Date:        d,
 		Description: desc,
 		Postings: []*model.Posting{
 			model.NewPosting(p.account, accounts.TBDAccount(), commodities.Get("CHF"), amt, nil),
@@ -221,7 +222,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 		return false, fmt.Errorf("row has invalid amounts: %v", r)
 	}
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, d),
+		Date:        d,
 		Description: desc,
 		Postings: []*model.Posting{
 			model.NewPosting(p.account, accounts.TBDAccount(), commodities.Get("CHF"), amt, nil),

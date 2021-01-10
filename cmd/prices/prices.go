@@ -25,6 +25,7 @@ import (
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/parser"
+	"github.com/sboehler/knut/lib/printer"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
 	"go.uber.org/multierr"
 
@@ -125,7 +126,7 @@ func readFile(filepath string) (map[time.Time]*model.Price, error) {
 			}
 			return nil, t
 		case *model.Price:
-			prices[t.Date()] = t
+			prices[t.Date] = t
 		default:
 			return nil, fmt.Errorf("Unexpected directive in prices file: %v", t)
 		}
@@ -141,7 +142,7 @@ func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]*model.Pric
 	}
 	for _, i := range quotes {
 		results[i.Date] = &model.Price{
-			Directive: model.NewDirective(model.Range{}, i.Date),
+			Date:      i.Date,
 			Commodity: commodities.Get(cfg.Commodity),
 			Target:    commodities.Get(cfg.TargetCommodity),
 			Price:     i.Close,
@@ -158,7 +159,10 @@ func writeFile(prices map[time.Time]*model.Price, filepath string) error {
 	r, w := io.Pipe()
 	go func() {
 		defer w.Close()
-		b.Build().WriteTo(w)
+		_, err := printer.Printer{}.PrintLedger(w, b.Build())
+		if err != nil {
+			panic(err)
+		}
 	}()
 	return atomic.WriteFile(filepath, r)
 }

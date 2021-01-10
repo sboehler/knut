@@ -23,6 +23,7 @@ import (
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/printer"
 )
 
 // Transcode transcodes the given ledger to beancount.
@@ -35,17 +36,18 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 	}
 	l[0].Openings = append(l[0].Openings,
 		&model.Open{
-			Directive: model.NewDirective(model.Range{}, l[0].Date),
-			Account:   accounts.ValuationAccount(),
+			Date:    l[0].Date,
+			Account: accounts.ValuationAccount(),
 		},
 		&model.Open{
-			Directive: model.NewDirective(model.Range{}, l[0].Date),
-			Account:   accounts.RetainedEarningsAccount(),
+			Date:    l[0].Date,
+			Account: accounts.RetainedEarningsAccount(),
 		},
 	)
+	p := printer.Printer{}
 	for _, step := range l {
 		for _, open := range step.Openings {
-			if _, err := open.WriteTo(w); err != nil {
+			if _, err := p.PrintDirective(w, open); err != nil {
 				return err
 			}
 			if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -58,7 +60,7 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 			}
 		}
 		for _, close := range step.Closings {
-			if _, err := close.WriteTo(w); err != nil {
+			if _, err := p.PrintDirective(w, close); err != nil {
 				return err
 			}
 			if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -70,7 +72,7 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 }
 
 func writeTrx(w io.Writer, t *model.Transaction, c *commodities.Commodity) error {
-	if _, err := fmt.Fprintf(w, `%s * "%s"`, t.Date().Format("2006-01-02"), t.Description); err != nil {
+	if _, err := fmt.Fprintf(w, `%s * "%s"`, t.Date.Format("2006-01-02"), t.Description); err != nil {
 		return err
 	}
 	for _, tag := range t.Tags {

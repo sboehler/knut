@@ -32,6 +32,7 @@ import (
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/printer"
 	"github.com/sboehler/knut/lib/scanner"
 )
 
@@ -97,7 +98,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	_, err = p.builder.Build().WriteTo(w)
+	_, err = printer.Printer{}.PrintLedger(w, p.builder.Build())
 	return err
 }
 
@@ -233,7 +234,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, date),
+		Date:        date,
 		Description: desc,
 		Postings: []*model.Posting{
 			model.NewPosting(accounts.ValuationAccount(), p.options.account, stock, qty.Round(2), nil),
@@ -288,7 +289,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		postings = append(postings, model.NewPosting(p.options.fee, p.options.account, currency, fee.Round(2), nil))
 	}
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, date),
+		Date:        date,
 		Description: desc,
 		Postings:    postings,
 	})
@@ -315,7 +316,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 		desc = fmt.Sprintf("Withdraw %s %s", amt, currency)
 	}
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, date),
+		Date:        date,
 		Description: desc,
 		Postings: []*model.Posting{
 			model.NewPosting(accounts.TBDAccount(), p.options.account, currency, amt, nil),
@@ -345,7 +346,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	security := commodities.Get(symbol)
 	desc := r[4]
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, date),
+		Date:        date,
 		Description: desc,
 		Postings: []*model.Posting{
 			model.NewPosting(p.options.dividend, p.options.account, currency, amt, nil),
@@ -376,7 +377,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	security := commodities.Get(symbol)
 	desc := r[4]
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, date),
+		Date:        date,
 		Description: desc,
 		Postings: []*model.Posting{
 			model.NewPosting(p.options.tax, p.options.account, currency, amt, nil),
@@ -402,7 +403,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	}
 	desc := r[4]
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, date),
+		Date:        date,
 		Description: desc,
 		Postings: []*model.Posting{
 			model.NewPosting(p.options.interest, p.options.account, currency, amt, nil)},
@@ -423,7 +424,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 		return false, err
 	}
 	p.builder.AddAssertion(&model.Assertion{
-		Directive: model.NewDirective(model.Range{}, p.dateTo),
+		Date:      p.dateTo,
 		Account:   p.options.account,
 		Commodity: symbol,
 		Amount:    amt,
@@ -444,7 +445,7 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 		return false, err
 	}
 	p.builder.AddAssertion(&model.Assertion{
-		Directive: model.NewDirective(model.Range{}, p.dateTo),
+		Date:      p.dateTo,
 		Account:   p.options.account,
 		Commodity: symbol,
 		Amount:    amt.Round(2),

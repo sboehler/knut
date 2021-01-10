@@ -28,17 +28,17 @@ import (
 	"github.com/sboehler/knut/lib/scanner"
 )
 
-// Parser parses a journal
-type Parser struct {
+// parser parses a journal
+type parser struct {
 	scanner          *scanner.Scanner
 	startPos, endPos model.FilePosition
 }
 
-func (p *Parser) markStart() {
+func (p *parser) markStart() {
 	p.startPos = p.scanner.Position()
 }
 
-func (p *Parser) getRange() model.Range {
+func (p *parser) getRange() model.Range {
 	pos := p.scanner.Position()
 	return model.Range{
 		Start: p.startPos,
@@ -46,31 +46,31 @@ func (p *Parser) getRange() model.Range {
 	}
 }
 
-// New creates a new parser
-func New(path string, r io.RuneReader) (*Parser, error) {
+// new creates a new parser
+func new(path string, r io.RuneReader) (*parser, error) {
 	s, err := scanner.New(r, path)
 	if err != nil {
 		return nil, err
 	}
-	return &Parser{scanner: s}, nil
+	return &parser{scanner: s}, nil
 }
 
-// Open creates a new parser for the given file.
-func Open(path string) (*Parser, error) {
+// open creates a new parser for the given file.
+func open(path string) (*parser, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	return New(path, bufio.NewReader(f))
+	return new(path, bufio.NewReader(f))
 }
 
 // current returns the current rune.
-func (p *Parser) current() rune {
+func (p *parser) current() rune {
 	return p.scanner.Current()
 }
 
 // next returns the next directive
-func (p *Parser) next() (interface{}, error) {
+func (p *parser) next() (interface{}, error) {
 	for p.current() != scanner.EOF {
 		if err := p.scanner.ConsumeWhile(isWhitespaceOrNewline); err != nil {
 			return nil, p.scanner.ParseError(err)
@@ -99,7 +99,7 @@ func (p *Parser) next() (interface{}, error) {
 	return nil, io.EOF
 }
 
-func (p *Parser) consumeComment() error {
+func (p *parser) consumeComment() error {
 	if err := p.scanner.ConsumeUntil(isNewline); err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (p *Parser) consumeComment() error {
 	return nil
 }
 
-func (p *Parser) parseDirective() (interface{}, error) {
+func (p *parser) parseDirective() (interface{}, error) {
 	p.markStart()
 	d, err := scanner.ParseDate(p.scanner)
 	if err != nil {
@@ -141,7 +141,7 @@ func (p *Parser) parseDirective() (interface{}, error) {
 	return result, nil
 }
 
-func (p *Parser) parseTransaction(d time.Time) (*model.Transaction, error) {
+func (p *parser) parseTransaction(d time.Time) (*model.Transaction, error) {
 	desc, err := scanner.ReadQuotedString(p.scanner)
 	if err != nil {
 		return nil, err
@@ -172,7 +172,7 @@ func (p *Parser) parseTransaction(d time.Time) (*model.Transaction, error) {
 
 }
 
-func (p *Parser) parsePostings() ([]*model.Posting, error) {
+func (p *parser) parsePostings() ([]*model.Posting, error) {
 	var postings []*model.Posting
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		crAccount, err := scanner.ParseAccount(p.scanner)
@@ -238,7 +238,7 @@ func (p *Parser) parsePostings() ([]*model.Posting, error) {
 	return postings, nil
 }
 
-func (p *Parser) parseOpen(d time.Time) (*model.Open, error) {
+func (p *parser) parseOpen(d time.Time) (*model.Open, error) {
 	if err := p.scanner.ParseString("open"); err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ func (p *Parser) parseOpen(d time.Time) (*model.Open, error) {
 	}, nil
 }
 
-func (p *Parser) parseClose(d time.Time) (*model.Close, error) {
+func (p *parser) parseClose(d time.Time) (*model.Close, error) {
 	if err := p.scanner.ParseString("close"); err != nil {
 		return nil, err
 	}
@@ -274,7 +274,7 @@ func (p *Parser) parseClose(d time.Time) (*model.Close, error) {
 	}, nil
 }
 
-func (p *Parser) parsePrice(d time.Time) (*model.Price, error) {
+func (p *parser) parsePrice(d time.Time) (*model.Price, error) {
 	if err := p.scanner.ParseString("price"); err != nil {
 		return nil, err
 	}
@@ -301,7 +301,6 @@ func (p *Parser) parsePrice(d time.Time) (*model.Price, error) {
 		return nil, err
 	}
 	return &model.Price{
-		Pos:       p.getRange(),
 		Date:      d,
 		Commodity: commodity,
 		Price:     price,
@@ -309,7 +308,7 @@ func (p *Parser) parsePrice(d time.Time) (*model.Price, error) {
 	}, nil
 }
 
-func (p *Parser) parseBalanceAssertion(d time.Time) (*model.Assertion, error) {
+func (p *parser) parseBalanceAssertion(d time.Time) (*model.Assertion, error) {
 	if err := p.scanner.ParseString("balance"); err != nil {
 		return nil, err
 	}
@@ -343,7 +342,7 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*model.Assertion, error) {
 	}, nil
 }
 
-func (p *Parser) parseValue(d time.Time) (*model.Value, error) {
+func (p *parser) parseValue(d time.Time) (*model.Value, error) {
 	if err := p.scanner.ParseString("value"); err != nil {
 		return nil, err
 	}
@@ -377,7 +376,7 @@ func (p *Parser) parseValue(d time.Time) (*model.Value, error) {
 	}, nil
 }
 
-func (p *Parser) parseInclude() (*model.Include, error) {
+func (p *parser) parseInclude() (*model.Include, error) {
 	p.markStart()
 	if err := p.scanner.ParseString("include"); err != nil {
 		return nil, err
@@ -399,28 +398,28 @@ func (p *Parser) parseInclude() (*model.Include, error) {
 	return result, nil
 }
 
-func (p *Parser) consumeNewline() error {
+func (p *parser) consumeNewline() error {
 	if p.current() != scanner.EOF {
 		return p.scanner.ConsumeRune('\n')
 	}
 	return nil
 }
 
-func (p *Parser) consumeWhitespace1() error {
+func (p *parser) consumeWhitespace1() error {
 	if !isWhitespaceOrNewline(p.current()) && p.current() != scanner.EOF {
 		return fmt.Errorf("expected whitespace, got %q", p.current())
 	}
 	return p.scanner.ConsumeWhile(isWhitespace)
 }
 
-func (p *Parser) consumeRestOfWhitespaceLine() error {
+func (p *parser) consumeRestOfWhitespaceLine() error {
 	if err := p.consumeWhitespace1(); err != nil {
 		return err
 	}
 	return p.consumeNewline()
 }
 
-func (p *Parser) parseLot() (*model.Lot, error) {
+func (p *parser) parseLot() (*model.Lot, error) {
 	err := p.scanner.ConsumeRune('{')
 	if err != nil {
 		return nil, err
@@ -484,7 +483,7 @@ func (p *Parser) parseLot() (*model.Lot, error) {
 	}, nil
 }
 
-func (p *Parser) parseTags() ([]model.Tag, error) {
+func (p *parser) parseTags() ([]model.Tag, error) {
 	var tags []model.Tag
 	for p.current() == '#' {
 		tag, err := p.parseTag()
@@ -499,7 +498,7 @@ func (p *Parser) parseTags() ([]model.Tag, error) {
 	return tags, nil
 }
 
-func (p *Parser) parseTag() (*model.Tag, error) {
+func (p *parser) parseTag() (*model.Tag, error) {
 	if p.current() != '#' {
 		return nil, fmt.Errorf("Expected tag, got %c", p.current())
 	}

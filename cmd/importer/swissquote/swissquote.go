@@ -33,6 +33,7 @@ import (
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/printer"
 	"github.com/sboehler/knut/lib/scanner"
 )
 
@@ -97,7 +98,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	_, err = p.builder.Build().WriteTo(w)
+	_, err = printer.Printer{}.PrintLedger(w, p.builder.Build())
 	return err
 }
 
@@ -237,7 +238,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	}
 	desc := fmt.Sprintf("%s %s %s x %s %s %s @ %s %s", r.orderNo, r.trxType, r.quantity, r.symbol, r.name, r.isin, r.price, r.currency)
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, r.date),
+		Date:        r.date,
 		Description: desc,
 		Postings: []*model.Posting{
 			model.NewPosting(accounts.ValuationAccount(), p.options.account, r.symbol, qty, nil),
@@ -267,7 +268,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 	}
 	desc := fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency, r.trxType, r.netAmount, r.currency)
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, r.date),
+		Date:        r.date,
 		Description: desc,
 		Postings: []*model.Posting{
 			model.NewPosting(accounts.ValuationAccount(), p.options.account, p.last.currency, p.last.netAmount, nil),
@@ -295,7 +296,7 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 	}
 	desc := fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol, r.name, r.isin)
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, r.date),
+		Date:        r.date,
 		Description: desc,
 		Postings:    postings,
 	})
@@ -307,7 +308,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 		return false, nil
 	}
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, r.date),
+		Date:        r.date,
 		Description: r.trxType,
 		Postings: []*model.Posting{
 			model.NewPosting(p.options.fee, p.options.account, r.currency, r.netAmount, nil),
@@ -327,7 +328,7 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 		return false, nil
 	}
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, r.date),
+		Date:        r.date,
 		Description: r.trxType,
 		Postings: []*model.Posting{
 			model.NewPosting(accounts.TBDAccount(), p.options.account, r.currency, r.netAmount, nil),
@@ -341,7 +342,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 		return false, nil
 	}
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, r.date),
+		Date:        r.date,
 		Description: r.trxType,
 		Postings: []*model.Posting{
 			model.NewPosting(p.options.interest, p.options.account, r.currency, r.netAmount, nil),
@@ -352,7 +353,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 
 func (p *parser) parseCatchall(r *record) (bool, error) {
 	p.builder.AddTransaction(&model.Transaction{
-		Directive:   model.NewDirective(model.Range{}, r.date),
+		Date:        r.date,
 		Description: r.trxType,
 		Postings: []*model.Posting{
 			model.NewPosting(accounts.TBDAccount(), p.options.account, r.currency, r.netAmount, nil),

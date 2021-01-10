@@ -338,9 +338,9 @@ func process(opts *options, l ledger.Ledger) ([]*balance.Balance, error) {
 			}
 			day++
 		}
-		cur := bal.Copy()
-		cur.Date = date
-		balances = append(balances, cur)
+		copy := bal.Copy()
+		copy.Date = date
+		balances = append(balances, copy)
 		bal.CloseIncomeAndExpenses = opts.Close
 	}
 	if opts.Diff {

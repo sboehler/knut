@@ -327,27 +327,30 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 // process processes the ledger and creates valuations for the given commodities
 // and returning balances for the given dates.
 func process(opts *options, l ledger.Ledger) ([]*balance.Balance, error) {
-	dates := createDateSeries(opts, l)
-	balances := make([]*balance.Balance, 0, len(dates))
-	bal := balance.New(opts.Valuations)
-	day := 0
-	for _, date := range dates {
-		for day < len(l) && (l[day].Date == date || l[day].Date.Before(date)) {
-			if err := bal.Update(l[day]); err != nil {
+	var (
+		b      = balance.New(opts.Valuations)
+		result []*balance.Balance
+		index  int
+	)
+	for _, date := range createDateSeries(opts, l) {
+		for ; index < len(l); index++ {
+			if l[index].Date.After(date) {
+				break
+			}
+			if err := b.Update(l[index]); err != nil {
 				return nil, err
 			}
-			day++
 		}
-		copy := bal.Copy()
+		copy := b.Copy()
 		copy.Date = date
-		balances = append(balances, copy)
-		bal.CloseIncomeAndExpenses = opts.Close
+		result = append(result, copy)
+		b.CloseIncomeAndExpenses = opts.Close
 	}
 	if opts.Diff {
-		balances = balance.Diffs(balances)
+		result = balance.Diffs(result)
 	}
-	if opts.Last > 0 && opts.Last < len(balances) {
-		balances = balances[len(balances)-opts.Last:]
+	if opts.Last > 0 && opts.Last < len(result) {
+		result = result[len(result)-opts.Last:]
 	}
-	return balances, nil
+	return result, nil
 }

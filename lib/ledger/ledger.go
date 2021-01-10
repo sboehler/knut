@@ -58,9 +58,6 @@ func (l Ledger) MaxDate() (time.Time, bool) {
 	return l[len(l)-1].Date, true
 }
 
-// Tag represents a tag for a transaction or booking.
-type Tag string
-
 // Open represents an open command.
 type Open struct {
 	Pos     model.Range
@@ -115,6 +112,9 @@ type Lot struct {
 	Price     float64
 	Commodity *commodities.Commodity
 }
+
+// Tag represents a tag for a transaction or booking.
+type Tag string
 
 // Transaction represents a transaction.
 type Transaction struct {

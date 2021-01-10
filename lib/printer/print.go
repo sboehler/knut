@@ -144,33 +144,33 @@ func (p Printer) printValue(w io.Writer, v *ledger.Value) (int, error) {
 // PrintLedger prints a Ledger.
 func (p Printer) PrintLedger(w io.Writer, l ledger.Ledger) (int, error) {
 	var n int
-	for _, step := range l {
-		for _, pr := range step.Prices {
+	for _, day := range l {
+		for _, pr := range day.Prices {
 			if err := p.writeLn(w, pr, &n); err != nil {
 				return n, err
 			}
 		}
-		for _, o := range step.Openings {
+		for _, o := range day.Openings {
 			if err := p.writeLn(w, o, &n); err != nil {
 				return n, err
 			}
 		}
-		for _, t := range step.Transactions {
+		for _, t := range day.Transactions {
 			if err := p.writeLn(w, t, &n); err != nil {
 				return n, err
 			}
 		}
-		for _, v := range step.Values {
+		for _, v := range day.Values {
 			if err := p.writeLn(w, v, &n); err != nil {
 				return n, err
 			}
 		}
-		for _, a := range step.Assertions {
+		for _, a := range day.Assertions {
 			if err := p.writeLn(w, a, &n); err != nil {
 				return n, err
 			}
 		}
-		for _, c := range step.Closings {
+		for _, c := range day.Closings {
 			if err := p.writeLn(w, c, &n); err != nil {
 				return n, err
 			}

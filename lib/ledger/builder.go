@@ -21,10 +21,10 @@ import (
 	"time"
 )
 
-// Builder maps dates to steps
+// Builder maps dates to days
 type Builder struct {
 	accountFilter, commodityFilter *regexp.Regexp
-	steps                          map[time.Time]*Step
+	days                           map[time.Time]*Day
 }
 
 // Options represents configuration options for creating a
@@ -48,7 +48,7 @@ func NewBuilder(options Options) *Builder {
 	return &Builder{
 		accountFilter:   af,
 		commodityFilter: cf,
-		steps:           make(map[time.Time]*Step),
+		days:            make(map[time.Time]*Day),
 	}
 }
 
@@ -79,8 +79,8 @@ func (b *Builder) Process(results <-chan interface{}) error {
 
 // Build creates a new
 func (b *Builder) Build() Ledger {
-	var result = make([]*Step, 0, len(b.steps))
-	for _, s := range b.steps {
+	var result = make([]*Day, 0, len(b.days))
+	for _, s := range b.days {
 		result = append(result, s)
 	}
 	sort.Slice(result, func(i, j int) bool {
@@ -90,11 +90,11 @@ func (b *Builder) Build() Ledger {
 
 }
 
-func (b *Builder) getOrCreate(d time.Time) *Step {
-	s, ok := b.steps[d]
+func (b *Builder) getOrCreate(d time.Time) *Day {
+	s, ok := b.days[d]
 	if !ok {
-		s = &Step{Date: d}
-		b.steps[d] = s
+		s = &Day{Date: d}
+		b.days[d] = s
 	}
 	return s
 }

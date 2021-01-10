@@ -17,15 +17,16 @@ package ledger
 import (
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
-	"github.com/shopspring/decimal"
 )
 
-// Step groups all commands for a given date.
-type Step struct {
+// Day groups all commands for a given date.
+type Day struct {
 	Date         time.Time
 	Prices       []*Price
 	Assertions   []*Assertion
@@ -36,7 +37,7 @@ type Step struct {
 }
 
 // Ledger is a ledger.
-type Ledger []*Step
+type Ledger []*Day
 
 // MinDate returns the minimum date for this ledger, as the first
 // date on which an account is opened (ignoring prices, for example).

@@ -44,8 +44,8 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 		},
 	)
 	p := printer.Printer{}
-	for _, step := range l {
-		for _, open := range step.Openings {
+	for _, day := range l {
+		for _, open := range day.Openings {
 			if _, err := p.PrintDirective(w, open); err != nil {
 				return err
 			}
@@ -53,12 +53,12 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 				return err
 			}
 		}
-		for _, trx := range step.Transactions {
+		for _, trx := range day.Transactions {
 			if err := writeTrx(w, trx, c); err != nil {
 				return err
 			}
 		}
-		for _, close := range step.Closings {
+		for _, close := range day.Closings {
 			if _, err := p.PrintDirective(w, close); err != nil {
 				return err
 			}

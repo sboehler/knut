@@ -346,13 +346,13 @@ func process(opts *options, l ledger.Ledger) ([]*balance.Balance, error) {
 	dates := createDateSeries(opts, l)
 	balances := make([]*balance.Balance, 0, len(dates))
 	balance := balance.New(opts.Valuations)
-	step := 0
+	day := 0
 	for _, date := range dates {
-		for step < len(l) && (l[step].Date == date || l[step].Date.Before(date)) {
-			if err := balance.Update(l[step]); err != nil {
+		for day < len(l) && (l[day].Date == date || l[day].Date.Before(date)) {
+			if err := balance.Update(l[day]); err != nil {
 				return nil, err
 			}
-			step++
+			day++
 		}
 		cur := balance.Copy()
 		cur.Date = date

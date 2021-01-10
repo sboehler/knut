@@ -78,8 +78,8 @@ func run(cmd *cobra.Command, args []string) error {
 // process processes the ledger and creates valuations for the given commodities
 func process(c *commodities.Commodity, l ledger.Ledger) error {
 	balance := balance.New([]*commodities.Commodity{c})
-	for _, step := range l {
-		if err := balance.Update(step); err != nil {
+	for _, day := range l {
+		if err := balance.Update(day); err != nil {
 			return err
 		}
 	}

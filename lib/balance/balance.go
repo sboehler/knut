@@ -81,14 +81,14 @@ func (b *Balance) Minus(bo *Balance) {
 	}
 }
 
-// Update updates the balance with the given step
-func (b *Balance) Update(step *ledger.Step) error {
+// Update updates the balance with the given Day
+func (b *Balance) Update(day *ledger.Day) error {
 
 	// update date
-	b.Date = step.Date
+	b.Date = day.Date
 
 	// update prices
-	for _, p := range step.Prices {
+	for _, p := range day.Prices {
 		b.Prices.Insert(p)
 	}
 
@@ -99,7 +99,7 @@ func (b *Balance) Update(step *ledger.Step) error {
 	}
 
 	// open accounts
-	for _, o := range step.Openings {
+	for _, o := range day.Openings {
 		if _, isOpen := b.Account[o.Account]; isOpen {
 			return fmt.Errorf("Account %v is already open", o)
 		}
@@ -107,7 +107,7 @@ func (b *Balance) Update(step *ledger.Step) error {
 	}
 
 	// valuate and book journal transactions
-	for _, t := range step.Transactions {
+	for _, t := range day.Transactions {
 		if err := b.valuateTransaction(t); err != nil {
 			return err
 		}
@@ -117,12 +117,12 @@ func (b *Balance) Update(step *ledger.Step) error {
 	}
 
 	// create and book value transactions
-	for _, v := range step.Values {
+	for _, v := range day.Values {
 		t, err := b.processValue(v)
 		if err != nil {
 			return err
 		}
-		step.Transactions = append(step.Transactions, t)
+		day.Transactions = append(day.Transactions, t)
 		if err := b.valuateTransaction(t); err != nil {
 			return err
 		}
@@ -136,7 +136,7 @@ func (b *Balance) Update(step *ledger.Step) error {
 	if err != nil {
 		return err
 	}
-	step.Transactions = append(step.Transactions, valTrx...)
+	day.Transactions = append(day.Transactions, valTrx...)
 
 	// book transactions
 	for _, t := range valTrx {
@@ -148,7 +148,7 @@ func (b *Balance) Update(step *ledger.Step) error {
 	// close income and expense accounts if necessary
 	if b.CloseIncomeAndExpenses {
 		closingTransactions := b.computeClosingTransactions()
-		step.Transactions = append(step.Transactions, closingTransactions...)
+		day.Transactions = append(day.Transactions, closingTransactions...)
 		for _, t := range closingTransactions {
 			if err := b.bookTransaction(t); err != nil {
 				return err
@@ -158,14 +158,14 @@ func (b *Balance) Update(step *ledger.Step) error {
 	}
 
 	// process balance assertions
-	for _, a := range step.Assertions {
+	for _, a := range day.Assertions {
 		if err := b.processBalanceAssertion(a); err != nil {
 			return err
 		}
 	}
 
 	// close accounts
-	for _, c := range step.Closings {
+	for _, c := range day.Closings {
 		if _, isOpen := b.Account[c.Account]; !isOpen {
 			return Error{c, "account is not open"}
 		}

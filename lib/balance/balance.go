@@ -306,20 +306,6 @@ func (b *Balance) processBalanceAssertion(a *ledger.Assertion) error {
 	return nil
 }
 
-// GetPositions returns the positions for the given valuation index.
-// An index of nil returns the raw counts.
-func (b *Balance) GetPositions(value bool) map[CommodityAccount]decimal.Decimal {
-	res := make(map[CommodityAccount]decimal.Decimal, len(b.Positions))
-	for pos, amt := range b.Positions {
-		if value {
-			res[pos] = amt.Value()
-		} else {
-			res[pos] = amt.Amount()
-		}
-	}
-	return res
-}
-
 // Options has options for processing a ledger
 
 // Diffs creates the difference balances for the given

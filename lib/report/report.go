@@ -19,12 +19,12 @@ import (
 	"sort"
 	"time"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
-
-	"github.com/shopspring/decimal"
 )
 
 // Report is a balance report for a range of dates.
@@ -58,13 +58,13 @@ type Collapse struct {
 func NewReport(options Options, bal []*balance.Balance) (*Report, error) {
 	// compute the dates and positions array
 	dates := make([]time.Time, 0, len(bal))
-	positions := make([]map[balance.CommodityAccount]decimal.Decimal, 0, len(bal))
+	positions := make([]map[balance.CommodityAccount]amount.Amount, 0, len(bal))
 	for _, b := range bal {
 		dates = append(dates, b.Date)
-		positions = append(positions, b.GetPositions(options.Value))
+		positions = append(positions, b.Positions)
 	}
 	// collect arrays of amounts by commodity account, across balances
-	sortedPos := mergePositions(positions)
+	sortedPos := mergePositions(options.Value, positions)
 	// compute the segments
 	segments := buildSegments(options, sortedPos)
 
@@ -92,7 +92,7 @@ func NewReport(options Options, bal []*balance.Balance) (*Report, error) {
 	}, nil
 }
 
-func mergePositions(positions []map[balance.CommodityAccount]decimal.Decimal) []Position {
+func mergePositions(value bool, positions []map[balance.CommodityAccount]amount.Amount) []Position {
 	commodityAccounts := make(map[balance.CommodityAccount]bool)
 	for _, p := range positions {
 		for ca := range p {
@@ -106,9 +106,17 @@ func mergePositions(positions []map[balance.CommodityAccount]decimal.Decimal) []
 			empty = true
 		)
 		for i, p := range positions {
-			if value, exists := p[ca]; exists && !value.IsZero() {
-				vec.Values[i] = value
-				empty = false
+			if amount, exists := p[ca]; exists {
+				var val decimal.Decimal
+				if value {
+					val = amount.Value()
+				} else {
+					val = amount.Amount()
+				}
+				if !val.IsZero() {
+					vec.Values[i] = val
+					empty = false
+				}
 			}
 		}
 		if empty {

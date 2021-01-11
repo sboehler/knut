@@ -233,7 +233,7 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 		}
 		v2, err := b.NormalizedPrices.Valuate(pos.Commodity, va.Amount())
 		if err != nil {
-			panic("no valuation found")
+			panic(fmt.Sprintf("no valuation found for commodity %s", pos.Commodity))
 		}
 		if !v2.Equal(va.Value()) {
 			// create a transaction to adjust the valuation

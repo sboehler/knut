@@ -157,7 +157,7 @@ func ParseFloat(p *Scanner) (float64, error) {
 func ParseCommodity(p *Scanner) (*commodities.Commodity, error) {
 	i, err := ParseIdentifier(p)
 	if err != nil {
-		return commodities.Get(""), err
+		return nil, err
 	}
 	return commodities.Get(i), nil
 }

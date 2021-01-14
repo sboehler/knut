@@ -240,8 +240,8 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 		Date:        r.date,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, r.symbol, qty),
-			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, r.currency, proceeds),
+			ledger.NewPosting(accounts.EquityAccount(), p.options.account, r.symbol, qty),
+			ledger.NewPosting(accounts.EquityAccount(), p.options.account, r.currency, proceeds),
 			ledger.NewPosting(p.options.fee, p.options.account, r.currency, fee),
 		},
 	})
@@ -270,8 +270,8 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		Date:        r.date,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, p.last.currency, p.last.netAmount),
-			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, r.currency, r.netAmount),
+			ledger.NewPosting(accounts.EquityAccount(), p.options.account, p.last.currency, p.last.netAmount),
+			ledger.NewPosting(accounts.EquityAccount(), p.options.account, r.currency, r.netAmount),
 		},
 	})
 	p.last = nil

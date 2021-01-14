@@ -236,8 +236,8 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, stock, qty.Round(2)),
-			ledger.NewPosting(accounts.ValuationAccount(), p.options.account, currency, proceeds.Round(2)),
+			ledger.NewPosting(accounts.EquityAccount(), p.options.account, stock, qty.Round(2)),
+			ledger.NewPosting(accounts.EquityAccount(), p.options.account, currency, proceeds.Round(2)),
 			ledger.NewPosting(p.options.fee, p.options.account, currency, fee.Round(2)),
 		},
 	})
@@ -281,8 +281,8 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
 	postings := []*ledger.Posting{
-		ledger.NewPosting(accounts.ValuationAccount(), p.options.account, stock, qty.Round(2)),
-		ledger.NewPosting(accounts.ValuationAccount(), p.options.account, currency, proceeds.Round(2)),
+		ledger.NewPosting(accounts.EquityAccount(), p.options.account, stock, qty.Round(2)),
+		ledger.NewPosting(accounts.EquityAccount(), p.options.account, currency, proceeds.Round(2)),
 	}
 	if !fee.IsZero() {
 		postings = append(postings, ledger.NewPosting(p.options.fee, p.options.account, p.baseCurrency, fee.Round(2)))

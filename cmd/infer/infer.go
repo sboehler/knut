@@ -16,6 +16,7 @@ package infer
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -43,7 +44,7 @@ func CreateCmd() *cobra.Command {
 
 		RunE: run,
 	}
-	cmd.Flags().StringP("account", "a", "TBD", "account name")
+	cmd.Flags().StringP("account", "a", "Expenses:TBD", "account name")
 	cmd.Flags().StringP("training-file", "t", "", "the journal file with existing data")
 	return &cmd
 }
@@ -83,6 +84,7 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 			return
 		}
 		for d := range upstream {
+			fmt.Println(d)
 			if t, ok := d.(*ledger.Transaction); ok {
 				bayesModel.Infer(t, account)
 			}

@@ -12,7 +12,7 @@ Expenses:Tax            Expenses:Tax                     0 AAPL
 2020-03-21 "Sell -459 CHF @ 1.03371 USD"
 Assets:IB               Equity:Valuation               459 CHF
 Equity:Valuation        Assets:IB                   449.39 USD
-Assets:IB               Expenses:Fees                  1.1 USD
+Assets:IB               Expenses:Fees                  1.1 EUR
 
 2020-04-12 "Buy 7 AAPL @ 10 USD"
 Equity:Valuation        Assets:IB                        7 AAPL

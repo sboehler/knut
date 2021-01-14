@@ -3,7 +3,7 @@ Statement,Data,BrokerName,Interactive Brokers
 Statement,Data,BrokerAddress,
 Statement,Data,Title,Activity Statement
 Statement,Data,Period,"January 1, 2020 - April 22, 2020"
-Account Information,Data,Base Currency,CHF
+Account Information,Data,Base Currency,EUR
 Open Positions,Data,Summary,Stocks,USD,AAPL,10,1,100.00,100.00,100.00,100.00,100.00,100.00,
 Forex Balances,Data,Forex,CHF,CHF,320.072033121,1,-320.072033121,1,320.072033121,0,
 Trades,Data,Order,Stocks,USD,AAPL,"2020-04-12, 10:17:49",7,10.00,10.00,-1.00,-1.00,0,0,40.425,O

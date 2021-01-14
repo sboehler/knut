@@ -285,7 +285,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		ledger.NewPosting(accounts.ValuationAccount(), p.options.account, currency, proceeds.Round(2)),
 	}
 	if !fee.IsZero() {
-		postings = append(postings, ledger.NewPosting(p.options.fee, p.options.account, currency, fee.Round(2)))
+		postings = append(postings, ledger.NewPosting(p.options.fee, p.options.account, p.baseCurrency, fee.Round(2)))
 	}
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,

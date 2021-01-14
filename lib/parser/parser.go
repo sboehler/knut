@@ -26,6 +26,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/sboehler/knut/lib/amount"
+	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/scanner"
@@ -83,6 +84,12 @@ func (p *Parser) next() (interface{}, error) {
 			if err := p.consumeComment(); err != nil {
 				return nil, p.scanner.ParseError(err)
 			}
+		case p.current() == '@':
+			a, err := p.parseAccrual()
+			if err != nil {
+				return nil, p.scanner.ParseError(err)
+			}
+			return a, nil
 		case p.current() == 'i':
 			i, err := p.parseInclude()
 			if err != nil {
@@ -165,14 +172,92 @@ func (p *Parser) parseTransaction(d time.Time) (*ledger.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ledger.Transaction{
+	t := &ledger.Transaction{
 		Pos:         p.getRange(),
 		Date:        d,
 		Description: desc,
 		Tags:        tags,
 		Postings:    postings,
-	}, nil
+	}
+	return t, nil
 
+}
+
+func (p *Parser) parseAccrual() (*ledger.Accrual, error) {
+	p.markStart()
+	if err := p.scanner.ConsumeRune('@'); err != nil {
+		return nil, err
+	}
+	if err := p.scanner.ParseString("accrue"); err != nil {
+		return nil, err
+	}
+	if err := p.consumeWhitespace1(); err != nil {
+		return nil, err
+	}
+	periodStr, err := p.scanner.ReadWhile(unicode.IsLetter)
+	if err != nil {
+		return nil, err
+	}
+	var period date.Period
+	switch periodStr {
+	case "once":
+		period = date.Once
+	case "daily":
+		period = date.Daily
+	case "weekly":
+		period = date.Weekly
+	case "monthly":
+		period = date.Monthly
+	case "quarterly":
+		period = date.Quarterly
+	case "yearly":
+		period = date.Yearly
+	default:
+		return nil, fmt.Errorf("expected \"once\", \"daily\", \"weekly\", \"monthly\", \"quarterly\" or \"yearly\", got %q", periodStr)
+	}
+	if err := p.consumeWhitespace1(); err != nil {
+		return nil, err
+	}
+	dateFrom, err := scanner.ParseDate(p.scanner)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consumeWhitespace1(); err != nil {
+		return nil, err
+	}
+	dateTo, err := scanner.ParseDate(p.scanner)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consumeWhitespace1(); err != nil {
+		return nil, err
+	}
+	account, err := scanner.ParseAccount(p.scanner)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consumeRestOfWhitespaceLine(); err != nil {
+		return nil, err
+	}
+	d, err := scanner.ParseDate(p.scanner)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consumeWhitespace1(); err != nil {
+		return nil, err
+	}
+	t, err := p.parseTransaction(d)
+	if err != nil {
+		return nil, err
+	}
+	return &ledger.Accrual{
+		Pos:         p.getRange(),
+		T0:          dateFrom,
+		T1:          dateTo,
+		Period:      period,
+		Account:     account,
+		Transaction: t,
+	}, nil
 }
 
 func (p *Parser) parsePostings() ([]*ledger.Posting, error) {

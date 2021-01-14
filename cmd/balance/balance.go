@@ -26,6 +26,7 @@ import (
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/macro"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/report"
@@ -295,7 +296,27 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 	if err != nil {
 		return err
 	}
-	l, err := ledger.Build(createLedgerOptions(opts), ch)
+	var dst = make(chan interface{}, 100)
+	go func() {
+		defer close(dst)
+		for d := range ch {
+			switch t := d.(type) {
+
+			case *ledger.Accrual:
+				trx, err := macro.Expand(t)
+				if err != nil {
+					dst <- err
+				}
+				for _, t := range trx {
+					dst <- t
+				}
+			default:
+				dst <- d
+
+			}
+		}
+	}()
+	l, err := ledger.Build(createLedgerOptions(opts), dst)
 	if err != nil {
 		return err
 	}

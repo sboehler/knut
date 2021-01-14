@@ -26,6 +26,8 @@ func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err 
 		return p.printInclude(w, d)
 	case *ledger.Price:
 		return p.printPrice(w, d)
+	case *ledger.Accrual:
+		return p.printAccrual(w, d)
 	case *ledger.Value:
 		return p.printValue(w, d)
 	}
@@ -63,6 +65,16 @@ func (p Printer) printTransaction(w io.Writer, t *ledger.Transaction) (n int, er
 		}
 	}
 	return n, nil
+}
+
+func (p Printer) printAccrual(w io.Writer, a *ledger.Accrual) (n int, err error) {
+	c, err := fmt.Fprintf(w, "@accrue %s %s %s %s\n", a.Period, a.T0.Format("2006-01-02"), a.T1.Format("2006-01-02"), a.Account)
+	n += c
+	if err != nil {
+		return n, err
+	}
+	c, err = p.printTransaction(w, a.Transaction)
+	return n + c, err
 }
 
 func (p Printer) printPosting(w io.Writer, t *ledger.Posting) (int, error) {

@@ -20,8 +20,10 @@ import "time"
 type Period int
 
 const (
+	// Once represents the beginning of the interval.
+	Once Period = iota
 	// Daily is a daily interval.
-	Daily Period = iota
+	Daily
 	// Weekly is a weekly interval.
 	Weekly
 	// Monthly is a monthly interval.
@@ -34,16 +36,18 @@ const (
 
 func (p Period) String() string {
 	switch p {
+	case Once:
+		return "once"
 	case Daily:
-		return "Daily"
+		return "daily"
 	case Weekly:
-		return "Weekly"
+		return "weekly"
 	case Monthly:
-		return "Monthly"
+		return "monthly"
 	case Quarterly:
-		return "Quarterly"
+		return "quarterly"
 	case Yearly:
-		return "Yearly"
+		return "yearly"
 	}
 	return ""
 }
@@ -57,6 +61,8 @@ func Date(year int, month time.Month, day int) time.Time {
 // contains the receiver.
 func StartOf(d time.Time, p Period) time.Time {
 	switch p {
+	case Once:
+		return d
 	case Daily:
 		return d
 	case Weekly:
@@ -76,6 +82,8 @@ func StartOf(d time.Time, p Period) time.Time {
 // the receiver.
 func EndOf(d time.Time, p Period) time.Time {
 	switch p {
+	case Once:
+		return d
 	case Daily:
 		return d
 	case Weekly:

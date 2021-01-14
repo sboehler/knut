@@ -20,6 +20,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/sboehler/knut/lib/amount"
+	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
@@ -182,4 +183,18 @@ type Value struct {
 // Position returns the model.Range.
 func (v Value) Position() model.Range {
 	return v.Pos
+}
+
+// Accrual represents an accrual.
+type Accrual struct {
+	Pos         model.Range
+	Period      date.Period
+	T0, T1      time.Time
+	Account     *accounts.Account
+	Transaction *Transaction
+}
+
+// Position returns the position.
+func (a *Accrual) Position() model.Range {
+	return a.Pos
 }

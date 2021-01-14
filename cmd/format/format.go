@@ -16,10 +16,12 @@ package format
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
@@ -36,7 +38,7 @@ func CreateCmd() *cobra.Command {
 		Short: "Format the given journal",
 		Long:  `Format the given journal in-place. Any white space and comments between directives is preserved.`,
 
-		RunE: run,
+		Run: run,
 	}
 }
 
@@ -47,28 +49,32 @@ type directive interface {
 
 const concurrency = 10
 
-func run(cmd *cobra.Command, args []string) (errors error) {
-	errCh := make(chan error)
-	defer close(errCh)
-	go func() {
-		for err := range errCh {
-			errors = multierr.Append(errors, err)
-		}
-	}()
+func run(cmd *cobra.Command, args []string) {
+	if err := execute(cmd, args); err != nil {
+		fmt.Fprintln(cmd.ErrOrStderr(), err)
+		os.Exit(1)
+	}
+}
+
+func execute(cmd *cobra.Command, args []string) (errors error) {
+	mu := sync.Mutex{}
 	sema := make(chan bool, concurrency)
 	for _, arg := range args {
+		target := arg
 		sema <- true
-		go func(target string) {
+		go func() {
 			defer func() { <-sema }()
 			if err := formatFile(target); err != nil {
-				errCh <- err
+				mu.Lock()
+				defer mu.Unlock()
+				errors = multierr.Append(errors, err)
 			}
-		}(arg)
+		}()
 	}
 	for i := 0; i < concurrency; i++ {
 		sema <- true
 	}
-	return nil
+	return errors
 }
 
 func formatFile(target string) error {

@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 
 	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/printer"
 )
 
 type iter interface {
@@ -28,7 +29,6 @@ type iter interface {
 
 type directive interface {
 	Position() model.Range
-	io.WriterTo
 }
 
 type nextFunc func() (interface{}, error)
@@ -52,6 +52,7 @@ func Format(ch <-chan interface{}, src reader, dest io.Writer) error {
 		}
 	}
 
+	var p = printer.Printer{}
 	srcBytePos := 0
 	for _, d := range directives {
 		p0, p1 := d.Position().Start.BytePos, d.Position().End.BytePos
@@ -67,7 +68,7 @@ func Format(ch <-chan interface{}, src reader, dest io.Writer) error {
 		}
 
 		// write directive to dst
-		if _, err := d.WriteTo(dest); err != nil {
+		if _, err := p.PrintDirective(dest, d); err != nil {
 			return err
 		}
 		// update srcPos

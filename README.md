@@ -56,6 +56,7 @@ $ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 doc/example.knu
   - [File format](#file-format)
     - [Open and close](#open-and-close)
     - [Transactions](#transactions)
+    - [Accruals (experimental)](#accruals-experimental)
     - [Balance assertions](#balance-assertions)
     - [Value directive](#value-directive)
     - [Prices](#prices)
@@ -495,6 +496,51 @@ The transaction syntax deviates from similar tools like ledger or beancount for 
 - It ensures that a transaction always balances, which is not guaranteed by formats where each booking references only one account.
 - It creates unambigous flows between two accounts, which is helpful when analyzing the flows of money.
 - The representation is more compact.
+
+### Accruals (experimental)
+
+Accruals are annotation placed on transactions to describe how the transaction's flows are to be broken up over time. Suppose you pay your yearly tax bill for 2020 on 24 March of that same year:
+
+```text
+2020-03-24 "2020 Taxes"
+Assets:BankAccount Expenses:Taxes 12000 USD
+```
+
+This will heavily impact your net income in March due to the large cash outflow, while the taxes are actually owed for the entire year. Enter accruals: 
+
+```text
+@accrue monthly 2020-01-01 2020-01-12 Assets:PrepaidTax
+2020-03-24 "2020 Taxes"
+Assets:BankAccount Expenses:Taxes 12000 USD
+```
+
+This annotation will replace the original transaction with an accrual, moving the money from expenses to a virtual asset account. In addition, the annotation will generate a series of small transactions which continuously move money from the virtual asset account to the expense account:
+
+```text
+# Accrual leg:
+2020-03-24 "2020 Taxes"
+Assets:BankAccount Assets:PrepaidTax 12000 USD
+
+# Expense legs:
+2020-01-31 "2020 Taxes"
+Assets:BankAccount Assets:PrepaidTax 1000 USD
+
+2020-02-29 "2020 Taxes"
+Assets:BankAccount Assets:PrepaidTax 1000 USD
+
+2020-03-31 "2020 Taxes"
+Assets:BankAccount Assets:PrepaidTax 1000 USD
+
+# ... etc, in total 12 transactions
+```
+
+knut will take care that the total impact remains the same. Also, amounts are properly split, without remainder.
+
+```text
+@accrue <once|daily|weekly|monthly|quarterly|yearly> <T0> <T1> <accrual account>
+<transaction>
+```
+
 
 ### Balance assertions
 

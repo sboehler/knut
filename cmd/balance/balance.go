@@ -26,7 +26,6 @@ import (
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/macro"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/report"
@@ -303,12 +302,13 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 			switch t := d.(type) {
 
 			case *ledger.Accrual:
-				trx, err := macro.Expand(t)
+				trx, err := t.Expand()
 				if err != nil {
 					dst <- err
-				}
-				for _, t := range trx {
-					dst <- t
+				} else {
+					for _, t := range trx {
+						dst <- t
+					}
 				}
 			default:
 				dst <- d

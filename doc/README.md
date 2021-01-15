@@ -213,13 +213,13 @@ Assets:BankAccount Assets:PrepaidTax 12000 USD
 
 # Expense legs:
 2020-01-31 "2020 Taxes"
-Assets:BankAccount Assets:PrepaidTax 1000 USD
+Assets:PrepaidTax Expenses:Taxes 1000 USD
 
 2020-02-29 "2020 Taxes"
-Assets:BankAccount Assets:PrepaidTax 1000 USD
+Assets:PrepaidTax Expenses:Taxes 1000 USD
 
 2020-03-31 "2020 Taxes"
-Assets:BankAccount Assets:PrepaidTax 1000 USD
+Assets:PrepaidTax Expenses:Taxes 1000 USD
 
 # ... etc, in total 12 transactions
 ```

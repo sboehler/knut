@@ -26,6 +26,7 @@ import (
 	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/printer"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
+	"github.com/shopspring/decimal"
 	"go.uber.org/multierr"
 
 	"github.com/cheggaaa/pb/v3"
@@ -144,7 +145,7 @@ func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]*ledger.Pri
 			Date:      i.Date,
 			Commodity: commodities.Get(cfg.Commodity),
 			Target:    commodities.Get(cfg.TargetCommodity),
-			Price:     i.Close,
+			Price:     decimal.NewFromFloat(i.Close),
 		}
 	}
 	return nil

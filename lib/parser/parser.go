@@ -367,7 +367,7 @@ func (p *Parser) parsePrice(d time.Time) (*ledger.Price, error) {
 		return nil, err
 	}
 
-	price, err := scanner.ParseFloat(p.scanner)
+	price, err := scanner.ParseDecimal(p.scanner)
 	if err != nil {
 		return nil, err
 	}

@@ -27,23 +27,25 @@ import (
 // Outer map: target commodity
 // Inner map: commodity
 // value: price in (target commodity / commodity)
-type Prices map[*commodities.Commodity]map[*commodities.Commodity]float64
+type Prices map[*commodities.Commodity]map[*commodities.Commodity]decimal.Decimal
 
 // New creates prices.
 func New() Prices {
-	return map[*commodities.Commodity]map[*commodities.Commodity]float64{}
+	return map[*commodities.Commodity]map[*commodities.Commodity]decimal.Decimal{}
 }
+
+var one = decimal.NewFromInt(1)
 
 // Insert inserts a new price.
 func (p Prices) Insert(pr *ledger.Price) {
 	p.addPrice(pr.Target, pr.Commodity, pr.Price)
-	p.addPrice(pr.Commodity, pr.Target, 1/pr.Price)
+	p.addPrice(pr.Commodity, pr.Target, one.Div(pr.Price))
 }
 
-func (p Prices) addPrice(target, commodity *commodities.Commodity, pr float64) {
+func (p Prices) addPrice(target, commodity *commodities.Commodity, pr decimal.Decimal) {
 	i, ok := p[target]
 	if !ok {
-		i = map[*commodities.Commodity]float64{}
+		i = map[*commodities.Commodity]decimal.Decimal{}
 		p[target] = i
 	}
 	i[commodity] = pr
@@ -52,12 +54,12 @@ func (p Prices) addPrice(target, commodity *commodities.Commodity, pr float64) {
 // Normalize creates a normalized price map for the given commodity.
 func (p Prices) Normalize(c *commodities.Commodity) NormalizedPrices {
 	// prices in (target commodity / commodity)
-	todo := NormalizedPrices{c: 1}
+	todo := NormalizedPrices{c: one}
 	done := NormalizedPrices{}
 
 	var (
 		currentC *commodities.Commodity
-		currentP float64
+		currentP decimal.Decimal
 	)
 
 	for len(todo) > 0 {
@@ -70,7 +72,7 @@ func (p Prices) Normalize(c *commodities.Commodity) NormalizedPrices {
 			if _, ok := done[neighbor]; ok {
 				continue
 			}
-			todo[neighbor] = price * currentP
+			todo[neighbor] = price.Mul(currentP)
 		}
 		delete(todo, currentC)
 	}
@@ -90,7 +92,7 @@ func (p Prices) Copy() Prices {
 
 // NormalizedPrices is a map representing the price of
 // commodities in some base commodity.
-type NormalizedPrices map[*commodities.Commodity]float64
+type NormalizedPrices map[*commodities.Commodity]decimal.Decimal
 
 // Valuate valuates the given amount.
 func (n NormalizedPrices) Valuate(c *commodities.Commodity, a decimal.Decimal) (decimal.Decimal, error) {
@@ -98,7 +100,5 @@ func (n NormalizedPrices) Valuate(c *commodities.Commodity, a decimal.Decimal) (
 	if !ok {
 		return decimal.Zero, fmt.Errorf("No price found for %v in %v", c, n)
 	}
-	amount, _ := a.Float64()
-	value := amount * price
-	return decimal.NewFromFloat(value), nil
+	return a.Mul(price), nil
 }

@@ -130,7 +130,7 @@ func (p Printer) printClose(w io.Writer, c *ledger.Close) (int, error) {
 }
 
 func (p Printer) printPrice(w io.Writer, pr *ledger.Price) (int, error) {
-	return fmt.Fprintf(w, "%s price %s %g %s", pr.Date.Format("2006-01-02"), pr.Commodity, pr.Price, pr.Target)
+	return fmt.Fprintf(w, "%s price %s %s %s", pr.Date.Format("2006-01-02"), pr.Commodity, pr.Price, pr.Target)
 }
 
 func (p Printer) printInclude(w io.Writer, i *ledger.Include) (int, error) {

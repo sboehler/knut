@@ -138,7 +138,7 @@ type Price struct {
 	Date      time.Time
 	Commodity *commodities.Commodity
 	Target    *commodities.Commodity
-	Price     float64
+	Price     decimal.Decimal
 }
 
 // Position returns the model.Range.

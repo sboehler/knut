@@ -73,6 +73,7 @@ Usage:
 
 Available Commands:
   balance     create a balance sheet
+  benchmark   various subcommands to benchmark knut
   fetch       Fetch quotes from Yahoo! Finance
   format      Format the given journal
   help        Help about any command

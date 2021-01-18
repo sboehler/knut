@@ -312,28 +312,7 @@ func createBalance(cmd *cobra.Command, opts *options) error {
 	if err != nil {
 		return err
 	}
-	var dst = make(chan interface{}, 100)
-	go func() {
-		defer close(dst)
-		for d := range ch {
-			switch t := d.(type) {
-
-			case *ledger.Accrual:
-				trx, err := t.Expand()
-				if err != nil {
-					dst <- err
-				} else {
-					for _, t := range trx {
-						dst <- t
-					}
-				}
-			default:
-				dst <- d
-
-			}
-		}
-	}()
-	l, err := ledger.Build(createLedgerOptions(opts), dst)
+	l, err := ledger.Build(createLedgerOptions(opts), ch)
 	if err != nil {
 		return err
 	}

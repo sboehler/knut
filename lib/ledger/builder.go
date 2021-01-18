@@ -44,6 +44,14 @@ func Build(options Options, results <-chan interface{}) (Ledger, error) {
 			b.AddValue(t)
 		case *Close:
 			b.AddClosing(t)
+		case *Accrual:
+			trx, err := t.Expand()
+			if err != nil {
+				return nil, err
+			}
+			for _, t := range trx {
+				b.AddTransaction(t)
+			}
 		default:
 			return nil, fmt.Errorf("unknown: %v", t)
 		}

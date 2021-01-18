@@ -225,7 +225,7 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 	if b.Valuation == nil {
 		return nil, nil
 	}
-	result := []*ledger.Transaction{}
+	var result []*ledger.Transaction
 	for pos, va := range b.Positions {
 		at := pos.Account.Type()
 		if at != accounts.ASSETS && at != accounts.LIABILITIES {
@@ -235,7 +235,8 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 		if err != nil {
 			panic(fmt.Sprintf("no valuation found for commodity %s", pos.Commodity))
 		}
-		if !v2.Equal(va.Value()) {
+		diff := v2.Sub(va.Value())
+		if !diff.IsZero() {
 			// create a transaction to adjust the valuation
 			result = append(result, &ledger.Transaction{
 				Date:        b.Date,
@@ -243,7 +244,7 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 				Tags:        nil,
 				Postings: []*ledger.Posting{
 					{
-						Amount:    amount.New(decimal.Zero, v2.Sub(va.Value())),
+						Amount:    amount.New(decimal.Zero, diff),
 						Credit:    accounts.ValuationAccount(),
 						Debit:     pos.Account,
 						Commodity: pos.Commodity,

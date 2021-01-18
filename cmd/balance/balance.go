@@ -17,8 +17,10 @@ package balance
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"time"
@@ -49,6 +51,7 @@ func CreateCmd() *cobra.Command {
 		Run: run,
 	}
 	c.Flags().String("from", "", "from date")
+	c.Flags().String("cpuprofile", "", "file to write profile")
 	c.Flags().String("to", "", "to date")
 	c.Flags().IntP("last", "l", 0, "last n periods")
 	c.Flags().BoolP("diff", "d", false, "diff")
@@ -77,6 +80,20 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func execute(cmd *cobra.Command, args []string) error {
+
+	prof, err := cmd.Flags().GetString("cpuprofile")
+	if err != nil {
+		return err
+	}
+	if prof != "" {
+		f, err := os.Create(prof)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	o, err := parseOptions(cmd, args)
 	if err != nil {
 		return err

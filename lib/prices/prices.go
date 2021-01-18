@@ -100,5 +100,5 @@ func (n NormalizedPrices) Valuate(c *commodities.Commodity, a decimal.Decimal) (
 	if !ok {
 		return decimal.Zero, fmt.Errorf("No price found for %v in %v", c, n)
 	}
-	return a.Mul(price), nil
+	return a.Mul(price).Round(8), nil
 }

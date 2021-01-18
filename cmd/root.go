@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/sboehler/knut/cmd/balance"
+	"github.com/sboehler/knut/cmd/benchmark"
 	"github.com/sboehler/knut/cmd/format"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/cmd/infer"
@@ -42,6 +43,7 @@ func CreateCmd() *cobra.Command {
 	c.AddCommand(format.CreateCmd())
 	c.AddCommand(infer.CreateCmd())
 	c.AddCommand(transcode.CreateCmd())
+	c.AddCommand(benchmark.CreateCmd())
 	return c
 }
 

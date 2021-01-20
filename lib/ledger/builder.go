@@ -122,6 +122,9 @@ func (b *Builder) AddOpening(o *Open) {
 
 // AddClosing adds a close directive.
 func (b *Builder) AddClosing(close *Close) {
+	if !b.filter.matchAccount(close.Account) {
+		return
+	}
 	s := b.getOrCreate(close.Date)
 	s.Closings = append(s.Closings, close)
 }

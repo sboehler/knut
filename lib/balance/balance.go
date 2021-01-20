@@ -254,10 +254,14 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 		}
 	}
 	sort.Slice(result, func(i, j int) bool {
-		if result[i].Postings[0].Debit.String() != result[j].Postings[0].Debit.String() {
-			return result[i].Postings[0].Debit.String() < result[j].Postings[0].Debit.String()
+		var p, q = result[i].Postings[0], result[j].Postings[0]
+		if p.Credit != q.Credit {
+			return p.Credit.String() < q.Credit.String()
 		}
-		return result[i].Postings[0].Commodity.String() < result[j].Postings[0].Commodity.String()
+		if p.Debit != q.Debit {
+			return p.Debit.String() < q.Debit.String()
+		}
+		return p.Commodity.String() < q.Commodity.String()
 	})
 	return result, nil
 }

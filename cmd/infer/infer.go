@@ -16,6 +16,7 @@ package infer
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/sboehler/knut/lib/bayes"
 	"github.com/sboehler/knut/lib/format"
+	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/parser"
@@ -39,15 +41,21 @@ func CreateCmd() *cobra.Command {
 		Long: `Build a Bayes model using the supplied training file and apply it to replace
 		the indicated account in the target file. Training file and target file may be the same.`,
 		Args: cobra.ExactValidArgs(1),
-
-		RunE: run,
+		Run:  run,
 	}
 	cmd.Flags().StringP("account", "a", "Expenses:TBD", "account name")
 	cmd.Flags().StringP("training-file", "t", "", "the journal file with existing data")
 	return &cmd
 }
 
-func run(cmd *cobra.Command, args []string) (errors error) {
+func run(cmd *cobra.Command, args []string) {
+	if err := execute(cmd, args); err != nil {
+		fmt.Fprintln(cmd.ErrOrStderr(), err)
+		os.Exit(1)
+	}
+}
+
+func execute(cmd *cobra.Command, args []string) (errors error) {
 	name, err := cmd.Flags().GetString("account")
 	if err != nil {
 		return err
@@ -105,12 +113,11 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 }
 
 func train(file string, exclude *accounts.Account) (*bayes.Model, error) {
-	ch, err := parser.Parse(file)
-	if err != nil {
-		return nil, err
-	}
-	m := bayes.NewModel()
-	for r := range ch {
+	var (
+		j = journal.Journal{File: file}
+		m = bayes.NewModel()
+	)
+	for r := range j.Parse() {
 		switch t := r.(type) {
 		case error:
 			return nil, t

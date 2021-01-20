@@ -24,9 +24,9 @@ import (
 	"github.com/sboehler/knut/lib/model/commodities"
 )
 
-// Build reads directives from the given channel and
+// FromDirectives reads directives from the given channel and
 // builds a Ledger if successful.
-func Build(filter Filter, results <-chan interface{}) (Ledger, error) {
+func FromDirectives(filter Filter, results <-chan interface{}) (Ledger, error) {
 	var b = NewBuilder(filter)
 	for res := range results {
 		switch t := res.(type) {

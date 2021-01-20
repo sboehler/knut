@@ -15,15 +15,6 @@ type Journal struct {
 	File string
 }
 
-// ToLedger processes a Journal and returns a ledger.
-func (j *Journal) ToLedger(f ledger.Filter) (ledger.Ledger, error) {
-	l, err := ledger.Build(f, j.Parse())
-	if err != nil {
-		return nil, err
-	}
-	return l, nil
-}
-
 // Parse parses the journal at the path, and branches out for include files
 func (j *Journal) Parse() chan interface{} {
 	var (

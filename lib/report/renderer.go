@@ -23,15 +23,11 @@ import (
 
 // Renderer renders a report.
 type Renderer struct {
-	// the configuration of this Renderer
 	Commodities bool
-	// the report which is to be rendered
-	negate bool
-	report *Report
-	// the table which is being built
-	table *table.Table
-	// the current indentation level
-	indent int
+	negate      bool
+	report      *Report
+	table       *table.Table
+	indent      int
 }
 
 const indent = 2

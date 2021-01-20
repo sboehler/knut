@@ -17,6 +17,7 @@ package balance
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -80,7 +81,6 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func execute(cmd *cobra.Command, args []string) error {
-
 	prof, err := cmd.Flags().GetString("cpuprofile")
 	if err != nil {
 		return err
@@ -94,14 +94,41 @@ func execute(cmd *cobra.Command, args []string) error {
 		defer pprof.StopCPUProfile()
 	}
 
-	pipeline, err := parseOptions(cmd, args)
+	pipeline, err := configurePipeline(cmd, args)
 	if err != nil {
 		return err
 	}
-	return createBalance(cmd, pipeline)
+	out := bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	return processPipeline(out, pipeline)
 }
 
-func parseOptions(cmd *cobra.Command, args []string) (*pipeline, error) {
+type pipeline struct {
+	Journal        journal.Journal
+	LedgerFilter   ledger.Filter
+	BalanceBuilder balance.Builder
+	ReportBuilder  report.Builder
+	ReportRenderer report.Renderer
+	TextRenderer   table.TextRenderer
+}
+
+func processPipeline(w io.Writer, ppl *pipeline) error {
+	l, err := ledger.FromDirectives(ppl.LedgerFilter, ppl.Journal.Parse())
+	if err != nil {
+		return err
+	}
+	b, err := ppl.BalanceBuilder.Build(l)
+	if err != nil {
+		return err
+	}
+	r, err := ppl.ReportBuilder.Build(b)
+	if err != nil {
+		return err
+	}
+	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(r), w)
+}
+
+func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	from, err := parseDate(cmd, "from")
 	if err != nil {
 		return nil, err
@@ -195,7 +222,7 @@ func parseOptions(cmd *cobra.Command, args []string) (*pipeline, error) {
 		Commodities: showCommodities || valuation == nil,
 	}
 
-	var tableRenderer = table.Renderer{
+	var tableRenderer = table.TextRenderer{
 		Color:     color,
 		Thousands: thousands,
 		Round:     digits,
@@ -207,7 +234,7 @@ func parseOptions(cmd *cobra.Command, args []string) (*pipeline, error) {
 		BalanceBuilder: balanceBuilder,
 		ReportBuilder:  reportBuilder,
 		ReportRenderer: reportRenderer,
-		TableRenderer:  tableRenderer,
+		TextRenderer:   tableRenderer,
 	}, nil
 }
 
@@ -282,32 +309,4 @@ func parseCollapse(cmd *cobra.Command, name string) ([]report.Collapse, error) {
 		res = append(res, report.Collapse{Level: l, Regex: regex})
 	}
 	return res, nil
-}
-
-type pipeline struct {
-	Journal        journal.Journal
-	LedgerFilter   ledger.Filter
-	BalanceBuilder balance.Builder
-	ReportBuilder  report.Builder
-	ReportRenderer report.Renderer
-	TableRenderer  table.Renderer
-}
-
-func createBalance(cmd *cobra.Command, ppl *pipeline) error {
-	l, err := ppl.Journal.ToLedger(ppl.LedgerFilter)
-	if err != nil {
-		return err
-	}
-	b, err := ppl.BalanceBuilder.Build(l)
-	if err != nil {
-		return err
-	}
-	r, err := ppl.ReportBuilder.Build(b)
-	if err != nil {
-		return err
-	}
-	tb := ppl.ReportRenderer.Render(r)
-	out := bufio.NewWriter(cmd.OutOrStdout())
-	defer out.Flush()
-	return ppl.TableRenderer.Render(tb, out)
 }

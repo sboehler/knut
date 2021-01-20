@@ -44,18 +44,24 @@ func CreateCmd() *cobra.Command {
 
 		Args: cobra.ExactValidArgs(1),
 
-		RunE: run,
+		Run: run,
 	}
 }
 
-func run(cmd *cobra.Command, args []string) error {
+func run(cmd *cobra.Command, args []string) {
+	if err := execute(cmd, args); err != nil {
+		fmt.Fprintln(cmd.ErrOrStderr(), err)
+		os.Exit(1)
+	}
+}
+
+func execute(cmd *cobra.Command, args []string) (errors error) {
 	configs, err := readConfig(args[0])
 	if err != nil {
 		return err
 	}
 	errCh := make(chan error)
 	defer close(errCh)
-	var errors error
 	go func() {
 		for err = range errCh {
 			errors = multierr.Append(err, errors)

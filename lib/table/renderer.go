@@ -25,8 +25,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Renderer renders a table to text.
-type Renderer struct {
+// TextRenderer renders a table to text.
+type TextRenderer struct {
 	table     *Table
 	Color     bool
 	Thousands bool
@@ -39,7 +39,7 @@ var (
 )
 
 // Render renders this table to a string.
-func (r *Renderer) Render(t *Table, w io.Writer) error {
+func (r *TextRenderer) Render(t *Table, w io.Writer) error {
 	r.table = t
 	color.NoColor = !r.Color
 
@@ -96,7 +96,7 @@ func (r *Renderer) Render(t *Table, w io.Writer) error {
 	return err
 }
 
-func (r *Renderer) renderCell(c cell, l int, w io.Writer) error {
+func (r *TextRenderer) renderCell(c cell, l int, w io.Writer) error {
 	switch t := c.(type) {
 
 	case emptyCell:
@@ -164,7 +164,7 @@ func writeSpace(w io.Writer, l int) error {
 	return writeStrings(w, " ", l)
 }
 
-func (r *Renderer) minLengthCell(c cell) int {
+func (r *TextRenderer) minLengthCell(c cell) int {
 	switch t := c.(type) {
 	case emptyCell, SeparatorCell:
 		return 0
@@ -194,7 +194,7 @@ func createSep(c1, c2 cell) string {
 
 var k = decimal.RequireFromString("1000")
 
-func (r *Renderer) numToString(d decimal.Decimal) string {
+func (r *TextRenderer) numToString(d decimal.Decimal) string {
 	if r.Thousands {
 		d = d.Div(k)
 	}

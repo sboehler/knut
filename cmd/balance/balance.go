@@ -137,6 +137,11 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	if err != nil {
 		return nil, err
 	}
+	if to == nil {
+		t := time.Now()
+		d := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+		to = &d
+	}
 	last, err := cmd.Flags().GetInt("last")
 	if err != nil {
 		return nil, err

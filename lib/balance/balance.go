@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/amount"
+	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/prices"
@@ -319,13 +319,9 @@ func Diffs(bals []*Balance) []*Balance {
 	return bals[1:]
 }
 
-type directive interface {
-	Position() model.Range
-}
-
 // Error is an error.
 type Error struct {
-	directive directive
+	directive ledger.Directive
 	msg       string
 }
 
@@ -353,4 +349,65 @@ func (p CommodityAccount) Less(p1 CommodityAccount) bool {
 		return p.Account.String() < p1.Account.String()
 	}
 	return p.Commodity.String() < p1.Commodity.String()
+}
+
+// Builder builds a sequence of balances.
+type Builder struct {
+	From, To    *time.Time
+	Period      *date.Period
+	Last        int
+	Valuation   *commodities.Commodity
+	Close, Diff bool
+}
+
+// Build builds a sequence of balances.
+func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
+	var (
+		bal    = New(b.Valuation)
+		result []*Balance
+		index  int
+	)
+	for _, date := range b.createDateSeries(l) {
+		for ; index < len(l); index++ {
+			if l[index].Date.After(date) {
+				break
+			}
+			if err := bal.Update(l[index]); err != nil {
+				return nil, err
+			}
+		}
+		copy := bal.Copy()
+		copy.Date = date
+		result = append(result, copy)
+		bal.CloseIncomeAndExpenses = b.Close
+	}
+	if b.Diff {
+		result = Diffs(result)
+	}
+	if b.Last > 0 && b.Last < len(result) {
+		result = result[len(result)-b.Last:]
+	}
+	return result, nil
+}
+
+func (b Builder) createDateSeries(l ledger.Ledger) []time.Time {
+	var from, to time.Time
+	if b.From != nil {
+		from = *b.From
+	} else if d, ok := l.MinDate(); ok {
+		from = d
+	} else {
+		return nil
+	}
+	if b.To != nil {
+		to = *b.To
+	} else if d, ok := l.MaxDate(); ok {
+		to = d
+	} else {
+		return nil
+	}
+	if b.Period != nil {
+		return date.Series(from, to, *b.Period)
+	}
+	return []time.Time{from, to}
 }

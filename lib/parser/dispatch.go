@@ -68,7 +68,7 @@ func ParseOneFile(path string) (chan interface{}, error) {
 	go func() {
 		defer close(ch)
 		for {
-			d, err := p.next()
+			d, err := p.Next()
 			if err == io.EOF {
 				break
 			}

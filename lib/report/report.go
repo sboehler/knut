@@ -30,7 +30,7 @@ import (
 // Report is a balance report for a range of dates.
 type Report struct {
 	Dates       []time.Time
-	Options     Options
+	Options     Builder
 	Segments    map[accounts.AccountType]*Segment
 	Commodities []*commodities.Commodity
 	Positions   map[*commodities.Commodity]amount.Vec
@@ -42,8 +42,8 @@ type Position struct {
 	Amounts amount.Vec
 }
 
-// Options contains configuration options to create a report.
-type Options struct {
+// Builder contains configuration options to create a report.
+type Builder struct {
 	Value    bool
 	Collapse []Collapse
 }
@@ -54,8 +54,8 @@ type Collapse struct {
 	Regex *regexp.Regexp
 }
 
-// NewReport creates a new report.
-func NewReport(options Options, bal []*balance.Balance) (*Report, error) {
+// Build creates a new report.
+func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 	// compute the dates and positions array
 	dates := make([]time.Time, 0, len(bal))
 	positions := make([]map[balance.CommodityAccount]amount.Amount, 0, len(bal))
@@ -64,9 +64,9 @@ func NewReport(options Options, bal []*balance.Balance) (*Report, error) {
 		positions = append(positions, b.Positions)
 	}
 	// collect arrays of amounts by commodity account, across balances
-	sortedPos := mergePositions(options.Value, positions)
+	sortedPos := mergePositions(b.Value, positions)
 	// compute the segments
-	segments := buildSegments(options, sortedPos)
+	segments := buildSegments(b, sortedPos)
 
 	// compute totals
 	totals := map[*commodities.Commodity]amount.Vec{}
@@ -86,7 +86,7 @@ func NewReport(options Options, bal []*balance.Balance) (*Report, error) {
 	return &Report{
 		Dates:       dates,
 		Commodities: commodities,
-		Options:     options,
+		Options:     b,
 		Segments:    segments,
 		Positions:   totals,
 	}, nil
@@ -133,7 +133,7 @@ func mergePositions(value bool, positions []map[balance.CommodityAccount]amount.
 	return res
 }
 
-func buildSegments(o Options, positions []Position) map[accounts.AccountType]*Segment {
+func buildSegments(o Builder, positions []Position) map[accounts.AccountType]*Segment {
 	result := make(map[accounts.AccountType]*Segment)
 	for _, position := range positions {
 		at := position.Account.Type()

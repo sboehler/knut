@@ -27,6 +27,7 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/sboehler/knut/lib/format"
+	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/parser"
 )
@@ -78,9 +79,20 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 }
 
 func formatFile(target string) error {
-	ch, err := parser.ParseOneFile(target)
+	p, err := parser.Open(target)
 	if err != nil {
 		return err
+	}
+	var directives []ledger.Directive
+	for {
+		d, err := p.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		directives = append(directives, d)
 	}
 	srcFile, err := os.Open(target)
 	if err != nil {
@@ -92,7 +104,7 @@ func formatFile(target string) error {
 		return err
 	}
 	dest := bufio.NewWriter(tmpfile)
-	err = format.Format(ch, src, dest)
+	err = format.Format(directives, src, dest)
 	if err = multierr.Combine(err, dest.Flush(), srcFile.Close()); err != nil {
 		return multierr.Append(err, os.Remove(tmpfile.Name()))
 	}

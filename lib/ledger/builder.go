@@ -26,8 +26,8 @@ import (
 
 // Build reads directives from the given channel and
 // builds a Ledger if successful.
-func Build(options Options, results <-chan interface{}) (Ledger, error) {
-	var b = NewBuilder(options)
+func Build(filter Filter, results <-chan interface{}) (Ledger, error) {
+	var b = NewBuilder(filter)
 	for res := range results {
 		switch t := res.(type) {
 		case error:
@@ -61,21 +61,15 @@ func Build(options Options, results <-chan interface{}) (Ledger, error) {
 
 // Builder maps dates to days
 type Builder struct {
-	accountFilter, commodityFilter *regexp.Regexp
-	days                           map[time.Time]*Day
-}
-
-// Options represents configuration options for creating a
-type Options struct {
-	AccountsFilter, CommoditiesFilter *regexp.Regexp
+	filter Filter
+	days   map[time.Time]*Day
 }
 
 // NewBuilder creates a new builder.
-func NewBuilder(options Options) *Builder {
+func NewBuilder(f Filter) *Builder {
 	return &Builder{
-		accountFilter:   options.AccountsFilter,
-		commodityFilter: options.CommoditiesFilter,
-		days:            make(map[time.Time]*Day),
+		filter: f,
+		days:   make(map[time.Time]*Day),
 	}
 }
 
@@ -105,10 +99,10 @@ func (b *Builder) getOrCreate(d time.Time) *Day {
 func (b *Builder) AddTransaction(t *Transaction) {
 	var filtered []*Posting
 	for _, p := range t.Postings {
-		if !b.matchAccount(p.Credit) && !b.matchAccount(p.Debit) {
+		if !b.filter.matchAccount(p.Credit) && !b.filter.matchAccount(p.Debit) {
 			continue
 		}
-		if !b.matchCommodity(p.Commodity) {
+		if !b.filter.matchCommodity(p.Commodity) {
 			continue
 		}
 		filtered = append(filtered, p)
@@ -140,7 +134,7 @@ func (b *Builder) AddPrice(p *Price) {
 
 // AddAssertion adds an assertion directive.
 func (b *Builder) AddAssertion(a *Assertion) {
-	if !b.matchAccount(a.Account) || !b.matchCommodity(a.Commodity) {
+	if !b.filter.matchAccount(a.Account) || !b.filter.matchCommodity(a.Commodity) {
 		return
 	}
 	s := b.getOrCreate(a.Date)
@@ -149,17 +143,22 @@ func (b *Builder) AddAssertion(a *Assertion) {
 
 // AddValue adds an value directive.
 func (b *Builder) AddValue(a *Value) {
-	if !b.matchAccount(a.Account) || !b.matchCommodity(a.Commodity) {
+	if !b.filter.matchAccount(a.Account) || !b.filter.matchCommodity(a.Commodity) {
 		return
 	}
 	s := b.getOrCreate(a.Date)
 	s.Values = append(s.Values, a)
 }
 
-func (b Builder) matchAccount(a *accounts.Account) bool {
-	return b.accountFilter == nil || b.accountFilter.MatchString(a.String())
+// Filter represents a filter creating a ledger.
+type Filter struct {
+	AccountsFilter, CommoditiesFilter *regexp.Regexp
 }
 
-func (b Builder) matchCommodity(c *commodities.Commodity) bool {
-	return b.commodityFilter == nil || b.commodityFilter.MatchString(c.String())
+func (b Filter) matchAccount(a *accounts.Account) bool {
+	return b.AccountsFilter == nil || b.AccountsFilter.MatchString(a.String())
+}
+
+func (b Filter) matchCommodity(c *commodities.Commodity) bool {
+	return b.CommoditiesFilter == nil || b.CommoditiesFilter.MatchString(c.String())
 }

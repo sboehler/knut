@@ -16,7 +16,6 @@ package infer
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -28,7 +27,6 @@ import (
 	"github.com/sboehler/knut/lib/bayes"
 	"github.com/sboehler/knut/lib/format"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/parser"
 )
@@ -47,11 +45,6 @@ func CreateCmd() *cobra.Command {
 	cmd.Flags().StringP("account", "a", "Expenses:TBD", "account name")
 	cmd.Flags().StringP("training-file", "t", "", "the journal file with existing data")
 	return &cmd
-}
-
-type directive interface {
-	io.WriterTo
-	Position() model.Range
 }
 
 func run(cmd *cobra.Command, args []string) (errors error) {
@@ -75,22 +68,24 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 	if err != nil {
 		return err
 	}
-	ch := make(chan interface{}, 100)
-	go func() {
-		defer close(ch)
-		upstream, err := parser.ParseOneFile(targetFile)
+	p, err := parser.Open(targetFile)
+	if err != nil {
+		return err
+	}
+	var directives []ledger.Directive
+	for {
+		d, err := p.Next()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
-			ch <- err
-			return
+			return err
 		}
-		for d := range upstream {
-			fmt.Println(d)
-			if t, ok := d.(*ledger.Transaction); ok {
-				bayesModel.Infer(t, account)
-			}
-			ch <- d
+		if t, ok := d.(*ledger.Transaction); ok {
+			bayesModel.Infer(t, account)
 		}
-	}()
+		directives = append(directives, d)
+	}
 
 	srcFile, err := os.Open(targetFile)
 	if err != nil {
@@ -102,7 +97,7 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 		return err
 	}
 	dest := bufio.NewWriter(tmpfile)
-	err = format.Format(ch, src, dest)
+	err = format.Format(directives, src, dest)
 	if err = multierr.Combine(err, dest.Flush(), srcFile.Close()); err != nil {
 		return multierr.Append(err, os.Remove(tmpfile.Name()))
 	}

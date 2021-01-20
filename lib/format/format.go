@@ -15,20 +15,15 @@
 package format
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 
-	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/printer"
 )
 
 type iter interface {
 	Next() (interface{}, error)
-}
-
-type directive interface {
-	Position() model.Range
 }
 
 type nextFunc func() (interface{}, error)
@@ -39,19 +34,7 @@ type reader interface {
 }
 
 // Format formats the directives returned by p.
-func Format(ch <-chan interface{}, src reader, dest io.Writer) error {
-	var directives []directive
-	for n := range ch {
-		switch d := n.(type) {
-		case error:
-			return d
-		case directive:
-			directives = append(directives, d)
-		default:
-			return fmt.Errorf("invalid directive: %v", d)
-		}
-	}
-
+func Format(directives []ledger.Directive, src reader, dest io.Writer) error {
 	var p = printer.Printer{}
 	srcBytePos := 0
 	for _, d := range directives {

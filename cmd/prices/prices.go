@@ -113,25 +113,25 @@ func readConfig(path string) ([]config, error) {
 }
 
 func readFile(filepath string) (map[time.Time]*ledger.Price, error) {
-	ch, err := parser.ParseOneFile(filepath)
+	p, err := parser.Open(filepath)
 	if err != nil {
 		return nil, err
 	}
 	prices := map[time.Time]*ledger.Price{}
-	for d := range ch {
-		switch t := d.(type) {
-		case error:
-			if t == io.EOF {
-				return prices, nil
-			}
-			return nil, t
-		case *ledger.Price:
-			prices[t.Date] = t
-		default:
-			return nil, fmt.Errorf("Unexpected directive in prices file: %v", t)
+	for {
+		d, err := p.Next()
+		if err == io.EOF {
+			return prices, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if price, ok := d.(*ledger.Price); ok {
+			prices[price.Date] = price
+		} else {
+			return nil, fmt.Errorf("Unexpected directive in prices file: %v", d)
 		}
 	}
-	return prices, nil
 }
 
 func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]*ledger.Price) error {
@@ -152,7 +152,7 @@ func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]*ledger.Pri
 }
 
 func writeFile(prices map[time.Time]*ledger.Price, filepath string) error {
-	b := ledger.NewBuilder(ledger.Options{})
+	b := ledger.NewBuilder(ledger.Filter{})
 	for _, price := range prices {
 		b.AddPrice(price)
 	}

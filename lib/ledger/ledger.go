@@ -60,6 +60,11 @@ func (l Ledger) MaxDate() (time.Time, bool) {
 	return l[len(l)-1].Date, true
 }
 
+// Directive is an element in a journal with a position.
+type Directive interface {
+	Position() model.Range
+}
+
 // Open represents an open command.
 type Open struct {
 	Pos     model.Range

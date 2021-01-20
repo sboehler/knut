@@ -27,9 +27,9 @@ import (
 
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/date"
+	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/commodities"
-	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/report"
 	"github.com/sboehler/knut/lib/table"
 
@@ -94,14 +94,14 @@ func execute(cmd *cobra.Command, args []string) error {
 		defer pprof.StopCPUProfile()
 	}
 
-	o, err := parseOptions(cmd, args)
+	pipeline, err := parseOptions(cmd, args)
 	if err != nil {
 		return err
 	}
-	return createBalance(cmd, o)
+	return createBalance(cmd, pipeline)
 }
 
-func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
+func parseOptions(cmd *cobra.Command, args []string) (*pipeline, error) {
 	from, err := parseDate(cmd, "from")
 	if err != nil {
 		return nil, err
@@ -167,22 +167,47 @@ func parseOptions(cmd *cobra.Command, args []string) (*options, error) {
 		return nil, err
 	}
 
-	return &options{
-		File:              args[0],
-		From:              from,
-		To:                to,
-		Last:              last,
-		Valuation:         valuation,
-		Diff:              diff,
-		ShowCommodities:   showCommodities || valuation == nil,
-		FilterAccounts:    filterAccountsRegex,
-		FilterCommodities: filterCommoditiesRegex,
-		Period:            period,
-		Collapse:          collapse,
-		Close:             close,
-		RoundDigits:       digits,
-		Thousands:         thousands,
-		Color:             color,
+	var journal = journal.Journal{
+		File: args[0],
+	}
+
+	var balanceBuilder = balance.Builder{
+		From:      from,
+		To:        to,
+		Period:    period,
+		Last:      last,
+		Valuation: valuation,
+		Close:     close,
+		Diff:      diff,
+	}
+
+	var ledgerFilter = ledger.Filter{
+		CommoditiesFilter: filterCommoditiesRegex,
+		AccountsFilter:    filterAccountsRegex,
+	}
+
+	var reportBuilder = report.Builder{
+		Value:    valuation != nil,
+		Collapse: collapse,
+	}
+
+	var reportRenderer = report.Renderer{
+		Commodities: showCommodities || valuation == nil,
+	}
+
+	var tableRenderer = table.Renderer{
+		Color:     color,
+		Thousands: thousands,
+		Round:     digits,
+	}
+
+	return &pipeline{
+		Journal:        journal,
+		LedgerFilter:   ledgerFilter,
+		BalanceBuilder: balanceBuilder,
+		ReportBuilder:  reportBuilder,
+		ReportRenderer: reportRenderer,
+		TableRenderer:  tableRenderer,
 	}, nil
 }
 
@@ -259,106 +284,30 @@ func parseCollapse(cmd *cobra.Command, name string) ([]report.Collapse, error) {
 	return res, nil
 }
 
-type options struct {
-	File                                           string
-	From, To                                       *time.Time
-	Last                                           int
-	Period                                         *date.Period
-	Valuation                                      *commodities.Commodity
-	FilterAccounts, FilterCommodities              *regexp.Regexp
-	Collapse                                       []report.Collapse
-	RoundDigits                                    int32
-	ShowCommodities, Diff, Close, Thousands, Color bool
+type pipeline struct {
+	Journal        journal.Journal
+	LedgerFilter   ledger.Filter
+	BalanceBuilder balance.Builder
+	ReportBuilder  report.Builder
+	ReportRenderer report.Renderer
+	TableRenderer  table.Renderer
 }
 
-func createLedgerOptions(o *options) ledger.Options {
-	return ledger.Options{
-		AccountsFilter:    o.FilterAccounts,
-		CommoditiesFilter: o.FilterCommodities,
-	}
-}
-
-func createDateSeries(o *options, l ledger.Ledger) []time.Time {
-	var from, to time.Time
-	if o.From != nil {
-		from = *o.From
-	} else if d, ok := l.MinDate(); ok {
-		from = d
-	} else {
-		return nil
-	}
-	if o.To != nil {
-		to = *o.To
-	} else if d, ok := l.MaxDate(); ok {
-		to = d
-	} else {
-		return nil
-	}
-	if o.Period != nil {
-		return date.Series(from, to, *o.Period)
-	}
-	return []time.Time{from, to}
-}
-
-func createReportOptions(o *options) report.Options {
-	return report.Options{
-		Value:    o.Valuation != nil,
-		Collapse: o.Collapse,
-	}
-}
-
-func createBalance(cmd *cobra.Command, opts *options) error {
-	ch, err := parser.Parse(opts.File)
+func createBalance(cmd *cobra.Command, ppl *pipeline) error {
+	l, err := ppl.Journal.ToLedger(ppl.LedgerFilter)
 	if err != nil {
 		return err
 	}
-	l, err := ledger.Build(createLedgerOptions(opts), ch)
+	b, err := ppl.BalanceBuilder.Build(l)
 	if err != nil {
 		return err
 	}
-	b, err := process(opts, l)
+	r, err := ppl.ReportBuilder.Build(b)
 	if err != nil {
 		return err
 	}
-	r, err := report.NewReport(createReportOptions(opts), b)
-	if err != nil {
-		return err
-	}
-
-	tb := report.Render(report.Config{Commodities: opts.ShowCommodities}, r)
-
+	tb := ppl.ReportRenderer.Render(r)
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return table.NewConsoleRenderer(tb, opts.Color, opts.Thousands, opts.RoundDigits).Render(out)
-}
-
-// process processes the ledger and creates valuations for the given commodities
-// and returning balances for the given dates.
-func process(opts *options, l ledger.Ledger) ([]*balance.Balance, error) {
-	var (
-		b      = balance.New(opts.Valuation)
-		result []*balance.Balance
-		index  int
-	)
-	for _, date := range createDateSeries(opts, l) {
-		for ; index < len(l); index++ {
-			if l[index].Date.After(date) {
-				break
-			}
-			if err := b.Update(l[index]); err != nil {
-				return nil, err
-			}
-		}
-		copy := b.Copy()
-		copy.Date = date
-		result = append(result, copy)
-		b.CloseIncomeAndExpenses = opts.Close
-	}
-	if opts.Diff {
-		result = balance.Diffs(result)
-	}
-	if opts.Last > 0 && opts.Last < len(result) {
-		result = result[len(result)-opts.Last:]
-	}
-	return result, nil
+	return ppl.TableRenderer.Render(tb, out)
 }

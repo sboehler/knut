@@ -73,8 +73,8 @@ func (p *Parser) current() rune {
 	return p.scanner.Current()
 }
 
-// next returns the next directive
-func (p *Parser) next() (interface{}, error) {
+// Next returns the next directive
+func (p *Parser) Next() (ledger.Directive, error) {
 	for p.current() != scanner.EOF {
 		if err := p.scanner.ConsumeWhile(isWhitespaceOrNewline); err != nil {
 			return nil, p.scanner.ParseError(err)
@@ -119,7 +119,7 @@ func (p *Parser) consumeComment() error {
 	return nil
 }
 
-func (p *Parser) parseDirective() (interface{}, error) {
+func (p *Parser) parseDirective() (ledger.Directive, error) {
 	p.markStart()
 	d, err := scanner.ParseDate(p.scanner)
 	if err != nil {
@@ -128,7 +128,7 @@ func (p *Parser) parseDirective() (interface{}, error) {
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	var result interface{}
+	var result ledger.Directive
 	switch p.current() {
 	case '"':
 		result, err = p.parseTransaction(d)

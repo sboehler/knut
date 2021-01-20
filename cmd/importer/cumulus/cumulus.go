@@ -77,7 +77,7 @@ func run(cmd *cobra.Command, args []string) error {
 	p := parser{
 		reader:  reader,
 		account: account,
-		builder: ledger.NewBuilder(ledger.Options{}),
+		builder: ledger.NewBuilder(ledger.Filter{}),
 	}
 	if err = p.parse(); err != nil {
 		return err

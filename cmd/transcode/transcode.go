@@ -60,7 +60,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	l, err := ledger.Build(ledger.Options{}, ch)
+	l, err := ledger.Build(ledger.Filter{}, ch)
 	if err != nil {
 		return err
 	}

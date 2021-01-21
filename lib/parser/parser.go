@@ -109,6 +109,26 @@ func (p *Parser) Next() (ledger.Directive, error) {
 	return nil, io.EOF
 }
 
+// ParseAll parses the entire stream asynchronously.
+func (p *Parser) ParseAll() <-chan interface{} {
+	var ch = make(chan interface{}, 10)
+	go func() {
+		defer close(ch)
+		for {
+			d, err := p.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				ch <- err
+				break
+			}
+			ch <- d
+		}
+	}()
+	return ch
+}
+
 func (p *Parser) consumeComment() error {
 	if err := p.scanner.ConsumeUntil(isNewline); err != nil {
 		return err

@@ -84,15 +84,15 @@ func formatFile(target string) error {
 		return err
 	}
 	var directives []ledger.Directive
-	for {
-		d, err := p.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
+	for d := range p.ParseAll() {
+		if err, ok := d.(error); ok {
 			return err
 		}
-		directives = append(directives, d)
+		if t, ok := d.(ledger.Directive); ok {
+			directives = append(directives, t)
+		} else {
+			return fmt.Errorf("unknown directive: %s", d)
+		}
 	}
 	srcFile, err := os.Open(target)
 	if err != nil {

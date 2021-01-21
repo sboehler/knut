@@ -17,7 +17,6 @@ package infer
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -81,20 +80,16 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 		return err
 	}
 	var directives []ledger.Directive
-	for {
-		d, err := p.Next()
-		if err == io.EOF {
-			break
+	for d := range p.ParseAll() {
+		if t, ok := d.(ledger.Directive); ok {
+			if t, ok := d.(*ledger.Transaction); ok {
+				bayesModel.Infer(t, account)
+			}
+			directives = append(directives, t)
+		} else {
+			return fmt.Errorf("unknown directive: %s", d)
 		}
-		if err != nil {
-			return err
-		}
-		if t, ok := d.(*ledger.Transaction); ok {
-			bayesModel.Infer(t, account)
-		}
-		directives = append(directives, d)
 	}
-
 	srcFile, err := os.Open(targetFile)
 	if err != nil {
 		return err

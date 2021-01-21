@@ -1,7 +1,6 @@
 package journal
 
 import (
-	"io"
 	"path"
 	"path/filepath"
 	"sync"
@@ -42,24 +41,22 @@ func (j *Journal) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, fi
 	if err != nil {
 		return err
 	}
-	for {
-		d, err := p.Next()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if i, ok := d.(*ledger.Include); ok {
+	for d := range p.ParseAll() {
+		switch t := d.(type) {
+		case error:
+			return t
+
+		case *ledger.Include:
 			wg.Add(1)
 			go func() {
-				if err := j.parseRecursively(wg, ch, path.Join(filepath.Dir(file), i.Path)); err != nil {
+				if err := j.parseRecursively(wg, ch, path.Join(filepath.Dir(file), t.Path)); err != nil {
 					ch <- err
 				}
 				wg.Done()
 			}()
-		} else {
+		default:
 			ch <- d
 		}
 	}
+	return nil
 }

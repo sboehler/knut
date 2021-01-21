@@ -30,7 +30,6 @@ import (
 // Report is a balance report for a range of dates.
 type Report struct {
 	Dates       []time.Time
-	Options     Builder
 	Segments    map[accounts.AccountType]*Segment
 	Commodities []*commodities.Commodity
 	Positions   map[*commodities.Commodity]amount.Vec
@@ -91,7 +90,6 @@ func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 	return &Report{
 		Dates:       dates,
 		Commodities: commodities,
-		Options:     b,
 		Segments:    segments,
 		Positions:   totals,
 	}, nil

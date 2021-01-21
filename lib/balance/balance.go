@@ -33,13 +33,12 @@ import (
 
 // Balance represents a balance for accounts at the given date.
 type Balance struct {
-	Date                   time.Time
-	Positions              map[CommodityAccount]amount.Amount
-	Account                map[*accounts.Account]bool
-	Prices                 prices.Prices
-	Valuation              *commodities.Commodity
-	NormalizedPrices       prices.NormalizedPrices
-	CloseIncomeAndExpenses bool
+	Date             time.Time
+	Positions        map[CommodityAccount]amount.Amount
+	Account          map[*accounts.Account]bool
+	Prices           prices.Prices
+	Valuation        *commodities.Commodity
+	NormalizedPrices prices.NormalizedPrices
 }
 
 // New creates a new balance.
@@ -81,7 +80,7 @@ func (b *Balance) Minus(bo *Balance) {
 }
 
 // Update updates the balance with the given Day
-func (b *Balance) Update(day *ledger.Day) error {
+func (b *Balance) Update(day *ledger.Day, close bool) error {
 
 	// update date
 	b.Date = day.Date
@@ -144,7 +143,7 @@ func (b *Balance) Update(day *ledger.Day) error {
 	}
 
 	// close income and expense accounts if necessary
-	if b.CloseIncomeAndExpenses {
+	if close {
 		closingTransactions := b.computeClosingTransactions()
 		day.Transactions = append(day.Transactions, closingTransactions...)
 		for _, t := range closingTransactions {
@@ -152,7 +151,6 @@ func (b *Balance) Update(day *ledger.Day) error {
 				return err
 			}
 		}
-		b.CloseIncomeAndExpenses = false
 	}
 
 	// process balance assertions
@@ -370,20 +368,22 @@ func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
 		bal    = New(b.Valuation)
 		result []*Balance
 		index  int
+		close  bool
 	)
 	for _, date := range b.createDateSeries(l) {
 		for ; index < len(l); index++ {
 			if l[index].Date.After(date) {
 				break
 			}
-			if err := bal.Update(l[index]); err != nil {
+			if err := bal.Update(l[index], close); err != nil {
 				return nil, err
 			}
+			close = false
 		}
 		copy := bal.Copy()
 		copy.Date = date
 		result = append(result, copy)
-		bal.CloseIncomeAndExpenses = b.Close
+		close = b.Close
 	}
 	if b.Diff {
 		result = Diffs(result)

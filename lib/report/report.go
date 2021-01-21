@@ -57,25 +57,30 @@ type Collapse struct {
 // Build creates a new report.
 func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 	// compute the dates and positions array
-	dates := make([]time.Time, 0, len(bal))
-	positions := make([]map[balance.CommodityAccount]amount.Amount, 0, len(bal))
+	var (
+		dates     = make([]time.Time, 0, len(bal))
+		positions = make([]map[balance.CommodityAccount]amount.Amount, 0, len(bal))
+	)
 	for _, b := range bal {
 		dates = append(dates, b.Date)
 		positions = append(positions, b.Positions)
 	}
-	// collect arrays of amounts by commodity account, across balances
-	sortedPos := mergePositions(b.Value, positions)
-	// compute the segments
-	segments := buildSegments(b, sortedPos)
+	var (
+		// collect arrays of amounts by commodity account, across balances
+		sortedPos = mergePositions(b.Value, positions)
+
+		//compute the segments
+		segments = buildSegments(b, sortedPos)
+	)
 
 	// compute totals
-	totals := map[*commodities.Commodity]amount.Vec{}
+	var totals = map[*commodities.Commodity]amount.Vec{}
 	for _, s := range segments {
 		s.sum(totals)
 	}
 
 	// compute sorted commodities
-	commodities := make([]*commodities.Commodity, 0, len(totals))
+	var commodities = make([]*commodities.Commodity, 0, len(totals))
 	for c := range totals {
 		commodities = append(commodities, c)
 	}
@@ -93,13 +98,13 @@ func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 }
 
 func mergePositions(value bool, positions []map[balance.CommodityAccount]amount.Amount) []Position {
-	commodityAccounts := make(map[balance.CommodityAccount]bool)
+	var commodityAccounts = make(map[balance.CommodityAccount]bool)
 	for _, p := range positions {
 		for ca := range p {
 			commodityAccounts[ca] = true
 		}
 	}
-	res := make([]Position, 0, len(commodityAccounts))
+	var res = make([]Position, 0, len(commodityAccounts))
 	for ca := range commodityAccounts {
 		var (
 			vec   = amount.NewVec(len(positions))
@@ -134,13 +139,15 @@ func mergePositions(value bool, positions []map[balance.CommodityAccount]amount.
 }
 
 func buildSegments(o Builder, positions []Position) map[accounts.AccountType]*Segment {
-	result := make(map[accounts.AccountType]*Segment)
+	var result = make(map[accounts.AccountType]*Segment)
 	for _, position := range positions {
-		at := position.Account.Type()
-		k := shorten(o.Collapse, position.Account)
+		var (
+			at = position.Account.Type()
+			k  = shorten(o.Collapse, position.Account)
+		)
 		// Any positions with zero keys should end up in totals.
 		if len(k) > 0 {
-			s, ok := result[at]
+			var s, ok = result[at]
 			if !ok {
 				s = NewSegment(at.String())
 				result[at] = s
@@ -153,9 +160,9 @@ func buildSegments(o Builder, positions []Position) map[accounts.AccountType]*Se
 
 // shorten shortens the given account according to the given rules.
 func shorten(c []Collapse, a *accounts.Account) []string {
-	s := a.Split()
+	var s = a.Split()
 	for _, c := range c {
-		matched := c.Regex.MatchString(a.String())
+		var matched = c.Regex.MatchString(a.String())
 		if matched && len(s) > c.Level {
 			s = s[:c.Level]
 		}

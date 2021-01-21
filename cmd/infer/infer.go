@@ -80,13 +80,14 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 		return err
 	}
 	var directives []ledger.Directive
-	for d := range p.ParseAll() {
-		if t, ok := d.(ledger.Directive); ok {
-			if t, ok := d.(*ledger.Transaction); ok {
-				bayesModel.Infer(t, account)
-			}
-			directives = append(directives, t)
-		} else {
+	for i := range p.ParseAll() {
+		switch d := i.(type) {
+		case *ledger.Transaction:
+			bayesModel.Infer(d, account)
+			directives = append(directives, d)
+		case ledger.Directive:
+			directives = append(directives, d)
+		default:
 			return fmt.Errorf("unknown directive: %s", d)
 		}
 	}

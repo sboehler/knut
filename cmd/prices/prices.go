@@ -124,13 +124,13 @@ func readFile(filepath string) (map[time.Time]*ledger.Price, error) {
 		return nil, err
 	}
 	prices := map[time.Time]*ledger.Price{}
-	for d := range p.ParseAll() {
-		if err, ok := d.(error); ok {
+	for i := range p.ParseAll() {
+		switch d := i.(type) {
+		case error:
 			return nil, err
-		}
-		if price, ok := d.(*ledger.Price); ok {
-			prices[price.Date] = price
-		} else {
+		case *ledger.Price:
+			prices[d.Date] = d
+		default:
 			return nil, fmt.Errorf("unexpected directive in prices file: %v", d)
 		}
 	}

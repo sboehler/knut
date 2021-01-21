@@ -85,12 +85,12 @@ func formatFile(target string) error {
 	}
 	var directives []ledger.Directive
 	for d := range p.ParseAll() {
-		if err, ok := d.(error); ok {
-			return err
-		}
-		if t, ok := d.(ledger.Directive); ok {
+		switch t := d.(type) {
+		case error:
+			return t
+		case ledger.Directive:
 			directives = append(directives, t)
-		} else {
+		default:
 			return fmt.Errorf("unknown directive: %s", d)
 		}
 	}

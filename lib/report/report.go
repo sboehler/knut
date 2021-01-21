@@ -71,10 +71,10 @@ func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 
 		//compute the segments
 		segments = buildSegments(b, sortedPos)
-	)
 
-	// compute totals
-	var totals = map[*commodities.Commodity]amount.Vec{}
+		// compute totals
+		totals = map[*commodities.Commodity]amount.Vec{}
+	)
 	for _, s := range segments {
 		s.sum(totals)
 	}

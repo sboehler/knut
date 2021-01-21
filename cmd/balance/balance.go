@@ -112,22 +112,6 @@ type pipeline struct {
 	TextRenderer   table.TextRenderer
 }
 
-func processPipeline(w io.Writer, ppl *pipeline) error {
-	l, err := ledger.FromDirectives(ppl.LedgerFilter, ppl.Journal.Parse())
-	if err != nil {
-		return err
-	}
-	b, err := ppl.BalanceBuilder.Build(l)
-	if err != nil {
-		return err
-	}
-	r, err := ppl.ReportBuilder.Build(b)
-	if err != nil {
-		return err
-	}
-	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(r), w)
-}
-
 func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	from, err := parseDate(cmd, "from")
 	if err != nil {
@@ -241,6 +225,22 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		ReportRenderer: reportRenderer,
 		TextRenderer:   tableRenderer,
 	}, nil
+}
+
+func processPipeline(w io.Writer, ppl *pipeline) error {
+	l, err := ledger.FromDirectives(ppl.LedgerFilter, ppl.Journal.Parse())
+	if err != nil {
+		return err
+	}
+	b, err := ppl.BalanceBuilder.Build(l)
+	if err != nil {
+		return err
+	}
+	r, err := ppl.ReportBuilder.Build(b)
+	if err != nil {
+		return err
+	}
+	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(r), w)
 }
 
 func parseValuation(cmd *cobra.Command, name string) (*commodities.Commodity, error) {

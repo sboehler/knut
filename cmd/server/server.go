@@ -80,7 +80,7 @@ type Server struct {
 }
 
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ppl := buildPipeline(s.File)
+	var ppl = buildPipeline(s.File)
 	if err := processPipeline(w, ppl); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -96,40 +96,43 @@ type pipeline struct {
 }
 
 func buildPipeline(file string) *pipeline {
-	var journal = journal.Journal{
-		File: file,
-	}
+	var (
+		journal = journal.Journal{
+			File: file,
+		}
 
-	var period = date.Monthly
-	var balanceBuilder = balance.Builder{
-		// From:      from,
-		// To:        to,
-		Period: &period,
-		// Last:      last,
-		// Valuation: valuation,
-		// Close:     close,
-		// Diff:      diff,
-	}
+		period = date.Monthly
 
-	var ledgerFilter = ledger.Filter{
-		// CommoditiesFilter: filterCommoditiesRegex,
-		// AccountsFilter:    filterAccountsRegex,
-	}
+		ledgerFilter = ledger.Filter{
+			// CommoditiesFilter: filterCommoditiesRegex,
+			// AccountsFilter:    filterAccountsRegex,
+		}
 
-	var reportBuilder = report.Builder{
-		// Value:    valuation != nil,
-		// Collapse: collapse,
-	}
+		balanceBuilder = balance.Builder{
+			// From:      from,
+			// To:        to,
+			Period: &period,
+			// Last:      last,
+			// Valuation: valuation,
+			// Close:     close,
+			// Diff:      diff,
+		}
 
-	var reportRenderer = report.Renderer{
-		Commodities: true, // showCommodities || valuation == nil,
-	}
+		reportBuilder = report.Builder{
+			// Value:    valuation != nil,
+			// Collapse: collapse,
+		}
 
-	var tableRenderer = table.TextRenderer{
-		// Color:     color,
-		// Thousands: thousands,
-		// Round:     digits,
-	}
+		reportRenderer = report.Renderer{
+			Commodities: true, // showCommodities || valuation == nil,
+		}
+
+		tableRenderer = table.TextRenderer{
+			// Color:     color,
+			// Thousands: thousands,
+			// Round:     digits,
+		}
+	)
 
 	return &pipeline{
 		Journal:        journal,

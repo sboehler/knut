@@ -74,6 +74,7 @@ func execute(cmd *cobra.Command, args []string) error {
 
 }
 
+// Server handles HTTP.
 type Server struct {
 	File string
 }

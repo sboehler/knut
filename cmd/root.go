@@ -21,6 +21,7 @@ import (
 
 	"github.com/sboehler/knut/cmd/balance"
 	"github.com/sboehler/knut/cmd/benchmark"
+	"github.com/sboehler/knut/cmd/completion"
 	"github.com/sboehler/knut/cmd/format"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/cmd/infer"
@@ -46,6 +47,7 @@ func CreateCmd() *cobra.Command {
 	c.AddCommand(transcode.CreateCmd())
 	c.AddCommand(benchmark.CreateCmd())
 	c.AddCommand(server.CreateCmd())
+	c.AddCommand(completion.CreateCmd(c))
 	return c
 }
 

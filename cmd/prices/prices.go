@@ -55,22 +55,23 @@ func run(cmd *cobra.Command, args []string) {
 	}
 }
 
+const concurrency = 5
+
 func execute(cmd *cobra.Command, args []string) (errors error) {
 	configs, err := readConfig(args[0])
 	if err != nil {
 		return err
 	}
-	errCh := make(chan error)
+	var errCh = make(chan error)
 	defer close(errCh)
 	go func() {
 		for err = range errCh {
 			errors = multierr.Append(err, errors)
 		}
 	}()
-	concurrency := 5
-	sema := make(chan bool, concurrency)
+	var sema = make(chan bool, concurrency)
 	defer close(sema)
-	bar := pb.StartNew(len(configs))
+	var bar = pb.StartNew(len(configs))
 	defer bar.Finish()
 	for _, cfg := range configs {
 		sema <- true
@@ -89,7 +90,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 }
 
 func fetch(f string, cfg config) error {
-	absPath := filepath.Join(filepath.Dir(f), cfg.File)
+	var absPath = filepath.Join(filepath.Dir(f), cfg.File)
 	l, err := readFile(absPath)
 	if err != nil {
 		return err
@@ -109,9 +110,9 @@ func readConfig(path string) ([]config, error) {
 		return nil, err
 	}
 	defer f.Close()
-	t := []config{}
-	dec := yaml.NewDecoder(f)
+	var dec = yaml.NewDecoder(f)
 	dec.SetStrict(true)
+	var t = []config{}
 	if err := dec.Decode(&t); err != nil {
 		return nil, err
 	}
@@ -123,7 +124,7 @@ func readFile(filepath string) (map[time.Time]*ledger.Price, error) {
 	if err != nil {
 		return nil, err
 	}
-	prices := map[time.Time]*ledger.Price{}
+	var prices = make(map[time.Time]*ledger.Price)
 	for i := range p.ParseAll() {
 		switch d := i.(type) {
 		case error:
@@ -138,7 +139,7 @@ func readFile(filepath string) (map[time.Time]*ledger.Price, error) {
 }
 
 func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]*ledger.Price) error {
-	c := yahoo.New()
+	var c = yahoo.New()
 	quotes, err := c.Fetch(cfg.Symbol, t0, t1)
 	if err != nil {
 		return err
@@ -155,7 +156,7 @@ func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]*ledger.Pri
 }
 
 func writeFile(prices map[time.Time]*ledger.Price, filepath string) error {
-	b := ledger.NewBuilder(ledger.Filter{})
+	var b = ledger.NewBuilder(ledger.Filter{})
 	for _, price := range prices {
 		b.AddPrice(price)
 	}

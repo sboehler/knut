@@ -30,13 +30,13 @@ func CreateCmd(rootCmd *cobra.Command) *cobra.Command {
 
 Bash:
 
-$ source <(yourprogram completion bash)
+$ source <(knut completion bash)
 
 # To load completions for each session, execute once:
 Linux:
-  $ yourprogram completion bash > /etc/bash_completion.d/yourprogram
+  $ knut completion bash > /etc/bash_completion.d/knut
 MacOS:
-  $ yourprogram completion bash > /usr/local/etc/bash_completion.d/yourprogram
+  $ knut completion bash > /usr/local/etc/bash_completion.d/knut
 
 Zsh:
 
@@ -45,8 +45,11 @@ Zsh:
 
 $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
+# To load completions in your current shell session:
+$ source <(knut completion zsh)
+
 # To load completions for each session, execute once:
-$ yourprogram completion zsh > "${fpath[1]}/_yourprogram"
+$ knut completion zsh > "${fpath[1]}/_knut"
 
 # You will need to start a new shell for this setup to take effect.
 `,

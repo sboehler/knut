@@ -71,8 +71,6 @@ func execute(cmd *cobra.Command, args []string) error {
 	defer close()
 	defer journal.Flush()
 
-	var p printer.Printer
-
 	if c.includes == 0 {
 		files = append(files, journal)
 	} else {
@@ -85,26 +83,26 @@ func execute(cmd *cobra.Command, args []string) error {
 			defer close()
 			defer include.Flush()
 			files = append(files, include)
-			if _, err := p.PrintDirective(journal, &ledger.Include{Path: name}); err != nil {
+			if _, err := printer.PrintDirective(journal, &ledger.Include{Path: name}); err != nil {
 				return err
 			}
 			io.WriteString(journal, "\n")
 		}
 	}
 	for i, o := range open {
-		if _, err := p.PrintDirective(files[i%len(files)], o); err != nil {
+		if _, err := printer.PrintDirective(files[i%len(files)], o); err != nil {
 			return err
 		}
 		io.WriteString(files[i%len(files)], "\n")
 	}
 	for i, o := range price {
-		if _, err := p.PrintDirective(files[i%len(files)], o); err != nil {
+		if _, err := printer.PrintDirective(files[i%len(files)], o); err != nil {
 			return err
 		}
 		io.WriteString(files[i%len(files)], "\n")
 	}
 	for i, o := range trx {
-		if _, err := p.PrintDirective(files[i%len(files)], o); err != nil {
+		if _, err := printer.PrintDirective(files[i%len(files)], o); err != nil {
 			return err
 		}
 		io.WriteString(files[i%len(files)], "\n")

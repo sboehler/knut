@@ -8,33 +8,30 @@ import (
 	"github.com/sboehler/knut/lib/ledger"
 )
 
-// Printer prints directives.
-type Printer struct{}
-
 // PrintDirective prints a directive to the given Writer.
-func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err error) {
+func PrintDirective(w io.Writer, directive interface{}) (n int, err error) {
 	switch d := directive.(type) {
 	case *ledger.Transaction:
-		return p.printTransaction(w, d)
+		return printTransaction(w, d)
 	case *ledger.Open:
-		return p.printOpen(w, d)
+		return printOpen(w, d)
 	case *ledger.Close:
-		return p.printClose(w, d)
+		return printClose(w, d)
 	case *ledger.Assertion:
-		return p.printAssertion(w, d)
+		return printAssertion(w, d)
 	case *ledger.Include:
-		return p.printInclude(w, d)
+		return printInclude(w, d)
 	case *ledger.Price:
-		return p.printPrice(w, d)
+		return printPrice(w, d)
 	case *ledger.Accrual:
-		return p.printAccrual(w, d)
+		return printAccrual(w, d)
 	case *ledger.Value:
-		return p.printValue(w, d)
+		return printValue(w, d)
 	}
 	return 0, fmt.Errorf("unknown directive: %v", directive)
 }
 
-func (p Printer) printTransaction(w io.Writer, t *ledger.Transaction) (n int, err error) {
+func printTransaction(w io.Writer, t *ledger.Transaction) (n int, err error) {
 	c, err := fmt.Fprintf(w, "%s \"%s\"", t.Date.Format("2006-01-02"), t.Description)
 	n += c
 	if err != nil {
@@ -53,7 +50,7 @@ func (p Printer) printTransaction(w io.Writer, t *ledger.Transaction) (n int, er
 		return n, err
 	}
 	for _, po := range t.Postings {
-		d, err := p.printPosting(w, po)
+		d, err := printPosting(w, po)
 		n += d
 		if err != nil {
 			return n, err
@@ -67,17 +64,17 @@ func (p Printer) printTransaction(w io.Writer, t *ledger.Transaction) (n int, er
 	return n, nil
 }
 
-func (p Printer) printAccrual(w io.Writer, a *ledger.Accrual) (n int, err error) {
+func printAccrual(w io.Writer, a *ledger.Accrual) (n int, err error) {
 	c, err := fmt.Fprintf(w, "@accrue %s %s %s %s\n", a.Period, a.T0.Format("2006-01-02"), a.T1.Format("2006-01-02"), a.Account)
 	n += c
 	if err != nil {
 		return n, err
 	}
-	c, err = p.printTransaction(w, a.Transaction)
+	c, err = printTransaction(w, a.Transaction)
 	return n + c, err
 }
 
-func (p Printer) printPosting(w io.Writer, t *ledger.Posting) (int, error) {
+func printPosting(w io.Writer, t *ledger.Posting) (int, error) {
 	var n int
 	c, err := fmt.Fprintf(w, "%s %s %s %s", t.Credit.RightPad(), t.Debit.RightPad(), leftPad(10, t.Amount.Amount().String()), t.Commodity)
 	n += c
@@ -90,7 +87,7 @@ func (p Printer) printPosting(w io.Writer, t *ledger.Posting) (int, error) {
 		if err != nil {
 			return n, err
 		}
-		d, err := p.printLot(w, t.Lot)
+		d, err := printLot(w, t.Lot)
 		n += d
 		if err != nil {
 			return n, err
@@ -99,7 +96,7 @@ func (p Printer) printPosting(w io.Writer, t *ledger.Posting) (int, error) {
 	return n, nil
 }
 
-func (p Printer) printLot(w io.Writer, l *ledger.Lot) (int, error) {
+func printLot(w io.Writer, l *ledger.Lot) (int, error) {
 	var n int
 	c, err := fmt.Fprintf(w, "{ %g %s, %s ", l.Price, l.Commodity, l.Date.Format("2006-01-02"))
 	n += c
@@ -121,61 +118,61 @@ func (p Printer) printLot(w io.Writer, l *ledger.Lot) (int, error) {
 	return n, nil
 }
 
-func (p Printer) printOpen(w io.Writer, o *ledger.Open) (int, error) {
+func printOpen(w io.Writer, o *ledger.Open) (int, error) {
 	return fmt.Fprintf(w, "%s open %s", o.Date.Format("2006-01-02"), o.Account)
 }
 
-func (p Printer) printClose(w io.Writer, c *ledger.Close) (int, error) {
+func printClose(w io.Writer, c *ledger.Close) (int, error) {
 	return fmt.Fprintf(w, "%s close %s", c.Date.Format("2006-01-02"), c.Account)
 }
 
-func (p Printer) printPrice(w io.Writer, pr *ledger.Price) (int, error) {
+func printPrice(w io.Writer, pr *ledger.Price) (int, error) {
 	return fmt.Fprintf(w, "%s price %s %s %s", pr.Date.Format("2006-01-02"), pr.Commodity, pr.Price, pr.Target)
 }
 
-func (p Printer) printInclude(w io.Writer, i *ledger.Include) (int, error) {
+func printInclude(w io.Writer, i *ledger.Include) (int, error) {
 	return fmt.Fprintf(w, "include \"%s\"", i.Path)
 }
 
-func (p Printer) printAssertion(w io.Writer, a *ledger.Assertion) (int, error) {
+func printAssertion(w io.Writer, a *ledger.Assertion) (int, error) {
 	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity)
 }
 
-func (p Printer) printValue(w io.Writer, v *ledger.Value) (int, error) {
+func printValue(w io.Writer, v *ledger.Value) (int, error) {
 	return fmt.Fprintf(w, "%s value %s %s %s", v.Date.Format("2006-01-02"), v.Account, v.Amount, v.Commodity)
 }
 
 // PrintLedger prints a Ledger.
-func (p Printer) PrintLedger(w io.Writer, l ledger.Ledger) (int, error) {
+func PrintLedger(w io.Writer, l ledger.Ledger) (int, error) {
 	var n int
 	for _, day := range l {
 		for _, pr := range day.Prices {
-			if err := p.writeLn(w, pr, &n); err != nil {
+			if err := writeLn(w, pr, &n); err != nil {
 				return n, err
 			}
 		}
 		for _, o := range day.Openings {
-			if err := p.writeLn(w, o, &n); err != nil {
+			if err := writeLn(w, o, &n); err != nil {
 				return n, err
 			}
 		}
 		for _, t := range day.Transactions {
-			if err := p.writeLn(w, t, &n); err != nil {
+			if err := writeLn(w, t, &n); err != nil {
 				return n, err
 			}
 		}
 		for _, v := range day.Values {
-			if err := p.writeLn(w, v, &n); err != nil {
+			if err := writeLn(w, v, &n); err != nil {
 				return n, err
 			}
 		}
 		for _, a := range day.Assertions {
-			if err := p.writeLn(w, a, &n); err != nil {
+			if err := writeLn(w, a, &n); err != nil {
 				return n, err
 			}
 		}
 		for _, c := range day.Closings {
-			if err := p.writeLn(w, c, &n); err != nil {
+			if err := writeLn(w, c, &n); err != nil {
 				return n, err
 			}
 		}
@@ -183,8 +180,8 @@ func (p Printer) PrintLedger(w io.Writer, l ledger.Ledger) (int, error) {
 	return n, nil
 }
 
-func (p Printer) writeLn(w io.Writer, d interface{}, count *int) error {
-	c, err := p.PrintDirective(w, d)
+func writeLn(w io.Writer, d interface{}, count *int) error {
+	c, err := PrintDirective(w, d)
 	*count += c
 	if err != nil {
 		return err

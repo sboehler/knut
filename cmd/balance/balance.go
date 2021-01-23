@@ -290,7 +290,8 @@ func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {
 			continue
 		}
 		if v && result == nil {
-			result = &tuple.period
+			var p = tuple.period
+			result = &p
 		}
 	}
 	return result, errors

@@ -80,6 +80,7 @@ Available Commands:
   import      Import financial account statements
   infer       Auto-assign accounts in a journal
   transcode   transcode to beancount
+  web         start the knut web frontend
 
 Flags:
   -h, --help   help for knut
@@ -98,9 +99,9 @@ Without additional options, knut will print a balance with counts of the various
 commodities per account.
 
 ```text
-$ knut balance doc/example.knut
+$ knut balance doc/example.knut --to 2020-04-01
 +---------------+------------+------------+
-|    Account    | 2019-12-31 | 2020-11-20 |
+|    Account    | 2019-12-31 | 2020-04-01 |
 +---------------+------------+------------+
 | Assets        |            |            |
 |   BankAccount |            |            |

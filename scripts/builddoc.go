@@ -97,7 +97,7 @@ func createConfig() (*config, error) {
 	c.Commands["BalanceMonthlyUSD"] = run([]string{"balance",
 		"-v", "USD", "--months", "--to", "2020-04-01", "doc/example.knut",
 	})
-	c.Commands["BalanceBasic"] = run([]string{"balance", "doc/example.knut"})
+	c.Commands["BalanceBasic"] = run([]string{"balance", "doc/example.knut", "--to", "2020-04-01"})
 	return c, nil
 }
 

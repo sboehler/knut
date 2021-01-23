@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//CreateCmd creates a command.
 func CreateCmd(rootCmd *cobra.Command) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "completion [bash|zsh]",

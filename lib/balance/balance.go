@@ -57,12 +57,9 @@ func New(valuation *commodities.Commodity) *Balance {
 // Copy deeply copies the balance
 func (b *Balance) Copy() *Balance {
 	var nb = New(b.Valuation)
-	nb.Prices = b.Prices.Copy()
-
-	// immutable
-	nb.NormalizedPrices = b.NormalizedPrices
-
 	nb.Date = b.Date
+	nb.Prices = b.Prices.Copy()
+	nb.NormalizedPrices = b.NormalizedPrices
 	for pos, val := range b.Positions {
 		nb.Positions[pos] = val
 	}
@@ -183,8 +180,10 @@ func (b *Balance) bookTransaction(t *ledger.Transaction) error {
 		if _, isOpen := b.Account[posting.Debit]; !isOpen {
 			return Error{t, fmt.Sprintf("debit account %s is not open", posting.Debit)}
 		}
-		crPos := CommodityAccount{posting.Credit, posting.Commodity}
-		drPos := CommodityAccount{posting.Debit, posting.Commodity}
+		var (
+			crPos = CommodityAccount{posting.Credit, posting.Commodity}
+			drPos = CommodityAccount{posting.Debit, posting.Commodity}
+		)
 		b.Positions[crPos] = b.Positions[crPos].Minus(posting.Amount)
 		b.Positions[drPos] = b.Positions[drPos].Plus(posting.Amount)
 	}
@@ -194,7 +193,7 @@ func (b *Balance) bookTransaction(t *ledger.Transaction) error {
 func (b *Balance) computeClosingTransactions() []*ledger.Transaction {
 	var result []*ledger.Transaction
 	for pos, va := range b.Positions {
-		at := pos.Account.Type()
+		var at = pos.Account.Type()
 		if at != accounts.INCOME && at != accounts.EXPENSES {
 			continue
 		}
@@ -225,7 +224,7 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 	}
 	var result []*ledger.Transaction
 	for pos, va := range b.Positions {
-		at := pos.Account.Type()
+		var at = pos.Account.Type()
 		if at != accounts.ASSETS && at != accounts.LIABILITIES {
 			continue
 		}
@@ -234,22 +233,24 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 			panic(fmt.Sprintf("no valuation found for commodity %s", pos.Commodity))
 		}
 		var diff = v2.Sub(va.Value())
-		if !diff.IsZero() {
-			// create a transaction to adjust the valuation
-			result = append(result, &ledger.Transaction{
-				Date:        b.Date,
-				Description: fmt.Sprintf("Valuation adjustment for (%s, %s)", pos.Account, pos.Commodity),
-				Tags:        nil,
-				Postings: []*ledger.Posting{
-					{
-						Amount:    amount.New(decimal.Zero, diff),
-						Credit:    accounts.ValuationAccount(),
-						Debit:     pos.Account,
-						Commodity: pos.Commodity,
-					},
-				},
-			})
+		if diff.IsZero() {
+			continue
 		}
+		// create a transaction to adjust the valuation
+		result = append(result, &ledger.Transaction{
+			Date:        b.Date,
+			Description: fmt.Sprintf("Valuation adjustment for (%s, %s)", pos.Account, pos.Commodity),
+			Tags:        nil,
+			Postings: []*ledger.Posting{
+				{
+					Amount:    amount.New(decimal.Zero, diff),
+					Credit:    accounts.ValuationAccount(),
+					Debit:     pos.Account,
+					Commodity: pos.Commodity,
+				},
+			},
+		})
+
 	}
 	sort.Slice(result, func(i, j int) bool {
 		var p, q = result[i].Postings[0], result[j].Postings[0]
@@ -282,7 +283,7 @@ func (b *Balance) processValue(v *ledger.Value) (*ledger.Transaction, error) {
 	if _, isOpen := b.Account[v.Account]; !isOpen {
 		return nil, Error{v, "account is not open"}
 	}
-	pos := CommodityAccount{v.Account, v.Commodity}
+	var pos = CommodityAccount{v.Account, v.Commodity}
 	va, ok := b.Positions[pos]
 	if !ok {
 		va = amount.New(decimal.Zero, decimal.Zero)

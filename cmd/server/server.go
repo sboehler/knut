@@ -42,21 +42,21 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func execute(cmd *cobra.Command, args []string) error {
-	port, err := cmd.Flags().GetInt16("port")
-	if err != nil {
-		return err
-	}
-	address, err := cmd.Flags().GetString("address")
-	if err != nil {
-		return err
-	}
 	var (
-		s   = &Server{File: args[0]}
-		srv = http.Server{
-			Handler: s,
-			Addr:    fmt.Sprintf("%s:%d", address, port),
-		}
+		address string
+		port    int16
+		err     error
 	)
+	if port, err = cmd.Flags().GetInt16("port"); err != nil {
+		return err
+	}
+	if address, err = cmd.Flags().GetString("address"); err != nil {
+		return err
+	}
+	var srv = http.Server{
+		Handler: Handler{File: args[0]},
+		Addr:    fmt.Sprintf("%s:%d", address, port),
+	}
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
 			fmt.Fprintln(cmd.ErrOrStderr(), err)
@@ -74,12 +74,12 @@ func execute(cmd *cobra.Command, args []string) error {
 
 }
 
-// Server handles HTTP.
-type Server struct {
+// Handler handles HTTP.
+type Handler struct {
 	File string
 }
 
-func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var ppl = buildPipeline(s.File)
 	if err := processPipeline(w, ppl); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

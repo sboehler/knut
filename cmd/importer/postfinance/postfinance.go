@@ -71,11 +71,11 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	p := Parser{scanner, account, ledger.NewBuilder(ledger.Filter{})}
+	var p = Parser{scanner, account, ledger.NewBuilder(ledger.Filter{})}
 	if err = p.parse(); err != nil {
 		return err
 	}
-	w := bufio.NewWriter(cmd.OutOrStdout())
+	var w = bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
 	_, err = printer.Printer{}.PrintLedger(w, p.builder.Build())
 	return err
@@ -121,7 +121,7 @@ func (p *Parser) parse() error {
 	if err != nil {
 		return err
 	}
-	commodity := commodities.Get(s)
+	var commodity = commodities.Get(s)
 
 	// ignore 6 header fields
 	for i := 0; i < 6; i++ {
@@ -178,19 +178,21 @@ func (p *Parser) parse() error {
 			crAccount, drAccount = p.account, accounts.TBDAccount()
 		}
 
-		postings := []*ledger.Posting{
-			{
-				Amount:    amount.New(amt.Abs(), decimal.Zero),
-				Credit:    crAccount,
-				Debit:     drAccount,
-				Commodity: commodity,
-			},
-		}
-		t := &ledger.Transaction{
-			Date:        d,
-			Description: description,
-			Postings:    postings,
-		}
+		var (
+			postings = []*ledger.Posting{
+				{
+					Amount:    amount.New(amt.Abs(), decimal.Zero),
+					Credit:    crAccount,
+					Debit:     drAccount,
+					Commodity: commodity,
+				},
+			}
+			t = &ledger.Transaction{
+				Date:        d,
+				Description: description,
+				Postings:    postings,
+			}
+		)
 		p.builder.AddTransaction(t)
 
 	}

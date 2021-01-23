@@ -54,7 +54,7 @@ func main() {
 }
 
 func createConfig() (*config, error) {
-	c := &config{
+	var c = &config{
 		Commands: make(map[string]string),
 	}
 	content, err := ioutil.ReadFile("doc/example.knut")
@@ -113,9 +113,9 @@ func generate(c *config) error {
 }
 
 func run(args []string) string {
-	c := cmd.CreateCmd()
+	var c = cmd.CreateCmd()
 	c.SetArgs(args)
-	b := strings.Builder{}
+	var b strings.Builder
 	b.WriteString("$ knut")
 	for _, a := range args {
 		b.WriteRune(' ')

@@ -20,7 +20,7 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-	cmd := &cobra.Command{
+	var cmd = &cobra.Command{
 		Use:   "web",
 		Short: "start the knut web frontend",
 		Long:  `start the knut web frontend`,
@@ -62,11 +62,11 @@ func execute(cmd *cobra.Command, args []string) error {
 			fmt.Fprintln(cmd.ErrOrStderr(), err)
 		}
 	}()
-	c := make(chan os.Signal, 1)
+	var c = make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c
 	fmt.Println("")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
 	fmt.Fprintln(cmd.ErrOrStderr(), "shutting down")

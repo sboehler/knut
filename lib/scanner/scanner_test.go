@@ -30,7 +30,7 @@ func TestNewScanner(t *testing.T) {
 }
 
 func TestWithoutBacktracking(t *testing.T) {
-	s := "foobar"
+	var s = "foobar"
 	b, err := New(strings.NewReader(s), "")
 	if err != nil {
 		t.Fatal(err)

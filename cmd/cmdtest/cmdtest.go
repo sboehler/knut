@@ -27,7 +27,7 @@ import (
 func Run(t *testing.T, cmd *cobra.Command, args []string) []byte {
 	t.Helper()
 	cmd.SetArgs(args)
-	b := bytes.NewBufferString("")
+	var b = bytes.NewBufferString("")
 	cmd.SetOut(b)
 	cmd.Execute()
 	out, err := ioutil.ReadAll(b)

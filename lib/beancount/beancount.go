@@ -43,7 +43,7 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 			Account: accounts.RetainedEarningsAccount(),
 		},
 	)
-	p := printer.Printer{}
+	var p printer.Printer
 	for _, day := range l {
 		for _, open := range day.Openings {
 			if _, err := p.PrintDirective(w, open); err != nil {
@@ -112,6 +112,5 @@ func writePosting(w io.Writer, p *ledger.Posting, c *commodities.Commodity) erro
 var regex = regexp.MustCompile("[^a-zA-Z]")
 
 func stripNonAlphanum(c *commodities.Commodity) string {
-	s := c.String()
-	return regex.ReplaceAllString(s, "X")
+	return regex.ReplaceAllString(c.String(), "X")
 }

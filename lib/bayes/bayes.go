@@ -33,8 +33,8 @@ type Model struct {
 func NewModel() *Model {
 	return &Model{
 		accounts:      0,
-		accountCounts: map[*accounts.Account]int{},
-		tokenCounts:   map[string]map[*accounts.Account]int{},
+		accountCounts: make(map[*accounts.Account]int),
+		tokenCounts:   make(map[string]map[*accounts.Account]int),
 	}
 }
 
@@ -75,7 +75,7 @@ func (m *Model) Infer(trx *ledger.Transaction, tbd *accounts.Account) {
 		if posting.Debit == tbd {
 			tokens = tokenize(trx, posting, posting.Debit)
 		}
-		scores := map[*accounts.Account]float64{}
+		var scores = make(map[*accounts.Account]float64)
 		for a, accountCount := range m.accountCounts {
 			if a == tbd {
 				continue
@@ -90,8 +90,10 @@ func (m *Model) Infer(trx *ledger.Transaction, tbd *accounts.Account) {
 				}
 			}
 		}
-		var selected *accounts.Account
-		max := math.Inf(-1)
+		var (
+			selected *accounts.Account
+			max      = math.Inf(-1)
+		)
 		for a, score := range scores {
 			if score > max && a != posting.Credit && a != posting.Debit {
 				selected = a
@@ -110,7 +112,7 @@ func (m *Model) Infer(trx *ledger.Transaction, tbd *accounts.Account) {
 }
 
 func dedup(ss []string) map[string]bool {
-	res := map[string]bool{}
+	var res = make(map[string]bool)
 	for _, s := range ss {
 		res[s] = true
 	}
@@ -118,14 +120,14 @@ func dedup(ss []string) map[string]bool {
 }
 
 func tokenize(trx *ledger.Transaction, posting *ledger.Posting, account *accounts.Account) []string {
-	tokens := append(strings.Fields(trx.Description), posting.Commodity.String(), posting.Amount.String())
+	var tokens = append(strings.Fields(trx.Description), posting.Commodity.String(), posting.Amount.String())
 	if account == posting.Credit {
 		tokens = append(tokens, "credit", posting.Debit.String())
 	}
 	if account == posting.Debit {
 		tokens = append(tokens, "debit", posting.Credit.String())
 	}
-	result := make([]string, 0, len(tokens))
+	var result = make([]string, 0, len(tokens))
 	for _, token := range tokens {
 		result = append(result, strings.ToLower(token))
 	}

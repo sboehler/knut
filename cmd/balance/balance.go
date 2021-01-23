@@ -42,7 +42,7 @@ import (
 func CreateCmd() *cobra.Command {
 
 	// Cmd is the balance command.
-	c := &cobra.Command{
+	var c = &cobra.Command{
 		Use:   "balance",
 		Short: "create a balance sheet",
 		Long:  `Compute a balance for a date or set of dates.`,
@@ -63,7 +63,7 @@ func CreateCmd() *cobra.Command {
 	c.Flags().Bool("quarters", false, "quarters")
 	c.Flags().Bool("years", false, "years")
 	c.Flags().StringP("val", "v", "", "valuate in the given commodity")
-	c.Flags().StringArrayP("collapse", "c", []string{}, "<level>,<regex>")
+	c.Flags().StringArrayP("collapse", "c", nil, "<level>,<regex>")
 	c.Flags().String("account", "", "filter accounts with a regex")
 	c.Flags().String("commodity", "", "filter commodities with a regex")
 	c.Flags().Bool("close", false, "close income and expenses accounts after every period")
@@ -98,7 +98,7 @@ func execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	out := bufio.NewWriter(cmd.OutOrStdout())
+	var out = bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 	return processPipeline(out, pipeline)
 }
@@ -113,17 +113,21 @@ type pipeline struct {
 }
 
 func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
-	from, err := parseDate(cmd, "from")
-	if err != nil {
+	var (
+		from, to *time.Time
+		err      error
+	)
+	if from, err = parseDate(cmd, "from"); err != nil {
 		return nil, err
 	}
-	to, err := parseDate(cmd, "to")
-	if err != nil {
+	if to, err = parseDate(cmd, "to"); err != nil {
 		return nil, err
 	}
 	if to == nil {
-		t := time.Now()
-		d := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+		var (
+			now = time.Now()
+			d   = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+		)
 		to = &d
 	}
 	last, err := cmd.Flags().GetInt("last")
@@ -264,16 +268,18 @@ func parseDate(cmd *cobra.Command, arg string) (*time.Time, error) {
 }
 
 func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {
-	periods := []struct {
-		name   string
-		period date.Period
-	}{
-		{"days", date.Daily},
-		{"weeks", date.Weekly},
-		{"months", date.Monthly},
-		{"quarters", date.Quarterly},
-		{"years", date.Yearly}}
 	var (
+		periods = []struct {
+			name   string
+			period date.Period
+		}{
+			{"days", date.Daily},
+			{"weeks", date.Weekly},
+			{"months", date.Monthly},
+			{"quarters", date.Quarterly},
+			{"years", date.Yearly},
+		}
+
 		errors error
 		result *date.Period
 	)
@@ -284,8 +290,7 @@ func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {
 			continue
 		}
 		if v && result == nil {
-			r := tuple.period
-			result = &r
+			result = &tuple.period
 		}
 	}
 	return result, errors
@@ -298,14 +303,14 @@ func parseCollapse(cmd *cobra.Command, name string) ([]report.Collapse, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := make([]report.Collapse, 0, len(collapse))
+	var res = make([]report.Collapse, 0, len(collapse))
 	for _, c := range collapse {
-		s := strings.SplitN(c, ",", 2)
+		var s = strings.SplitN(c, ",", 2)
 		l, err := strconv.Atoi(s[0])
 		if err != nil {
 			return nil, fmt.Errorf("Expected integer level, got %q (error: %v)", s[0], err)
 		}
-		regex := defaultRegex
+		var regex *regexp.Regexp
 		if len(s) == 2 {
 			if regex, err = regexp.Compile(s[1]); err != nil {
 				return nil, err

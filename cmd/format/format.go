@@ -58,14 +58,16 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func execute(cmd *cobra.Command, args []string) (errors error) {
-	mu := sync.Mutex{}
-	sema := make(chan bool, concurrency)
+	var (
+		mu   sync.Mutex
+		sema = make(chan bool, concurrency)
+	)
 	for _, arg := range args {
-		target := arg
+		arg := arg
 		sema <- true
 		go func() {
 			defer func() { <-sema }()
-			if err := formatFile(target); err != nil {
+			if err := formatFile(arg); err != nil {
 				mu.Lock()
 				defer mu.Unlock()
 				errors = multierr.Append(errors, err)
@@ -98,12 +100,12 @@ func formatFile(target string) error {
 	if err != nil {
 		return err
 	}
-	src := bufio.NewReader(srcFile)
+	var src = bufio.NewReader(srcFile)
 	tmpfile, err := ioutil.TempFile(path.Dir(target), "-format")
 	if err != nil {
 		return err
 	}
-	dest := bufio.NewWriter(tmpfile)
+	var dest = bufio.NewWriter(tmpfile)
 	err = format.Format(directives, src, dest)
 	if err = multierr.Combine(err, dest.Flush(), srcFile.Close()); err != nil {
 		return multierr.Append(err, os.Remove(tmpfile.Name()))

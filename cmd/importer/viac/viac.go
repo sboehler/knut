@@ -34,7 +34,7 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-	cmd := cobra.Command{
+	var cmd = cobra.Command{
 		Use:   "ch.viac",
 		Short: "Import VIAC values from JSON files",
 		Long:  `Open app.viac.ch, choose a portfolio, and select "From start" in the overview dash. In the Chrome dev tools, save the response from the "performance" XHR call, and pass the resulting file to this importer.`,
@@ -85,7 +85,7 @@ func run(cmd *cobra.Command, args []string) error {
 	var resp response
 	json.Unmarshal(b, &resp)
 
-	builder := ledger.NewBuilder(ledger.Filter{})
+	var builder = ledger.NewBuilder(ledger.Filter{})
 	for _, dv := range resp.DailyValues {
 		d, err := time.Parse("2006-01-02", dv.Date)
 		if err != nil {

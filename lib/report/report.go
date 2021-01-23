@@ -53,6 +53,12 @@ type Collapse struct {
 	Regex *regexp.Regexp
 }
 
+// MatchAccount determines whether this Collapse matches the
+// given Account.
+func (c Collapse) MatchAccount(a *accounts.Account) bool {
+	return c.Regex == nil || c.Regex.MatchString(a.String())
+}
+
 // Build creates a new report.
 func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 	// compute the dates and positions array
@@ -72,7 +78,7 @@ func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 		segments = buildSegments(b, sortedPos)
 
 		// compute totals
-		totals = map[*commodities.Commodity]amount.Vec{}
+		totals = make(map[*commodities.Commodity]amount.Vec)
 	)
 	for _, s := range segments {
 		s.sum(totals)
@@ -160,8 +166,7 @@ func buildSegments(o Builder, positions []Position) map[accounts.AccountType]*Se
 func shorten(c []Collapse, a *accounts.Account) []string {
 	var s = a.Split()
 	for _, c := range c {
-		var matched = c.Regex.MatchString(a.String())
-		if matched && len(s) > c.Level {
+		if c.MatchAccount(a) && len(s) > c.Level {
 			s = s[:c.Level]
 		}
 	}

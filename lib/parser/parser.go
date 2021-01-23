@@ -43,7 +43,7 @@ func (p *Parser) markStart() {
 }
 
 func (p *Parser) getRange() model.Range {
-	pos := p.scanner.Position()
+	var pos = p.scanner.Position()
 	return model.Range{
 		Start: p.startPos,
 		End:   pos,
@@ -192,14 +192,13 @@ func (p *Parser) parseTransaction(d time.Time) (*ledger.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := &ledger.Transaction{
+	return &ledger.Transaction{
 		Pos:         p.getRange(),
 		Date:        d,
 		Description: desc,
 		Tags:        tags,
 		Postings:    postings,
-	}
-	return t, nil
+	}, nil
 
 }
 
@@ -589,7 +588,7 @@ func (p *Parser) parseTags() ([]ledger.Tag, error) {
 		if err != nil {
 			return nil, err
 		}
-		tags = append(tags, *tag)
+		tags = append(tags, tag)
 		if err := p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
@@ -597,22 +596,21 @@ func (p *Parser) parseTags() ([]ledger.Tag, error) {
 	return tags, nil
 }
 
-func (p *Parser) parseTag() (*ledger.Tag, error) {
+func (p *Parser) parseTag() (ledger.Tag, error) {
 	if p.current() != '#' {
-		return nil, fmt.Errorf("Expected tag, got %c", p.current())
+		return "", fmt.Errorf("Expected tag, got %c", p.current())
 	}
 	if err := p.scanner.ConsumeRune('#'); err != nil {
-		return nil, err
+		return "", err
 	}
-	b := strings.Builder{}
+	var b strings.Builder
 	b.WriteRune('#')
 	i, err := scanner.ParseIdentifier(p.scanner)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	b.WriteString(i)
-	tag := ledger.Tag(b.String())
-	return &tag, nil
+	return ledger.Tag(b.String()), nil
 }
 
 func isWhitespace(ch rune) bool {

@@ -66,7 +66,7 @@ func StartOf(d time.Time, p Period) time.Time {
 	case Daily:
 		return d
 	case Weekly:
-		x := (int(d.Weekday()) + 6) % 7
+		var x = (int(d.Weekday()) + 6) % 7
 		return d.AddDate(0, 0, -x)
 	case Monthly:
 		return Date(d.Year(), d.Month(), 1)
@@ -87,7 +87,7 @@ func EndOf(d time.Time, p Period) time.Time {
 	case Daily:
 		return d
 	case Weekly:
-		x := (7 - int(d.Weekday())) % 7
+		var x = (7 - int(d.Weekday())) % 7
 		return d.AddDate(0, 0, x)
 	case Monthly:
 		return StartOf(d, Monthly).AddDate(0, 1, -1)
@@ -103,8 +103,10 @@ func EndOf(d time.Time, p Period) time.Time {
 // Series returns a series of dates in the given interval,
 // which contains both t0 and t1.
 func Series(t0, t1 time.Time, p Period) []time.Time {
-	res := []time.Time{StartOf(t0, p).AddDate(0, 0, -1)}
-	t := t0
+	var (
+		res = []time.Time{StartOf(t0, p).AddDate(0, 0, -1)}
+		t   = t0
+	)
 	for t == t1 || t.Before(t1) {
 		res = append(res, EndOf(t, p))
 		t = EndOf(t, p).AddDate(0, 0, 1)

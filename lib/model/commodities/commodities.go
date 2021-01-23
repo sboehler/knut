@@ -17,8 +17,8 @@ package commodities
 import "sync"
 
 var (
-	mutex       = sync.RWMutex{}
-	commodities = map[string]*Commodity{}
+	commodities = make(map[string]*Commodity)
+	mutex       sync.RWMutex
 )
 
 // Commodity represents a currency or security.
@@ -39,7 +39,7 @@ func create(name string) *Commodity {
 	if c, ok := commodities[name]; ok {
 		return c
 	}
-	c := &Commodity{name}
+	var c = &Commodity{name}
 	commodities[name] = c
 	return c
 }

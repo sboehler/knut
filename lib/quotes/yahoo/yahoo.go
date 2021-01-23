@@ -81,7 +81,7 @@ func createURL(rootURL, sym string, t0, t1 time.Time) (*url.URL, error) {
 // decodeResponse takes a reader for the response and returns
 // the parsed quotes.
 func decodeResponse(r io.ReadCloser) ([]Quote, error) {
-	csvReader := csv.NewReader(r)
+	var csvReader = csv.NewReader(r)
 	csvReader.FieldsPerRecord = 7
 	// skip header
 	if _, err := csvReader.Read(); err != nil {
@@ -109,8 +109,10 @@ func decodeResponse(r io.ReadCloser) ([]Quote, error) {
 
 // recordToQuote decodes one line of the response CSV.
 func recordToQuote(r []string) (Quote, bool, error) {
-	var err error
-	quote := Quote{}
+	var (
+		quote Quote
+		err   error
+	)
 	for _, item := range r {
 		if item == "null" {
 			return quote, false, nil

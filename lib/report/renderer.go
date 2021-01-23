@@ -50,7 +50,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	rn.table.AddSeparatorRow()
 
 	// header
-	header := rn.table.AddRow().AddText("Account", table.Center)
+	var header = rn.table.AddRow().AddText("Account", table.Center)
 	for _, d := range r.Dates {
 		header.AddText(d.Format("2006-01-02"), table.Center)
 	}
@@ -78,7 +78,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 			rn.table.AddEmptyRow()
 		}
 
-		totals := map[*commodities.Commodity]amount.Vec{}
+		var totals = make(map[*commodities.Commodity]amount.Vec)
 		for _, s := range g1 {
 			s.sum(totals)
 		}
@@ -92,7 +92,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 			render(s)
 			rn.table.AddEmptyRow()
 		}
-		totals := map[*commodities.Commodity]amount.Vec{}
+		var totals = make(map[*commodities.Commodity]amount.Vec)
 		for _, s := range g2 {
 			s.sum(totals)
 		}
@@ -108,20 +108,18 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 		Positions: r.Positions,
 	})
 	rn.table.AddSeparatorRow()
-
 	return rn.table
 }
 
 func (rn *Renderer) renderSegment(s *Segment) {
-	header := rn.table.AddRow().AddIndented(s.Key, rn.indent)
-
 	// compute total value
-	total := amount.NewVec(len(rn.report.Dates))
+	var total = amount.NewVec(len(rn.report.Dates))
 	for _, amounts := range s.Positions {
 		total.Add(amounts)
 	}
 
 	// fill header cells with total values
+	var header = rn.table.AddRow().AddIndented(s.Key, rn.indent)
 	for _, amount := range total.Values {
 		if amount.IsZero() {
 			header.AddEmpty()
@@ -142,7 +140,7 @@ func (rn *Renderer) renderSegment(s *Segment) {
 }
 
 func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
-	header := rn.table.AddRow().AddIndented(segment.Key, rn.indent)
+	var header = rn.table.AddRow().AddIndented(segment.Key, rn.indent)
 	for range rn.report.Dates {
 		header.AddEmpty()
 	}
@@ -151,7 +149,7 @@ func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
 	rn.indent += indent
 	for _, commodity := range rn.report.Commodities {
 		if amounts, ok := segment.Positions[commodity]; ok {
-			row := rn.table.AddRow().AddIndented(commodity.String(), rn.indent)
+			var row = rn.table.AddRow().AddIndented(commodity.String(), rn.indent)
 			for _, amount := range amounts.Values {
 				if amount.IsZero() {
 					row.AddEmpty()

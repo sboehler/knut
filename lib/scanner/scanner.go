@@ -43,7 +43,7 @@ func New(r io.RuneReader, path string) (*Scanner, error) {
 		}
 		ch = EOF
 	}
-	b := &Scanner{
+	return &Scanner{
 		reader:  r,
 		current: ch,
 		Path:    path,
@@ -54,8 +54,7 @@ func New(r io.RuneReader, path string) (*Scanner, error) {
 			BytePos: 0,
 			RunePos: 0,
 		},
-	}
-	return b, nil
+	}, nil
 }
 
 // ReadRune implements io.RuneReader.
@@ -107,7 +106,7 @@ const EOF = rune(0)
 
 // ReadWhile reads runes into the builder while the predicate holds
 func (s *Scanner) ReadWhile(pred func(r rune) bool) (string, error) {
-	b := strings.Builder{}
+	var b strings.Builder
 	for pred(s.Current()) && s.Current() != EOF {
 		b.WriteRune(s.Current())
 		if err := s.Advance(); err != nil {
@@ -147,7 +146,7 @@ func (s *Scanner) ConsumeRune(r rune) error {
 
 // ParseString parses the given string
 func (s *Scanner) ParseString(str string) error {
-	b := strings.Builder{}
+	var b strings.Builder
 	for _, ch := range str {
 		if _, err := b.WriteRune(s.Current()); err != nil {
 			return err

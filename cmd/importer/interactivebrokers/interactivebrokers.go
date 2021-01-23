@@ -37,7 +37,7 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-	cmd := cobra.Command{
+	var cmd = cobra.Command{
 		Use:   "us.interactivebrokers",
 		Short: "Import Interactive Brokers account reports",
 		Long: `In the account manager web UI, go to "Reports" and download an "Activity" statement for the
@@ -86,16 +86,18 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	reader := csv.NewReader(bufio.NewReader(f))
-	p := parser{
-		reader:  reader,
-		options: o,
-		builder: ledger.NewBuilder(ledger.Filter{}),
-	}
+	var (
+		reader = csv.NewReader(bufio.NewReader(f))
+		p      = parser{
+			reader:  reader,
+			options: o,
+			builder: ledger.NewBuilder(ledger.Filter{}),
+		}
+	)
 	if err = p.parse(); err != nil {
 		return err
 	}
-	w := bufio.NewWriter(cmd.OutOrStdout())
+	var w = bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
 	_, err = printer.Printer{}.PrintLedger(w, p.builder.Build())
 	return err
@@ -204,8 +206,10 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	if r[0] != "Trades" || r[1] != "Data" || r[2] != "Order" || r[3] != "Stocks" {
 		return false, nil
 	}
-	currency := commodities.Get(r[4])
-	stock := commodities.Get(r[5])
+	var (
+		currency = commodities.Get(r[4])
+		stock    = commodities.Get(r[5])
+	)
 	date, err := time.Parse("2006-01-02", r[6][:10])
 	if err != nil {
 		return false, err
@@ -251,9 +255,11 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	if p.baseCurrency == nil {
 		return false, fmt.Errorf("base currency is not defined")
 	}
-	currency := commodities.Get(r[4])
-	currency2 := strings.SplitN(r[5], ".", 2)[0]
-	stock := commodities.Get(currency2)
+	var (
+		currency  = commodities.Get(r[4])
+		currency2 = strings.SplitN(r[5], ".", 2)[0]
+		stock     = commodities.Get(currency2)
+	)
 	date, err := time.Parse("2006-01-02", r[6][:10])
 	if err != nil {
 		return false, err
@@ -280,7 +286,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
-	postings := []*ledger.Posting{
+	var postings = []*ledger.Posting{
 		ledger.NewPosting(accounts.EquityAccount(), p.options.account, stock, qty.Round(2)),
 		ledger.NewPosting(accounts.EquityAccount(), p.options.account, currency, proceeds.Round(2)),
 	}
@@ -299,7 +305,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	if r[0] != "Deposits & Withdrawals" || r[1] != "Data" || r[2] == "Total" || r[3] == "" {
 		return false, nil
 	}
-	currency := commodities.Get(r[2])
+	var currency = commodities.Get(r[2])
 	date, err := time.Parse("2006-01-02", r[3])
 	if err != nil {
 		return false, err
@@ -328,7 +334,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if r[0] != "Dividends" || r[1] != "Data" || strings.HasPrefix(r[2], "Total") || len(r) != 6 {
 		return false, nil
 	}
-	currency := commodities.Get(r[2])
+	var currency = commodities.Get(r[2])
 	date, err := time.Parse("2006-01-02", r[3])
 	if err != nil {
 		return false, err
@@ -337,13 +343,17 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	regex := regexp.MustCompile("[A-Za-z0-9]+")
-	symbol := strings.TrimSpace(strings.Split(r[4], "(")[0])
+	var (
+		regex  = regexp.MustCompile("[A-Za-z0-9]+")
+		symbol = strings.TrimSpace(strings.Split(r[4], "(")[0])
+	)
 	if !regex.MatchString(symbol) {
 		return false, fmt.Errorf("invalid symbol name %s", symbol)
 	}
-	security := commodities.Get(symbol)
-	desc := r[4]
+	var (
+		security = commodities.Get(symbol)
+		desc     = r[4]
+	)
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
@@ -359,7 +369,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if r[0] != "Withholding Tax" || r[1] != "Data" || strings.HasPrefix(r[2], "Total") {
 		return false, nil
 	}
-	currency := commodities.Get(r[2])
+	var currency = commodities.Get(r[2])
 	date, err := time.Parse("2006-01-02", r[3])
 	if err != nil {
 		return false, err
@@ -368,13 +378,17 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	regex := regexp.MustCompile("[A-Za-z0-9]+")
-	symbol := strings.TrimSpace(strings.Split(r[4], "(")[0])
+	var (
+		regex  = regexp.MustCompile("[A-Za-z0-9]+")
+		symbol = strings.TrimSpace(strings.Split(r[4], "(")[0])
+	)
 	if !regex.MatchString(symbol) {
 		return false, fmt.Errorf("invalid symbol name %s", symbol)
 	}
-	security := commodities.Get(symbol)
-	desc := r[4]
+	var (
+		security = commodities.Get(symbol)
+		desc     = r[4]
+	)
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
@@ -391,7 +405,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	if r[0] != "Interest" || r[1] != "Data" || strings.HasPrefix(r[2], "Total") || len(r) != 6 {
 		return false, nil
 	}
-	currency := commodities.Get(r[2])
+	var currency = commodities.Get(r[2])
 	date, err := time.Parse("2006-01-02", r[3])
 	if err != nil {
 		return false, err
@@ -400,7 +414,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	desc := r[4]
+	var desc = r[4]
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
@@ -417,7 +431,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 	if p.dateTo.IsZero() {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
-	symbol := commodities.Get(r[5])
+	var symbol = commodities.Get(r[5])
 	amt, err := decimal.NewFromString(r[6])
 	if err != nil {
 		return false, err

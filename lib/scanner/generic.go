@@ -46,7 +46,7 @@ func ReadQuotedString(b *Scanner) (string, error) {
 
 // ParseIdentifier parses an identifier
 func ParseIdentifier(b *Scanner) (string, error) {
-	s := strings.Builder{}
+	var s strings.Builder
 	if !(unicode.IsLetter(b.Current()) || unicode.IsDigit(b.Current())) {
 		return "", fmt.Errorf("expected identifier, got %q", b.Current())
 	}
@@ -61,7 +61,7 @@ func ParseIdentifier(b *Scanner) (string, error) {
 
 // ParseAccount parses an account
 func ParseAccount(b *Scanner) (*accounts.Account, error) {
-	name := strings.Builder{}
+	var name strings.Builder
 	for {
 		i, err := ParseIdentifier(b)
 		if err != nil {
@@ -106,7 +106,7 @@ func ParseAccountType(b *Scanner) (accounts.AccountType, error) {
 
 // ParseDecimal parses a decimal number
 func ParseDecimal(p *Scanner) (decimal.Decimal, error) {
-	b := strings.Builder{}
+	var b strings.Builder
 	for unicode.IsDigit(p.Current()) || p.Current() == '.' || p.Current() == '-' {
 		b.WriteRune(p.Current())
 		if err := p.Advance(); err != nil {
@@ -131,7 +131,7 @@ func ParseDate(p *Scanner) (time.Time, error) {
 
 // ReadString reads a string with n runes
 func ReadString(p *Scanner, n int) (string, error) {
-	b := strings.Builder{}
+	var b strings.Builder
 	for i := 0; i < n; i++ {
 		b.WriteRune(p.Current())
 		if err := p.Advance(); err != nil {
@@ -143,7 +143,7 @@ func ReadString(p *Scanner, n int) (string, error) {
 
 // ParseFloat parses a floating point number
 func ParseFloat(p *Scanner) (float64, error) {
-	b := strings.Builder{}
+	var b strings.Builder
 	for unicode.IsDigit(p.Current()) || p.Current() == '.' || p.Current() == '-' {
 		b.WriteRune(p.Current())
 		if err := p.Advance(); err != nil {

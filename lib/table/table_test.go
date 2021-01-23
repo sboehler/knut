@@ -17,7 +17,7 @@ package table
 import "testing"
 
 func TestAddThousandsSep(t *testing.T) {
-	tests := []struct {
+	var tests = []struct {
 		input, want string
 	}{
 		{"1000.000", "1,000.000"},
@@ -38,7 +38,8 @@ func TestAddThousandsSep(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.input, func(t *testing.T) {
-			got := addThousandsSep(test.input)
+			var got = addThousandsSep(test.input)
+
 			if got != test.want {
 				t.Errorf("fmt2(%q) = %q, want %q", test.input, got, test.want)
 			}

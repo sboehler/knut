@@ -43,7 +43,7 @@ func (r *TextRenderer) Render(t *Table, w io.Writer) error {
 	r.table = t
 	color.NoColor = !r.Color
 
-	widths := make([]int, r.table.Width())
+	var widths = make([]int, r.table.Width())
 	for _, row := range r.table.rows {
 		for i, c := range row.cells {
 			if widths[i] < r.minLengthCell(c) {
@@ -51,7 +51,7 @@ func (r *TextRenderer) Render(t *Table, w io.Writer) error {
 			}
 		}
 	}
-	groups := map[int]int{}
+	var groups = make(map[int]int)
 	for i, w := range widths {
 		if groups[r.table.columns[i]] < w {
 			groups[r.table.columns[i]] = w
@@ -124,8 +124,10 @@ func (r *TextRenderer) renderCell(c cell, l int, w io.Writer) error {
 		return writeSpace(w, l-before-utf8.RuneCountInString(t.Content))
 
 	case numberCell:
-		s := r.numToString(t.n)
-		var before = l - utf8.RuneCountInString(s)
+		var (
+			s      = r.numToString(t.n)
+			before = l - utf8.RuneCountInString(s)
+		)
 		if err := writeSpace(w, before); err != nil {
 			return err
 		}
@@ -198,17 +200,18 @@ func (r *TextRenderer) numToString(d decimal.Decimal) string {
 	if r.Thousands {
 		d = d.Div(k)
 	}
-	e := d.StringFixed(r.Round)
-	return addThousandsSep(e)
+	return addThousandsSep(d.StringFixed(r.Round))
 }
 
 func addThousandsSep(e string) string {
-	index := strings.Index(e, ".")
+	var index = strings.Index(e, ".")
 	if index < 0 {
 		index = len(e)
 	}
-	b := strings.Builder{}
-	ok := false
+	var (
+		b  strings.Builder
+		ok bool
+	)
 	for i, ch := range e {
 		if i >= index && ch != '-' {
 			b.WriteString(e[i:])

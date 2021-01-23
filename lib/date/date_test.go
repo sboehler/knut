@@ -20,7 +20,7 @@ import (
 )
 
 func TestStartOf(t *testing.T) {
-	tests := []struct {
+	var tests = []struct {
 		date   time.Time
 		result map[Period]time.Time
 	}{
@@ -72,7 +72,7 @@ func TestStartOf(t *testing.T) {
 }
 
 func TestEndOf(t *testing.T) {
-	tests := []struct {
+	var tests = []struct {
 		date   time.Time
 		result map[Period]time.Time
 	}{
@@ -124,7 +124,7 @@ func TestEndOf(t *testing.T) {
 }
 
 func TestSeries(t *testing.T) {
-	tests := []struct {
+	var tests = []struct {
 		t0     time.Time
 		t1     time.Time
 		period Period

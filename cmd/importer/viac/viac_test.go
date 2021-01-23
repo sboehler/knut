@@ -25,21 +25,22 @@ import (
 )
 
 func TestGolden(t *testing.T) {
-	tests := []string{
+	var tests = []string{
 		"example1",
 	}
 	for _, test := range tests {
 		test := test
 		t.Run(test, func(t *testing.T) {
 			t.Parallel()
-			g := goldie.New(t)
-			args := []string{
+			var args = []string{
 				"--account",
 				"Assets:VIAC",
 				path.Join("testdata", fmt.Sprintf("%s.input", test)),
 			}
-			got := cmdtest.Run(t, CreateCmd(), args)
-			g.Assert(t, test, got)
+
+			var got = cmdtest.Run(t, CreateCmd(), args)
+
+			goldie.New(t).Assert(t, test, got)
 		})
 	}
 }

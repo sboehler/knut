@@ -24,42 +24,46 @@ import (
 )
 
 func TestFetch(t *testing.T) {
-	var gotQuery map[string][]string
-	response := "Date,Open,High,Low,Close,Adj Close,Volume\n" +
-		"2019-11-07,1294.280029,1323.739990,1294.244995,1308.859985,1308.859985,2030000\n" +
-		"2019-11-08,1305.280029,1318.000000,1304.364990,1311.369995,1311.369995,1251400"
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotQuery = r.URL.Query()
-		w.Write([]byte(response))
-	}))
+	var (
+		gotQuery map[string][]string
+		response = "Date,Open,High,Low,Close,Adj Close,Volume\n" +
+			"2019-11-07,1294.280029,1323.739990,1294.244995,1308.859985,1308.859985,2030000\n" +
+			"2019-11-08,1305.280029,1318.000000,1304.364990,1311.369995,1311.369995,1251400"
+		srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotQuery = r.URL.Query()
+			w.Write([]byte(response))
+		}))
+	)
 	defer srv.Close()
-	want := []Quote{
-		{
-			Date:     time.Date(2019, 11, 07, 0, 0, 0, 0, time.UTC),
-			Open:     1294.280029,
-			High:     1323.73999,
-			Low:      1294.244995,
-			Close:    1308.859985,
-			AdjClose: 1308.859985,
-			Volume:   2030000,
-		},
-		{
-			Date:     time.Date(2019, 11, 8, 0, 0, 0, 0, time.UTC),
-			Open:     1305.280029,
-			High:     1318,
-			Low:      1304.36499,
-			Close:    1311.369995,
-			AdjClose: 1311.369995,
-			Volume:   1251400,
-		},
-	}
-	wantQuery := map[string][]string{
-		"period1":  {"1573084800"},
-		"period2":  {"1573257600"},
-		"events":   {"history"},
-		"interval": {"1d"},
-	}
-	client := Client{srv.URL}
+	var (
+		want = []Quote{
+			{
+				Date:     time.Date(2019, 11, 07, 0, 0, 0, 0, time.UTC),
+				Open:     1294.280029,
+				High:     1323.73999,
+				Low:      1294.244995,
+				Close:    1308.859985,
+				AdjClose: 1308.859985,
+				Volume:   2030000,
+			},
+			{
+				Date:     time.Date(2019, 11, 8, 0, 0, 0, 0, time.UTC),
+				Open:     1305.280029,
+				High:     1318,
+				Low:      1304.36499,
+				Close:    1311.369995,
+				AdjClose: 1311.369995,
+				Volume:   1251400,
+			},
+		}
+		wantQuery = map[string][]string{
+			"period1":  {"1573084800"},
+			"period2":  {"1573257600"},
+			"events":   {"history"},
+			"interval": {"1d"},
+		}
+		client = Client{srv.URL}
+	)
 
 	got, err := client.Fetch("GOOG", time.Date(2019, 11, 7, 0, 0, 0, 0, time.UTC), time.Date(2019, 11, 9, 0, 0, 0, 0, time.UTC))
 

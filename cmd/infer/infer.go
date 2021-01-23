@@ -34,7 +34,7 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-	cmd := cobra.Command{
+	var cmd = cobra.Command{
 		Use:   "infer",
 		Short: "Auto-assign accounts in a journal",
 		Long: `Build a Bayes model using the supplied training file and apply it to replace
@@ -95,12 +95,12 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 	if err != nil {
 		return err
 	}
-	src := bufio.NewReader(srcFile)
+	var src = bufio.NewReader(srcFile)
 	tmpfile, err := ioutil.TempFile(path.Dir(targetFile), "-format")
 	if err != nil {
 		return err
 	}
-	dest := bufio.NewWriter(tmpfile)
+	var dest = bufio.NewWriter(tmpfile)
 	err = format.Format(directives, src, dest)
 	if err = multierr.Combine(err, dest.Flush(), srcFile.Close()); err != nil {
 		return multierr.Append(err, os.Remove(tmpfile.Name()))

@@ -35,8 +35,10 @@ type reader interface {
 
 // Format formats the directives returned by p.
 func Format(directives []ledger.Directive, src reader, dest io.Writer) error {
-	var p = printer.Printer{}
-	srcBytePos := 0
+	var (
+		p          printer.Printer
+		srcBytePos int
+	)
 	for _, d := range directives {
 		p0, p1 := d.Position().Start.BytePos, d.Position().End.BytePos
 

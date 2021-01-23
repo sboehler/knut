@@ -25,7 +25,7 @@ import (
 )
 
 func TestGolden(t *testing.T) {
-	tests := []string{
+	var tests = []string{
 		"example1",
 		"example2",
 	}
@@ -33,13 +33,15 @@ func TestGolden(t *testing.T) {
 		test := test
 		t.Run(test, func(t *testing.T) {
 			t.Parallel()
-			g := goldie.New(t)
-			args := []string{
-				"--account",
-				"Liabilities:Cumulus",
-				path.Join("testdata", fmt.Sprintf("%s.input", test)),
-			}
-			got := cmdtest.Run(t, CreateCmd(), args)
+			var (
+				g    = goldie.New(t)
+				args = []string{
+					"--account",
+					"Liabilities:Cumulus",
+					path.Join("testdata", fmt.Sprintf("%s.input", test)),
+				}
+				got = cmdtest.Run(t, CreateCmd(), args)
+			)
 			g.Assert(t, test, got)
 		})
 	}

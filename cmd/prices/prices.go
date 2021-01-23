@@ -112,7 +112,7 @@ func readConfig(path string) ([]config, error) {
 	defer f.Close()
 	var dec = yaml.NewDecoder(f)
 	dec.SetStrict(true)
-	var t = []config{}
+	var t []config
 	if err := dec.Decode(&t); err != nil {
 		return nil, err
 	}

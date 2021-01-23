@@ -71,16 +71,18 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	reader := csv.NewReader(bufio.NewReader(f))
-	p := parser{
-		reader:  reader,
-		account: account,
-		builder: ledger.NewBuilder(ledger.Filter{}),
-	}
+	var (
+		reader = csv.NewReader(bufio.NewReader(f))
+		p      = parser{
+			reader:  reader,
+			account: account,
+			builder: ledger.NewBuilder(ledger.Filter{}),
+		}
+	)
 	if err = p.parse(); err != nil {
 		return err
 	}
-	w := bufio.NewWriter(cmd.OutOrStdout())
+	var w = bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
 	_, err = printer.Printer{}.PrintLedger(w, p.builder.Build())
 	return err
@@ -127,7 +129,7 @@ func (p *parser) parseHeader(r []string) error {
 	if len(r) != 9 {
 		return fmt.Errorf("expected record with 9 items, got %v", r)
 	}
-	groups := re.FindStringSubmatch(r[2])
+	var groups = re.FindStringSubmatch(r[2])
 	if len(groups) != 2 {
 		return fmt.Errorf("could not extract currency from header field: %q", r[2])
 	}
@@ -171,8 +173,10 @@ func (p *parser) parseBooking(r []string) error {
 	for _, i := range []int{1, 7, 8} {
 		words = append(words, strings.Fields(r[i])...)
 	}
-	desc := strings.Join(words, " ")
-	var amt decimal.Decimal
+	var (
+		desc = strings.Join(words, " ")
+		amt  decimal.Decimal
+	)
 	if len(r[2]) > 0 && len(r[3]) == 0 {
 		// credit booking
 		if amt, err = decimal.NewFromString(replacer.Replace(r[2])); err != nil {
@@ -221,11 +225,11 @@ func (p *parser) parseBooking(r []string) error {
 }
 
 func parseCombiField(f string) (*commodities.Commodity, decimal.Decimal, error) {
-	fs := strings.Fields(f)
+	var fs = strings.Fields(f)
 	if len(fs) != 2 {
 		return nil, decimal.Decimal{}, fmt.Errorf("expected currency and amount, got %s", f)
 	}
-	otherCommodity := commodities.Get(fs[0])
+	var otherCommodity = commodities.Get(fs[0])
 	otherAmount, err := decimal.NewFromString(replacer.Replace(fs[1]))
 	if err != nil {
 		return nil, decimal.Decimal{}, err

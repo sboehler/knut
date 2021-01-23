@@ -109,14 +109,14 @@ func (b *Builder) AddTransaction(t *Transaction) {
 	}
 	if len(filtered) > 0 {
 		t.Postings = filtered
-		s := b.getOrCreate(t.Date)
+		var s = b.getOrCreate(t.Date)
 		s.Transactions = append(s.Transactions, t)
 	}
 }
 
 // AddOpening adds an open directive.
 func (b *Builder) AddOpening(o *Open) {
-	s := b.getOrCreate(o.Date)
+	var s = b.getOrCreate(o.Date)
 	s.Openings = append(s.Openings, o)
 }
 
@@ -125,13 +125,13 @@ func (b *Builder) AddClosing(close *Close) {
 	if !b.filter.matchAccount(close.Account) {
 		return
 	}
-	s := b.getOrCreate(close.Date)
+	var s = b.getOrCreate(close.Date)
 	s.Closings = append(s.Closings, close)
 }
 
 // AddPrice adds a price directive.
 func (b *Builder) AddPrice(p *Price) {
-	s := b.getOrCreate(p.Date)
+	var s = b.getOrCreate(p.Date)
 	s.Prices = append(s.Prices, p)
 }
 
@@ -140,7 +140,7 @@ func (b *Builder) AddAssertion(a *Assertion) {
 	if !b.filter.matchAccount(a.Account) || !b.filter.matchCommodity(a.Commodity) {
 		return
 	}
-	s := b.getOrCreate(a.Date)
+	var s = b.getOrCreate(a.Date)
 	s.Assertions = append(s.Assertions, a)
 }
 
@@ -149,7 +149,7 @@ func (b *Builder) AddValue(a *Value) {
 	if !b.filter.matchAccount(a.Account) || !b.filter.matchCommodity(a.Commodity) {
 		return
 	}
-	s := b.getOrCreate(a.Date)
+	var s = b.getOrCreate(a.Date)
 	s.Values = append(s.Values, a)
 }
 

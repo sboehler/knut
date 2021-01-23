@@ -66,9 +66,9 @@ var accountTypes = map[string]AccountType{
 }
 
 var (
-	mutex     = sync.RWMutex{}
+	mutex     sync.RWMutex
+	maxLength int
 	accounts  = make(map[string]*Account)
-	maxLength = 0
 )
 
 func get(name string) (*Account, bool) {
@@ -85,7 +85,7 @@ func create(name string) (*Account, error) {
 		return a, nil
 	}
 	if t, ok := accountTypes[strings.SplitN(name, ":", 2)[0]]; ok {
-		a := &Account{
+		var a = &Account{
 			accountType: t,
 			name:        name,
 		}
@@ -102,20 +102,16 @@ var valuationAccount, equityAccount, retainedEarningsAccount, tbdAccount *Accoun
 
 func init() {
 	var err error
-	valuationAccount, err = Get("Equity:Valuation")
-	if err != nil {
+	if valuationAccount, err = Get("Equity:Valuation"); err != nil {
 		panic("Could not create valuationAccount")
 	}
-	equityAccount, err = Get("Equity:Equity")
-	if err != nil {
+	if equityAccount, err = Get("Equity:Equity"); err != nil {
 		panic("Could not create equityAccount")
 	}
-	retainedEarningsAccount, err = Get("Equity:RetainedEarnings")
-	if err != nil {
+	if retainedEarningsAccount, err = Get("Equity:RetainedEarnings"); err != nil {
 		panic("Could not create valuationAccount")
 	}
-	tbdAccount, err = Get("Expenses:TBD")
-	if err != nil {
+	if tbdAccount, err = Get("Expenses:TBD"); err != nil {
 		panic("Could not create Expenses:TBD account")
 	}
 }
@@ -172,7 +168,7 @@ func (a Account) WriteTo(w io.Writer) (int64, error) {
 
 // RightPad returns a string with the account name, padded to the right.
 func (a Account) RightPad() string {
-	b := strings.Builder{}
+	var b strings.Builder
 	b.WriteString(a.name)
 	for i := utf8.RuneCountInString(a.name); i < maxLength; i++ {
 		b.WriteRune(' ')

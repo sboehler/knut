@@ -29,11 +29,6 @@ import (
 // value: price in (target commodity / commodity)
 type Prices map[*commodities.Commodity]map[*commodities.Commodity]decimal.Decimal
 
-// New creates prices.
-func New() Prices {
-	return map[*commodities.Commodity]map[*commodities.Commodity]decimal.Decimal{}
-}
-
 var one = decimal.NewFromInt(1)
 
 // Insert inserts a new price.
@@ -45,7 +40,7 @@ func (p Prices) Insert(pr *ledger.Price) {
 func (p Prices) addPrice(target, commodity *commodities.Commodity, pr decimal.Decimal) {
 	i, ok := p[target]
 	if !ok {
-		i = map[*commodities.Commodity]decimal.Decimal{}
+		i = make(map[*commodities.Commodity]decimal.Decimal)
 		p[target] = i
 	}
 	i[commodity] = pr
@@ -54,14 +49,13 @@ func (p Prices) addPrice(target, commodity *commodities.Commodity, pr decimal.De
 // Normalize creates a normalized price map for the given commodity.
 func (p Prices) Normalize(c *commodities.Commodity) NormalizedPrices {
 	// prices in (target commodity / commodity)
-	todo := NormalizedPrices{c: one}
-	done := NormalizedPrices{}
-
 	var (
+		todo = NormalizedPrices{c: one}
+		done = make(NormalizedPrices)
+
 		currentC *commodities.Commodity
 		currentP decimal.Decimal
 	)
-
 	for len(todo) > 0 {
 		// we're interested in an arbitrary element of the map
 		for currentC, currentP = range todo {
@@ -81,7 +75,7 @@ func (p Prices) Normalize(c *commodities.Commodity) NormalizedPrices {
 
 // Copy creates a deep copy.
 func (p Prices) Copy() Prices {
-	pr := New()
+	var pr = make(Prices)
 	for tc, ps := range p {
 		for c, v := range ps {
 			pr.addPrice(tc, c, v)

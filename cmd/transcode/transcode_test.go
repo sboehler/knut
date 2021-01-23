@@ -23,12 +23,13 @@ import (
 )
 
 func TestGolden(t *testing.T) {
-	g := goldie.New(t)
-	args := []string{
+	var args = []string{
 		"--commodity",
 		"CHF",
 		path.Join("testdata", "example.knut"),
 	}
-	got := cmdtest.Run(t, CreateCmd(), args)
-	g.Assert(t, "example", got)
+
+	var got = cmdtest.Run(t, CreateCmd(), args)
+
+	goldie.New(t).Assert(t, "example", got)
 }

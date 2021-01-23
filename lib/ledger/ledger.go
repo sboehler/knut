@@ -207,12 +207,12 @@ func (a *Accrual) Position() model.Range {
 
 // Expand expands an accrual transaction.
 func (a *Accrual) Expand() ([]*Transaction, error) {
-	t := a.Transaction
+	var t = a.Transaction
 	if l := len(t.Postings); l != 1 {
 		return nil, fmt.Errorf("%s: accrual expansion: number of postings is %d, must be 1", a.Transaction.Position().Start, l)
 	}
-	posting := t.Postings[0]
 	var (
+		posting                                                          = t.Postings[0]
 		crAccountSingle, drAccountSingle, crAccountMulti, drAccountMulti = a.Account, a.Account, a.Account, a.Account
 	)
 	switch {
@@ -229,14 +229,15 @@ func (a *Accrual) Expand() ([]*Transaction, error) {
 		crAccountSingle = posting.Credit
 		drAccountSingle = posting.Debit
 	}
-	amount := posting.Amount.Amount()
-	dates := date.Series(a.T0, a.T1, a.Period)[1:]
-	rated, rem := amount.QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
+	var (
+		dates       = date.Series(a.T0, a.T1, a.Period)[1:]
+		amount, rem = posting.Amount.Amount().QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
 
-	var result []*Transaction
+		result []*Transaction
+	)
 	if crAccountMulti != drAccountMulti {
 		for i, date := range dates {
-			a := rated
+			var a = amount
 			if i == 0 {
 				a = a.Add(rem)
 			}

@@ -71,13 +71,13 @@ func execute(cmd *cobra.Command, args []string) error {
 	defer close()
 	defer journal.Flush()
 
-	p := printer.Printer{}
+	var p printer.Printer
 
 	if c.includes == 0 {
 		files = append(files, journal)
 	} else {
 		for i := 0; i < c.includes; i++ {
-			name := fmt.Sprintf("include%d.knut", i)
+			var name = fmt.Sprintf("include%d.knut", i)
 			include, close, err := createFile(filepath.Join(c.path, name))
 			if err != nil {
 				return err
@@ -164,11 +164,13 @@ func parseDate(cmd *cobra.Command, name string) (time.Time, error) {
 
 func generate(c config) ([]*ledger.Open, []*ledger.Price, []*ledger.Transaction) {
 	rand.Seed(c.seed)
-	accounts := generateAccounts(c)
-	commodities := generateCommodities(c)
-	opens := generateOpenings(c, accounts)
-	prices := generatePrices(c, commodities)
-	transactions := generateTransactions(c, commodities, accounts)
+	var (
+		accounts     = generateAccounts(c)
+		commodities  = generateCommodities(c)
+		opens        = generateOpenings(c, accounts)
+		prices       = generatePrices(c, commodities)
+		transactions = generateTransactions(c, commodities, accounts)
+	)
 	return opens, prices, transactions
 }
 
@@ -178,7 +180,7 @@ func generateAccounts(c config) []*accounts.Account {
 		types = []string{"Assets", "Liabilities", "Income", "Expenses"}
 	)
 	for i := 0; i < c.accounts; i++ {
-		s := strings.Builder{}
+		var s strings.Builder
 		s.WriteString(types[rand.Intn(4)])
 		s.WriteRune(':')
 		s.WriteString(generateIdentifier(10))
@@ -250,7 +252,7 @@ var small = []rune("abcdefghijklmnopqrstuvwxyz")
 var large []rune = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func generateIdentifier(n int) string {
-	s := strings.Builder{}
+	var s strings.Builder
 	s.WriteRune(large[rand.Intn(len(large))])
 	for i := 0; i < n-1; i++ {
 		s.WriteRune(small[rand.Intn(len(large))])

@@ -201,7 +201,7 @@ func leftPad(n int, s string) string {
 	if len(s) > n {
 		return s
 	}
-	b := strings.Builder{}
+	var b strings.Builder
 	for i := 0; i < n-len(s); i++ {
 		b.WriteRune(' ')
 	}

@@ -30,15 +30,17 @@ type Segment struct {
 func NewSegment(k string) *Segment {
 	return &Segment{
 		Key:         k,
-		Positions:   map[*commodities.Commodity]amount.Vec{},
+		Positions:   make(map[*commodities.Commodity]amount.Vec),
 		Subsegments: nil,
 	}
 }
 
 func (s *Segment) insert(keys []string, pos Position) {
 	if len(keys) > 0 {
-		key := keys[0]
-		var subsegment *Segment
+		var (
+			key        = keys[0]
+			subsegment *Segment
+		)
 		for _, ss := range s.Subsegments {
 			if ss.Key == key {
 				subsegment = ss
@@ -61,7 +63,7 @@ func (s *Segment) insert(keys []string, pos Position) {
 
 func (s *Segment) sum(m map[*commodities.Commodity]amount.Vec) map[*commodities.Commodity]amount.Vec {
 	if m == nil {
-		m = map[*commodities.Commodity]amount.Vec{}
+		m = make(map[*commodities.Commodity]amount.Vec)
 	}
 	for _, ss := range s.Subsegments {
 		ss.sum(m)

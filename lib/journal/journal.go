@@ -18,7 +18,7 @@ type Journal struct {
 func (j *Journal) Parse() chan interface{} {
 	var (
 		ch = make(chan interface{}, 100)
-		wg = sync.WaitGroup{}
+		wg sync.WaitGroup
 	)
 
 	// Parse and eventually close input channel

@@ -38,7 +38,7 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-	cmd := cobra.Command{
+	var cmd = cobra.Command{
 		Use:   "ch.swissquote",
 		Short: "Import Swissquote account reports",
 		Long:  `Parses CSV files from Swissquote's transactions overview.`,
@@ -86,12 +86,14 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	reader := csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f))
-	p := parser{
-		reader:  reader,
-		options: o,
-		builder: ledger.NewBuilder(ledger.Filter{}),
-	}
+	var (
+		reader = csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f))
+		p      = parser{
+			reader:  reader,
+			options: o,
+			builder: ledger.NewBuilder(ledger.Filter{}),
+		}
+	)
 	if err = p.parse(); err != nil {
 		return err
 	}
@@ -229,9 +231,11 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	if r.trxType != "Kauf" && r.trxType != "Verkauf" {
 		return false, nil
 	}
-	proceeds := r.netAmount.Add(r.fee)
-	fee := r.fee.Neg()
-	qty := r.quantity
+	var (
+		proceeds = r.netAmount.Add(r.fee)
+		fee      = r.fee.Neg()
+		qty      = r.quantity
+	)
 	if proceeds.IsPositive() {
 		qty = qty.Neg()
 	}
@@ -249,7 +253,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 }
 
 func (p *parser) parseForex(r *record) (bool, error) {
-	w := map[string]bool{
+	var w = map[string]bool{
 		"Forex-Gutschrift":    true,
 		"Forex-Belastung":     true,
 		"Fx-Gutschrift Comp.": true,
@@ -265,7 +269,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		p.last = r
 		return true, nil
 	}
-	desc := fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency, r.trxType, r.netAmount, r.currency)
+	var desc = fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency, r.trxType, r.netAmount, r.currency)
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: desc,
@@ -279,7 +283,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 }
 
 func (p *parser) parseDividend(r *record) (bool, error) {
-	w := map[string]bool{
+	var w = map[string]bool{
 		"Capital Gain":       true,
 		"Kapitalrückzahlung": true,
 		"Dividende":          true,

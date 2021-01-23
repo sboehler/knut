@@ -49,14 +49,14 @@ func New(valuation *commodities.Commodity) *Balance {
 			accounts.ValuationAccount():        true,
 			accounts.RetainedEarningsAccount(): true,
 		},
-		Prices:    prices.Prices{},
+		Prices:    make(prices.Prices),
 		Valuation: valuation,
 	}
 }
 
 // Copy deeply copies the balance
 func (b *Balance) Copy() *Balance {
-	nb := New(b.Valuation)
+	var nb = New(b.Valuation)
 	nb.Prices = b.Prices.Copy()
 
 	// immutable
@@ -144,7 +144,7 @@ func (b *Balance) Update(day *ledger.Day, close bool) error {
 
 	// close income and expense accounts if necessary
 	if close {
-		closingTransactions := b.computeClosingTransactions()
+		var closingTransactions = b.computeClosingTransactions()
 		day.Transactions = append(day.Transactions, closingTransactions...)
 		for _, t := range closingTransactions {
 			if err := b.bookTransaction(t); err != nil {
@@ -233,7 +233,7 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 		if err != nil {
 			panic(fmt.Sprintf("no valuation found for commodity %s", pos.Commodity))
 		}
-		diff := v2.Sub(va.Value())
+		var diff = v2.Sub(va.Value())
 		if !diff.IsZero() {
 			// create a transaction to adjust the valuation
 			result = append(result, &ledger.Transaction{
@@ -301,7 +301,7 @@ func (b *Balance) processBalanceAssertion(a *ledger.Assertion) error {
 	if _, isOpen := b.Account[a.Account]; !isOpen {
 		return Error{a, "account is not open"}
 	}
-	pos := CommodityAccount{a.Account, a.Commodity}
+	var pos = CommodityAccount{a.Account, a.Commodity}
 	va, ok := b.Positions[pos]
 	if !ok || !va.Amount().Equal(a.Amount) {
 		return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va.Amount(), pos.Commodity)}
@@ -328,8 +328,10 @@ type Error struct {
 }
 
 func (be Error) Error() string {
-	p := printer.Printer{}
-	b := bytes.Buffer{}
+	var (
+		p printer.Printer
+		b bytes.Buffer
+	)
 	fmt.Fprintf(&b, "%s:\n", be.directive.Position().Start)
 	p.PrintDirective(&b, be.directive)
 	fmt.Fprintf(&b, "\n%s\n", be.msg)
@@ -380,9 +382,9 @@ func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
 			}
 			close = false
 		}
-		copy := bal.Copy()
-		copy.Date = date
-		result = append(result, copy)
+		var balCopy = bal.Copy()
+		balCopy.Date = date
+		result = append(result, balCopy)
 		close = b.Close
 	}
 	if b.Diff {

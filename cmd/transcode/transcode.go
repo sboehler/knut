@@ -31,9 +31,8 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-
 	// Cmd is the balance command.
-	c := &cobra.Command{
+	var cmd = &cobra.Command{
 		Use:   "transcode",
 		Short: "transcode to beancount",
 		Long: `Transcode the given journal to beancount, to leverage their amazing tooling. This command requires a valuation commodity, so` +
@@ -43,8 +42,8 @@ func CreateCmd() *cobra.Command {
 
 		Run: run,
 	}
-	c.Flags().StringP("commodity", "c", "", "valuate in the given commodity")
-	return c
+	cmd.Flags().StringP("commodity", "c", "", "valuate in the given commodity")
+	return cmd
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -62,18 +61,19 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	if c == "" {
 		return fmt.Errorf("missing --commodity flag, please provide a valuation commodity")
 	}
-	commodity := commodities.Get(c)
-
-	j := journal.Journal{File: args[0]}
+	var (
+		commodity = commodities.Get(c)
+		j         = journal.Journal{File: args[0]}
+	)
 	l, err := ledger.FromDirectives(ledger.Filter{}, j.Parse())
 	if err != nil {
 		return err
 	}
-	balanceBuilder := balance.Builder{Valuation: commodity}
+	var balanceBuilder = balance.Builder{Valuation: commodity}
 	if _, err := balanceBuilder.Build(l); err != nil {
 		return err
 	}
-	w := bufio.NewWriter(cmd.OutOrStdout())
+	var w = bufio.NewWriter(cmd.OutOrStdout())
 	defer func() { err = multierr.Append(err, w.Flush()) }()
 
 	// transcode the ledger here

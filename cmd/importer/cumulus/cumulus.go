@@ -37,7 +37,7 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-	cmd := cobra.Command{
+	var cmd = cobra.Command{
 		Use:   "ch.cumulus",
 		Short: "Import Cumulus credit card statements",
 		Long: `Download a PDF account statement and run it through tabula (https://tabula.technology/),

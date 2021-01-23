@@ -45,24 +45,27 @@ func (t *Table) Width() int {
 
 // AddRow adds a row.
 func (t *Table) AddRow() *Row {
-	row := &Row{cells: make([]cell, 0, t.Width())}
+	var (
+		cells = make([]cell, 0, t.Width())
+		row   = &Row{cells}
+	)
 	t.rows = append(t.rows, row)
 	return row
 }
 
 // AddSeparatorRow adds a separator row.
 func (t *Table) AddSeparatorRow() {
-	c := t.AddRow()
+	var r = t.AddRow()
 	for i := 0; i < t.Width(); i++ {
-		c.addCell(SeparatorCell{})
+		r.addCell(SeparatorCell{})
 	}
 }
 
 // AddEmptyRow adds a separator row.
 func (t *Table) AddEmptyRow() {
-	c := t.AddRow()
+	var r = t.AddRow()
 	for i := 0; i < t.Width(); i++ {
-		c.addCell(emptyCell{})
+		r.addCell(emptyCell{})
 	}
 }
 

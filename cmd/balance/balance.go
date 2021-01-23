@@ -187,40 +187,36 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		return nil, err
 	}
 
-	var journal = journal.Journal{
-		File: args[0],
-	}
-
-	var balanceBuilder = balance.Builder{
-		From:      from,
-		To:        to,
-		Period:    period,
-		Last:      last,
-		Valuation: valuation,
-		Close:     close,
-		Diff:      diff,
-	}
-
-	var ledgerFilter = ledger.Filter{
-		CommoditiesFilter: filterCommoditiesRegex,
-		AccountsFilter:    filterAccountsRegex,
-	}
-
-	var reportBuilder = report.Builder{
-		Value:    valuation != nil,
-		Collapse: collapse,
-	}
-
-	var reportRenderer = report.Renderer{
-		Commodities: showCommodities || valuation == nil,
-	}
-
-	var tableRenderer = table.TextRenderer{
-		Color:     color,
-		Thousands: thousands,
-		Round:     digits,
-	}
-
+	var (
+		journal = journal.Journal{
+			File: args[0],
+		}
+		balanceBuilder = balance.Builder{
+			From:      from,
+			To:        to,
+			Period:    period,
+			Last:      last,
+			Valuation: valuation,
+			Close:     close,
+			Diff:      diff,
+		}
+		ledgerFilter = ledger.Filter{
+			CommoditiesFilter: filterCommoditiesRegex,
+			AccountsFilter:    filterAccountsRegex,
+		}
+		reportBuilder = report.Builder{
+			Value:    valuation != nil,
+			Collapse: collapse,
+		}
+		reportRenderer = report.Renderer{
+			Commodities: showCommodities || valuation == nil,
+		}
+		tableRenderer = table.TextRenderer{
+			Color:     color,
+			Thousands: thousands,
+			Round:     digits,
+		}
+	)
 	return &pipeline{
 		Journal:        journal,
 		LedgerFilter:   ledgerFilter,
@@ -232,16 +228,19 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 }
 
 func processPipeline(w io.Writer, ppl *pipeline) error {
-	l, err := ledger.FromDirectives(ppl.LedgerFilter, ppl.Journal.Parse())
-	if err != nil {
+	var (
+		l   ledger.Ledger
+		bal []*balance.Balance
+		r   *report.Report
+		err error
+	)
+	if l, err = ledger.FromDirectives(ppl.LedgerFilter, ppl.Journal.Parse()); err != nil {
 		return err
 	}
-	b, err := ppl.BalanceBuilder.Build(l)
-	if err != nil {
+	if bal, err = ppl.BalanceBuilder.Build(l); err != nil {
 		return err
 	}
-	r, err := ppl.ReportBuilder.Build(b)
-	if err != nil {
+	if r, err = ppl.ReportBuilder.Build(bal); err != nil {
 		return err
 	}
 	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(r), w)

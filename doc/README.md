@@ -196,7 +196,7 @@ Accruals are annotation placed on transactions to describe how the transaction's
 Assets:BankAccount Expenses:Taxes 12000 USD
 ```
 
-This will heavily impact your net income in March due to the large cash outflow, while the taxes are actually owed for the entire year. Enter accruals: 
+This will heavily impact your net income in March due to the large cash outflow, while the taxes are actually owed for the entire year. Enter accruals:
 
 ```text
 @accrue monthly 2020-01-01 2020-01-12 Assets:PrepaidTax
@@ -230,7 +230,6 @@ knut will take care that the total impact remains the same. Also, amounts are pr
 @accrue <once|daily|weekly|monthly|quarterly|yearly> <T0> <T1> <accrual account>
 <transaction>
 ```
-
 
 ### Balance assertions
 

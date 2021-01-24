@@ -374,10 +374,11 @@ func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
 	)
 	for _, date := range b.createDateSeries(l) {
 		for ; index < len(l); index++ {
-			if l[index].Date.After(date) {
+			var step = l[index]
+			if step.Date.After(date) {
 				break
 			}
-			if err := bal.Update(l[index], close); err != nil {
+			if err := bal.Update(step, close); err != nil {
 				return nil, err
 			}
 			close = false

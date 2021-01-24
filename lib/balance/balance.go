@@ -36,7 +36,6 @@ type Balance struct {
 	Date             time.Time
 	Positions        map[CommodityAccount]amount.Amount
 	Account          map[*accounts.Account]bool
-	Prices           prices.Prices
 	Valuation        *commodities.Commodity
 	NormalizedPrices prices.NormalizedPrices
 }
@@ -49,7 +48,6 @@ func New(valuation *commodities.Commodity) *Balance {
 			accounts.ValuationAccount():        true,
 			accounts.RetainedEarningsAccount(): true,
 		},
-		Prices:    make(prices.Prices),
 		Valuation: valuation,
 	}
 }
@@ -58,7 +56,6 @@ func New(valuation *commodities.Commodity) *Balance {
 func (b *Balance) Copy() *Balance {
 	var nb = New(b.Valuation)
 	nb.Date = b.Date
-	nb.Prices = b.Prices.Copy()
 	nb.NormalizedPrices = b.NormalizedPrices
 	for pos, val := range b.Positions {
 		nb.Positions[pos] = val
@@ -77,20 +74,11 @@ func (b *Balance) Minus(bo *Balance) {
 }
 
 // Update updates the balance with the given Day
-func (b *Balance) Update(day *ledger.Day, close bool) error {
+func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool) error {
 
 	// update date
 	b.Date = day.Date
-
-	// update prices
-	for _, p := range day.Prices {
-		b.Prices.Insert(p)
-	}
-
-	// update normalized prices
-	if b.Valuation != nil {
-		b.NormalizedPrices = b.Prices.Normalize(b.Valuation)
-	}
+	b.NormalizedPrices = np
 
 	// open accounts
 	for _, o := range day.Openings {
@@ -368,17 +356,26 @@ type Builder struct {
 func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
 	var (
 		bal    = New(b.Valuation)
+		dates  = b.createDateSeries(l)
+		ps     = make(prices.Prices)
 		result []*Balance
 		index  int
 		close  bool
+		np     prices.NormalizedPrices
 	)
-	for _, date := range b.createDateSeries(l) {
+	for _, date := range dates {
 		for ; index < len(l); index++ {
 			var step = l[index]
 			if step.Date.After(date) {
 				break
 			}
-			if err := bal.Update(step, close); err != nil {
+			if b.Valuation != nil {
+				for _, p := range step.Prices {
+					ps.Insert(p)
+				}
+				np = ps.Normalize(b.Valuation)
+			}
+			if err := bal.Update(step, np, close); err != nil {
 				return nil, err
 			}
 			close = false
@@ -417,4 +414,9 @@ func (b Builder) createDateSeries(l ledger.Ledger) []time.Time {
 		return date.Series(from, to, *b.Period)
 	}
 	return []time.Time{from, to}
+}
+
+type valuatedStep struct {
+	*ledger.Day
+	prices prices.NormalizedPrices
 }

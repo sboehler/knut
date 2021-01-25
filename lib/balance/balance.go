@@ -161,9 +161,14 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 			return Error{c, "account is not open"}
 		}
 		for pos, amount := range b.Amounts {
-			if pos.Account == c.Account && !amount.IsZero() {
+			if pos.Account != c.Account {
+				continue
+			}
+			if !amount.IsZero() || !b.Values[pos].IsZero() {
 				return Error{c, "account has nonzero position"}
 			}
+			delete(b.Amounts, pos)
+			delete(b.Values, pos)
 		}
 		delete(b.Account, c.Account)
 	}

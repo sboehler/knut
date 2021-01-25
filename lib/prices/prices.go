@@ -73,17 +73,6 @@ func (p Prices) Normalize(c *commodities.Commodity) NormalizedPrices {
 	return done
 }
 
-// Copy creates a deep copy.
-func (p Prices) Copy() Prices {
-	var pr = make(Prices)
-	for tc, ps := range p {
-		for c, v := range ps {
-			pr.addPrice(tc, c, v)
-		}
-	}
-	return pr
-}
-
 // NormalizedPrices is a map representing the price of
 // commodities in some base commodity.
 type NormalizedPrices map[*commodities.Commodity]decimal.Decimal

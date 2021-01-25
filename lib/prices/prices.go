@@ -34,7 +34,7 @@ var one = decimal.NewFromInt(1)
 // Insert inserts a new price.
 func (p Prices) Insert(pr *ledger.Price) {
 	p.addPrice(pr.Target, pr.Commodity, pr.Price)
-	p.addPrice(pr.Commodity, pr.Target, one.Div(pr.Price).Round(8))
+	p.addPrice(pr.Commodity, pr.Target, one.Div(pr.Price).Truncate(8))
 }
 
 func (p Prices) addPrice(target, commodity *commodities.Commodity, pr decimal.Decimal) {
@@ -66,7 +66,7 @@ func (p Prices) Normalize(c *commodities.Commodity) NormalizedPrices {
 			if _, ok := done[neighbor]; ok {
 				continue
 			}
-			todo[neighbor] = price.Mul(currentP)
+			todo[neighbor] = price.Mul(currentP).Truncate(8)
 		}
 		delete(todo, currentC)
 	}
@@ -94,5 +94,5 @@ func (n NormalizedPrices) Valuate(c *commodities.Commodity, a decimal.Decimal) (
 	if !ok {
 		return decimal.Zero, fmt.Errorf("No price found for %v in %v", c, n)
 	}
-	return a.Mul(price).Round(8), nil
+	return a.Mul(price).Truncate(8), nil
 }

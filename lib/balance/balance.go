@@ -225,6 +225,8 @@ func (b *Balance) computeClosingTransactions() []*ledger.Transaction {
 	return result
 }
 
+var descCache = make(map[CommodityAccount]string)
+
 // computeValuationTransactions checks whether the valuation for the positions
 // corresponds to the amounts. If not, the difference is due to a valuation
 // change of the previous amount, and a transaction is created to adjust the
@@ -235,23 +237,32 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 	}
 	var result []*ledger.Transaction
 	for pos, va := range b.Amounts {
+		if pos.Commodity == b.Valuation {
+			continue
+		}
 		var at = pos.Account.Type()
 		if at != accounts.ASSETS && at != accounts.LIABILITIES {
 			continue
 		}
-		v2, err := b.NormalizedPrices.Valuate(pos.Commodity, va)
+		value, err := b.NormalizedPrices.Valuate(pos.Commodity, va)
 		if err != nil {
 			panic(fmt.Sprintf("no valuation found for commodity %s", pos.Commodity))
 		}
-		var diff = v2.Sub(b.Values[pos])
+		var diff = value.Sub(b.Values[pos])
 		if diff.IsZero() {
 			continue
+		}
+		var desc string
+		if s, ok := descCache[pos]; ok {
+			desc = s
+		} else {
+			desc = fmt.Sprintf("Adjust value of account %s in %s", pos.Account, pos.Commodity)
+			descCache[pos] = desc
 		}
 		// create a transaction to adjust the valuation
 		result = append(result, &ledger.Transaction{
 			Date:        b.Date,
-			Description: fmt.Sprintf("Valuation adjustment for (%s, %s)", pos.Account, pos.Commodity),
-			Tags:        nil,
+			Description: desc,
 			Postings: []*ledger.Posting{
 				{
 					Value:     diff,
@@ -281,11 +292,14 @@ func (b *Balance) valuateTransaction(t *ledger.Transaction) error {
 		return nil
 	}
 	for _, posting := range t.Postings {
-		value, err := b.NormalizedPrices.Valuate(posting.Commodity, posting.Amount)
-		if err != nil {
-			return Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
+		if b.Valuation == posting.Commodity {
+			posting.Value = posting.Amount
+		} else {
+			var err error
+			if posting.Value, err = b.NormalizedPrices.Valuate(posting.Commodity, posting.Amount); err != nil {
+				return Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
+			}
 		}
-		posting.Value = value
 	}
 	return nil
 }

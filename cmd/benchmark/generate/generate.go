@@ -234,7 +234,7 @@ func generatePrices(c config, cs []*commodities.Commodity) []*ledger.Price {
 	for _, commodity := range cs[1:] {
 		var price = decimal.NewFromFloat(1.0 + 200*rand.Float64())
 		for _, d := range date.Series(c.from, c.to, date.Daily) {
-			price = price.Mul(decimal.NewFromFloat(1 + rand.NormFloat64()*stdev)).Round(4)
+			price = price.Mul(decimal.NewFromFloat(1 + rand.NormFloat64()*stdev)).Truncate(4)
 			prices = append(prices, &ledger.Price{
 				Date:      d,
 				Commodity: commodity,

@@ -34,7 +34,7 @@ import (
 // Balance represents a balance for accounts at the given date.
 type Balance struct {
 	Date             time.Time
-	Positions        map[CommodityAccount]amount.Amount
+	Amounts, Values  map[CommodityAccount]decimal.Decimal
 	Account          map[*accounts.Account]bool
 	Valuation        *commodities.Commodity
 	NormalizedPrices prices.NormalizedPrices
@@ -43,7 +43,8 @@ type Balance struct {
 // New creates a new balance.
 func New(valuation *commodities.Commodity) *Balance {
 	return &Balance{
-		Positions: make(map[CommodityAccount]amount.Amount),
+		Amounts: make(map[CommodityAccount]decimal.Decimal),
+		Values:  make(map[CommodityAccount]decimal.Decimal),
 		Account: map[*accounts.Account]bool{
 			accounts.ValuationAccount():        true,
 			accounts.RetainedEarningsAccount(): true,
@@ -57,8 +58,11 @@ func (b *Balance) Copy() *Balance {
 	var nb = New(b.Valuation)
 	nb.Date = b.Date
 	nb.NormalizedPrices = b.NormalizedPrices
-	for pos, val := range b.Positions {
-		nb.Positions[pos] = val
+	for pos, amt := range b.Amounts {
+		nb.Amounts[pos] = amt
+	}
+	for pos, val := range b.Values {
+		nb.Values[pos] = val
 	}
 	for acc := range b.Account {
 		nb.Account[acc] = true
@@ -68,8 +72,11 @@ func (b *Balance) Copy() *Balance {
 
 // Minus mutably subtracts the given balance from the receiver.
 func (b *Balance) Minus(bo *Balance) {
-	for pos, va := range bo.Positions {
-		b.Positions[pos] = b.Positions[pos].Minus(va)
+	for pos, va := range bo.Amounts {
+		b.Amounts[pos] = b.Amounts[pos].Sub(va)
+	}
+	for pos, va := range bo.Values {
+		b.Values[pos] = b.Values[pos].Sub(va)
 	}
 }
 
@@ -150,8 +157,8 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 		if _, isOpen := b.Account[c.Account]; !isOpen {
 			return Error{c, "account is not open"}
 		}
-		for pos, amount := range b.Positions {
-			if pos.Account == c.Account && !amount.Amount().IsZero() {
+		for pos, amount := range b.Amounts {
+			if pos.Account == c.Account && !amount.IsZero() {
 				return Error{c, "account has nonzero position"}
 			}
 		}
@@ -161,6 +168,13 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 }
 
 func (b *Balance) bookTransaction(t *ledger.Transaction) error {
+	if err := b.bookTransactionAmounts(t); err != nil {
+		return err
+	}
+	return b.bookTransactionValues(t)
+}
+
+func (b *Balance) bookTransactionAmounts(t *ledger.Transaction) error {
 	for _, posting := range t.Postings {
 		if _, isOpen := b.Account[posting.Credit]; !isOpen {
 			return Error{t, fmt.Sprintf("credit account %s is not open", posting.Credit)}
@@ -172,15 +186,27 @@ func (b *Balance) bookTransaction(t *ledger.Transaction) error {
 			crPos = CommodityAccount{posting.Credit, posting.Commodity}
 			drPos = CommodityAccount{posting.Debit, posting.Commodity}
 		)
-		b.Positions[crPos] = b.Positions[crPos].Minus(posting.Amount)
-		b.Positions[drPos] = b.Positions[drPos].Plus(posting.Amount)
+		b.Amounts[crPos] = b.Amounts[crPos].Sub(posting.Amount.Amount())
+		b.Amounts[drPos] = b.Amounts[drPos].Add(posting.Amount.Amount())
+	}
+	return nil
+}
+
+func (b *Balance) bookTransactionValues(t *ledger.Transaction) error {
+	for _, posting := range t.Postings {
+		var (
+			crPos = CommodityAccount{posting.Credit, posting.Commodity}
+			drPos = CommodityAccount{posting.Debit, posting.Commodity}
+		)
+		b.Values[crPos] = b.Values[crPos].Sub(posting.Amount.Value())
+		b.Values[drPos] = b.Values[drPos].Add(posting.Amount.Value())
 	}
 	return nil
 }
 
 func (b *Balance) computeClosingTransactions() []*ledger.Transaction {
 	var result []*ledger.Transaction
-	for pos, va := range b.Positions {
+	for pos, va := range b.Amounts {
 		var at = pos.Account.Type()
 		if at != accounts.INCOME && at != accounts.EXPENSES {
 			continue
@@ -191,7 +217,7 @@ func (b *Balance) computeClosingTransactions() []*ledger.Transaction {
 			Tags:        nil,
 			Postings: []*ledger.Posting{
 				{
-					Amount:    va,
+					Amount:    amount.New(va, decimal.Zero),
 					Commodity: pos.Commodity,
 					Credit:    pos.Account,
 					Debit:     accounts.RetainedEarningsAccount(),
@@ -211,16 +237,16 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 		return nil, nil
 	}
 	var result []*ledger.Transaction
-	for pos, va := range b.Positions {
+	for pos, va := range b.Amounts {
 		var at = pos.Account.Type()
 		if at != accounts.ASSETS && at != accounts.LIABILITIES {
 			continue
 		}
-		v2, err := b.NormalizedPrices.Valuate(pos.Commodity, va.Amount())
+		v2, err := b.NormalizedPrices.Valuate(pos.Commodity, va)
 		if err != nil {
 			panic(fmt.Sprintf("no valuation found for commodity %s", pos.Commodity))
 		}
-		var diff = v2.Sub(va.Value())
+		var diff = v2.Sub(b.Values[pos])
 		if diff.IsZero() {
 			continue
 		}
@@ -272,16 +298,13 @@ func (b *Balance) processValue(v *ledger.Value) (*ledger.Transaction, error) {
 		return nil, Error{v, "account is not open"}
 	}
 	var pos = CommodityAccount{v.Account, v.Commodity}
-	va, ok := b.Positions[pos]
-	if !ok {
-		va = amount.New(decimal.Zero, decimal.Zero)
-	}
+	va, _ := b.Amounts[pos]
 	return &ledger.Transaction{
 		Date:        v.Date,
 		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
 		Tags:        nil,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(accounts.ValuationAccount(), v.Account, pos.Commodity, v.Amount.Sub(va.Amount())),
+			ledger.NewPosting(accounts.ValuationAccount(), v.Account, pos.Commodity, v.Amount.Sub(va)),
 		},
 	}, nil
 }
@@ -291,9 +314,9 @@ func (b *Balance) processBalanceAssertion(a *ledger.Assertion) error {
 		return Error{a, "account is not open"}
 	}
 	var pos = CommodityAccount{a.Account, a.Commodity}
-	va, ok := b.Positions[pos]
-	if !ok || !va.Amount().Equal(a.Amount) {
-		return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va.Amount(), pos.Commodity)}
+	va, ok := b.Amounts[pos]
+	if !ok || !va.Equal(a.Amount) {
+		return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va, pos.Commodity)}
 	}
 	return nil
 }

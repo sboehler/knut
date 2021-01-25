@@ -64,15 +64,19 @@ func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 	// compute the dates and positions array
 	var (
 		dates     = make([]time.Time, 0, len(bal))
-		positions = make([]map[balance.CommodityAccount]amount.Amount, 0, len(bal))
+		positions = make([]map[balance.CommodityAccount]decimal.Decimal, 0, len(bal))
 	)
-	for _, b := range bal {
-		dates = append(dates, b.Date)
-		positions = append(positions, b.Positions)
+	for _, ba := range bal {
+		dates = append(dates, ba.Date)
+		if b.Value {
+			positions = append(positions, ba.Values)
+		} else {
+			positions = append(positions, ba.Amounts)
+		}
 	}
 	var (
 		// collect arrays of amounts by commodity account, across balances
-		sortedPos = mergePositions(b.Value, positions)
+		sortedPos = mergePositions(positions)
 
 		//compute the segments
 		segments = buildSegments(b, sortedPos)
@@ -101,7 +105,7 @@ func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 	}, nil
 }
 
-func mergePositions(value bool, positions []map[balance.CommodityAccount]amount.Amount) []Position {
+func mergePositions(positions []map[balance.CommodityAccount]decimal.Decimal) []Position {
 	var commodityAccounts = make(map[balance.CommodityAccount]bool)
 	for _, p := range positions {
 		for ca := range p {
@@ -116,14 +120,8 @@ func mergePositions(value bool, positions []map[balance.CommodityAccount]amount.
 		)
 		for i, p := range positions {
 			if amount, exists := p[ca]; exists {
-				var val decimal.Decimal
-				if value {
-					val = amount.Value()
-				} else {
-					val = amount.Amount()
-				}
-				if !val.IsZero() {
-					vec.Values[i] = val
+				if !amount.IsZero() {
+					vec.Values[i] = amount
 					empty = false
 				}
 			}

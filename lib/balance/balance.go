@@ -82,6 +82,7 @@ func (b *Balance) Minus(bo *Balance) {
 
 // Update updates the balance with the given Day
 func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool) error {
+	var err error
 
 	// update date
 	b.Date = day.Date
@@ -95,60 +96,63 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 		b.Account[o.Account] = true
 	}
 
-	// valuate and book journal transactions
+	// valuate and book journal transaction amounts
 	for _, t := range day.Transactions {
-		if err := b.valuateTransaction(t); err != nil {
-			return err
-		}
-		if err := b.bookTransaction(t); err != nil {
+		if err = b.bookTransactionAmounts(t); err != nil {
 			return err
 		}
 	}
 
 	// create and book value transactions
 	for _, v := range day.Values {
-		t, err := b.processValue(v)
-		if err != nil {
+		var t *ledger.Transaction
+		if t, err = b.processValue(v); err != nil {
+			return err
+		}
+		if err = b.bookTransactionAmounts(t); err != nil {
 			return err
 		}
 		day.Transactions = append(day.Transactions, t)
-		if err := b.valuateTransaction(t); err != nil {
-			return err
-		}
-		if err := b.bookTransaction(t); err != nil {
-			return err
-		}
-	}
-
-	// compute and append valuation transactions
-	valTrx, err := b.computeValuationTransactions()
-	if err != nil {
-		return err
-	}
-	day.Transactions = append(day.Transactions, valTrx...)
-
-	// book transactions
-	for _, t := range valTrx {
-		if err := b.bookTransaction(t); err != nil {
-			return err
-		}
-	}
-
-	// close income and expense accounts if necessary
-	if close {
-		var closingTransactions = b.computeClosingTransactions()
-		day.Transactions = append(day.Transactions, closingTransactions...)
-		for _, t := range closingTransactions {
-			if err := b.bookTransaction(t); err != nil {
-				return err
-			}
-		}
 	}
 
 	// process balance assertions
 	for _, a := range day.Assertions {
 		if err := b.processBalanceAssertion(a); err != nil {
 			return err
+		}
+	}
+	for _, t := range day.Transactions {
+		if err := b.valuateTransaction(t); err != nil {
+			return err
+		}
+		if err := b.bookTransactionValues(t); err != nil {
+			return err
+		}
+	}
+
+	// compute and append valuation transactions
+	var valTrx []*ledger.Transaction
+	if valTrx, err = b.computeValuationTransactions(); err != nil {
+		return err
+	}
+	for _, t := range valTrx {
+		if err := b.bookTransactionValues(t); err != nil {
+			return err
+		}
+	}
+	day.Transactions = append(day.Transactions, valTrx...)
+
+	// close income and expense accounts if necessary
+	if close {
+		var closingTransactions = b.computeClosingTransactions()
+		day.Transactions = append(day.Transactions, closingTransactions...)
+		for _, t := range closingTransactions {
+			if err := b.bookTransactionAmounts(t); err != nil {
+				return err
+			}
+			if err := b.bookTransactionValues(t); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -165,13 +169,6 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 		delete(b.Account, c.Account)
 	}
 	return nil
-}
-
-func (b *Balance) bookTransaction(t *ledger.Transaction) error {
-	if err := b.bookTransactionAmounts(t); err != nil {
-		return err
-	}
-	return b.bookTransactionValues(t)
 }
 
 func (b *Balance) bookTransactionAmounts(t *ledger.Transaction) error {
@@ -217,7 +214,7 @@ func (b *Balance) computeClosingTransactions() []*ledger.Transaction {
 			Tags:        nil,
 			Postings: []*ledger.Posting{
 				{
-					Amount:    amount.New(va, decimal.Zero),
+					Amount:    amount.New(va, b.Values[pos]),
 					Commodity: pos.Commodity,
 					Credit:    pos.Account,
 					Debit:     accounts.RetainedEarningsAccount(),
@@ -298,13 +295,12 @@ func (b *Balance) processValue(v *ledger.Value) (*ledger.Transaction, error) {
 		return nil, Error{v, "account is not open"}
 	}
 	var pos = CommodityAccount{v.Account, v.Commodity}
-	va, _ := b.Amounts[pos]
 	return &ledger.Transaction{
 		Date:        v.Date,
 		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
 		Tags:        nil,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(accounts.ValuationAccount(), v.Account, pos.Commodity, v.Amount.Sub(va)),
+			ledger.NewPosting(accounts.ValuationAccount(), v.Account, pos.Commodity, v.Amount.Sub(b.Amounts[pos])),
 		},
 	}, nil
 }

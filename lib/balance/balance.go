@@ -256,7 +256,7 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 		if s, ok := descCache[pos]; ok {
 			desc = s
 		} else {
-			desc = fmt.Sprintf("Adjust value of account %s in %s", pos.Account, pos.Commodity)
+			desc = fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity, pos.Account)
 			descCache[pos] = desc
 		}
 		// create a transaction to adjust the valuation

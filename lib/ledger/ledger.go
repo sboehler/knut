@@ -20,7 +20,6 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
@@ -91,7 +90,7 @@ func (c Close) Position() model.Range {
 
 // Posting represents a posting.
 type Posting struct {
-	Amount        amount.Amount
+	Amount, Value decimal.Decimal
 	Credit, Debit *accounts.Account
 	Commodity     *commodities.Commodity
 	Lot           *Lot
@@ -107,7 +106,7 @@ func NewPosting(crAccount, drAccount *accounts.Account, commodity *commodities.C
 	return &Posting{
 		Credit:    crAccount,
 		Debit:     drAccount,
-		Amount:    amount.New(amt, decimal.Zero),
+		Amount:    amt,
 		Commodity: commodity,
 	}
 }
@@ -231,7 +230,7 @@ func (a *Accrual) Expand() ([]*Transaction, error) {
 	}
 	var (
 		dates       = date.Series(a.T0, a.T1, a.Period)[1:]
-		amount, rem = posting.Amount.Amount().QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
+		amount, rem = posting.Amount.QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
 
 		result []*Transaction
 	)
@@ -259,7 +258,7 @@ func (a *Accrual) Expand() ([]*Transaction, error) {
 			Tags:        t.Tags,
 			Description: t.Description,
 			Postings: []*Posting{
-				NewPosting(crAccountSingle, drAccountSingle, posting.Commodity, posting.Amount.Amount()),
+				NewPosting(crAccountSingle, drAccountSingle, posting.Commodity, posting.Amount),
 			},
 		})
 

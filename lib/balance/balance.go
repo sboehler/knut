@@ -20,7 +20,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/accounts"
@@ -183,8 +182,8 @@ func (b *Balance) bookTransactionAmounts(t *ledger.Transaction) error {
 			crPos = CommodityAccount{posting.Credit, posting.Commodity}
 			drPos = CommodityAccount{posting.Debit, posting.Commodity}
 		)
-		b.Amounts[crPos] = b.Amounts[crPos].Sub(posting.Amount.Amount())
-		b.Amounts[drPos] = b.Amounts[drPos].Add(posting.Amount.Amount())
+		b.Amounts[crPos] = b.Amounts[crPos].Sub(posting.Amount)
+		b.Amounts[drPos] = b.Amounts[drPos].Add(posting.Amount)
 	}
 	return nil
 }
@@ -195,8 +194,8 @@ func (b *Balance) bookTransactionValues(t *ledger.Transaction) error {
 			crPos = CommodityAccount{posting.Credit, posting.Commodity}
 			drPos = CommodityAccount{posting.Debit, posting.Commodity}
 		)
-		b.Values[crPos] = b.Values[crPos].Sub(posting.Amount.Value())
-		b.Values[drPos] = b.Values[drPos].Add(posting.Amount.Value())
+		b.Values[crPos] = b.Values[crPos].Sub(posting.Value)
+		b.Values[drPos] = b.Values[drPos].Add(posting.Value)
 	}
 	return nil
 }
@@ -214,7 +213,8 @@ func (b *Balance) computeClosingTransactions() []*ledger.Transaction {
 			Tags:        nil,
 			Postings: []*ledger.Posting{
 				{
-					Amount:    amount.New(va, b.Values[pos]),
+					Amount:    va,
+					Value:     b.Values[pos],
 					Commodity: pos.Commodity,
 					Credit:    pos.Account,
 					Debit:     accounts.RetainedEarningsAccount(),
@@ -254,7 +254,7 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 			Tags:        nil,
 			Postings: []*ledger.Posting{
 				{
-					Amount:    amount.New(decimal.Zero, diff),
+					Value:     diff,
 					Credit:    accounts.ValuationAccount(),
 					Debit:     pos.Account,
 					Commodity: pos.Commodity,
@@ -281,11 +281,11 @@ func (b *Balance) valuateTransaction(t *ledger.Transaction) error {
 		return nil
 	}
 	for _, posting := range t.Postings {
-		value, err := b.NormalizedPrices.Valuate(posting.Commodity, posting.Amount.Amount())
+		value, err := b.NormalizedPrices.Valuate(posting.Commodity, posting.Amount)
 		if err != nil {
 			return Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
 		}
-		posting.Amount = amount.New(posting.Amount.Amount(), value)
+		posting.Value = value
 	}
 	return nil
 }

@@ -92,14 +92,14 @@ func writeTrx(w io.Writer, t *ledger.Transaction, c *commodities.Commodity) erro
 
 // WriteTo pretty-prints a posting.
 func writePosting(w io.Writer, p *ledger.Posting, c *commodities.Commodity) error {
-	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit, p.Amount.Value().Neg(), stripNonAlphanum(c)); err != nil {
+	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit, p.Value.Neg(), stripNonAlphanum(c)); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n"); err != nil {
 		return err
 	}
 
-	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Debit, p.Amount.Value(), stripNonAlphanum(c)); err != nil {
+	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Debit, p.Value, stripNonAlphanum(c)); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n"); err != nil {

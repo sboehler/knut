@@ -27,7 +27,6 @@ import (
 	"golang.org/x/text/encoding/charmap"
 
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
@@ -181,7 +180,7 @@ func (p *Parser) parse() error {
 		var (
 			postings = []*ledger.Posting{
 				{
-					Amount:    amount.New(amt.Abs(), decimal.Zero),
+					Amount:    amt.Abs(),
 					Credit:    crAccount,
 					Debit:     drAccount,
 					Commodity: commodity,

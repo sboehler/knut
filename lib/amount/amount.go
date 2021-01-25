@@ -15,55 +15,8 @@
 package amount
 
 import (
-	"fmt"
-
 	"github.com/shopspring/decimal"
 )
-
-// Amount represents an amount in some commodity, along
-// with a set of valuations.
-type Amount struct {
-	amount, value decimal.Decimal
-}
-
-// New creates a new amount with value zero.
-func New(amount, value decimal.Decimal) Amount {
-	return Amount{amount, value}
-}
-
-// Amount returns the amount.
-func (a Amount) Amount() decimal.Decimal {
-	return a.amount
-}
-
-// Value returns the value.
-func (a Amount) Value() decimal.Decimal {
-	return a.value
-}
-
-func (a Amount) String() string {
-	return fmt.Sprintf("%s [%s]", a.amount, a.value)
-}
-
-// Plus computes the sum of two amounts.
-func (a Amount) Plus(b Amount) Amount {
-	return Amount{a.amount.Add(b.amount), a.value.Add(b.value)}
-}
-
-// Minus computes the difference between two amounts.
-func (a Amount) Minus(b Amount) Amount {
-	return Amount{a.amount.Sub(b.amount), a.value.Sub(b.value)}
-}
-
-// Neg computes the negation of this amount.
-func (a Amount) Neg() Amount {
-	return Amount{a.amount.Neg(), a.value.Neg()}
-}
-
-// Equal tests if both amounts are equal.
-func (a Amount) Equal(b Amount) bool {
-	return a.amount.Equal(b.amount) && a.value.Equal(b.value)
-}
 
 // Vec is a vector of decimals.
 type Vec struct {

@@ -76,7 +76,7 @@ func printAccrual(w io.Writer, a *ledger.Accrual) (n int, err error) {
 
 func printPosting(w io.Writer, t *ledger.Posting) (int, error) {
 	var n int
-	c, err := fmt.Fprintf(w, "%s %s %s %s", t.Credit.RightPad(), t.Debit.RightPad(), leftPad(10, t.Amount.Amount().String()), t.Commodity)
+	c, err := fmt.Fprintf(w, "%s %s %s %s", t.Credit.RightPad(), t.Debit.RightPad(), leftPad(10, t.Amount.String()), t.Commodity)
 	n += c
 	if err != nil {
 		return n, err

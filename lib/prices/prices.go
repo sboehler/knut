@@ -34,7 +34,7 @@ var one = decimal.NewFromInt(1)
 // Insert inserts a new price.
 func (p Prices) Insert(pr *ledger.Price) {
 	p.addPrice(pr.Target, pr.Commodity, pr.Price)
-	p.addPrice(pr.Commodity, pr.Target, one.Div(pr.Price))
+	p.addPrice(pr.Commodity, pr.Target, one.Div(pr.Price).Round(8))
 }
 
 func (p Prices) addPrice(target, commodity *commodities.Commodity, pr decimal.Decimal) {

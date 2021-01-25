@@ -113,11 +113,7 @@ func ParseDecimal(p *Scanner) (decimal.Decimal, error) {
 			return decimal.Zero, err
 		}
 	}
-	d, err := decimal.NewFromString(b.String())
-	if err != nil {
-		return decimal.Zero, err
-	}
-	return d, nil
+	return decimal.NewFromString(b.String())
 }
 
 // ParseDate parses a date as YYYY-MM-DD

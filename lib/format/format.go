@@ -22,6 +22,12 @@ import (
 	"github.com/sboehler/knut/lib/printer"
 )
 
+type iter interface {
+	Next() (interface{}, error)
+}
+
+type nextFunc func() (interface{}, error)
+
 type reader interface {
 	io.RuneReader
 	io.Reader
@@ -29,7 +35,11 @@ type reader interface {
 
 // Format formats the directives returned by p.
 func Format(directives []ledger.Directive, src reader, dest io.Writer) error {
-	var srcBytePos int
+	var (
+		p          = printer.New()
+		srcBytePos int
+	)
+	p.Initialize(directives)
 	for _, d := range directives {
 		p0, p1 := d.Position().Start.BytePos, d.Position().End.BytePos
 
@@ -44,7 +54,7 @@ func Format(directives []ledger.Directive, src reader, dest io.Writer) error {
 		}
 
 		// write directive to dst
-		if _, err := printer.PrintDirective(dest, d); err != nil {
+		if _, err := p.PrintDirective(dest, d); err != nil {
 			return err
 		}
 		// update srcPos

@@ -356,10 +356,11 @@ type Error struct {
 
 func (be Error) Error() string {
 	var (
+		p printer.Printer
 		b bytes.Buffer
 	)
 	fmt.Fprintf(&b, "%s:\n", be.directive.Position().Start)
-	printer.PrintDirective(&b, be.directive)
+	p.PrintDirective(&b, be.directive)
 	fmt.Fprintf(&b, "\n%s\n", be.msg)
 	return b.String()
 }

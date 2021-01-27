@@ -163,7 +163,7 @@ func writeFile(prices map[time.Time]*ledger.Price, filepath string) error {
 	r, w := io.Pipe()
 	go func() {
 		defer w.Close()
-		_, err := printer.PrintLedger(w, b.Build())
+		_, err := printer.New().PrintLedger(w, b.Build())
 		if err != nil {
 			panic(err)
 		}

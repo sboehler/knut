@@ -166,16 +166,6 @@ func (a Account) WriteTo(w io.Writer) (int64, error) {
 	return int64(n), err
 }
 
-// RightPad returns a string with the account name, padded to the right.
-func (a Account) RightPad() string {
-	var b strings.Builder
-	b.WriteString(a.name)
-	for i := utf8.RuneCountInString(a.name); i < maxLength; i++ {
-		b.WriteRune(' ')
-	}
-	return b.String()
-}
-
 func (a Account) String() string {
 	return a.name
 }

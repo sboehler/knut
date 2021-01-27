@@ -1,24 +1,24 @@
 2015-05-05 "Capital Gain SYM NAME CH00XX"
-Income:Dividends        Assets:Swissquote               82 CHF
+Income:Dividends  Assets:Swissquote         82 CHF
 
 2017-12-30 "Zins"
-Income:Interest         Assets:Swissquote             0.19 USD
+Income:Interest   Assets:Swissquote       0.19 USD
 
 2020-05-27 "Einzahlung"
-Expenses:TBD            Assets:Swissquote          3656.89 USD
+Expenses:TBD      Assets:Swissquote    3656.89 USD
 
 2020-09-30 "Depotgebühren"
-Assets:Swissquote       Expenses:Fees                45.52 CHF
+Assets:Swissquote Expenses:Fees          45.52 CHF
 
 2020-10-09 "76396333 Kauf 8 x VWRL Vanguard All World ETF Dist IE00B3RBWM25 @ 87.6 CHF"
-Equity:Equity           Assets:Swissquote                8 VWRL
-Assets:Swissquote       Equity:Equity                700.8 CHF
-Assets:Swissquote       Expenses:Fees                 12.9 CHF
+Equity:Equity     Assets:Swissquote          8 VWRL
+Assets:Swissquote Equity:Equity          700.8 CHF
+Assets:Swissquote Expenses:Fees           12.9 CHF
 
 2020-10-09 "Forex-Gutschrift 830.07 CHF / Forex-Belastung -918 USD"
-Equity:Equity           Assets:Swissquote           830.07 CHF
-Assets:Swissquote       Equity:Equity                  918 USD
+Equity:Equity     Assets:Swissquote     830.07 CHF
+Assets:Swissquote Equity:Equity            918 USD
 
 2020-10-09 "Dividende VWRL Vanguard All World ETF Dist IE00B3RBWM25"
-Income:Dividends        Assets:Swissquote             23.8 USD
+Income:Dividends  Assets:Swissquote       23.8 USD
 

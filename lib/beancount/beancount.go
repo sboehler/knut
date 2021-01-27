@@ -43,9 +43,10 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 			Account: accounts.RetainedEarningsAccount(),
 		},
 	)
+	var p printer.Printer
 	for _, day := range l {
 		for _, open := range day.Openings {
-			if _, err := printer.PrintDirective(w, open); err != nil {
+			if _, err := p.PrintDirective(w, open); err != nil {
 				return err
 			}
 			if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -58,7 +59,7 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 			}
 		}
 		for _, close := range day.Closings {
-			if _, err := printer.PrintDirective(w, close); err != nil {
+			if _, err := p.PrintDirective(w, close); err != nil {
 				return err
 			}
 			if _, err := io.WriteString(w, "\n\n"); err != nil {

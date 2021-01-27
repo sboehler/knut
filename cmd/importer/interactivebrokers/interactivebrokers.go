@@ -99,7 +99,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	var w = bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	_, err = printer.PrintLedger(w, p.builder.Build())
+	_, err = printer.New().PrintLedger(w, p.builder.Build())
 	return err
 }
 

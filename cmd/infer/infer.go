@@ -55,16 +55,18 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func execute(cmd *cobra.Command, args []string) (errors error) {
-	name, err := cmd.Flags().GetString("account")
-	if err != nil {
+	var (
+		s, trainingFile string
+		account         *accounts.Account
+		err             error
+	)
+	if s, err = cmd.Flags().GetString("account"); err != nil {
 		return err
 	}
-	account, err := accounts.Get(name)
-	if err != nil {
+	if account, err = accounts.Get(s); err != nil {
 		return err
 	}
-	trainingFile, err := cmd.Flags().GetString("training-file")
-	if err != nil {
+	if trainingFile, err = cmd.Flags().GetString("training-file"); err != nil {
 		return err
 	}
 	return infer(trainingFile, args[0], account)

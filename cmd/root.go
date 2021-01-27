@@ -32,12 +32,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var version, date string
+
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
 	var c = &cobra.Command{
 		Use:   "knut",
 		Short: "knut is a plain text accounting tool",
 		Long:  `knut is a plain text accounting tool for tracking personal finances and investments.`,
+		Version: version,
 	}
 	c.AddCommand(balance.CreateCmd())
 	c.AddCommand(importer.CreateCmd())
@@ -48,6 +51,11 @@ func CreateCmd() *cobra.Command {
 	c.AddCommand(benchmark.CreateCmd())
 	c.AddCommand(web.CreateCmd())
 	c.AddCommand(completion.CreateCmd(c))
+
+	basicTemplate := `{{with .Name}}{{printf "%s " .}}{{end}}{{printf "%s" .Version}}`
+	c.SetVersionTemplate(
+		fmt.Sprintf("%s (built: %s)\n", basicTemplate, date),
+	)
 	return c
 }
 

@@ -47,8 +47,12 @@ func execute(cmd *cobra.Command, args []string) error {
 	if address, err = cmd.Flags().GetString("address"); err != nil {
 		return err
 	}
+
+	var handler = http.NewServeMux()
+	handler.Handle("/api/", http.StripPrefix("/api", api.New(args[0])))
+
 	var srv = http.Server{
-		Handler: api.Handler{File: args[0]},
+		Handler: handler,
 		Addr:    fmt.Sprintf("%s:%d", address, port),
 	}
 	go func() {

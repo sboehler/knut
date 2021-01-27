@@ -20,12 +20,19 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Handler handles HTTP.
-type Handler struct {
+// New instantiates the API handler.
+func New(file string) http.Handler {
+	var s = http.NewServeMux()
+	s.Handle("/balance", handler{file})
+	return s
+}
+
+// handler handles HTTP.
+type handler struct {
 	File string
 }
 
-func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
 		ppl *pipeline
 		err error
@@ -85,16 +92,16 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 		return nil, err
 	}
 
-	var (
-		journal = journal.Journal{
+	return &pipeline{
+		Journal: journal.Journal{
 			File: file,
-		}
-		ledgerFilter = ledger.Filter{
+		},
+		LedgerFilter: ledger.Filter{
 			CommoditiesFilter: commoditiesFilter,
 			AccountsFilter:    accountsFilter,
-		}
+		},
 
-		balanceBuilder = balance.Builder{
+		BalanceBuilder: balance.Builder{
 			From:      from,
 			To:        to,
 			Period:    period,
@@ -102,13 +109,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 			Valuation: valuation,
 			Close:     close,
 			Diff:      diff,
-		}
-	)
-
-	return &pipeline{
-		Journal:        journal,
-		LedgerFilter:   ledgerFilter,
-		BalanceBuilder: balanceBuilder,
+		},
 	}, nil
 }
 

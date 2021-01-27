@@ -19,7 +19,6 @@ import (
 	"io"
 	"strings"
 	"sync"
-	"unicode/utf8"
 )
 
 // AccountType is the type of an account.
@@ -66,9 +65,8 @@ var accountTypes = map[string]AccountType{
 }
 
 var (
-	mutex     sync.RWMutex
-	maxLength int
-	accounts  = make(map[string]*Account)
+	mutex    sync.RWMutex
+	accounts = make(map[string]*Account)
 )
 
 func get(name string) (*Account, bool) {
@@ -90,9 +88,6 @@ func create(name string) (*Account, error) {
 			name:        name,
 		}
 		accounts[name] = a
-		if maxLength < utf8.RuneCountInString(name) {
-			maxLength = utf8.RuneCountInString(name)
-		}
 		return a, nil
 	}
 	return nil, fmt.Errorf("invalid account name: %q", name)

@@ -14,7 +14,10 @@
 
 package commodities
 
-import "sync"
+import (
+	"encoding/json"
+	"sync"
+)
 
 var (
 	commodities = make(map[string]*Commodity)
@@ -54,4 +57,9 @@ func Get(name string) *Commodity {
 
 func (c Commodity) String() string {
 	return c.name
+}
+
+// MarshalJSON marshals a commodity to JSON.
+func (c Commodity) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.name)
 }

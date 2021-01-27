@@ -2,12 +2,14 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/sboehler/knut/lib/balance"
@@ -15,8 +17,7 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/commodities"
-	"github.com/sboehler/knut/lib/report"
-	"github.com/sboehler/knut/lib/table"
+	"github.com/shopspring/decimal"
 )
 
 // Handler handles HTTP.
@@ -33,6 +34,7 @@ func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if err = ppl.process(w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -43,9 +45,6 @@ type pipeline struct {
 	Journal        journal.Journal
 	LedgerFilter   ledger.Filter
 	BalanceBuilder balance.Builder
-	ReportBuilder  report.Builder
-	ReportRenderer report.Renderer
-	TextRenderer   table.TextRenderer
 }
 
 func buildPipeline(file string, query url.Values) (*pipeline, error) {
@@ -104,30 +103,12 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 			Close:     close,
 			Diff:      diff,
 		}
-
-		reportBuilder = report.Builder{
-			// Value:    valuation != nil,
-			// Collapse: collapse,
-		}
-
-		reportRenderer = report.Renderer{
-			Commodities: true, // showCommodities || valuation == nil,
-		}
-
-		tableRenderer = table.TextRenderer{
-			// Color:     color,
-			// Thousands: thousands,
-			// Round:     digits,
-		}
 	)
 
 	return &pipeline{
 		Journal:        journal,
 		LedgerFilter:   ledgerFilter,
 		BalanceBuilder: balanceBuilder,
-		ReportBuilder:  reportBuilder,
-		ReportRenderer: reportRenderer,
-		TextRenderer:   tableRenderer,
 	}, nil
 }
 
@@ -140,11 +121,11 @@ func (ppl *pipeline) process(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	r, err := ppl.ReportBuilder.Build(b)
-	if err != nil {
-		return err
-	}
-	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(r), w)
+	var (
+		j = balanceToJSON(b)
+		e = json.NewEncoder(w)
+	)
+	return e.Encode(j)
 }
 
 var periods = map[string]date.Period{
@@ -269,4 +250,53 @@ func getOne(query url.Values, key string) (string, bool, error) {
 		return "", false, fmt.Errorf("expected one value for query parameter %q, got %v", key, values)
 	}
 	return values[0], true, nil
+}
+
+type jsonBalance struct {
+	Valuation       *commodities.Commodity
+	Dates           []time.Time
+	Amounts, Values map[string]map[string][]decimal.Decimal
+}
+
+func balanceToJSON(bs []*balance.Balance) *jsonBalance {
+	var res = jsonBalance{
+		Valuation: bs[0].Valuation,
+		Amounts:   make(map[string]map[string][]decimal.Decimal),
+		Values:    make(map[string]map[string][]decimal.Decimal),
+	}
+	var wg sync.WaitGroup
+	for i, b := range bs {
+		res.Dates = append(res.Dates, b.Date)
+		wg.Add(2)
+		i := i
+		b := b
+		go func() {
+			defer wg.Done()
+			for pos, amount := range b.Amounts {
+				insert(res.Amounts, i, len(bs), pos, amount)
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			for pos, value := range b.Amounts {
+				insert(res.Values, i, len(bs), pos, value)
+			}
+		}()
+		wg.Wait()
+	}
+	return &res
+}
+
+func insert(m map[string]map[string][]decimal.Decimal, i int, n int, pos balance.CommodityAccount, amount decimal.Decimal) {
+	a, ok := m[pos.Account.String()]
+	if !ok {
+		a = make(map[string][]decimal.Decimal)
+		m[pos.Account.String()] = a
+	}
+	c, ok := a[pos.Commodity.String()]
+	if !ok {
+		c = make([]decimal.Decimal, n)
+		a[pos.Commodity.String()] = c
+	}
+	c[i] = amount
 }

@@ -15,10 +15,10 @@
 package report
 
 import (
-	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/table"
+	"github.com/sboehler/knut/lib/vector"
 )
 
 // Renderer renders a report.
@@ -78,7 +78,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 			rn.table.AddEmptyRow()
 		}
 
-		var totals = make(map[*commodities.Commodity]amount.Vec)
+		var totals = make(map[*commodities.Commodity]vector.Vector)
 		for _, s := range g1 {
 			s.sum(totals)
 		}
@@ -92,7 +92,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 			render(s)
 			rn.table.AddEmptyRow()
 		}
-		var totals = make(map[*commodities.Commodity]amount.Vec)
+		var totals = make(map[*commodities.Commodity]vector.Vector)
 		for _, s := range g2 {
 			s.sum(totals)
 		}
@@ -113,7 +113,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 
 func (rn *Renderer) renderSegment(s *Segment) {
 	// compute total value
-	var total = amount.NewVec(len(rn.report.Dates))
+	var total = vector.New(len(rn.report.Dates))
 	for _, amounts := range s.Positions {
 		total.Add(amounts)
 	}

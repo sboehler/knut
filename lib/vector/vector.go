@@ -12,33 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package amount
+package vector
 
 import (
 	"github.com/shopspring/decimal"
 )
 
-// Vec is a vector of decimals.
-type Vec struct {
+// Vector is a vector of decimals.
+type Vector struct {
 	Values []decimal.Decimal
 }
 
-// NewVec creates a new vector.
-func NewVec(n int) Vec {
-	return Vec{
+// New creates a new vector.
+func New(n int) Vector {
+	return Vector{
 		Values: make([]decimal.Decimal, n),
 	}
 }
 
 // Add mutably adds the given vector to the receiver.
-func (v Vec) Add(u Vec) {
+func (v Vector) Add(u Vector) {
 	for i, a := range u.Values {
 		v.Values[i] = v.Values[i].Add(a)
 	}
 }
 
 // Neg mutably negates the given vector.
-func (v Vec) Neg() {
+func (v Vector) Neg() {
 	for i := range v.Values {
 		v.Values[i] = v.Values[i].Neg()
 	}

@@ -21,10 +21,10 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/sboehler/knut/lib/amount"
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/vector"
 )
 
 // Report is a balance report for a range of dates.
@@ -32,13 +32,13 @@ type Report struct {
 	Dates       []time.Time
 	Segments    map[accounts.AccountType]*Segment
 	Commodities []*commodities.Commodity
-	Positions   map[*commodities.Commodity]amount.Vec
+	Positions   map[*commodities.Commodity]vector.Vector
 }
 
 // Position is a position.
 type Position struct {
 	balance.CommodityAccount
-	Amounts amount.Vec
+	Amounts vector.Vector
 }
 
 // Builder contains configuration options to create a report.
@@ -82,7 +82,7 @@ func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 		segments = buildSegments(b, sortedPos)
 
 		// compute totals
-		totals = make(map[*commodities.Commodity]amount.Vec)
+		totals = make(map[*commodities.Commodity]vector.Vector)
 	)
 	for _, s := range segments {
 		s.sum(totals)
@@ -115,7 +115,7 @@ func mergePositions(positions []map[balance.CommodityAccount]decimal.Decimal) []
 	var res = make([]Position, 0, len(commodityAccounts))
 	for ca := range commodityAccounts {
 		var (
-			vec   = amount.NewVec(len(positions))
+			vec   = vector.New(len(positions))
 			empty = true
 		)
 		for i, p := range positions {

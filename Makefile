@@ -11,12 +11,12 @@ build: gen_version
 	go build .
 
 gen_version:
-	VERSION=$(version) go run scripts/$@.go
+	VERSION=$(version) go run scripts/$@/main.go
 
-test:
+test: gen_version
 	go test -v ./...
 
-test-update:
+test-update: gen_version
 	go test ./... --update
 
 clean:

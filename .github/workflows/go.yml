@@ -17,6 +17,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Build Version Info
-      run: go run scripts/gen_version.go
+      run: go run scripts/gen_version/main.go
     - name: Test
       run: go test ./...

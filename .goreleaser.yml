@@ -7,3 +7,9 @@ builds:
       - 386
       - amd64
       - arm64
+    ignore:
+      - goos: darwin
+        goarch: 386
+    hooks:
+      pre:
+        - make gen_version

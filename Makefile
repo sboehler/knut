@@ -1,7 +1,4 @@
 version?=`if [ -d ./.git ]; then git describe --tags; else echo default; fi`
-date    =`date "+%Y-%m-%d"`
-package ="github.com/sboehler/knut/cmd"
-ldflags ="-X $(package).version=$(version) -X $(package).date=$(date)"
 
 all: build
 
@@ -10,8 +7,11 @@ all: build
 doc:
 	go run scripts/builddoc.go > README.md
 
-build:
-	go build -ldflags $(ldflags)
+build: gen_version
+	go build .
+
+gen_version:
+	VERSION=$(version) go run scripts/$@.go
 
 test:
 	go test -v ./...

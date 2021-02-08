@@ -2,3 +2,4 @@
 knut
 .code-workspace
 builddoc
+cmd/version.go

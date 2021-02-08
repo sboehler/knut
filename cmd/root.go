@@ -32,8 +32,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version, date string
-
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
 	var c = &cobra.Command{

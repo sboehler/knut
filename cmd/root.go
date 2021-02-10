@@ -16,9 +16,6 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/sboehler/knut/cmd/balance"
 	"github.com/sboehler/knut/cmd/benchmark"
 	"github.com/sboehler/knut/cmd/completion"
@@ -33,11 +30,12 @@ import (
 )
 
 // CreateCmd creates the command.
-func CreateCmd() *cobra.Command {
+func CreateCmd(version string) *cobra.Command {
 	var c = &cobra.Command{
-		Use:   "knut",
-		Short: "knut is a plain text accounting tool",
-		Long:  `knut is a plain text accounting tool for tracking personal finances and investments.`,
+		Use:     "knut",
+		Short:   "knut is a plain text accounting tool",
+		Long:    `knut is a plain text accounting tool for tracking personal finances and investments.`,
+		Version: version,
 	}
 	c.AddCommand(balance.CreateCmd())
 	c.AddCommand(importer.CreateCmd())
@@ -48,15 +46,6 @@ func CreateCmd() *cobra.Command {
 	c.AddCommand(benchmark.CreateCmd())
 	c.AddCommand(web.CreateCmd())
 	c.AddCommand(completion.CreateCmd(c))
-	return c
-}
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the RootCmd.
-func Execute() {
-	c := CreateCmd()
-	if err := c.Execute(); err != nil {
-		fmt.Fprintln(c.ErrOrStderr(), err)
-		os.Exit(1)
-	}
+	return c
 }

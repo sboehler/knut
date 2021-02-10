@@ -15,6 +15,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/sboehler/knut/cmd"
 
 	// enable importers here
@@ -27,6 +30,12 @@ import (
 	_ "github.com/sboehler/knut/cmd/importer/viac"
 )
 
+var version = "development"
+
 func main() {
-	cmd.Execute()
+	var c = cmd.CreateCmd(version)
+	if err := c.Execute(); err != nil {
+		fmt.Fprintln(c.ErrOrStderr(), err)
+		os.Exit(1)
+	}
 }

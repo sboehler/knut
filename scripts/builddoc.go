@@ -113,7 +113,7 @@ func generate(c *config) error {
 }
 
 func run(args []string) string {
-	var c = cmd.CreateCmd()
+	var c = cmd.CreateCmd("development")
 	c.SetArgs(args)
 	var b strings.Builder
 	b.WriteString("$ knut")

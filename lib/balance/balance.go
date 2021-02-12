@@ -454,8 +454,3 @@ func (b Builder) createDateSeries(l ledger.Ledger) []time.Time {
 	}
 	return []time.Time{from, to}
 }
-
-type valuatedStep struct {
-	*ledger.Day
-	prices prices.NormalizedPrices
-}

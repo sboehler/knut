@@ -90,10 +90,10 @@ func (c Close) Position() model.Range {
 
 // Posting represents a posting.
 type Posting struct {
-	Amount, Value decimal.Decimal
-	Credit, Debit *accounts.Account
-	Commodity     *commodities.Commodity
-	Lot           *Lot
+	Amount, Value     decimal.Decimal
+	Credit, Debit     *accounts.Account
+	Commodity, Target *commodities.Commodity
+	Lot               *Lot
 }
 
 // NewPosting creates a new posting from the given parameters. If amount is negative, it

@@ -277,54 +277,55 @@ func (p *Parser) parseAccrual() (*ledger.Accrual, error) {
 }
 
 func (p *Parser) parsePostings() ([]*ledger.Posting, error) {
-	var postings []*ledger.Posting
+	var (
+		postings []*ledger.Posting
+		err      error
+	)
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
-		crAccount, err := scanner.ParseAccount(p.scanner)
-		if err != nil {
+		var posting ledger.Posting
+		if posting.Credit, err = scanner.ParseAccount(p.scanner); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		drAccount, err := scanner.ParseAccount(p.scanner)
-		if err != nil {
+		if posting.Debit, err = scanner.ParseAccount(p.scanner); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		amt, err := scanner.ParseDecimal(p.scanner)
-		if err != nil {
+		if posting.Amount, err = scanner.ParseDecimal(p.scanner); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		commodity, err := scanner.ParseCommodity(p.scanner)
-		if err != nil {
+		if posting.Commodity, err = scanner.ParseCommodity(p.scanner); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		var lot *ledger.Lot
+		if unicode.IsLetter(p.current()) || unicode.IsDigit(p.current()) {
+			if posting.Target, err = scanner.ParseCommodity(p.scanner); err != nil {
+				return nil, err
+			}
+			if err = p.consumeWhitespace1(); err != nil {
+				return nil, err
+			}
+		} else {
+			posting.Target = posting.Commodity
+		}
 		if p.current() == '{' {
-			if lot, err = p.parseLot(); err != nil {
+			if posting.Lot, err = p.parseLot(); err != nil {
 				return nil, err
 			}
 			if err = p.consumeWhitespace1(); err != nil {
 				return nil, err
 			}
 		}
-		postings = append(postings,
-			&ledger.Posting{
-				Amount:    amt,
-				Credit:    crAccount,
-				Debit:     drAccount,
-				Commodity: commodity,
-				Lot:       lot,
-			},
-		)
+		postings = append(postings, &posting)
 		if err = p.consumeRestOfWhitespaceLine(); err != nil {
 			return nil, err
 		}

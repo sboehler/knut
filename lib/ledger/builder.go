@@ -99,10 +99,10 @@ func (b *Builder) getOrCreate(d time.Time) *Day {
 func (b *Builder) AddTransaction(t *Transaction) {
 	var filtered []*Posting
 	for _, p := range t.Postings {
-		if !b.filter.matchAccount(p.Credit) && !b.filter.matchAccount(p.Debit) {
+		if !b.filter.MatchAccount(p.Credit) && !b.filter.MatchAccount(p.Debit) {
 			continue
 		}
-		if !b.filter.matchCommodity(p.Commodity) {
+		if !b.filter.MatchCommodity(p.Commodity) {
 			continue
 		}
 		filtered = append(filtered, p)
@@ -122,7 +122,7 @@ func (b *Builder) AddOpening(o *Open) {
 
 // AddClosing adds a close directive.
 func (b *Builder) AddClosing(close *Close) {
-	if !b.filter.matchAccount(close.Account) {
+	if !b.filter.MatchAccount(close.Account) {
 		return
 	}
 	var s = b.getOrCreate(close.Date)
@@ -137,7 +137,7 @@ func (b *Builder) AddPrice(p *Price) {
 
 // AddAssertion adds an assertion directive.
 func (b *Builder) AddAssertion(a *Assertion) {
-	if !b.filter.matchAccount(a.Account) || !b.filter.matchCommodity(a.Commodity) {
+	if !b.filter.MatchAccount(a.Account) || !b.filter.MatchCommodity(a.Commodity) {
 		return
 	}
 	var s = b.getOrCreate(a.Date)
@@ -146,7 +146,7 @@ func (b *Builder) AddAssertion(a *Assertion) {
 
 // AddValue adds an value directive.
 func (b *Builder) AddValue(a *Value) {
-	if !b.filter.matchAccount(a.Account) || !b.filter.matchCommodity(a.Commodity) {
+	if !b.filter.MatchAccount(a.Account) || !b.filter.MatchCommodity(a.Commodity) {
 		return
 	}
 	var s = b.getOrCreate(a.Date)
@@ -158,10 +158,12 @@ type Filter struct {
 	AccountsFilter, CommoditiesFilter *regexp.Regexp
 }
 
-func (b Filter) matchAccount(a *accounts.Account) bool {
+// MatchAccount returns whether this filter matches the given Account.
+func (b Filter) MatchAccount(a *accounts.Account) bool {
 	return b.AccountsFilter == nil || b.AccountsFilter.MatchString(a.String())
 }
 
-func (b Filter) matchCommodity(c *commodities.Commodity) bool {
+// MatchCommodity returns whether this filter matches the given Commodity.
+func (b Filter) MatchCommodity(c *commodities.Commodity) bool {
 	return b.CommoditiesFilter == nil || b.CommoditiesFilter.MatchString(c.String())
 }

@@ -108,6 +108,7 @@ func NewPosting(crAccount, drAccount *accounts.Account, commodity *commodities.C
 		Debit:     drAccount,
 		Amount:    amt,
 		Commodity: commodity,
+		Target:    commodity,
 	}
 }
 

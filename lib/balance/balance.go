@@ -221,6 +221,7 @@ func (b *Balance) computeClosingTransactions() []*ledger.Transaction {
 					Amount:    va,
 					Value:     b.Values[pos],
 					Commodity: pos.Commodity,
+					Target:    pos.Commodity,
 					Credit:    pos.Account,
 					Debit:     accounts.RetainedEarningsAccount(),
 				},
@@ -274,6 +275,7 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 					Credit:    accounts.ValuationAccount(),
 					Debit:     pos.Account,
 					Commodity: pos.Commodity,
+					Target:    pos.Commodity,
 				},
 			},
 		})

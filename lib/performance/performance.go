@@ -176,5 +176,5 @@ func (dpv DailyPerfValues) performance() float64 {
 		internalOutflow += v
 	}
 	fmt.Printf("%.0f %.0f %.0f %.0f %.0f %.0f\n", v0, v1, inflow, outflow, internalInflow, internalOutflow)
-	return (v1 - outflow - internalOutflow) / (v0 + inflow + internalInflow)
+	return (v1 - outflow) / (v0 + inflow)
 }

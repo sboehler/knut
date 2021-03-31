@@ -81,7 +81,7 @@ type NormalizedPrices map[*commodities.Commodity]decimal.Decimal
 func (n NormalizedPrices) Valuate(c *commodities.Commodity, a decimal.Decimal) (decimal.Decimal, error) {
 	price, ok := n[c]
 	if !ok {
-		return decimal.Zero, fmt.Errorf("No price found for %v in %v", c, n)
+		return decimal.Zero, fmt.Errorf("no price found for %v in %v", c, n)
 	}
 	return a.Mul(price).Truncate(8), nil
 }

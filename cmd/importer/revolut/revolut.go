@@ -137,10 +137,7 @@ func (p *parser) parseHeader(r []string) error {
 	return nil
 }
 
-var (
-	dateRegex = regexp.MustCompile(`\d\d.\d\d.\d\d\d\d`)
-	replacer  = strings.NewReplacer("'", "")
-)
+var replacer = strings.NewReplacer("'", "")
 
 var (
 	fxSellRegex = regexp.MustCompile(`Sold [A-Z]+ to [A-Z]+`)

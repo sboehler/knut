@@ -90,7 +90,7 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 	// open accounts
 	for _, o := range day.Openings {
 		if _, isOpen := b.Account[o.Account]; isOpen {
-			return fmt.Errorf("Account %v is already open", o)
+			return fmt.Errorf("account %v is already open", o)
 		}
 		b.Account[o.Account] = true
 	}

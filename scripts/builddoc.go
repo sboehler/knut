@@ -38,10 +38,6 @@ type config struct {
 	Commands    map[string]string
 }
 
-type command struct {
-	args []string
-}
-
 func main() {
 	c, err := createConfig()
 	if err != nil {

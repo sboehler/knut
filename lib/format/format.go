@@ -22,12 +22,6 @@ import (
 	"github.com/sboehler/knut/lib/printer"
 )
 
-type iter interface {
-	Next() (interface{}, error)
-}
-
-type nextFunc func() (interface{}, error)
-
 type reader interface {
 	io.RuneReader
 	io.Reader

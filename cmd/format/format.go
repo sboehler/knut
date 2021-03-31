@@ -17,7 +17,6 @@ package format
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -28,7 +27,6 @@ import (
 
 	"github.com/sboehler/knut/lib/format"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/parser"
 )
 
@@ -41,11 +39,6 @@ func CreateCmd() *cobra.Command {
 
 		Run: run,
 	}
-}
-
-type directive interface {
-	io.WriterTo
-	Position() model.Range
 }
 
 const concurrency = 10

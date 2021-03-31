@@ -202,7 +202,7 @@ func (p *Parser) parse() error {
 		}
 	}
 	if p.Current() != scanner.EOF {
-		return fmt.Errorf("Expected EOF, got %b", p.Current())
+		return fmt.Errorf("expected EOF, got %b", p.Current())
 	}
 	return nil
 }
@@ -264,7 +264,7 @@ func (p *Parser) consumeDelimiter() error {
 	if p.Current() == scanner.EOF {
 		return nil
 	}
-	return fmt.Errorf("Expected delimiter, newline or EOF, got %c", p.Current())
+	return fmt.Errorf("expected delimiter, newline or EOF, got %c", p.Current())
 }
 
 func (p *Parser) readUnquotedField() (string, error) {
@@ -282,5 +282,5 @@ func oneOf(s string, ss ...string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Expected %q, got %q", ss, s)
+	return fmt.Errorf("expected %q, got %q", ss, s)
 }

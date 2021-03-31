@@ -31,8 +31,8 @@ import (
 
 // Parser parses a journal
 type Parser struct {
-	scanner          *scanner.Scanner
-	startPos, endPos model.FilePosition
+	scanner  *scanner.Scanner
+	startPos model.FilePosition
 }
 
 func (p *Parser) markStart() {
@@ -596,7 +596,7 @@ func (p *Parser) parseTags() ([]ledger.Tag, error) {
 
 func (p *Parser) parseTag() (ledger.Tag, error) {
 	if p.current() != '#' {
-		return "", fmt.Errorf("Expected tag, got %c", p.current())
+		return "", fmt.Errorf("expected tag, got %c", p.current())
 	}
 	if err := p.scanner.ConsumeRune('#'); err != nil {
 		return "", err

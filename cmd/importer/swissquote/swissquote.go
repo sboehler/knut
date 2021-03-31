@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -116,11 +115,10 @@ func getAccountFlag(cmd *cobra.Command, flag string) (*accounts.Account, error) 
 }
 
 type parser struct {
-	reader           *csv.Reader
-	options          options
-	builder          *ledger.Builder
-	dateFrom, dateTo time.Time
-	last             *record
+	reader  *csv.Reader
+	options options
+	builder *ledger.Builder
+	last    *record
 }
 
 func (p *parser) parse() error {
@@ -222,8 +220,6 @@ type record struct {
 	quantity, price, fee, interest, netAmount, balance decimal.Decimal
 	currency, symbol                                   *commodities.Commodity
 }
-
-var dateRegex = regexp.MustCompile(`\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d`)
 
 var replacer = strings.NewReplacer("'", "")
 

@@ -139,7 +139,7 @@ func (s *Scanner) ConsumeUntil(pred func(r rune) bool) error {
 // ConsumeRune consumes the given rune
 func (s *Scanner) ConsumeRune(r rune) error {
 	if s.Current() != r {
-		return fmt.Errorf("Expected %c, got %c", r, s.Current())
+		return fmt.Errorf("expected %c, got %c", r, s.Current())
 	}
 	return s.Advance()
 }
@@ -152,7 +152,7 @@ func (s *Scanner) ParseString(str string) error {
 			return err
 		}
 		if ch != s.Current() {
-			return fmt.Errorf("Expected %v, got %v", str, b.String())
+			return fmt.Errorf("expected %v, got %v", str, b.String())
 		}
 		if err := s.Advance(); err != nil {
 			return err

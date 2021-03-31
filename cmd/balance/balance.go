@@ -296,8 +296,6 @@ func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {
 	return result, errors
 }
 
-var defaultRegex = regexp.MustCompile("")
-
 func parseCollapse(cmd *cobra.Command, name string) ([]report.Collapse, error) {
 	collapse, err := cmd.Flags().GetStringArray(name)
 	if err != nil {
@@ -308,7 +306,7 @@ func parseCollapse(cmd *cobra.Command, name string) ([]report.Collapse, error) {
 		var s = strings.SplitN(c, ",", 2)
 		l, err := strconv.Atoi(s[0])
 		if err != nil {
-			return nil, fmt.Errorf("Expected integer level, got %q (error: %v)", s[0], err)
+			return nil, fmt.Errorf("expected integer level, got %q (error: %v)", s[0], err)
 		}
 		var regex *regexp.Regexp
 		if len(s) == 2 {

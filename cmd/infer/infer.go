@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/natefinch/atomic"
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
 
@@ -77,7 +78,7 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 	if err != nil {
 		return err
 	}
-	p, err := parser.Open(targetFile)
+	p, cls, err := parser.FromPath(targetFile)
 	if err != nil {
 		return err
 	}
@@ -90,24 +91,27 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 		case ledger.Directive:
 			directives = append(directives, d)
 		default:
-			return fmt.Errorf("unknown directive: %s", d)
+			return multierr.Append(cls(), fmt.Errorf("unknown directive: %s", d))
 		}
+	}
+	if err := cls(); err != nil {
+		return err
 	}
 	srcFile, err := os.Open(targetFile)
 	if err != nil {
 		return err
 	}
-	var src = bufio.NewReader(srcFile)
-	tmpfile, err := ioutil.TempFile(path.Dir(targetFile), "-format")
+	tmpfile, err := ioutil.TempFile(path.Dir(targetFile), "infer-")
 	if err != nil {
-		return err
+		return multierr.Append(err, srcFile.Close())
 	}
 	var dest = bufio.NewWriter(tmpfile)
-	err = format.Format(directives, src, dest)
-	if err = multierr.Combine(err, dest.Flush(), srcFile.Close()); err != nil {
+	err = format.Format(directives, bufio.NewReader(srcFile), dest)
+	err = multierr.Combine(err, srcFile.Close(), dest.Flush(), tmpfile.Close())
+	if err != nil {
 		return multierr.Append(err, os.Remove(tmpfile.Name()))
 	}
-	return os.Rename(tmpfile.Name(), targetFile)
+	return multierr.Append(err, atomic.ReplaceFile(tmpfile.Name(), targetFile))
 }
 
 func train(file string, exclude *accounts.Account) (*bayes.Model, error) {

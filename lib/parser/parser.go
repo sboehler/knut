@@ -57,12 +57,16 @@ func New(path string, r io.RuneReader) (*Parser, error) {
 }
 
 // Open creates a new parser for the given file.
-func Open(path string) (*Parser, error) {
+func FromPath(path string) (*Parser, func() error, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return New(path, bufio.NewReader(f))
+	p, err := New(path, bufio.NewReader(f))
+	if err != nil {
+		return nil, nil, err
+	}
+	return p, f.Close, nil
 }
 
 // current returns the current rune.

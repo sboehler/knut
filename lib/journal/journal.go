@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"go.uber.org/multierr"
+
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/parser"
 )
@@ -36,11 +38,14 @@ func (j *Journal) Parse() chan interface{} {
 	return ch
 }
 
-func (j *Journal) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, file string) error {
-	p, err := parser.Open(file)
+func (j *Journal) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, file string) (err error) {
+	p, cls, err := parser.FromPath(file)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = multierr.Append(err, cls())
+	}()
 	for d := range p.ParseAll() {
 		switch t := d.(type) {
 		case error:

@@ -22,6 +22,7 @@ import (
 	"path"
 	"sync"
 
+	"github.com/natefinch/atomic"
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
 
@@ -74,34 +75,46 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 }
 
 func formatFile(target string) error {
-	p, err := parser.Open(target)
-	if err != nil {
+	var (
+		directives           []ledger.Directive
+		err                  error
+		srcFile, tmpDestFile *os.File
+	)
+	if directives, err = readDirectives(target); err != nil {
 		return err
 	}
-	var directives []ledger.Directive
+	if srcFile, err = os.Open(target); err != nil {
+		return err
+	}
+	if tmpDestFile, err = ioutil.TempFile(path.Dir(target), "format-"); err != nil {
+		return multierr.Append(err, srcFile.Close())
+	}
+	var dest = bufio.NewWriter(tmpDestFile)
+	err = format.Format(directives, bufio.NewReader(srcFile), dest)
+	err = multierr.Combine(err, srcFile.Close(), dest.Flush(), tmpDestFile.Close())
+	if err != nil {
+		return multierr.Append(err, os.Remove(tmpDestFile.Name()))
+	}
+	return multierr.Append(err, atomic.ReplaceFile(tmpDestFile.Name(), target))
+}
+
+func readDirectives(target string) (directives []ledger.Directive, err error) {
+	p, close, err := parser.FromPath(target)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		err = multierr.Append(err, close())
+	}()
 	for d := range p.ParseAll() {
 		switch t := d.(type) {
 		case error:
-			return t
+			return nil, t
 		case ledger.Directive:
 			directives = append(directives, t)
 		default:
-			return fmt.Errorf("unknown directive: %s", d)
+			return nil, fmt.Errorf("unknown directive: %s", d)
 		}
 	}
-	srcFile, err := os.Open(target)
-	if err != nil {
-		return err
-	}
-	var src = bufio.NewReader(srcFile)
-	tmpfile, err := ioutil.TempFile(path.Dir(target), "-format")
-	if err != nil {
-		return err
-	}
-	var dest = bufio.NewWriter(tmpfile)
-	err = format.Format(directives, src, dest)
-	if err = multierr.Combine(err, dest.Flush(), srcFile.Close()); err != nil {
-		return multierr.Append(err, os.Remove(tmpfile.Name()))
-	}
-	return os.Rename(tmpfile.Name(), target)
+	return directives, nil
 }

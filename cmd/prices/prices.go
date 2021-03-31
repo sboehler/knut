@@ -119,11 +119,12 @@ func readConfig(path string) ([]config, error) {
 	return t, nil
 }
 
-func readFile(filepath string) (map[time.Time]*ledger.Price, error) {
-	p, err := parser.Open(filepath)
+func readFile(filepath string) (res map[time.Time]*ledger.Price, err error) {
+	p, cls, err := parser.FromPath(filepath)
 	if err != nil {
 		return nil, err
 	}
+	defer func() { err = multierr.Append(err, cls()) }()
 	var prices = make(map[time.Time]*ledger.Price)
 	for i := range p.ParseAll() {
 		switch d := i.(type) {

@@ -4,3 +4,5 @@ knut.exe
 .code-workspace
 builddoc
 *.sqlite3
+*.sqlite3-journal
+/.vscode

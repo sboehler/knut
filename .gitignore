@@ -3,3 +3,4 @@ knut
 knut.exe
 .code-workspace
 builddoc
+*.sqlite3

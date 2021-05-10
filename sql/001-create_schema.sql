@@ -1,33 +1,33 @@
 CREATE TABLE versions (
-    version_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    version_id INTEGER PRIMARY KEY,
     description TEXT,
     created_at TEXT
 );
 
 CREATE TABLE changelists (
-    changelist_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    changelist_id INTEGER PRIMARY KEY,
     description TEXT,
     created_at TEXT
 );
 
 CREATE TABLE commodities(
-    commodity_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    commodity_id INTEGER PRIMARY KEY,
     name TEXT NOT NULL
 );
 
 CREATE TABLE accounts(
-    account_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     type INTEGER NOT NULL
 );
 
 CREATE TABLE directives(
-    directive_id INTEGER PRIMARY KEY AUTOINCREMENT
+    directive_id INTEGER PRIMARY KEY
 );
 
 CREATE TABLE directive_versions (
   directive_id INTEGER NOT NULL REFERENCES directives,
-  directive_version_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  directive_version_id INTEGER PRIMARY KEY,
   version_from INTEGER NOT NULL REFERENCES versions,
   version_to INTEGER REFERENCES versions,
   changelist_id INTEGER REFERENCES changelists
@@ -61,8 +61,8 @@ CREATE INDEX assertions_account_id_index on assertions(account_id);
 
 
 CREATE TABLE transactions (
+  transaction_id INTEGER PRIMARY KEY,
   directive_versions_id INTEGER NOT NULL REFERENCES directive_versions,
-  transaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
   date TEXT NOT NULL,
   description TEXT NOT NULL
 );

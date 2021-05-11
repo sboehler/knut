@@ -7,6 +7,7 @@ require (
 	github.com/fatih/color v1.10.0
 	github.com/google/go-cmp v0.5.2
 	github.com/mattn/go-runewidth v0.0.9 // indirect
+	github.com/mattn/go-sqlite3 v1.14.7
 	github.com/natefinch/atomic v0.0.0-20200526193002-18c0533a5b09
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/shopspring/decimal v1.2.0

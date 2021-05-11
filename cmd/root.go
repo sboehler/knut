@@ -19,6 +19,7 @@ import (
 	"github.com/sboehler/knut/cmd/balance"
 	"github.com/sboehler/knut/cmd/benchmark"
 	"github.com/sboehler/knut/cmd/completion"
+	"github.com/sboehler/knut/cmd/db"
 	"github.com/sboehler/knut/cmd/format"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/cmd/infer"
@@ -46,6 +47,7 @@ func CreateCmd(version string) *cobra.Command {
 	c.AddCommand(benchmark.CreateCmd())
 	c.AddCommand(web.CreateCmd())
 	c.AddCommand(completion.CreateCmd(c))
+	c.AddCommand(db.CreateCmd())
 
 	return c
 }

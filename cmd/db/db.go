@@ -45,11 +45,8 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func execute(cmd *cobra.Command, args []string) error {
-	h, err := db.Open(args[0])
-	if err != nil {
-		return err
-	}
 	ctx, cancel := context.WithTimeout(cmd.Context(), 5*time.Second)
 	defer cancel()
-	return h.Migrate(ctx)
+	_, err := db.Open(ctx, args[0])
+	return err
 }

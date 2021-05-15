@@ -15,11 +15,7 @@ import (
 //go:embed sql
 var migrations embed.FS
 
-type Handle struct {
-	DB *sql.DB
-}
-
-func Open(path string) (*Handle, error) {
+func Open(ctx context.Context, path string) (*sql.DB, error) {
 	var (
 		db  *sql.DB
 		err error
@@ -28,11 +24,14 @@ func Open(path string) (*Handle, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Handle{db}, nil
+	if err := migrate(ctx, db); err != nil {
+		return nil, err
+	}
+	return db, nil
 }
 
-func (h *Handle) Migrate(ctx context.Context) error {
-	conn, err := h.DB.Conn(ctx)
+func migrate(ctx context.Context, db *sql.DB) error {
+	conn, err := db.Conn(ctx)
 	if err != nil {
 		return err
 	}
@@ -57,7 +56,7 @@ func (h *Handle) Migrate(ctx context.Context) error {
 		if i <= version {
 			continue
 		}
-		f, err := migrations.ReadFile(path.Join("sql", f.Name()))
+		s, err := migrations.ReadFile(path.Join("sql", f.Name()))
 		if err != nil {
 			return err
 		}
@@ -65,7 +64,7 @@ func (h *Handle) Migrate(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if _, err := txn.ExecContext(ctx, string(f)); err != nil {
+		if _, err := txn.ExecContext(ctx, string(s)); err != nil {
 			return err
 		}
 		if _, err := txn.ExecContext(ctx, fmt.Sprintf("PRAGMA user_version = %d", i)); err != nil {

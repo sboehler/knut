@@ -1,8 +1,8 @@
 CREATE TABLE versions (
-    id INTEGER PRIMARY KEY,
+    version INTEGER PRIMARY KEY,
     description TEXT,
-    created_at TEXT
-);
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) WITHOUT ROWID;
 
 CREATE TABLE commodities(
     id INTEGER PRIMARY KEY,

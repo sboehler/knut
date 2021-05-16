@@ -73,21 +73,17 @@ func TestListVersions(t *testing.T) {
 
 func TestListVersionsEmpty(t *testing.T) {
 	var (
-		ctx  = context.Background()
-		db   = createAndMigrateInMemoryDB(ctx, t)
-		want []model.Version
+		ctx = context.Background()
+		db  = createAndMigrateInMemoryDB(ctx, t)
 	)
-	sort.Slice(want, func(i, j int) bool {
-		return want[i].Version < want[j].Version
-	})
 
 	got, err := ListVersions(ctx, db)
 
 	if err != nil {
 		t.Fatalf("ListVersions() returned unexpected error: %v", err)
 	}
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("ListVersions() mismatch (-want +got):\n%s", diff)
+	if got != nil {
+		t.Errorf("ListVersions() returned unexpected result: %v", got)
 	}
 }
 

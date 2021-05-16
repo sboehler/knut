@@ -56,7 +56,7 @@ func New(path string, r io.RuneReader) (*Parser, error) {
 	return &Parser{scanner: s}, nil
 }
 
-// Open creates a new parser for the given file.
+// FromPath creates a new parser for the given file.
 func FromPath(path string) (*Parser, func() error, error) {
 	f, err := os.Open(path)
 	if err != nil {

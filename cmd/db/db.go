@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/sboehler/knut/lib/server/db"
+	"github.com/sboehler/knut/lib/server/database"
 	"github.com/spf13/cobra"
 )
 
@@ -47,6 +47,6 @@ func run(cmd *cobra.Command, args []string) {
 func execute(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), 5*time.Second)
 	defer cancel()
-	_, err := db.Open(ctx, args[0])
+	_, err := database.Open(ctx, args[0])
 	return err
 }

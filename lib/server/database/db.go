@@ -1,4 +1,4 @@
-package db
+package database
 
 import (
 	"context"
@@ -9,12 +9,14 @@ import (
 	"sort"
 	"strconv"
 
+	// use SQLite3
 	_ "github.com/mattn/go-sqlite3"
 )
 
 //go:embed sql
 var migrations embed.FS
 
+// Open opens and migrate an SQLite3 database.
 func Open(ctx context.Context, path string) (*sql.DB, error) {
 	var (
 		db  *sql.DB

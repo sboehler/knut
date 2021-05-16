@@ -4,12 +4,6 @@ CREATE TABLE versions (
     created_at TEXT
 );
 
-CREATE TABLE changelists (
-    id INTEGER PRIMARY KEY,
-    description TEXT,
-    created_at TEXT
-);
-
 CREATE TABLE commodities(
     id INTEGER PRIMARY KEY,
     name TEXT UNIQUE NOT NULL
@@ -26,8 +20,7 @@ CREATE TABLE accounts(
     close_date TEXT,
     version_from INTEGER NOT NULL REFERENCES versions,
     version_to INTEGER NOT NULL REFERENCES versions,
-    changelist_id INTEGER NOT NULL REFERENCES changelists,
-    PRIMARY KEY(account_id, version_from, version_to, changelist_id)
+    PRIMARY KEY(account_id, version_from, version_to)
 );
 
 CREATE TABLE prices (
@@ -37,8 +30,7 @@ CREATE TABLE prices (
   price DOUBLE NOT NULL,
   version_from INTEGER NOT NULL REFERENCES versions,
   version_to INTEGER NOT NULL REFERENCES versions,
-  changelist_id INTEGER NOT NULL REFERENCES changelists,
-  PRIMARY KEY(date, commodity_id, target_commodity_id, version_from, version_to, changelist_id)
+  PRIMARY KEY(date, commodity_id, target_commodity_id, version_from, version_to)
 );
 
 CREATE TABLE assertion_ids (
@@ -53,8 +45,7 @@ CREATE TABLE assertions (
   amount TEXT NOT NULL,
   version_from INTEGER NOT NULL REFERENCES versions,
   version_to INTEGER NOT NULL REFERENCES versions,
-  changelist_id INTEGER NOT NULL REFERENCES changelists,
-  PRIMARY KEY(assertion_id, version_from, version_to, changelist_id)
+  PRIMARY KEY(assertion_id, version_from, version_to)
 );
 
 CREATE TABLE transaction_ids (
@@ -68,8 +59,7 @@ CREATE TABLE transactions (
   description TEXT NOT NULL,
   version_from INTEGER NOT NULL REFERENCES versions,
   version_to INTEGER NOT NULL REFERENCES versions,
-  changelist_id INTEGER NOT NULL REFERENCES changelists,
-  UNIQUE(transaction_id, version_from, version_to, changelist_id)
+  UNIQUE(transaction_id, version_from, version_to)
 );
 
 CREATE TABLE bookings (

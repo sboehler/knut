@@ -14,3 +14,11 @@ type Version struct {
 	Description string
 	CreatedAt   time.Time
 }
+
+// Account represents an account.
+type Account struct {
+	ID        int
+	Name      string
+	OpenDate  time.Time
+	CloseDate *time.Time
+}

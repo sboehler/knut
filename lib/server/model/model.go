@@ -8,11 +8,11 @@ type Commodity struct {
 	Name string
 }
 
-// Version represents a data version.
-type Version struct {
-	Version     int
-	Description string
-	CreatedAt   time.Time
+// Price represents a price.
+type Price struct {
+	Date                           time.Time
+	CommodityID, TargetCommodityID int
+	Price                          float64
 }
 
 // Account represents an account.

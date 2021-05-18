@@ -17,7 +17,7 @@ CREATE TABLE accounts_history(
     PRIMARY KEY(id, created_at, deleted_at)
 );
 
-CREATE TABLE prices (
+CREATE TABLE prices_history (
   date TEXT NOT NULL,
   commodity_id INTEGER NOT NULL REFERENCES commodities,
   target_commodity_id INTEGER NOT NULL REFERENCES commodities,

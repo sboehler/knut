@@ -15,6 +15,9 @@ func createAndMigrateInMemoryDB(ctx context.Context, t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("error creating in-memory database: %v", err)
 	}
+	if _, err := db.ExecContext(ctx, "PRAGMA foreign_keys = ON;"); err != nil {
+		t.Fatalf("error when enabling foreign keys: %v", err)
+	}
 	return db
 }
 

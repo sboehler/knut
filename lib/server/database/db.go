@@ -13,7 +13,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-//go:embed sql
+//go:embed sql idem
 var migrations embed.FS
 
 // Open opens and migrate an SQLite3 database.
@@ -70,6 +70,29 @@ func migrate(ctx context.Context, db *sql.DB) error {
 			return err
 		}
 		if _, err := txn.ExecContext(ctx, fmt.Sprintf("PRAGMA user_version = %d", i)); err != nil {
+			return err
+		}
+		if err := txn.Commit(); err != nil {
+			return err
+		}
+	}
+	files, err = migrations.ReadDir("idem")
+	if err != nil {
+		return err
+	}
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].Name() < files[j].Name()
+	})
+	for _, f := range files {
+		s, err := migrations.ReadFile(path.Join("idem", f.Name()))
+		if err != nil {
+			return err
+		}
+		txn, err := conn.BeginTx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		if _, err := txn.ExecContext(ctx, string(s)); err != nil {
 			return err
 		}
 		if err := txn.Commit(); err != nil {

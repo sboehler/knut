@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"testing"
 	"time"
@@ -22,15 +23,14 @@ func TestCreateAccount(t *testing.T) {
 			OpenDate: openDate,
 		}
 	)
-	_ = populateVersions(ctx, t, db, []string{"first version"})
 
 	got, err := CreateAccount(ctx, db, name, openDate, nil)
 
 	if err != nil {
-		t.Fatalf("CreateVersion() returned unexpected error: %v", err)
+		t.Fatalf("CreateAccount() returned unexpected error: %v", err)
 	}
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("CreateVersion() mismatch (-want +got):\n%s", diff)
+		t.Errorf("CreateAccount() mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -54,12 +54,10 @@ func TestListAccounts(t *testing.T) {
 			},
 		}
 	)
-	_ = populateVersions(ctx, t, db, []string{"v1"})
 	var want = populateAccounts(ctx, t, db, as)
 	sort.Slice(want, func(i, j int) bool {
 		return want[i].Name < want[j].Name
 	})
-	_ = populateVersions(ctx, t, db, []string{"v1"})
 
 	got, err := ListAccounts(ctx, db)
 
@@ -89,9 +87,7 @@ func TestUpdateAccounts(t *testing.T) {
 			},
 		}
 	)
-	_ = populateVersions(ctx, t, db, []string{"v1"})
 	_ = populateAccounts(ctx, t, db, as)
-	_ = populateVersions(ctx, t, db, []string{"v2"})
 	var before = listAccounts(ctx, t, db)
 
 	got, err := UpdateAccount(ctx, db, before[0].ID, "Two", t1, &t2)
@@ -125,18 +121,11 @@ func TestDeleteAccounts(t *testing.T) {
 			},
 		}
 	)
-	_ = populateVersions(ctx, t, db, []string{"v1"})
 	_ = populateAccounts(ctx, t, db, as)
-	_ = populateVersions(ctx, t, db, []string{"v1"})
 	var before = listAccounts(ctx, t, db)
 
-	ok, err := DeleteAccount(ctx, db, before[0].ID)
-
-	if err != nil {
+	if err := DeleteAccount(ctx, db, before[0].ID); err != nil {
 		t.Fatalf("DeleteAccount() returned unexpected error: %v", err)
-	}
-	if !ok {
-		t.Fatalf("DeleteAccount() did not delete an account, but expected it to do so")
 	}
 	var after = listAccounts(ctx, t, db)
 	if diff := cmp.Diff(before[1:], after); diff != "" {
@@ -154,6 +143,7 @@ func populateAccounts(ctx context.Context, t *testing.T, db db, accounts []model
 		}
 		res = append(res, a)
 	}
+	fmt.Println(res)
 	return res
 }
 

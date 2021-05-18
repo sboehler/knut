@@ -1,9 +1,3 @@
-CREATE TABLE versions (
-    version INTEGER PRIMARY KEY,
-    description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-) WITHOUT ROWID;
-
 CREATE TABLE commodities(
     id INTEGER PRIMARY KEY,
     name TEXT UNIQUE NOT NULL
@@ -13,14 +7,14 @@ CREATE TABLE account_ids (
   id INTEGER PRIMARY KEY
 );
 
-CREATE TABLE accounts(
-    account_id INTEGER NOT NULL REFERENCES account_ids,
+CREATE TABLE accounts_history(
+    id INTEGER NOT NULL REFERENCES account_ids,
     name TEXT NOT NULL,
     open_date TEXT NOT NULL,
     close_date TEXT,
-    version_from INTEGER NOT NULL REFERENCES versions,
-    version_to INTEGER NOT NULL REFERENCES versions,
-    PRIMARY KEY(account_id, version_from, version_to)
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TEXT NOT NULL DEFAULT (DATETIME('2999-12-31')),
+    PRIMARY KEY(id, created_at, deleted_at)
 );
 
 CREATE TABLE prices (
@@ -28,9 +22,9 @@ CREATE TABLE prices (
   commodity_id INTEGER NOT NULL REFERENCES commodities,
   target_commodity_id INTEGER NOT NULL REFERENCES commodities,
   price DOUBLE NOT NULL,
-  version_from INTEGER NOT NULL REFERENCES versions,
-  version_to INTEGER NOT NULL REFERENCES versions,
-  PRIMARY KEY(date, commodity_id, target_commodity_id, version_from, version_to)
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TEXT NOT NULL DEFAULT (DATETIME('2999-12-31')),
+  PRIMARY KEY(date, commodity_id, target_commodity_id, created_at, deleted_at)
 );
 
 CREATE TABLE assertion_ids (
@@ -38,14 +32,14 @@ CREATE TABLE assertion_ids (
 );
 
 CREATE TABLE assertions (
-  assertion_id INTEGER NOT NULL REFERENCES assertion_ids,
+  id INTEGER NOT NULL REFERENCES assertion_ids,
   date TEXT NOT NULL,
   commodity_id INTEGER NOT NULL REFERENCES commodities,
-  account_id INTEGER NOT NULL REFERENCES accounts,
+  account_id INTEGER NOT NULL REFERENCES account_ids,
   amount TEXT NOT NULL,
-  version_from INTEGER NOT NULL REFERENCES versions,
-  version_to INTEGER NOT NULL REFERENCES versions,
-  PRIMARY KEY(assertion_id, version_from, version_to)
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TEXT NOT NULL DEFAULT (DATETIME('2999-12-31')),
+  PRIMARY KEY(id, created_at, deleted_at)
 );
 
 CREATE TABLE transaction_ids (
@@ -53,19 +47,19 @@ CREATE TABLE transaction_ids (
 );
 
 CREATE TABLE transactions (
-  id INTEGER PRIMARY KEY,
-  transaction_id INTEGER NOT NULL REFERENCES transaction_ids,
+  id INTEGER NOT NULL REFERENCES transaction_ids,
+  transaction_id INTEGER PRIMARY KEY,
   date TEXT NOT NULL,
   description TEXT NOT NULL,
-  version_from INTEGER NOT NULL REFERENCES versions,
-  version_to INTEGER NOT NULL REFERENCES versions,
-  UNIQUE(transaction_id, version_from, version_to)
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TEXT NOT NULL DEFAULT (DATETIME('2999-12-31')),
+  UNIQUE(id, created_at, deleted_at)
 );
 
 CREATE TABLE bookings (
   transaction_id INTEGER NOT NULL REFERENCES transactions,
-  credit_account_id INTEGER NOT NULL REFERENCES accounts,
-  debit_account_id INTEGER NOT NULL REFERENCES accounts,
+  credit_account_id INTEGER NOT NULL REFERENCES account_ids,
+  debit_account_id INTEGER NOT NULL REFERENCES account_ids,
   commodity_id INTEGER NOT NULL REFERENCES commodities,
   amount TEXT NOT NULL
 );

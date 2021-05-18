@@ -13,6 +13,9 @@ END;
 CREATE TRIGGER IF NOT EXISTS accounts_update INSTEAD OF UPDATE ON accounts
 FOR EACH ROW
 BEGIN
+ DELETE FROM accounts_history
+    WHERE id = new.id 
+    AND created_at = CURRENT_TIMESTAMP;
   UPDATE accounts_history SET deleted_at = CURRENT_TIMESTAMP 
     WHERE id = new.id AND deleted_at = DATETIME('2999-12-31');
   INSERT INTO accounts_history(id, name, open_date, close_date)
@@ -43,6 +46,11 @@ WHEN NOT EXISTS (
     AND target_commodity_id = new.target_commodity_id 
     AND price = new.price)
 BEGIN
+  DELETE FROM prices_history
+    WHERE date = new.date 
+    AND commodity_id = new.commodity_id
+    AND target_commodity_id = new.target_commodity_id
+    AND created_at = CURRENT_TIMESTAMP;
   UPDATE prices_history SET deleted_at = CURRENT_TIMESTAMP
     WHERE date = new.date 
     AND commodity_id = new.commodity_id

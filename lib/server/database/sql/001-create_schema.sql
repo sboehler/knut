@@ -14,7 +14,7 @@ CREATE TABLE accounts_history(
     close_date TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at TEXT NOT NULL DEFAULT (DATETIME('2999-12-31')),
-    PRIMARY KEY(id, created_at, deleted_at)
+    PRIMARY KEY(id, created_at)
 );
 
 CREATE TABLE prices_history (
@@ -24,7 +24,7 @@ CREATE TABLE prices_history (
   price DOUBLE NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   deleted_at TEXT NOT NULL DEFAULT (DATETIME('2999-12-31')),
-  PRIMARY KEY(date, commodity_id, target_commodity_id, created_at, deleted_at)
+  PRIMARY KEY(date, commodity_id, target_commodity_id, created_at)
 );
 
 CREATE TABLE assertion_ids (
@@ -39,7 +39,7 @@ CREATE TABLE assertions (
   amount TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   deleted_at TEXT NOT NULL DEFAULT (DATETIME('2999-12-31')),
-  PRIMARY KEY(id, created_at, deleted_at)
+  PRIMARY KEY(id, created_at)
 );
 
 CREATE TABLE transaction_ids (
@@ -48,23 +48,24 @@ CREATE TABLE transaction_ids (
 
 CREATE TABLE transactions (
   id INTEGER NOT NULL REFERENCES transaction_ids,
-  transaction_id INTEGER PRIMARY KEY,
   date TEXT NOT NULL,
   description TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   deleted_at TEXT NOT NULL DEFAULT (DATETIME('2999-12-31')),
-  UNIQUE(id, created_at, deleted_at)
+  PRIMARY KEY(id, created_at)
 );
 
 CREATE TABLE bookings (
-  transaction_id INTEGER NOT NULL REFERENCES transactions,
+  id INTEGER NOT NULL,
   credit_account_id INTEGER NOT NULL REFERENCES account_ids,
   debit_account_id INTEGER NOT NULL REFERENCES account_ids,
   commodity_id INTEGER NOT NULL REFERENCES commodities,
-  amount TEXT NOT NULL
+  amount TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(id, created_at) REFERENCES transactions(id, created_at)
 );
   
-CREATE INDEX bookings_transaction_id_index on bookings(transaction_id);
+CREATE INDEX bookings_transaction_id_index on bookings(id, created_at);
 CREATE INDEX bookings_credit_account_id_index on bookings(credit_account_id);
 CREATE INDEX bookings_debit_account_id_index on bookings(debit_account_id);
 CREATE INDEX bookings_commodity_id_index on bookings(commodity_id);

@@ -69,3 +69,29 @@ BEGIN
     AND target_commodity_id = old.target_commodity_id
     AND deleted_at = DATETIME('2999-12-31');
 END;
+
+
+DROP VIEW IF EXISTS transactions;
+CREATE VIEW IF NOT EXISTS transactions AS 
+SELECT id, date, description FROM transactions_history
+WHERE created_at <= CURRENT_TIMESTAMP AND deleted_at > CURRENT_TIMESTAMP;
+
+CREATE TRIGGER IF NOT EXISTS transactions_insert INSTEAD OF INSERT ON transactions
+FOR EACH ROW
+BEGIN
+  INSERT INTO transactions_history(id, date, description)
+    VALUES (new.id, new.date, new.description);
+END;
+
+
+DROP VIEW IF EXISTS bookings;
+CREATE VIEW IF NOT EXISTS bookings AS 
+SELECT id, amount, commodity_id, credit_account_id, debit_account_id FROM bookings_history
+WHERE created_at <= CURRENT_TIMESTAMP AND deleted_at > CURRENT_TIMESTAMP;
+
+CREATE TRIGGER IF NOT EXISTS bookings_insert INSTEAD OF INSERT ON bookings
+FOR EACH ROW
+BEGIN
+  INSERT INTO bookings_history(id, amount, commodity_id, credit_account_id, debit_account_id)
+    VALUES (new.id, new.amount, new.commodity_id, new.credit_account_id, new.debit_account_id);
+END;

@@ -31,7 +31,7 @@ CREATE TABLE assertion_ids (
   id INTEGER PRIMARY KEY
 );
 
-CREATE TABLE assertions (
+CREATE TABLE assertions_history (
   id INTEGER NOT NULL REFERENCES assertion_ids,
   date TEXT NOT NULL,
   commodity_id INTEGER NOT NULL REFERENCES commodities,
@@ -46,7 +46,7 @@ CREATE TABLE transaction_ids (
   id INTEGER PRIMARY KEY
 );
 
-CREATE TABLE transactions (
+CREATE TABLE transactions_history (
   id INTEGER NOT NULL REFERENCES transaction_ids,
   date TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -55,17 +55,18 @@ CREATE TABLE transactions (
   PRIMARY KEY(id, created_at)
 );
 
-CREATE TABLE bookings (
+CREATE TABLE bookings_history (
   id INTEGER NOT NULL,
   credit_account_id INTEGER NOT NULL REFERENCES account_ids,
   debit_account_id INTEGER NOT NULL REFERENCES account_ids,
   commodity_id INTEGER NOT NULL REFERENCES commodities,
   amount TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(id, created_at) REFERENCES transactions(id, created_at)
+  deleted_at TEXT NOT NULL DEFAULT (DATETIME('2999-12-31')),
+  FOREIGN KEY(id, created_at) REFERENCES transactions_history(id, created_at)
 );
   
-CREATE INDEX bookings_transaction_id_index on bookings(id, created_at);
-CREATE INDEX bookings_credit_account_id_index on bookings(credit_account_id);
-CREATE INDEX bookings_debit_account_id_index on bookings(debit_account_id);
-CREATE INDEX bookings_commodity_id_index on bookings(commodity_id);
+CREATE INDEX bookings_history_transaction_id_index on bookings_history(id, created_at);
+CREATE INDEX bookings_history_credit_account_id_index on bookings_history(credit_account_id);
+CREATE INDEX bookings_history_debit_account_id_index on bookings_history(debit_account_id);
+CREATE INDEX bookings_history_commodity_id_index on bookings_history(commodity_id);

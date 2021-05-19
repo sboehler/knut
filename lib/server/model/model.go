@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/shopspring/decimal"
+)
 
 // Commodity represents a commodity.
 type Commodity struct {
@@ -21,4 +25,20 @@ type Account struct {
 	Name      string
 	OpenDate  time.Time
 	CloseDate *time.Time
+}
+
+// Transaction represents a transaction.
+type Transaction struct {
+	ID          int
+	Date        time.Time
+	Description string
+	Bookings    []Booking
+}
+
+// Booking represents a booking.
+type Booking struct {
+	ID                              int
+	Amount                          decimal.Decimal
+	CommodityID                     int
+	CreditAccountID, DebitAccountID int
 }

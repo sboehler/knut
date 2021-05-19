@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"testing"
 	"time"
@@ -143,7 +142,6 @@ func populateAccounts(ctx context.Context, t *testing.T, db db, accounts []model
 		}
 		res = append(res, a)
 	}
-	fmt.Println(res)
 	return res
 }
 

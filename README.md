@@ -512,7 +512,7 @@ Assets:BankAccount Expenses:Taxes 12000 USD
 This will heavily impact your net income in March due to the large cash outflow, while the taxes are actually owed for the entire year. Enter accruals:
 
 ```text
-@accrue monthly 2020-01-01 2020-01-12 Assets:PrepaidTax
+@accrue monthly 2020-01-01 2020-12-01 Assets:PrepaidTax
 2020-03-24 "2020 Taxes"
 Assets:BankAccount Expenses:Taxes 12000 USD
 ```

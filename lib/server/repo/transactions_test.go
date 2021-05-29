@@ -100,7 +100,7 @@ func TestListTransaction(t *testing.T) {
 			},
 		}
 	)
-	populateCommodities(ctx, t, db, []string{"AAA"})
+	populateCommodities(ctx, t, db, []string{"AAA", "BBB", "CCC"})
 	populateAccounts(ctx, t, db, []model.Account{{Name: "Foo"}, {Name: "Bar"}})
 	populateTransactions(ctx, t, db, trx)
 

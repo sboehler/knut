@@ -17,6 +17,7 @@ func TestCreateTransaction(t *testing.T) {
 		db       = createAndMigrateInMemoryDB(ctx, t)
 		bookings = []model.Booking{
 			{
+				ID:              1,
 				Amount:          decimal.RequireFromString("4.23"),
 				CommodityID:     1,
 				CreditAccountID: 1,

@@ -34,15 +34,15 @@ func CreateAccount(ctx context.Context, db db, name string, openDate time.Time, 
 
 // ListAccounts lists all accounts.
 func ListAccounts(ctx context.Context, db db) ([]model.Account, error) {
-	var res []model.Account
 	rows, err := db.QueryContext(ctx, `
-	  SELECT id, name, datetime(open_date), datetime(close_date) 
-	  FROM accounts 
-	  ORDER BY name`)
+	SELECT id, name, datetime(open_date), datetime(close_date) 
+	FROM accounts 
+	ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+	var res []model.Account
 	for rows.Next() {
 		var account model.Account
 		if err := rowToAccount(rows, &account); err != nil {
@@ -62,12 +62,11 @@ func UpdateAccount(ctx context.Context, db db, id model.AccountID, name string, 
 		row     *sql.Row
 		account model.Account
 	)
-	row = db.QueryRowContext(ctx,
+	if row = db.QueryRowContext(ctx,
 		`UPDATE accounts
 		SET name = ?, open_date = ?, close_date = ?
 		WHERE id = ?
-		RETURNING id, name, datetime(open_date), datetime(close_date)`, name, openDate, closeDate, id)
-	if row.Err() != nil {
+		RETURNING id, name, datetime(open_date), datetime(close_date)`, name, openDate, closeDate, id); row.Err() != nil {
 		return account, row.Err()
 	}
 	return account, rowToAccount(row, &account)

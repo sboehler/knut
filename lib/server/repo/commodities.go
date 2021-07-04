@@ -10,8 +10,8 @@ import (
 // CreateCommodity creates a new commodity.
 func CreateCommodity(ctx context.Context, db db, name string) (model.Commodity, error) {
 	var (
-		row *sql.Row
 		res model.Commodity
+		row *sql.Row
 	)
 	if row = db.QueryRowContext(ctx, "INSERT INTO commodities (name) VALUES (?) returning id, name", name); row.Err() != nil {
 		return res, row.Err()
@@ -21,11 +21,7 @@ func CreateCommodity(ctx context.Context, db db, name string) (model.Commodity, 
 
 // ListCommodities lists all commodities, alphabetically sorted by name.
 func ListCommodities(ctx context.Context, db db) ([]model.Commodity, error) {
-	var (
-		rows *sql.Rows
-		err  error
-	)
-	rows, err = db.QueryContext(ctx, "SELECT id, name FROM commodities ORDER BY name")
+	rows, err := db.QueryContext(ctx, "SELECT id, name FROM commodities ORDER BY name")
 	if err != nil {
 		return nil, err
 	}

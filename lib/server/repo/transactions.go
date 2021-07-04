@@ -13,17 +13,15 @@ func CreateTransaction(ctx context.Context, db db, t model.Transaction) (model.T
 		row *sql.Row
 		err error
 	)
-	row = db.QueryRowContext(ctx, `INSERT INTO transaction_ids DEFAULT VALUES RETURNING id`)
-	if row.Err() != nil {
+	if row = db.QueryRowContext(ctx, `INSERT INTO transaction_ids DEFAULT VALUES RETURNING id`); row.Err() != nil {
 		return t, row.Err()
 	}
 	if err = row.Scan(&t.ID); err != nil {
 		return t, err
 	}
-	row = db.QueryRowContext(ctx,
+	if row = db.QueryRowContext(ctx,
 		`INSERT INTO transactions_history(id, date, description) VALUES (?, ?, ?) returning id, datetime(date), description`,
-		t.ID, t.Date, t.Description)
-	if row.Err() != nil {
+		t.ID, t.Date, t.Description); row.Err() != nil {
 		return t, row.Err()
 	}
 	var res model.Transaction
@@ -31,36 +29,35 @@ func CreateTransaction(ctx context.Context, db db, t model.Transaction) (model.T
 		return t, err
 	}
 	for _, b := range t.Bookings {
-		row = db.QueryRowContext(ctx,
+		if row = db.QueryRowContext(ctx,
 			`INSERT INTO bookings(id, amount, commodity_id, credit_account_id, debit_account_id) VALUES (?, ?, ?, ?, ?)
 			returning id, amount, commodity_id, credit_account_id, debit_account_id`,
-			t.ID, b.Amount, b.CommodityID, b.CreditAccountID, b.DebitAccountID)
-		if row.Err() != nil {
+			t.ID, b.Amount, b.CommodityID, b.CreditAccountID, b.DebitAccountID); row.Err() != nil {
 			return t, row.Err()
 		}
-		var resB model.Booking
-		if err = rowToBooking(row, &resB); err != nil {
+		var booking model.Booking
+		if err = rowToBooking(row, &booking); err != nil {
 			return t, err
 		}
-		res.Bookings = append(res.Bookings, resB)
+		res.Bookings = append(res.Bookings, booking)
 	}
 	return res, nil
 }
 
 // ListTransactions fetches all transactions.
 func ListTransactions(ctx context.Context, db db) ([]model.Transaction, error) {
-	var res []model.Transaction
 	bookings, err := ListBookings(ctx, db)
 	if err != nil {
 		return nil, err
 	}
 	rows, err := db.QueryContext(ctx,
 		`SELECT id, datetime(date), description 
-	  	FROM transactions 
-	  	ORDER BY date, description, id`)
+		FROM transactions 
+		ORDER BY date, description, id`)
 	if err != nil {
 		return nil, err
 	}
+	var res []model.Transaction
 	defer rows.Close()
 	for rows.Next() {
 		var t model.Transaction

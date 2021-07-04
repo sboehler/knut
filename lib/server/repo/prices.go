@@ -30,8 +30,8 @@ func ListPrices(ctx context.Context, db db) ([]model.Price, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		price, err := rowToPrice(rows)
-		if err != nil {
+		var price model.Price
+		if err := rowToPrice(rows, &price); err != nil {
 			return nil, err
 		}
 		res = append(res, price)
@@ -50,17 +50,10 @@ func DeletePrice(ctx context.Context, db db, date time.Time, commodityID, target
 	return err
 }
 
-func rowToPrice(row scan) (model.Price, error) {
-	var (
-		res model.Price
-		err error
-		s   string
-	)
-	if err = row.Scan(&s, &res.CommodityID, &res.TargetCommodityID, &res.Price); err != nil {
-		return res, err
+func rowToPrice(row scan, res *model.Price) error {
+	var s string
+	if err := row.Scan(&s, &res.CommodityID, &res.TargetCommodityID, &res.Price); err != nil {
+		return err
 	}
-	if err = parseDatetime(s, &res.Date); err != nil {
-		return res, err
-	}
-	return res, nil
+	return parseDatetime(s, &res.Date)
 }

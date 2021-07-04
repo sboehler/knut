@@ -11,13 +11,9 @@ import (
 // CreateAccount creates an account in the current version.
 func CreateAccount(ctx context.Context, db db, name string, openDate time.Time, closeDate *time.Time) (model.Account, error) {
 	var (
-		account = model.Account{
-			Name:      name,
-			OpenDate:  openDate,
-			CloseDate: closeDate,
-		}
-		row *sql.Row
-		err error
+		account model.Account
+		row     *sql.Row
+		err     error
 	)
 	row = db.QueryRowContext(ctx, `INSERT INTO account_ids DEFAULT VALUES RETURNING id`)
 	if row.Err() != nil {
@@ -26,13 +22,14 @@ func CreateAccount(ctx context.Context, db db, name string, openDate time.Time, 
 	if err = row.Scan(&account.ID); err != nil {
 		return account, err
 	}
-	_, err = db.ExecContext(ctx,
-		`INSERT INTO accounts_history(id, name, open_date, close_date) VALUES (?, ?, ?, ?)`,
-		account.ID, account.Name, account.OpenDate, account.CloseDate)
-	if err != nil {
+	row = db.QueryRowContext(ctx,
+		`INSERT INTO accounts(id, name, open_date, close_date) VALUES (?, ?, ?, ?)
+		returning id, name, datetime(open_date), datetime(close_date)`,
+		account.ID, name, openDate, closeDate)
+	if row.Err() != nil {
 		return account, row.Err()
 	}
-	return account, nil
+	return account, rowToAccount(row, &account)
 }
 
 // ListAccounts lists all accounts.
@@ -47,8 +44,8 @@ func ListAccounts(ctx context.Context, db db) ([]model.Account, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		account, err := rowToAccount(rows)
-		if err != nil {
+		var account model.Account
+		if err := rowToAccount(rows, &account); err != nil {
 			return nil, err
 		}
 		res = append(res, account)
@@ -61,16 +58,19 @@ func ListAccounts(ctx context.Context, db db) ([]model.Account, error) {
 
 // UpdateAccount updates an account in the current version.
 func UpdateAccount(ctx context.Context, db db, id model.AccountID, name string, openDate time.Time, closeDate *time.Time) (model.Account, error) {
-	var row *sql.Row
+	var (
+		row     *sql.Row
+		account model.Account
+	)
 	row = db.QueryRowContext(ctx,
 		`UPDATE accounts
 		SET name = ?, open_date = ?, close_date = ?
 		WHERE id = ?
 		RETURNING id, name, datetime(open_date), datetime(close_date)`, name, openDate, closeDate, id)
 	if row.Err() != nil {
-		return model.Account{}, row.Err()
+		return account, row.Err()
 	}
-	return rowToAccount(row)
+	return account, rowToAccount(row, &account)
 }
 
 type scan interface {
@@ -83,25 +83,24 @@ func DeleteAccount(ctx context.Context, db db, id model.AccountID) error {
 	return err
 }
 
-func rowToAccount(row scan) (model.Account, error) {
+func rowToAccount(row scan, res *model.Account) error {
 	var (
-		res       model.Account
 		err       error
 		openDate  string
 		closeDate sql.NullString
 	)
 	if err = row.Scan(&res.ID, &res.Name, &openDate, &closeDate); err != nil {
-		return res, err
+		return err
 	}
 	if err = parseDatetime(openDate, &res.OpenDate); err != nil {
-		return res, err
+		return err
 	}
 	if closeDate.Valid {
 		var t time.Time
 		if err = parseDatetime(closeDate.String, &t); err != nil {
-			return res, err
+			return err
 		}
 		res.CloseDate = &t
 	}
-	return res, nil
+	return nil
 }

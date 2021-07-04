@@ -20,21 +20,31 @@ func CreateTransaction(ctx context.Context, db db, t model.Transaction) (model.T
 	if err = row.Scan(&t.ID); err != nil {
 		return t, err
 	}
-	_, err = db.ExecContext(ctx,
-		`INSERT INTO transactions_history(id, date, description) VALUES (?, ?, ?)`,
+	row = db.QueryRowContext(ctx,
+		`INSERT INTO transactions_history(id, date, description) VALUES (?, ?, ?) returning id, datetime(date), description`,
 		t.ID, t.Date, t.Description)
-	if err != nil {
+	if row.Err() != nil {
+		return t, row.Err()
+	}
+	var res model.Transaction
+	if err = rowToTrx(row, &res); err != nil {
 		return t, err
 	}
 	for _, b := range t.Bookings {
-		_, err = db.ExecContext(ctx,
-			`INSERT INTO bookings_history(id, amount, commodity_id, credit_account_id, debit_account_id) VALUES (?, ?, ?, ?, ?)`,
+		row = db.QueryRowContext(ctx,
+			`INSERT INTO bookings(id, amount, commodity_id, credit_account_id, debit_account_id) VALUES (?, ?, ?, ?, ?)
+			returning id, amount, commodity_id, credit_account_id, debit_account_id`,
 			t.ID, b.Amount, b.CommodityID, b.CreditAccountID, b.DebitAccountID)
-		if err != nil {
+		if row.Err() != nil {
+			return t, row.Err()
+		}
+		var resB model.Booking
+		if err = rowToBooking(row, &resB); err != nil {
 			return t, err
 		}
+		res.Bookings = append(res.Bookings, resB)
 	}
-	return t, nil
+	return res, nil
 }
 
 // ListTransactions fetches all transactions.
@@ -53,8 +63,8 @@ func ListTransactions(ctx context.Context, db db) ([]model.Transaction, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		t, err := rowToTrx(rows)
-		if err != nil {
+		var t model.Transaction
+		if err := rowToTrx(rows, &t); err != nil {
 			return nil, err
 		}
 		t.Bookings = bookings[t.ID]
@@ -75,8 +85,8 @@ func ListBookings(ctx context.Context, db db) (map[model.TransactionID][]model.B
 	defer rows.Close()
 	var res = make(map[model.TransactionID][]model.Booking)
 	for rows.Next() {
-		b, err := rowToBooking(rows)
-		if err != nil {
+		var b model.Booking
+		if err := rowToBooking(rows, &b); err != nil {
 			return nil, err
 		}
 		res[b.ID] = append(res[b.ID], b)
@@ -87,18 +97,14 @@ func ListBookings(ctx context.Context, db db) (map[model.TransactionID][]model.B
 	return res, nil
 }
 
-func rowToTrx(row scan) (model.Transaction, error) {
-	var (
-		res  model.Transaction
-		err  error
-		date string
-	)
-	if err = row.Scan(&res.ID, &date, &res.Description); err != nil {
-		return res, err
+func rowToTrx(row scan, t *model.Transaction) error {
+	var d string
+	if err := row.Scan(&t.ID, &d, &t.Description); err != nil {
+		return err
 	}
-	return res, parseDatetime(date, &res.Date)
+	return parseDatetime(d, &t.Date)
 }
 
-func rowToBooking(row scan) (res model.Booking, err error) {
-	return res, row.Scan(&res.ID, &res.Amount, &res.CommodityID, &res.CreditAccountID, &res.DebitAccountID)
+func rowToBooking(row scan, res *model.Booking) error {
+	return row.Scan(&res.ID, &res.Amount, &res.CommodityID, &res.CreditAccountID, &res.DebitAccountID)
 }

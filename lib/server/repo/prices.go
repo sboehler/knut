@@ -20,15 +20,15 @@ func InsertPrice(ctx context.Context, db db, price model.Price) error {
 
 // ListPrices lists all prices.
 func ListPrices(ctx context.Context, db db) ([]model.Price, error) {
-	var res []model.Price
 	rows, err := db.QueryContext(ctx,
 		`SELECT datetime(date), commodity_id, target_commodity_id, price 
-	  	FROM prices 
+		FROM prices 
 	    ORDER BY date, commodity_id, target_commodity_id`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+	var res []model.Price
 	for rows.Next() {
 		var price model.Price
 		if err := rowToPrice(rows, &price); err != nil {

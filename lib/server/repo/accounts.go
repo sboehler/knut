@@ -60,7 +60,7 @@ func ListAccounts(ctx context.Context, db db) ([]model.Account, error) {
 }
 
 // UpdateAccount updates an account in the current version.
-func UpdateAccount(ctx context.Context, db db, id int, name string, openDate time.Time, closeDate *time.Time) (model.Account, error) {
+func UpdateAccount(ctx context.Context, db db, id model.AccountID, name string, openDate time.Time, closeDate *time.Time) (model.Account, error) {
 	var row *sql.Row
 	row = db.QueryRowContext(ctx,
 		`UPDATE accounts
@@ -78,7 +78,7 @@ type scan interface {
 }
 
 // DeleteAccount deletes an account in the current version.
-func DeleteAccount(ctx context.Context, db db, id int) error {
+func DeleteAccount(ctx context.Context, db db, id model.AccountID) error {
 	_, err := db.ExecContext(ctx, `DELETE FROM accounts WHERE id = ?`, id)
 	return err
 }

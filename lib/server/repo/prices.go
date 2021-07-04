@@ -43,7 +43,7 @@ func ListPrices(ctx context.Context, db db) ([]model.Price, error) {
 }
 
 // DeletePrice deletes a price.
-func DeletePrice(ctx context.Context, db db, date time.Time, commodityID, targetCommodityID int) error {
+func DeletePrice(ctx context.Context, db db, date time.Time, commodityID, targetCommodityID model.CommodityID) error {
 	_, err := db.ExecContext(ctx,
 		`DELETE FROM prices WHERE date = ? AND commodity_id = ? and target_commodity_id = ?`,
 		date, commodityID, targetCommodityID)

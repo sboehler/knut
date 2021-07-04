@@ -67,13 +67,13 @@ func ListTransactions(ctx context.Context, db db) ([]model.Transaction, error) {
 }
 
 // ListBookings lists all bookings.
-func ListBookings(ctx context.Context, db db) (map[int][]model.Booking, error) {
+func ListBookings(ctx context.Context, db db) (map[model.TransactionID][]model.Booking, error) {
 	rows, err := db.QueryContext(ctx, `SELECT id, amount, commodity_id, credit_account_id, debit_account_id FROM bookings`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var res = make(map[int][]model.Booking)
+	var res = make(map[model.TransactionID][]model.Booking)
 	for rows.Next() {
 		b, err := rowToBooking(rows)
 		if err != nil {

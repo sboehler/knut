@@ -51,7 +51,7 @@ func TestInsertPrice(t *testing.T) {
 	_ = populateCommodities(ctx, t, db, []string{"AAA"})
 	for _, price := range prices {
 
-		err := InsertPrice(ctx, db, price)
+		_, err := InsertPrice(ctx, db, price)
 
 		if err != nil {
 			t.Fatalf("InsertPrice() returned unexpected error: %v", err)
@@ -171,7 +171,7 @@ func TestDeletePrices(t *testing.T) {
 func populatePrices(ctx context.Context, t *testing.T, db db, prices []model.Price) {
 	t.Helper()
 	for _, price := range prices {
-		if err := InsertPrice(ctx, db, price); err != nil {
+		if _, err := InsertPrice(ctx, db, price); err != nil {
 			t.Fatalf("InsertPrice() returned unexpected error: %v", err)
 		}
 	}

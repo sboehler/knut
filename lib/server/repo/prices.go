@@ -9,13 +9,23 @@ import (
 )
 
 // InsertPrice creates a price.
-func InsertPrice(ctx context.Context, db db, price model.Price) error {
-	var err error
-	_, err = db.ExecContext(ctx,
+func InsertPrice(ctx context.Context, db db, price model.Price) (model.Price, error) {
+	var (
+		res model.Price
+		err error
+	)
+	row := db.QueryRowContext(ctx,
 		`INSERT INTO prices(date, commodity_id, target_commodity_id, price) 
-		VALUES (?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?)
+		RETURNING datetime(date), commodity_id, target_commodity_id, price`,
 		price.Date, price.CommodityID, price.TargetCommodityID, price.Price)
-	return err
+	if row.Err() != nil {
+		return res, row.Err()
+	}
+	if err = rowToPrice(row, &res); err != nil {
+		return res, err
+	}
+	return res, nil
 }
 
 // ListPrices lists all prices.

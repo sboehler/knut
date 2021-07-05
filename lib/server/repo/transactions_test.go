@@ -115,6 +115,97 @@ func TestListTransaction(t *testing.T) {
 	}
 }
 
+func TestUpdateTransaction(t *testing.T) {
+	var (
+		date1 = time.Date(2021, time.May, 14, 0, 0, 0, 0, time.UTC)
+		date2 = time.Date(2021, time.May, 15, 0, 0, 0, 0, time.UTC)
+		date3 = time.Date(2021, time.May, 16, 0, 0, 0, 0, time.UTC)
+		ctx   = context.Background()
+		db    = createAndMigrateInMemoryDB(ctx, t)
+		trx   = []model.Transaction{
+			{
+				ID:          1,
+				Date:        date1,
+				Description: "desc1",
+				Bookings: []model.Booking{
+					{
+						ID:              1,
+						Amount:          decimal.RequireFromString("4.23"),
+						CommodityID:     1,
+						CreditAccountID: 1,
+						DebitAccountID:  2,
+					},
+				},
+			},
+			{
+				ID:          2,
+				Date:        date2,
+				Description: "desc2",
+				Bookings: []model.Booking{
+					{
+						ID:              2,
+						Amount:          decimal.RequireFromString("3.23"),
+						CommodityID:     1,
+						CreditAccountID: 2,
+						DebitAccountID:  1,
+					},
+				},
+			},
+			{
+				ID:          3,
+				Date:        date3,
+				Description: "desc3",
+				Bookings: []model.Booking{
+					{
+						ID:              3,
+						Amount:          decimal.RequireFromString("3.23"),
+						CommodityID:     1,
+						CreditAccountID: 2,
+						DebitAccountID:  1,
+					},
+				},
+			},
+		}
+		update = model.Transaction{
+			ID:          3,
+			Date:        date2,
+			Description: "desc4",
+			Bookings: []model.Booking{
+				{
+					ID:              3,
+					Amount:          decimal.RequireFromString("5.23"),
+					CommodityID:     1,
+					CreditAccountID: 1,
+					DebitAccountID:  2,
+				},
+			},
+		}
+		want = []model.Transaction{
+			trx[0],
+			trx[1],
+			update,
+		}
+	)
+	populateCommodities(ctx, t, db, []string{"AAA", "BBB", "CCC"})
+	populateAccounts(ctx, t, db, []model.Account{{Name: "Foo"}, {Name: "Bar"}})
+	populateTransactions(ctx, t, db, trx)
+
+	_, err := UpdateTransaction(ctx, db, update)
+
+	if err != nil {
+		t.Fatalf("UpdateTransaction() returned unexpected error: %v", err)
+	}
+
+	got, err := ListTransactions(ctx, db)
+	if err != nil {
+		t.Fatalf("ListTransactions() returned unexpected error: %v", err)
+	}
+
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("UpdateTransactions() mismatch (-want +got):\n%s", diff)
+	}
+}
+
 func populateTransactions(ctx context.Context, t *testing.T, db db, ts []model.Transaction) []model.Transaction {
 	t.Helper()
 	var res []model.Transaction

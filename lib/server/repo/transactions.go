@@ -29,17 +29,37 @@ func CreateTransaction(ctx context.Context, db db, t model.Transaction) (model.T
 		return t, err
 	}
 	for _, b := range t.Bookings {
-		if row = db.QueryRowContext(ctx,
-			`INSERT INTO bookings(id, amount, commodity_id, credit_account_id, debit_account_id) VALUES (?, ?, ?, ?, ?)
-			returning id, amount, commodity_id, credit_account_id, debit_account_id`,
-			t.ID, b.Amount, b.CommodityID, b.CreditAccountID, b.DebitAccountID); row.Err() != nil {
-			return t, row.Err()
-		}
-		var booking model.Booking
-		if err = rowToBooking(row, &booking); err != nil {
+		var resB model.Booking
+		if resB, err = insertBooking(ctx, db, t.ID, b); err != nil {
 			return t, err
 		}
-		res.Bookings = append(res.Bookings, booking)
+		res.Bookings = append(res.Bookings, resB)
+	}
+	return res, nil
+}
+
+// UpdateTransaction updates a transaction.
+func UpdateTransaction(ctx context.Context, db db, t model.Transaction) (model.Transaction, error) {
+	var (
+		row *sql.Row
+		res model.Transaction
+		err error
+	)
+	if row = db.QueryRowContext(ctx,
+		`UPDATE transactions SET date = ?, description = ?
+		WHERE id = ?
+		RETURNING id, datetime(date), description`, t.Date, t.Description, t.ID); row.Err() != nil {
+		return res, row.Err()
+	}
+	if err = rowToTrx(row, &res); err != nil {
+		return res, err
+	}
+	for _, b := range t.Bookings {
+		var resB model.Booking
+		if resB, err = insertBooking(ctx, db, t.ID, b); err != nil {
+			return res, err
+		}
+		res.Bookings = append(res.Bookings, resB)
 	}
 	return res, nil
 }
@@ -90,6 +110,21 @@ func ListBookings(ctx context.Context, db db) (map[model.TransactionID][]model.B
 	}
 	if rows.Err() != nil && rows.Err() != sql.ErrNoRows {
 		return nil, rows.Err()
+	}
+	return res, nil
+}
+
+func insertBooking(ctx context.Context, db db, tid model.TransactionID, b model.Booking) (model.Booking, error) {
+	var row *sql.Row
+	if row = db.QueryRowContext(ctx,
+		`INSERT INTO bookings(id, amount, commodity_id, credit_account_id, debit_account_id) VALUES (?, ?, ?, ?, ?)
+		returning id, amount, commodity_id, credit_account_id, debit_account_id`,
+		tid, b.Amount, b.CommodityID, b.CreditAccountID, b.DebitAccountID); row.Err() != nil {
+		return b, row.Err()
+	}
+	var res model.Booking
+	if err := rowToBooking(row, &res); err != nil {
+		return res, err
 	}
 	return res, nil
 }

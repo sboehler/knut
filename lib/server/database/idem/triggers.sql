@@ -84,6 +84,23 @@ BEGIN
     VALUES (new.id, new.date, new.description);
 END;
 
+CREATE TRIGGER IF NOT EXISTS transactions_update INSTEAD OF UPDATE ON transactions
+FOR EACH ROW
+BEGIN
+  DELETE FROM transactions_history
+    WHERE id = new.id
+    AND created_at = CURRENT_TIMESTAMP;
+  DELETE FROM bookings_history
+    WHERE id = new.id
+    AND created_at = CURRENT_TIMESTAMP;
+  UPDATE transactions_history SET deleted_at = CURRENT_TIMESTAMP
+    WHERE id = new.id AND deleted_at = DATETIME('2999-12-31');
+  UPDATE bookings_history SET deleted_at = CURRENT_TIMESTAMP
+    WHERE id = new.id AND deleted_at = DATETIME('2999-12-31');
+  INSERT INTO transactions_history(id, date, description)
+    VALUES (new.id, new.date, new.description);
+END;
+
 
 DROP VIEW IF EXISTS bookings;
 CREATE VIEW IF NOT EXISTS bookings AS

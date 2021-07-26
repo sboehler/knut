@@ -150,13 +150,13 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	switch {
 	// credit booking
 	case len(crAmount) > 0 && len(drAmount) == 0:
-		amt, err = decimal.NewFromString(crAmount)
+		amt, err = parseDecimal(crAmount)
 		if err != nil {
 			return false, err
 		}
 	// debit booking
 	case len(crAmount) == 0 && len(drAmount) > 0:
-		amt, err = decimal.NewFromString(drAmount)
+		amt, err = parseDecimal(drAmount)
 		if err != nil {
 			return false, err
 		}
@@ -206,14 +206,14 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	switch {
 	// credit booking
 	case len(crAmount) > 0 && len(drAmount) == 0:
-		amt, err = decimal.NewFromString(crAmount)
+		amt, err = parseDecimal(crAmount)
 		if err != nil {
 			return false, err
 		}
 		amt = amt.Neg()
 	// debit booking
 	case len(crAmount) == 0 && len(drAmount) > 0:
-		amt, err = decimal.NewFromString(drAmount)
+		amt, err = parseDecimal(drAmount)
 		if err != nil {
 			return false, err
 		}
@@ -228,4 +228,8 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 		},
 	})
 	return true, nil
+}
+
+func parseDecimal(s string) (decimal.Decimal, error) {
+	return decimal.NewFromString(strings.ReplaceAll(s, "'", ""))
 }

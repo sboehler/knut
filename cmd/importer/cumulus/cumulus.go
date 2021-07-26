@@ -154,12 +154,13 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-	// debit booking
+		// debit booking
 	case len(crAmount) == 0 && len(drAmount) > 0:
 		amt, err = parseDecimal(drAmount)
 		if err != nil {
 			return false, err
 		}
+		amt = amt.Neg()
 	default:
 		return false, fmt.Errorf("row has invalid amounts: %v", r)
 	}
@@ -210,13 +211,13 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		amt = amt.Neg()
-	// debit booking
+		// debit booking
 	case len(crAmount) == 0 && len(drAmount) > 0:
 		amt, err = parseDecimal(drAmount)
 		if err != nil {
 			return false, err
 		}
+		amt = amt.Neg()
 	default:
 		return false, fmt.Errorf("row has invalid amounts: %v", r)
 	}

@@ -87,9 +87,8 @@ func run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	var (
-		reader = csv.NewReader(bufio.NewReader(f))
-		p      = parser{
-			reader:  reader,
+		p = parser{
+			reader:  csv.NewReader(bufio.NewReader(f)),
 			options: o,
 			builder: ledger.NewBuilder(ledger.Filter{}),
 		}
@@ -177,60 +176,107 @@ func (p *parser) readLine() error {
 	return nil
 }
 
+type accountInformationField int
+
+const (
+	aiAccountInformation accountInformationField = iota
+	aiHeader
+	aiFieldName
+	aiFieldValue
+)
+
 func (p *parser) parseBaseCurrency(r []string) bool {
-	if r[0] != "Account Information" || r[1] != "Data" || r[2] != "Base Currency" {
+	if !(r[aiAccountInformation] == "Account Information" &&
+		r[aiHeader] == "Data" &&
+		r[aiFieldName] == "Base Currency") {
 		return false
 	}
-	p.baseCurrency = commodities.Get(r[3])
+	p.baseCurrency = commodities.Get(r[aiFieldValue])
 	return true
 }
 
-func (p *parser) parseDate(r []string) (bool, error) {
-	if r[0] != "Statement" || r[1] != "Data" || r[2] != "Period" {
-		return false, nil
-	}
-	ds := strings.Split(r[3], " - ")
-	var err error
-	p.dateFrom, err = time.Parse("January 2, 2006", ds[0])
-	if err != nil {
-		return false, err
-	}
-	p.dateTo, err = time.Parse("January 2, 2006", ds[1])
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
+type statementField int
 
-func (p *parser) parseTrade(r []string) (bool, error) {
-	if r[0] != "Trades" || r[1] != "Data" || r[2] != "Order" || r[3] != "Stocks" {
+const (
+	stfStatement statementField = iota
+	stfHeader
+	stfFieldName
+	stfFieldValue
+)
+
+func (p *parser) parseDate(r []string) (bool, error) {
+	if !(r[stfStatement] == "Statement" &&
+		r[stfHeader] == "Data" && r[stfFieldName] == "Period") {
 		return false, nil
 	}
 	var (
-		currency = commodities.Get(r[4])
-		stock    = commodities.Get(r[5])
+		dates            = strings.Split(r[stfFieldValue], " - ")
+		dateFrom, dateTo time.Time
+		err              error
 	)
-	date, err := time.Parse("2006-01-02", r[6][:10])
+	if dateFrom, err = time.Parse("January 2, 2006", dates[0]); err != nil {
+		return false, err
+	}
+	if dateTo, err = time.Parse("January 2, 2006", dates[1]); err != nil {
+		return false, err
+	}
+	p.dateFrom, p.dateTo = dateFrom, dateTo
+	return true, nil
+}
+
+type tradesField int
+
+const (
+	tfTrades tradesField = iota
+	tfHeader
+	tfDataDiscriminator
+	tfAssetCategory
+	tfCurrency
+	tfSymbol
+	tfDateTime
+	tfQuantity
+	tfTPrice
+	tfCPrice
+	tfProceeds
+	tfCommFee
+	tfBasis
+	tfRealizedPL
+	tfRealizedPLPct
+	tfMTMPL
+	tfCode
+)
+
+func (p *parser) parseTrade(r []string) (bool, error) {
+	if !(r[tfTrades] == "Trades" &&
+		r[tfHeader] == "Data" &&
+		r[tfDataDiscriminator] == "Order" &&
+		r[tfAssetCategory] == "Stocks") {
+		return false, nil
+	}
+	var (
+		currency                  = commodities.Get(r[tfCurrency])
+		stock                     = commodities.Get(r[tfSymbol])
+		date                      time.Time
+		desc                      string
+		qty, price, proceeds, fee decimal.Decimal
+		err                       error
+	)
+	date, err = parseDateFromDateTime(r[tfDateTime])
 	if err != nil {
 		return false, err
 	}
-	qty, err := decimal.NewFromString(r[7])
-	if err != nil {
+	if qty, err = parseRoundedDecimal(r[tfQuantity]); err != nil {
 		return false, err
 	}
-	price, err := decimal.NewFromString(r[8])
-	if err != nil {
+	if price, err = parseDecimal(r[tfTPrice]); err != nil {
 		return false, err
 	}
-	proceeds, err := decimal.NewFromString(strings.ReplaceAll(r[10], ",", ""))
-	if err != nil {
+	if proceeds, err = parseRoundedDecimal(r[tfProceeds]); err != nil {
 		return false, err
 	}
-	fee, err := decimal.NewFromString(r[11])
-	if err != nil {
+	if fee, err = decimal.NewFromString(r[tfCommFee]); err != nil {
 		return false, err
 	}
-	var desc string
 	if qty.IsPositive() {
 		desc = fmt.Sprintf("Buy %s %s @ %s %s", qty, stock, price, currency)
 	} else {
@@ -240,58 +286,59 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(accounts.EquityAccount(), p.options.account, stock, qty.Round(2)),
-			ledger.NewPosting(accounts.EquityAccount(), p.options.account, currency, proceeds.Round(2)),
-			ledger.NewPosting(p.options.fee, p.options.account, currency, fee.Round(2)),
+			ledger.NewPosting(accounts.EquityAccount(), p.options.account, stock, qty),
+			ledger.NewPosting(accounts.EquityAccount(), p.options.account, currency, proceeds),
+			ledger.NewPosting(p.options.fee, p.options.account, currency, fee),
 		},
 	})
 	return true, nil
 }
 
 func (p *parser) parseForex(r []string) (bool, error) {
-	if r[0] != "Trades" || r[1] != "Data" || r[2] != "Order" || r[3] != "Forex" {
+	if !(r[tfTrades] == "Trades" &&
+		r[tfHeader] == "Data" &&
+		r[tfDataDiscriminator] == "Order" &&
+		r[tfAssetCategory] == "Forex") {
 		return false, nil
 	}
 	if p.baseCurrency == nil {
 		return false, fmt.Errorf("base currency is not defined")
 	}
 	var (
-		currency  = commodities.Get(r[4])
-		currency2 = strings.SplitN(r[5], ".", 2)[0]
-		stock     = commodities.Get(currency2)
+		currency                  = commodities.Get(r[tfCurrency])
+		currency2                 = strings.SplitN(r[tfSymbol], ".", 2)[0]
+		stock                     = commodities.Get(currency2)
+		date                      time.Time
+		desc                      string
+		qty, price, proceeds, fee decimal.Decimal
+		err                       error
 	)
-	date, err := time.Parse("2006-01-02", r[6][:10])
-	if err != nil {
+	if date, err = parseDateFromDateTime(r[tfDateTime]); err != nil {
 		return false, err
 	}
-	qty, err := decimal.NewFromString(strings.ReplaceAll(r[7], ",", ""))
-	if err != nil {
+	if qty, err = parseRoundedDecimal(r[tfQuantity]); err != nil {
 		return false, err
 	}
-	price, err := decimal.NewFromString(r[8])
-	if err != nil {
+	if price, err = parseDecimal(r[tfTPrice]); err != nil {
 		return false, err
 	}
-	proceeds, err := decimal.NewFromString(strings.ReplaceAll(r[10], ",", ""))
-	if err != nil {
+	if proceeds, err = parseRoundedDecimal(r[tfProceeds]); err != nil {
 		return false, err
 	}
-	fee, err := decimal.NewFromString(r[11])
-	if err != nil {
+	if fee, err = parseRoundedDecimal(r[tfCommFee]); err != nil {
 		return false, err
 	}
-	var desc string
 	if qty.IsPositive() {
 		desc = fmt.Sprintf("Buy %s %s @ %s %s", qty, stock, price, currency)
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
 	var postings = []*ledger.Posting{
-		ledger.NewPosting(accounts.EquityAccount(), p.options.account, stock, qty.Round(2)),
-		ledger.NewPosting(accounts.EquityAccount(), p.options.account, currency, proceeds.Round(2)),
+		ledger.NewPosting(accounts.EquityAccount(), p.options.account, stock, qty),
+		ledger.NewPosting(accounts.EquityAccount(), p.options.account, currency, proceeds),
 	}
 	if !fee.IsZero() {
-		postings = append(postings, ledger.NewPosting(p.options.fee, p.options.account, p.baseCurrency, fee.Round(2)))
+		postings = append(postings, ledger.NewPosting(p.options.fee, p.options.account, p.baseCurrency, fee))
 	}
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
@@ -301,99 +348,154 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	return true, nil
 }
 
+type depositsWithdrawalsField int
+
+const (
+	dwfDepositsWithdrawals depositsWithdrawalsField = iota
+	dwfHeader
+	dwfCurrency
+	dwfSettleDate
+	dwfDescription
+	dwfAmount
+)
+
 func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
-	if r[0] != "Deposits & Withdrawals" || r[1] != "Data" || r[2] == "Total" || r[3] == "" {
+	if !(r[dwfDepositsWithdrawals] == "Deposits & Withdrawals" &&
+		r[dwfHeader] == "Data" &&
+		r[dwfCurrency] != "Total" &&
+		r[dwfSettleDate] != "") {
 		return false, nil
 	}
-	var currency = commodities.Get(r[2])
-	date, err := time.Parse("2006-01-02", r[3])
-	if err != nil {
+	var (
+		currency = commodities.Get(r[dwfCurrency])
+		date     time.Time
+		desc     string
+		amount   decimal.Decimal
+		err      error
+	)
+	if date, err = parseDate(r[dwfSettleDate]); err != nil {
 		return false, err
 	}
-	amt, err := decimal.NewFromString(r[5])
-	if err != nil {
+	if amount, err = parseRoundedDecimal(r[dwfAmount]); err != nil {
 		return false, err
 	}
-	var desc string
-	if amt.IsPositive() {
-		desc = fmt.Sprintf("Deposit %s %s", amt, currency)
+	if amount.IsPositive() {
+		desc = fmt.Sprintf("Deposit %s %s", amount, currency)
 	} else {
-		desc = fmt.Sprintf("Withdraw %s %s", amt, currency)
+		desc = fmt.Sprintf("Withdraw %s %s", amount, currency)
 	}
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(accounts.TBDAccount(), p.options.account, currency, amt),
+			ledger.NewPosting(accounts.TBDAccount(), p.options.account, currency, amount),
 		},
 	})
 	return true, nil
 }
 
+type dividendsField int
+
+const (
+	dfDividends dividendsField = iota
+	dfHeader
+	dfCurrency
+	dfDate
+	dfDescription
+	dfAmount
+)
+
 func (p *parser) parseDividend(r []string) (bool, error) {
-	if r[0] != "Dividends" || r[1] != "Data" || strings.HasPrefix(r[2], "Total") || len(r) != 6 {
+	if !(r[dfDividends] == "Dividends" &&
+		r[dfHeader] == "Data" &&
+		!strings.HasPrefix(r[dfCurrency], "Total") &&
+		len(r) == 6) {
 		return false, nil
 	}
-	var currency = commodities.Get(r[2])
-	date, err := time.Parse("2006-01-02", r[3])
-	if err != nil {
-		return false, err
-	}
-	amt, err := decimal.NewFromString(r[5])
-	if err != nil {
-		return false, err
-	}
 	var (
-		regex  = regexp.MustCompile("[A-Za-z0-9]+")
-		symbol = strings.TrimSpace(strings.Split(r[4], "(")[0])
+		currency = commodities.Get(r[dfCurrency])
+		date     time.Time
+		amount   decimal.Decimal
+		symbol   string
+		err      error
 	)
-	if !regex.MatchString(symbol) {
-		return false, fmt.Errorf("invalid symbol name %s", symbol)
+	if date, err = parseDate(r[dfDate]); err != nil {
+		return false, err
+	}
+	if amount, err = parseDecimal(r[dfAmount]); err != nil {
+		return false, err
+	}
+	if symbol, err = parseDividendSymbol(r[dfDescription]); err != nil {
+		return false, err
 	}
 	var (
 		security = commodities.Get(symbol)
-		desc     = r[4]
+		desc     = r[dfDescription]
 	)
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(p.options.dividend, p.options.account, currency, amt),
+			ledger.NewPosting(p.options.dividend, p.options.account, currency, amount),
 			ledger.NewPosting(p.options.dividend, p.options.dividend, security, decimal.Zero),
 		},
 	})
 	return true, nil
 }
 
+var dividendSymbolRegex = regexp.MustCompile("[A-Za-z0-9]+")
+
+func parseDividendSymbol(s string) (string, error) {
+	var symbol = dividendSymbolRegex.FindString(s)
+	if symbol == "" {
+		return symbol, fmt.Errorf("invalid symbol name %s", s)
+	}
+	return symbol, nil
+}
+
+type withholdingTaxField int
+
+const (
+	wtfWithholdingTax withholdingTaxField = iota
+	wtfHeader
+	wtfCurrency
+	wtfDate
+	wtfDescription
+	wtfAmount
+	wtfCode
+)
+
 func (p *parser) parseWithholdingTax(r []string) (bool, error) {
-	if r[0] != "Withholding Tax" || r[1] != "Data" || strings.HasPrefix(r[2], "Total") {
+	if !(r[wtfWithholdingTax] == "Withholding Tax" &&
+		r[wtfHeader] == "Data" &&
+		!strings.HasPrefix(r[wtfCurrency], "Total")) {
 		return false, nil
 	}
-	var currency = commodities.Get(r[2])
-	date, err := time.Parse("2006-01-02", r[3])
-	if err != nil {
-		return false, err
-	}
-	amt, err := decimal.NewFromString(r[5])
-	if err != nil {
-		return false, err
-	}
 	var (
-		regex  = regexp.MustCompile("[A-Za-z0-9]+")
-		symbol = strings.TrimSpace(strings.Split(r[4], "(")[0])
+		currency = commodities.Get(r[wtfCurrency])
+		date     time.Time
+		amount   decimal.Decimal
+		symbol   string
+		err      error
 	)
-	if !regex.MatchString(symbol) {
-		return false, fmt.Errorf("invalid symbol name %s", symbol)
+	if date, err = parseDate(r[wtfDate]); err != nil {
+		return false, err
+	}
+	if amount, err = parseDecimal(r[wtfAmount]); err != nil {
+		return false, err
+	}
+	if symbol, err = parseDividendSymbol(r[wtfDescription]); err != nil {
+		return false, err
 	}
 	var (
 		security = commodities.Get(symbol)
-		desc     = r[4]
+		desc     = r[wtfDescription]
 	)
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(p.options.tax, p.options.account, currency, amt),
+			ledger.NewPosting(p.options.tax, p.options.account, currency, amount),
 			ledger.NewPosting(p.options.tax, p.options.tax, security, decimal.Zero),
 		},
 	})
@@ -402,37 +504,62 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 
 //Interest,Data,USD,2020-07-06,USD Debit Interest for Jun-2020,-0.73
 func (p *parser) parseInterest(r []string) (bool, error) {
-	if r[0] != "Interest" || r[1] != "Data" || strings.HasPrefix(r[2], "Total") || len(r) != 6 {
+	if !(r[dfDividends] == "Interest" && r[dfHeader] == "Data" && !strings.HasPrefix(r[dfCurrency], "Total") && len(r) == 6) {
 		return false, nil
 	}
-	var currency = commodities.Get(r[2])
-	date, err := time.Parse("2006-01-02", r[3])
-	if err != nil {
+	var (
+		currency = commodities.Get(r[dfCurrency])
+		date     time.Time
+		amount   decimal.Decimal
+		desc     = r[dfDescription]
+		err      error
+	)
+	if date, err = parseDate(r[dfDate]); err != nil {
 		return false, err
 	}
-	amt, err := decimal.NewFromString(r[5])
-	if err != nil {
+	if amount, err = parseDecimal(r[dfAmount]); err != nil {
 		return false, err
 	}
-	var desc = r[4]
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(p.options.interest, p.options.account, currency, amt)},
+			ledger.NewPosting(p.options.interest, p.options.account, currency, amount)},
 	})
 	return true, nil
 }
 
+type openPositionsField int
+
+const (
+	opfOpenPositions openPositionsField = iota
+	opfHeader
+	opfDataDiscriminator
+	opfAssetCategory
+	opfCurrency
+	opfSymbol
+	opfQuantity
+	opfMult
+	opfCostPrice
+	opfCostBasis
+	opfClosePrice
+	opfValue
+	opfUnrealizedPL
+	opfUnrealizedPLPct
+	opfCode
+)
+
 func (p *parser) createAssertions(r []string) (bool, error) {
-	if r[0] != "Open Positions" || r[1] != "Data" || r[2] != "Summary" {
+	if !(r[opfOpenPositions] == "Open Positions" &&
+		r[opfHeader] == "Data" &&
+		r[opfDataDiscriminator] == "Summary") {
 		return false, nil
 	}
 	if p.dateTo.IsZero() {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
-	var symbol = commodities.Get(r[5])
-	amt, err := decimal.NewFromString(r[6])
+	var symbol = commodities.Get(r[opfSymbol])
+	amt, err := decimal.NewFromString(r[opfQuantity])
 	if err != nil {
 		return false, err
 	}
@@ -445,23 +572,65 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 	return true, nil
 }
 
+type forexBalancesField int
+
+const (
+	fbfForexBalances forexBalancesField = iota
+	fbfHeader
+	fbfAssetCategory
+	fbfCurrency
+	fbfDescription
+	fbfQuantity
+	fbfCostPrice
+	fbfCostBasisInCHF
+	fbfClosePrice
+	fbfValueInCHF
+	fbfUnrealizedPLInCHF
+	fbfCode
+)
+
 func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
-	if r[0] != "Forex Balances" || r[1] != "Data" || r[2] != "Forex" {
+	if !(r[fbfForexBalances] == "Forex Balances" &&
+		r[fbfHeader] == "Data" &&
+		r[fbfAssetCategory] == "Forex") {
 		return false, nil
 	}
 	if p.dateTo.IsZero() {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
-	symbol := commodities.Get(r[4])
-	amt, err := decimal.NewFromString(r[5])
-	if err != nil {
+	var (
+		symbol = commodities.Get(r[fbfDescription])
+		amount decimal.Decimal
+		err    error
+	)
+	if amount, err = parseRoundedDecimal(r[fbfQuantity]); err != nil {
 		return false, err
 	}
 	p.builder.AddAssertion(&ledger.Assertion{
 		Date:      p.dateTo,
 		Account:   p.options.account,
 		Commodity: symbol,
-		Amount:    amt.Round(2),
+		Amount:    amount,
 	})
 	return true, nil
+}
+
+func parseRoundedDecimal(s string) (decimal.Decimal, error) {
+	amount, err := parseDecimal(s)
+	if err != nil {
+		return amount, err
+	}
+	return amount.Round(2), nil
+}
+
+func parseDecimal(s string) (decimal.Decimal, error) {
+	return decimal.NewFromString(strings.ReplaceAll(s, ",", ""))
+}
+
+func parseDateFromDateTime(s string) (time.Time, error) {
+	return parseDate(s[:10])
+}
+
+func parseDate(s string) (time.Time, error) {
+	return time.Parse("2006-01-02", s)
 }

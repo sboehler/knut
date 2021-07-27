@@ -111,11 +111,11 @@ func (p *parser) parse() error {
 
 func (p *parser) readLine() error {
 	r, err := p.reader.Read()
+	fmt.Println(r)
 	if err != nil {
 		return err
 	}
 	if ok, err := p.parseRounding(r); ok || err != nil {
-		p.last = nil
 		return err
 	}
 	if ok, err := p.parseFXComment(r); ok || err != nil {
@@ -124,108 +124,127 @@ func (p *parser) readLine() error {
 	if ok, err := p.parseBooking(r); ok || err != nil {
 		return err
 	}
-	p.last = nil
 	return nil
 }
 
 var dateRegex = regexp.MustCompile(`\d\d.\d\d.\d\d\d\d`)
 
+// bookingField denotes the labels the fields of a regular booking line.
+type bookingField int
+
+const (
+	bfEinkaufsDatum bookingField = iota
+	bfVerbuchtAm
+	bfBeschreibung
+	bfGutschriftCHF
+	bfBelastungCHF
+)
+
 func (p *parser) parseBooking(r []string) (bool, error) {
-	if !dateRegex.MatchString(r[0]) || !dateRegex.MatchString(r[1]) {
+	if !checkValidBookingLine(r) {
 		return false, nil
 	}
 	if len(r) != 5 {
 		return false, fmt.Errorf("expected five items, got %v", r)
 	}
 	var (
-		err                error
-		desc               = r[2]
-		crAmount, drAmount = r[4], r[3]
-		amt                decimal.Decimal
-		d                  time.Time
+		err    error
+		desc   = r[bfBeschreibung]
+		amount decimal.Decimal
+		date   time.Time
 	)
-	if d, err = time.Parse("02.01.2006", r[0]); err != nil {
+	if date, err = time.Parse("02.01.2006", r[bfEinkaufsDatum]); err != nil {
 		return false, err
 	}
-	switch {
-	// credit booking
-	case len(crAmount) > 0 && len(drAmount) == 0:
-		amt, err = parseDecimal(crAmount)
-		if err != nil {
-			return false, err
-		}
-		// debit booking
-	case len(crAmount) == 0 && len(drAmount) > 0:
-		amt, err = parseDecimal(drAmount)
-		if err != nil {
-			return false, err
-		}
-		amt = amt.Neg()
-	default:
-		return false, fmt.Errorf("row has invalid amounts: %v", r)
+	if amount, err = parseAmount(r[bfBelastungCHF], r[bfGutschriftCHF]); err != nil {
+		return false, err
 	}
 	p.last = &ledger.Transaction{
-		Date:        d,
+		Date:        date,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(p.account, accounts.TBDAccount(), commodities.Get("CHF"), amt),
+			ledger.NewPosting(accounts.TBDAccount(), p.account, commodities.Get("CHF"), amount),
 		},
 	}
 	p.builder.AddTransaction(p.last)
 	return true, nil
+}
 
+func parseAmount(creditField, debitField string) (decimal.Decimal, error) {
+	var (
+		sign   = decimal.NewFromInt(1)
+		field  string
+		amount decimal.Decimal
+		err    error
+	)
+	switch {
+	case len(creditField) > 0 && len(debitField) == 0:
+		field = creditField
+		sign = sign.Neg()
+	case len(creditField) == 0 && len(debitField) > 0:
+		field = debitField
+	default:
+		return amount, fmt.Errorf("row has invalid amounts: %v %v", creditField, debitField)
+	}
+	if amount, err = parseDecimal(field); err != nil {
+		return amount, err
+	}
+	return amount.Mul(sign), nil
+}
+
+func checkValidBookingLine(r []string) bool {
+	return dateRegex.MatchString(r[0]) && dateRegex.MatchString(r[1])
 }
 
 func (p *parser) parseFXComment(r []string) (bool, error) {
-	if len(r) != 5 || len(r[0]) > 0 || len(r[1]) > 0 || len(r[2]) == 0 || len(r[3]) > 0 || len(r[4]) > 0 {
+	if !(len(r) == 5 &&
+		len(r[bfEinkaufsDatum]) == 0 &&
+		len(r[bfVerbuchtAm]) == 0 &&
+		len(r[bfBeschreibung]) > 0 &&
+		len(r[bfGutschriftCHF]) == 0 &&
+		len(r[bfBelastungCHF]) == 0) {
 		return false, nil
 	}
 	if p.last == nil {
 		return false, fmt.Errorf("fx comment but no previous transaction")
 	}
-	p.last.Description = fmt.Sprintf("%s %s", p.last.Description, r[2])
+	p.last.Description = fmt.Sprintf("%s %s", p.last.Description, r[bfBeschreibung])
 	return true, nil
 }
 
+// roundingField denotes the labels the fields of a "Rundungskorrektur" line.
+type roundingField int
+
+const (
+	rfEinkaufsDatum roundingField = iota
+	rfBeschreibung
+	rfGutschriftCHF
+	rfBelastungCHF
+)
+
 func (p *parser) parseRounding(r []string) (bool, error) {
-	if !dateRegex.MatchString(r[0]) || r[1] != "Rundungskorrektur" {
+	if !(dateRegex.MatchString(r[rfEinkaufsDatum]) && r[rfBeschreibung] == "Rundungskorrektur") {
 		return false, nil
 	}
 	if len(r) != 4 {
 		return false, fmt.Errorf("expected three items, got %v", r)
 	}
 	var (
-		err                error
-		desc               = r[1]
-		crAmount, drAmount = r[3], r[2]
-		amt                decimal.Decimal
-		d                  time.Time
+		err    error
+		amount decimal.Decimal
+		date   time.Time
 	)
-	if d, err = time.Parse("02.01.2006", r[0]); err != nil {
+	if date, err = time.Parse("02.01.2006", r[rfEinkaufsDatum]); err != nil {
 		return false, err
 	}
-	switch {
-	// credit booking
-	case len(crAmount) > 0 && len(drAmount) == 0:
-		amt, err = parseDecimal(crAmount)
-		if err != nil {
-			return false, err
-		}
-		// debit booking
-	case len(crAmount) == 0 && len(drAmount) > 0:
-		amt, err = parseDecimal(drAmount)
-		if err != nil {
-			return false, err
-		}
-		amt = amt.Neg()
-	default:
-		return false, fmt.Errorf("row has invalid amounts: %v", r)
+	if amount, err = parseAmount(r[rfBelastungCHF], r[rfGutschriftCHF]); err != nil {
+		return false, err
 	}
 	p.builder.AddTransaction(&ledger.Transaction{
-		Date:        d,
-		Description: desc,
+		Date:        date,
+		Description: r[rfBeschreibung],
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(p.account, accounts.TBDAccount(), commodities.Get("CHF"), amt),
+			ledger.NewPosting(accounts.TBDAccount(), p.account, commodities.Get("CHF"), amount),
 		},
 	})
 	return true, nil

@@ -1,0 +1,38 @@
+package flags
+
+import (
+	"regexp"
+	"time"
+
+	"github.com/spf13/cobra"
+
+	"github.com/sboehler/knut/lib/model/accounts"
+)
+
+// GetAccountFlag is a helper to get an account passed as a flag to the command.
+func GetAccountFlag(cmd *cobra.Command, flag string) (*accounts.Account, error) {
+	name, err := cmd.Flags().GetString(flag)
+	if err != nil {
+		return nil, err
+	}
+	return accounts.Get(name)
+}
+
+// GetDateFlag is a helper to get a date passed as a flag to the command.
+func GetDateFlag(cmd *cobra.Command, flag string) (*time.Time, error) {
+	s, err := cmd.Flags().GetString(flag)
+	if err != nil || s == "" {
+		return nil, err
+	}
+	t, err := time.Parse("2006-01-02", s)
+	return &t, err
+}
+
+// GetRegexFlag is a helper to get a regex passed as a flag to the command.
+func GetRegexFlag(cmd *cobra.Command, flag string) (*regexp.Regexp, error) {
+	s, err := cmd.Flags().GetString(flag)
+	if err != nil {
+		return nil, err
+	}
+	return regexp.Compile(s)
+}

@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/text/encoding/charmap"
 
+	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/accounts"
@@ -65,19 +66,19 @@ func run(cmd *cobra.Command, args []string) error {
 		o   options
 		err error
 	)
-	if o.account, err = getAccountFlag(cmd, "account"); err != nil {
+	if o.account, err = flags.GetAccountFlag(cmd, "account"); err != nil {
 		return err
 	}
-	if o.dividend, err = getAccountFlag(cmd, "dividend"); err != nil {
+	if o.dividend, err = flags.GetAccountFlag(cmd, "dividend"); err != nil {
 		return err
 	}
-	if o.interest, err = getAccountFlag(cmd, "interest"); err != nil {
+	if o.interest, err = flags.GetAccountFlag(cmd, "interest"); err != nil {
 		return err
 	}
-	if o.tax, err = getAccountFlag(cmd, "tax"); err != nil {
+	if o.tax, err = flags.GetAccountFlag(cmd, "tax"); err != nil {
 		return err
 	}
-	if o.fee, err = getAccountFlag(cmd, "fee"); err != nil {
+	if o.fee, err = flags.GetAccountFlag(cmd, "fee"); err != nil {
 		return err
 	}
 	f, err := os.Open(args[0])
@@ -99,14 +100,6 @@ func run(cmd *cobra.Command, args []string) error {
 	defer w.Flush()
 	_, err = printer.New().PrintLedger(w, p.builder.Build())
 	return err
-}
-
-func getAccountFlag(cmd *cobra.Command, flag string) (*accounts.Account, error) {
-	name, err := cmd.Flags().GetString(flag)
-	if err != nil {
-		return nil, err
-	}
-	return accounts.Get(name)
 }
 
 type parser struct {

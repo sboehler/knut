@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/journal"
@@ -117,10 +118,10 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		from, to *time.Time
 		err      error
 	)
-	if from, err = parseDate(cmd, "from"); err != nil {
+	if from, err = flags.GetDateFlag(cmd, "from"); err != nil {
 		return nil, err
 	}
-	if to, err = parseDate(cmd, "to"); err != nil {
+	if to, err = flags.GetDateFlag(cmd, "to"); err != nil {
 		return nil, err
 	}
 	if to == nil {
@@ -162,19 +163,11 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	if err != nil {
 		return nil, err
 	}
-	filterAccounts, err := cmd.Flags().GetString("account")
+	filterAccounts, err := flags.GetRegexFlag(cmd, "account")
 	if err != nil {
 		return nil, err
 	}
-	filterAccountsRegex, err := regexp.Compile(filterAccounts)
-	if err != nil {
-		return nil, err
-	}
-	filterCommodities, err := cmd.Flags().GetString("commodity")
-	if err != nil {
-		return nil, err
-	}
-	filterCommoditiesRegex, err := regexp.Compile(filterCommodities)
+	filterCommodities, err := flags.GetRegexFlag(cmd, "commodity")
 	if err != nil {
 		return nil, err
 	}
@@ -201,8 +194,8 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			Diff:      diff,
 		}
 		ledgerFilter = ledger.Filter{
-			CommoditiesFilter: filterCommoditiesRegex,
-			AccountsFilter:    filterAccountsRegex,
+			CommoditiesFilter: filterCommodities,
+			AccountsFilter:    filterAccounts,
 		}
 		reportBuilder = report.Builder{
 			Value:    valuation != nil,
@@ -255,15 +248,6 @@ func parseValuation(cmd *cobra.Command, name string) (*commodities.Commodity, er
 		return nil, nil
 	}
 	return commodities.Get(val), nil
-}
-
-func parseDate(cmd *cobra.Command, arg string) (*time.Time, error) {
-	s, err := cmd.Flags().GetString(arg)
-	if err != nil || s == "" {
-		return nil, err
-	}
-	t, err := time.Parse("2006-01-02", s)
-	return &t, err
 }
 
 func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {

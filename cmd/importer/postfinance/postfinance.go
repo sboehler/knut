@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/text/encoding/charmap"
 
+	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/accounts"
@@ -49,11 +50,7 @@ func CreateCmd() *cobra.Command {
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	accountName, err := cmd.Flags().GetString("account")
-	if err != nil {
-		return err
-	}
-	account, err := accounts.Get(accountName)
+	account, err := flags.GetAccountFlag(cmd, "account")
 	if err != nil {
 		return err
 	}

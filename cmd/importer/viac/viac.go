@@ -24,9 +24,9 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
+	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 )
@@ -60,11 +60,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	accountName, err := cmd.Flags().GetString("account")
-	if err != nil {
-		return err
-	}
-	account, err := accounts.Get(accountName)
+	account, err := flags.GetAccountFlag(cmd, "account")
 	if err != nil {
 		return err
 	}

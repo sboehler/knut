@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
 
+	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/bayes"
 	"github.com/sboehler/knut/lib/format"
 	"github.com/sboehler/knut/lib/journal"
@@ -57,14 +58,11 @@ func run(cmd *cobra.Command, args []string) {
 
 func execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
-		s, trainingFile string
-		account         *accounts.Account
-		err             error
+		trainingFile string
+		account      *accounts.Account
+		err          error
 	)
-	if s, err = cmd.Flags().GetString("account"); err != nil {
-		return err
-	}
-	if account, err = accounts.Get(s); err != nil {
+	if account, err = flags.GetAccountFlag(cmd, "account"); err != nil {
 		return err
 	}
 	if trainingFile, err = cmd.Flags().GetString("training-file"); err != nil {

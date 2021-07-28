@@ -61,47 +61,13 @@ func ParseIdentifier(b *Scanner) (string, error) {
 
 // ParseAccount parses an account
 func ParseAccount(b *Scanner) (*accounts.Account, error) {
-	var name strings.Builder
-	for {
-		i, err := ParseIdentifier(b)
-		if err != nil {
-			return nil, err
-		}
-		if _, err := name.WriteString(i); err != nil {
-			return nil, err
-		}
-		if b.Current() != ':' {
-			return accounts.Get(name.String())
-		}
-		if err := b.ConsumeRune(':'); err != nil {
-			return nil, err
-		}
-		if _, err := name.WriteRune(':'); err != nil {
-			return nil, err
-		}
-	}
-}
-
-// ParseAccountType parses an account type
-func ParseAccountType(b *Scanner) (accounts.AccountType, error) {
-	s, err := b.ReadWhile(unicode.IsLetter)
+	s, err := b.ReadWhile(func(r rune) bool {
+		return r == ':' || unicode.IsLetter(r) || unicode.IsDigit(r)
+	})
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	switch s {
-	case "Assets":
-		return accounts.ASSETS, nil
-	case "Liabilities":
-		return accounts.LIABILITIES, nil
-	case "Equity":
-		return accounts.EQUITY, nil
-	case "Income":
-		return accounts.INCOME, nil
-	case "Expenses":
-		return accounts.EXPENSES, nil
-	default:
-		return 0, fmt.Errorf("expected account type, got %q", s)
-	}
+	return accounts.Get(s)
 }
 
 // ParseDecimal parses a decimal number

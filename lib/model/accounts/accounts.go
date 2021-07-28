@@ -19,6 +19,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"unicode"
 )
 
 // AccountType is the type of an account.
@@ -76,21 +77,43 @@ func get(name string) (*Account, bool) {
 	return c, ok
 }
 
+func isValidSegment(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, c := range s {
+		if !(unicode.IsLetter(c) || unicode.IsDigit(c)) {
+			return false
+		}
+	}
+	return true
+}
 func create(name string) (*Account, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
+	// check if the account has been created in the meantime
 	if a, ok := accounts[name]; ok {
 		return a, nil
 	}
-	if t, ok := accountTypes[strings.SplitN(name, ":", 2)[0]]; ok {
-		var a = &Account{
-			accountType: t,
-			name:        name,
-		}
-		accounts[name] = a
-		return a, nil
+	var segments = strings.Split(name, ":")
+	if len(segments) < 2 {
+		return nil, fmt.Errorf("invalid account name: %q", name)
 	}
-	return nil, fmt.Errorf("invalid account name: %q", name)
+	at, ok := accountTypes[segments[0]]
+	if !ok {
+		return nil, fmt.Errorf("account name %q has an invalid account type %q", name, segments[0])
+	}
+	for _, s := range segments[1:] {
+		if !isValidSegment(s) {
+			return nil, fmt.Errorf("account name %q has an invalid segment %q", name, s)
+		}
+	}
+	var a = &Account{
+		accountType: at,
+		name:        name,
+	}
+	accounts[name] = a
+	return a, nil
 }
 
 var valuationAccount, equityAccount, retainedEarningsAccount, tbdAccount *Account

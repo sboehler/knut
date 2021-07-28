@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 	"unicode"
 
@@ -54,11 +53,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	accountScanner, err := scanner.New(strings.NewReader(accountName), "")
-	if err != nil {
-		return err
-	}
-	account, err := scanner.ParseAccount(accountScanner)
+	account, err := accounts.Get(accountName)
 	if err != nil {
 		return err
 	}

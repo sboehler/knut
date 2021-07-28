@@ -33,7 +33,6 @@ import (
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
-	"github.com/sboehler/knut/lib/scanner"
 )
 
 // CreateCmd creates the command.
@@ -60,11 +59,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	s, err := scanner.New(strings.NewReader(accountName), "")
-	if err != nil {
-		return err
-	}
-	account, err := scanner.ParseAccount(s)
+	account, err := accounts.Get(accountName)
 	if err != nil {
 		return err
 	}

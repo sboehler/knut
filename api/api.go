@@ -228,18 +228,14 @@ func parseBool(query url.Values, key string) (bool, error) {
 
 func parseCommodity(query url.Values, key string) (*commodities.Commodity, error) {
 	var (
-		s      string
-		ok     bool
-		err    error
-		result *commodities.Commodity
+		s   string
+		ok  bool
+		err error
 	)
-	if s, ok, err = getOne(query, key); err != nil {
+	if s, ok, err = getOne(query, key); err != nil || !ok {
 		return nil, err
 	}
-	if ok {
-		result = commodities.Get(s)
-	}
-	return result, nil
+	return commodities.Get(s)
 }
 
 func getOne(query url.Values, key string) (string, bool, error) {

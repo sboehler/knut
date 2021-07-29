@@ -143,6 +143,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		err    error
 		desc   = r[bfBeschreibung]
 		amount decimal.Decimal
+		chf    *commodities.Commodity
 		date   time.Time
 	)
 	if date, err = time.Parse("02.01.2006", r[bfEinkaufsDatum]); err != nil {
@@ -151,11 +152,14 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if amount, err = parseAmount(r[bfBelastungCHF], r[bfGutschriftCHF]); err != nil {
 		return false, err
 	}
+	if chf, err = commodities.Get("CHF"); err != nil {
+		return false, err
+	}
 	p.last = &ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(accounts.TBDAccount(), p.account, commodities.Get("CHF"), amount),
+			ledger.NewPosting(accounts.TBDAccount(), p.account, chf, amount),
 		},
 	}
 	p.builder.AddTransaction(p.last)
@@ -225,6 +229,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 		err    error
 		amount decimal.Decimal
 		date   time.Time
+		chf    *commodities.Commodity
 	)
 	if date, err = time.Parse("02.01.2006", r[rfEinkaufsDatum]); err != nil {
 		return false, err
@@ -232,11 +237,14 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	if amount, err = parseAmount(r[rfBelastungCHF], r[rfGutschriftCHF]); err != nil {
 		return false, err
 	}
+	if chf, err = commodities.Get("CHF"); err != nil {
+		return false, err
+	}
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: r[rfBeschreibung],
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(accounts.TBDAccount(), p.account, commodities.Get("CHF"), amount),
+			ledger.NewPosting(accounts.TBDAccount(), p.account, chf, amount),
 		},
 	})
 	return true, nil

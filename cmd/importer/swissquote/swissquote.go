@@ -176,7 +176,9 @@ func lineToRecord(l []string) (*record, error) {
 	r.orderNo = l[1]
 	r.trxType = l[2]
 	if len(l[3]) > 0 {
-		r.symbol = commodities.Get(l[3])
+		if r.symbol, err = commodities.Get(l[3]); err != nil {
+			return nil, err
+		}
 	}
 	r.name = l[4]
 	r.isin = l[5]
@@ -198,7 +200,9 @@ func lineToRecord(l []string) (*record, error) {
 	if r.balance, err = decimal.NewFromString(replacer.Replace(l[11])); err != nil {
 		return nil, err
 	}
-	r.currency = commodities.Get(l[12])
+	if r.currency, err = commodities.Get(l[12]); err != nil {
+		return nil, err
+	}
 	return &r, nil
 }
 

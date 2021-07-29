@@ -16,7 +16,9 @@ package commodities
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
+	"unicode"
 )
 
 var (
@@ -36,21 +38,37 @@ func get(name string) (*Commodity, bool) {
 	return c, ok
 }
 
-func create(name string) *Commodity {
+func isValidCommodity(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, c := range s {
+		if !(unicode.IsLetter(c) || unicode.IsDigit(c)) {
+			return false
+		}
+	}
+	return true
+}
+
+func create(name string) (*Commodity, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
+	// check if the commodity has been created in the meantime
 	if c, ok := commodities[name]; ok {
-		return c
+		return c, nil
+	}
+	if !isValidCommodity(name) {
+		return nil, fmt.Errorf("invalid commodity name %q", name)
 	}
 	var c = &Commodity{name}
 	commodities[name] = c
-	return c
+	return c, nil
 }
 
 // Get creates a new commodity.
-func Get(name string) *Commodity {
+func Get(name string) (*Commodity, error) {
 	if c, ok := get(name); ok {
-		return c
+		return c, nil
 	}
 	return create(name)
 }

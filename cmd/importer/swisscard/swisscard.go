@@ -131,6 +131,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	var (
 		err  error
 		desc = strings.Join(words, " ")
+		chf  *commodities.Commodity
 		amt  decimal.Decimal
 		d    time.Time
 	)
@@ -140,11 +141,14 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if amt, err = decimal.NewFromString(replacer.Replace(r[3])); err != nil {
 		return false, err
 	}
+	if chf, err = commodities.Get("CHF"); err != nil {
+		return false, err
+	}
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        d,
 		Description: desc,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(p.account, accounts.TBDAccount(), commodities.Get("CHF"), amt),
+			ledger.NewPosting(p.account, accounts.TBDAccount(), chf, amt),
 		},
 	})
 	return true, nil

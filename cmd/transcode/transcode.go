@@ -62,11 +62,14 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 		return fmt.Errorf("missing --commodity flag, please provide a valuation commodity")
 	}
 	var (
-		commodity = commodities.Get(c)
+		commodity *commodities.Commodity
 		j         = journal.Journal{File: args[0]}
+		l         ledger.Ledger
 	)
-	l, err := ledger.FromDirectives(ledger.Filter{}, j.Parse())
-	if err != nil {
+	if commodity, err = commodities.Get(c); err != nil {
+		return err
+	}
+	if l, err = ledger.FromDirectives(ledger.Filter{}, j.Parse()); err != nil {
 		return err
 	}
 	var balanceBuilder = balance.Builder{Valuation: commodity}

@@ -72,6 +72,10 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	commodity, err := commodities.Get("CHF")
+	if err != nil {
+		return err
+	}
 
 	var resp response
 	json.Unmarshal(b, &resp)
@@ -93,7 +97,7 @@ func run(cmd *cobra.Command, args []string) error {
 			Date:      d,
 			Account:   account,
 			Amount:    a.Round(2),
-			Commodity: commodities.Get("CHF"),
+			Commodity: commodity,
 		})
 	}
 

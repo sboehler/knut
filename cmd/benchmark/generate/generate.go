@@ -196,7 +196,11 @@ func generateAccounts(c config) []*accounts.Account {
 func generateCommodities(c config) []*commodities.Commodity {
 	var res []*commodities.Commodity
 	for i := 0; i < c.commodities; i++ {
-		res = append(res, commodities.Get(fmt.Sprintf("COMMODITY%d", i)))
+		commodity, err := commodities.Get(fmt.Sprintf("COMMODITY%d", i))
+		if err != nil {
+			panic("invalid commodity")
+		}
+		res = append(res, commodity)
 	}
 	return res
 }

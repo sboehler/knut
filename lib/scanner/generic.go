@@ -121,5 +121,5 @@ func ParseCommodity(p *Scanner) (*commodities.Commodity, error) {
 	if err != nil {
 		return nil, err
 	}
-	return commodities.Get(i), nil
+	return commodities.Get(i)
 }

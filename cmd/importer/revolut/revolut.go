@@ -125,8 +125,9 @@ func (p *parser) parseHeader(r []string) error {
 	if len(groups) != 2 {
 		return fmt.Errorf("could not extract currency from header field: %q", r[2])
 	}
-	p.currency = commodities.Get(groups[1])
-	return nil
+	var err error
+	p.currency, err = commodities.Get(groups[1])
+	return err
 }
 
 var replacer = strings.NewReplacer("'", "")
@@ -218,9 +219,15 @@ func parseCombiField(f string) (*commodities.Commodity, decimal.Decimal, error) 
 	if len(fs) != 2 {
 		return nil, decimal.Decimal{}, fmt.Errorf("expected currency and amount, got %s", f)
 	}
-	var otherCommodity = commodities.Get(fs[0])
-	otherAmount, err := decimal.NewFromString(replacer.Replace(fs[1]))
-	if err != nil {
+	var (
+		otherCommodity *commodities.Commodity
+		otherAmount    decimal.Decimal
+		err            error
+	)
+	if otherCommodity, err = commodities.Get(fs[0]); err != nil {
+		return nil, decimal.Decimal{}, err
+	}
+	if otherAmount, err = decimal.NewFromString(replacer.Replace(fs[1])); err != nil {
 		return nil, decimal.Decimal{}, err
 	}
 	return otherCommodity, otherAmount, nil

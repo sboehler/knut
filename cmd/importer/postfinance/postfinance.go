@@ -112,8 +112,10 @@ func (p *Parser) parse() error {
 	if err != nil {
 		return err
 	}
-	var commodity = commodities.Get(s)
-
+	var commodity *commodities.Commodity
+	if commodity, err = commodities.Get(s); err != nil {
+		return err
+	}
 	// ignore 6 header fields
 	for i := 0; i < 6; i++ {
 		if err := p.ignoreField(); err != nil {

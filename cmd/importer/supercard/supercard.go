@@ -162,11 +162,12 @@ const (
 
 func (p *parser) parseBooking(r []string) error {
 	var (
-		words    = p.parseWords(r)
-		currency = p.parseCurrency(r)
-		date     time.Time
-		amount   decimal.Decimal
-		err      error
+		words     = p.parseWords(r)
+		currency  = p.parseCurrency(r)
+		commodity *commodities.Commodity
+		date      time.Time
+		amount    decimal.Decimal
+		err       error
 	)
 	if date, err = p.parseDate(r); err != nil {
 		return err
@@ -174,11 +175,14 @@ func (p *parser) parseBooking(r []string) error {
 	if amount, err = p.parseAmount(r); err != nil {
 		return err
 	}
+	if commodity, err = commodities.Get(currency); err != nil {
+		return err
+	}
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: words,
 		Postings: []*ledger.Posting{
-			ledger.NewPosting(accounts.TBDAccount(), p.account, commodities.Get(currency), amount),
+			ledger.NewPosting(accounts.TBDAccount(), p.account, commodity, amount),
 		},
 	})
 	return nil

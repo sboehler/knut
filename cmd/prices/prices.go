@@ -140,16 +140,26 @@ func readFile(filepath string) (res map[time.Time]*ledger.Price, err error) {
 }
 
 func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]*ledger.Price) error {
-	var c = yahoo.New()
-	quotes, err := c.Fetch(cfg.Symbol, t0, t1)
-	if err != nil {
+	var (
+		c                 = yahoo.New()
+		quotes            []yahoo.Quote
+		commodity, target *commodities.Commodity
+		err               error
+	)
+	if quotes, err = c.Fetch(cfg.Symbol, t0, t1); err != nil {
+		return err
+	}
+	if commodity, err = commodities.Get(cfg.Commodity); err != nil {
+		return err
+	}
+	if target, err = commodities.Get(cfg.TargetCommodity); err != nil {
 		return err
 	}
 	for _, i := range quotes {
 		results[i.Date] = &ledger.Price{
 			Date:      i.Date,
-			Commodity: commodities.Get(cfg.Commodity),
-			Target:    commodities.Get(cfg.TargetCommodity),
+			Commodity: commodity,
+			Target:    target,
 			Price:     decimal.NewFromFloat(i.Close),
 		}
 	}

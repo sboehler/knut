@@ -131,8 +131,8 @@ func (p *parser) readLine() error {
 	if err != nil {
 		return err
 	}
-	if ok := p.parseBaseCurrency(l); ok {
-		return nil
+	if ok, err := p.parseBaseCurrency(l); ok || err != nil {
+		return err
 	}
 	if ok, err := p.parseDate(l); ok || err != nil {
 		return err
@@ -173,14 +173,17 @@ const (
 	aiFieldValue
 )
 
-func (p *parser) parseBaseCurrency(r []string) bool {
+func (p *parser) parseBaseCurrency(r []string) (bool, error) {
 	if !(r[aiAccountInformation] == "Account Information" &&
 		r[aiHeader] == "Data" &&
 		r[aiFieldName] == "Base Currency") {
-		return false
+		return false, nil
 	}
-	p.baseCurrency = commodities.Get(r[aiFieldValue])
-	return true
+	var err error
+	if p.baseCurrency, err = commodities.Get(r[aiFieldValue]); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 type statementField int
@@ -242,13 +245,18 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency                  = commodities.Get(r[tfCurrency])
-		stock                     = commodities.Get(r[tfSymbol])
+		currency, stock           *commodities.Commodity
 		date                      time.Time
 		desc                      string
 		qty, price, proceeds, fee decimal.Decimal
 		err                       error
 	)
+	if currency, err = commodities.Get(r[tfCurrency]); err != nil {
+		return false, err
+	}
+	if stock, err = commodities.Get(r[tfSymbol]); err != nil {
+		return false, err
+	}
 	date, err = parseDateFromDateTime(r[tfDateTime])
 	if err != nil {
 		return false, err
@@ -293,14 +301,18 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		return false, fmt.Errorf("base currency is not defined")
 	}
 	var (
-		currency                  = commodities.Get(r[tfCurrency])
-		currency2                 = strings.SplitN(r[tfSymbol], ".", 2)[0]
-		stock                     = commodities.Get(currency2)
+		currency, stock           *commodities.Commodity
 		date                      time.Time
 		desc                      string
 		qty, price, proceeds, fee decimal.Decimal
 		err                       error
 	)
+	if currency, err = commodities.Get(r[tfCurrency]); err != nil {
+		return false, err
+	}
+	if stock, err = commodities.Get(strings.SplitN(r[tfSymbol], ".", 2)[0]); err != nil {
+		return false, err
+	}
 	if date, err = parseDateFromDateTime(r[tfDateTime]); err != nil {
 		return false, err
 	}
@@ -355,12 +367,15 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency = commodities.Get(r[dwfCurrency])
+		currency *commodities.Commodity
 		date     time.Time
 		desc     string
 		amount   decimal.Decimal
 		err      error
 	)
+	if currency, err = commodities.Get(r[dwfCurrency]); err != nil {
+		return false, err
+	}
 	if date, err = parseDate(r[dwfSettleDate]); err != nil {
 		return false, err
 	}
@@ -401,12 +416,16 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency = commodities.Get(r[dfCurrency])
-		date     time.Time
-		amount   decimal.Decimal
-		symbol   string
-		err      error
+		currency, security *commodities.Commodity
+		date               time.Time
+		desc               = r[dfDescription]
+		amount             decimal.Decimal
+		symbol             string
+		err                error
 	)
+	if currency, err = commodities.Get(r[dfCurrency]); err != nil {
+		return false, err
+	}
 	if date, err = parseDate(r[dfDate]); err != nil {
 		return false, err
 	}
@@ -416,10 +435,9 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if symbol, err = parseDividendSymbol(r[dfDescription]); err != nil {
 		return false, err
 	}
-	var (
-		security = commodities.Get(symbol)
-		desc     = r[dfDescription]
-	)
+	if security, err = commodities.Get(symbol); err != nil {
+		return false, err
+	}
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
@@ -460,12 +478,16 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency = commodities.Get(r[wtfCurrency])
-		date     time.Time
-		amount   decimal.Decimal
-		symbol   string
-		err      error
+		desc               = r[wtfDescription]
+		currency, security *commodities.Commodity
+		date               time.Time
+		amount             decimal.Decimal
+		symbol             string
+		err                error
 	)
+	if currency, err = commodities.Get(r[wtfCurrency]); err != nil {
+		return false, err
+	}
 	if date, err = parseDate(r[wtfDate]); err != nil {
 		return false, err
 	}
@@ -475,10 +497,9 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if symbol, err = parseDividendSymbol(r[wtfDescription]); err != nil {
 		return false, err
 	}
-	var (
-		security = commodities.Get(symbol)
-		desc     = r[wtfDescription]
-	)
+	if security, err = commodities.Get(symbol); err != nil {
+		return false, err
+	}
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
@@ -496,12 +517,15 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency = commodities.Get(r[dfCurrency])
+		currency *commodities.Commodity
 		date     time.Time
 		amount   decimal.Decimal
 		desc     = r[dfDescription]
 		err      error
 	)
+	if currency, err = commodities.Get(r[dfCurrency]); err != nil {
+		return false, err
+	}
 	if date, err = parseDate(r[dfDate]); err != nil {
 		return false, err
 	}
@@ -546,9 +570,15 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 	if p.dateTo.IsZero() {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
-	var symbol = commodities.Get(r[opfSymbol])
-	amt, err := decimal.NewFromString(r[opfQuantity])
-	if err != nil {
+	var (
+		symbol *commodities.Commodity
+		amt    decimal.Decimal
+		err    error
+	)
+	if symbol, err = commodities.Get(r[opfSymbol]); err != nil {
+		return false, err
+	}
+	if amt, err = decimal.NewFromString(r[opfQuantity]); err != nil {
 		return false, err
 	}
 	p.builder.AddAssertion(&ledger.Assertion{
@@ -587,10 +617,13 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
 	var (
-		symbol = commodities.Get(r[fbfDescription])
+		symbol *commodities.Commodity
 		amount decimal.Decimal
 		err    error
 	)
+	if symbol, err = commodities.Get(r[fbfDescription]); err != nil {
+		return false, err
+	}
 	if amount, err = parseRoundedDecimal(r[fbfQuantity]); err != nil {
 		return false, err
 	}

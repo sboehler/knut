@@ -110,11 +110,10 @@ type parser struct {
 }
 
 func (p *parser) parse() error {
-	// quotes can appear within fields
 	p.reader.LazyQuotes = true
-	// entries separated by semicolons
 	p.reader.Comma = ';'
-	// remove header
+	p.reader.FieldsPerRecord = 13
+	// skip header
 	if _, err := p.reader.Read(); err != nil {
 		return err
 	}
@@ -162,48 +161,72 @@ func (p *parser) readLine() error {
 	return fmt.Errorf("unparsed line: %v", l)
 }
 
+type field int
+
+const (
+	fDatum field = iota
+	fAuftragNo
+	fTransaktionen
+	fSymbol
+	fName
+	fISIN
+	fAnzahl
+	fStückpreis
+	fKosten
+	fAufgelaufeneZinsen
+	fNettobetrag
+	fSaldo
+	fWährung
+)
+
 func lineToRecord(l []string) (*record, error) {
-	if len(l) != 13 {
-		return nil, fmt.Errorf("invalid len: %v", l)
-	}
 	var (
-		r   record
+		r = record{
+			orderNo: l[fAuftragNo],
+			trxType: l[fTransaktionen],
+			name:    l[fName],
+			isin:    l[fISIN],
+		}
 		err error
 	)
-	if r.date, err = time.Parse("02-01-2006", l[0][:10]); err != nil {
+	if r.date, err = parseDateFromDateTime(l[fDatum]); err != nil {
 		return nil, err
 	}
-	r.orderNo = l[1]
-	r.trxType = l[2]
-	if len(l[3]) > 0 {
-		if r.symbol, err = commodities.Get(l[3]); err != nil {
+	if len(l[fSymbol]) > 0 {
+		if r.symbol, err = commodities.Get(l[fSymbol]); err != nil {
 			return nil, err
 		}
 	}
-	r.name = l[4]
-	r.isin = l[5]
-	if r.quantity, err = decimal.NewFromString(replacer.Replace(l[6])); err != nil {
+	if r.quantity, err = parseDecimal(l[fAnzahl]); err != nil {
 		return nil, err
 	}
-	if r.price, err = decimal.NewFromString(replacer.Replace(l[7])); err != nil {
+	if r.price, err = parseDecimal(l[fStückpreis]); err != nil {
 		return nil, err
 	}
-	if r.fee, err = decimal.NewFromString(replacer.Replace(l[8])); err != nil {
+	if r.fee, err = parseDecimal(l[fKosten]); err != nil {
 		return nil, err
 	}
-	if r.interest, err = decimal.NewFromString(replacer.Replace(l[9])); err != nil {
+	if r.interest, err = parseDecimal(l[fAufgelaufeneZinsen]); err != nil {
 		return nil, err
 	}
-	if r.netAmount, err = decimal.NewFromString(replacer.Replace(l[10])); err != nil {
+	if r.netAmount, err = parseDecimal(l[fNettobetrag]); err != nil {
 		return nil, err
 	}
-	if r.balance, err = decimal.NewFromString(replacer.Replace(l[11])); err != nil {
+	if r.balance, err = parseDecimal(l[fSaldo]); err != nil {
 		return nil, err
 	}
-	if r.currency, err = commodities.Get(l[12]); err != nil {
+	if r.currency, err = commodities.Get(l[fWährung]); err != nil {
 		return nil, err
 	}
 	return &r, nil
+}
+
+func parseDecimal(s string) (decimal.Decimal, error) {
+	return decimal.NewFromString(strings.ReplaceAll(s, "'", ""))
+}
+
+func parseDateFromDateTime(s string) (time.Time, error) {
+	return time.Parse("02-01-2006", s[:10])
 }
 
 type record struct {
@@ -213,21 +236,19 @@ type record struct {
 	currency, symbol                                   *commodities.Commodity
 }
 
-var replacer = strings.NewReplacer("'", "")
-
 func (p *parser) parseTrade(r *record) (bool, error) {
-	if r.trxType != "Kauf" && r.trxType != "Verkauf" {
+	if !(r.trxType == "Kauf" || r.trxType == "Verkauf") {
 		return false, nil
 	}
 	var (
 		proceeds = r.netAmount.Add(r.fee)
 		fee      = r.fee.Neg()
 		qty      = r.quantity
+		desc     = fmt.Sprintf("%s %s %s x %s %s %s @ %s %s", r.orderNo, r.trxType, r.quantity, r.symbol, r.name, r.isin, r.price, r.currency)
 	)
 	if proceeds.IsPositive() {
 		qty = qty.Neg()
 	}
-	desc := fmt.Sprintf("%s %s %s x %s %s %s @ %s %s", r.orderNo, r.trxType, r.quantity, r.symbol, r.name, r.isin, r.price, r.currency)
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: desc,
@@ -279,16 +300,15 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 	if _, ok := w[r.trxType]; !ok {
 		return false, nil
 	}
-	postings := []*ledger.Posting{
+	var postings = []*ledger.Posting{
 		ledger.NewPosting(p.options.dividend, p.options.account, r.currency, r.price),
 	}
 	if !r.fee.IsZero() {
 		postings = append(postings, ledger.NewPosting(p.options.account, p.options.tax, r.currency, r.fee))
 	}
-	desc := fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol, r.name, r.isin)
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
-		Description: desc,
+		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol, r.name, r.isin),
 		Postings:    postings,
 	})
 	return true, nil
@@ -309,7 +329,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 }
 
 func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
-	w := map[string]bool{
+	var w = map[string]bool{
 		"Einzahlung": true,
 		"Auszahlung": true,
 		"Vergütung":  true,

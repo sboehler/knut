@@ -31,6 +31,7 @@ import (
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/report"
 	"github.com/sboehler/knut/lib/table"
 
@@ -134,9 +135,11 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	if err != nil {
 		return nil, err
 	}
-	valuation, err := flags.GetCommodityFlag(cmd, "val")
-	if err != nil {
-		return nil, err
+	var valuation *commodities.Commodity
+	if cmd.Flags().Changed("val") {
+		if valuation, err = flags.GetCommodityFlag(cmd, "val"); err != nil {
+			return nil, err
+		}
 	}
 	showCommodities, err := cmd.Flags().GetBool("show-commodities")
 	if err != nil {

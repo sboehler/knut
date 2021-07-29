@@ -22,7 +22,7 @@ func GetAccountFlag(cmd *cobra.Command, flag string) (*accounts.Account, error) 
 // GetDateFlag is a helper to get a date passed as a flag to the command.
 func GetDateFlag(cmd *cobra.Command, flag string) (*time.Time, error) {
 	s, err := cmd.Flags().GetString(flag)
-	if err != nil || s == "" {
+	if err != nil {
 		return nil, err
 	}
 	t, err := time.Parse("2006-01-02", s)

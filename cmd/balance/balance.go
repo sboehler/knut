@@ -118,13 +118,16 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		from, to *time.Time
 		err      error
 	)
-	if from, err = flags.GetDateFlag(cmd, "from"); err != nil {
-		return nil, err
+	if cmd.Flags().Changed("from") {
+		if from, err = flags.GetDateFlag(cmd, "from"); err != nil {
+			return nil, err
+		}
 	}
-	if to, err = flags.GetDateFlag(cmd, "to"); err != nil {
-		return nil, err
-	}
-	if to == nil {
+	if cmd.Flags().Changed("to") {
+		if to, err = flags.GetDateFlag(cmd, "to"); err != nil {
+			return nil, err
+		}
+	} else {
 		var (
 			now = time.Now()
 			d   = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)

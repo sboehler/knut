@@ -16,10 +16,11 @@ package postfinance
 
 import (
 	"bufio"
+	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"time"
-	"unicode"
 
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
@@ -31,7 +32,6 @@ import (
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
-	"github.com/sboehler/knut/lib/scanner"
 )
 
 // CreateCmd creates the cobra command.
@@ -50,19 +50,22 @@ func CreateCmd() *cobra.Command {
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	account, err := flags.GetAccountFlag(cmd, "account")
-	if err != nil {
+	var (
+		file    *os.File
+		account *accounts.Account
+		err     error
+	)
+	if account, err = flags.GetAccountFlag(cmd, "account"); err != nil {
 		return err
 	}
-	f, err := os.Open(args[0])
-	if err != nil {
+	if file, err = os.Open(args[0]); err != nil {
 		return err
 	}
-	scanner, err := scanner.New(bufio.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)), args[0])
-	if err != nil {
-		return err
+	var p = Parser{
+		reader:  csv.NewReader(bufio.NewReader(charmap.ISO8859_1.NewDecoder().Reader(file))),
+		account: account,
+		builder: ledger.NewBuilder(ledger.Filter{}),
 	}
-	var p = Parser{scanner, account, ledger.NewBuilder(ledger.Filter{})}
 	if err = p.parse(); err != nil {
 		return err
 	}
@@ -78,203 +81,120 @@ func init() {
 
 // Parser is a parser for account statements
 type Parser struct {
-	*scanner.Scanner
+	reader  *csv.Reader
 	account *accounts.Account
 	builder *ledger.Builder
+
+	currency *commodities.Commodity
 }
 
 func (p *Parser) parse() error {
-	if p.Current() == 'D' {
-		if err := p.consumeStringField("Datum von:"); err != nil {
-			return err
-		}
-		if err := p.ignoreField(); err != nil {
-			return err
-		}
-	}
-	for _, s := range [][]string{
-		{"Buchungsart:", "Entry type:"},
-		{"Konto:", "Account:"},
-	} {
-		if err := p.consumeStringField(s...); err != nil {
-			return err
-		}
-		if err := p.ignoreField(); err != nil {
-			return err
-		}
-	}
-
-	if err := p.consumeStringField("Währung:", "Currency:"); err != nil {
-		return err
-	}
-
-	s, err := p.getField()
-	if err != nil {
-		return err
-	}
-	var commodity *commodities.Commodity
-	if commodity, err = commodities.Get(s); err != nil {
-		return err
-	}
-	// ignore 6 header fields
-	for i := 0; i < 6; i++ {
-		if err := p.ignoreField(); err != nil {
-			return err
-		}
-	}
-
-	for !unicode.IsControl(p.Current()) {
-
-		s, err := p.getField()
-		if err != nil {
-			return err
-		}
-		d, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return err
-		}
-		description, err := p.getField()
-		if err != nil {
-			return err
-		}
-		if p.Current() == ';' {
-			if err := p.consumeDelimiter(); err != nil {
-				return err
-			}
-			s, err = p.getField()
-			if err != nil {
-				return err
-			}
-		} else {
-			s, err = p.getField()
-			if err != nil {
-				return err
-			}
-			if err := p.consumeDelimiter(); err != nil {
-				return err
-			}
-		}
-		amt, err := decimal.NewFromString(s)
-		if err != nil {
-			return err
-		}
-
-		for i := 0; i < 2; i++ {
-			if err := p.ignoreField(); err != nil {
-				return err
-			}
-		}
-		var drAccount, crAccount *accounts.Account
-		if amt.IsPositive() {
-			crAccount, drAccount = accounts.TBDAccount(), p.account
-		} else {
-			crAccount, drAccount = p.account, accounts.TBDAccount()
-		}
-
-		var (
-			postings = []*ledger.Posting{
-				{
-					Amount:    amt.Abs(),
-					Credit:    crAccount,
-					Debit:     drAccount,
-					Commodity: commodity,
-				},
-			}
-			t = &ledger.Transaction{
-				Date:        d,
-				Description: description,
-				Postings:    postings,
-			}
-		)
-		p.builder.AddTransaction(t)
-
-	}
-
-	for i := 0; i < 3; i++ {
-		if err := p.ignoreField(); err != nil {
-			return err
-		}
-	}
-	if p.Current() != scanner.EOF {
-		return fmt.Errorf("expected EOF, got %b", p.Current())
-	}
-	return nil
-}
-
-func (p *Parser) consumeStringField(ss ...string) error {
-	s, err := p.getField()
-	if err != nil {
-		return err
-	}
-	if err := oneOf(s, ss...); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *Parser) ignoreField() error {
-	_, err := p.getField()
-	return err
-}
-
-func (p *Parser) getField() (string, error) {
-	var (
-		err error
-		s   string
-	)
-	if p.Current() == '"' {
-		if s, err = scanner.ReadQuotedString(p.Scanner); err != nil {
-			return s, err
-		}
-	} else if p.Current() != '\n' && p.Current() != '\r' && p.Current() != ';' {
-		if s, err = p.readUnquotedField(); err != nil {
-			return s, err
-		}
-	}
-	if err := p.consumeDelimiter(); err != nil {
-		return s, err
-	}
-	return s, nil
-}
-
-func (p *Parser) consumeDelimiter() error {
-	if p.Current() == ';' {
-		err := p.ConsumeRune(';')
-		return err
-	}
-	if p.Current() == '\n' {
-		err := p.ConsumeRune('\n')
-		return err
-	}
-	if p.Current() == '\r' {
-		if err := p.ConsumeRune('\r'); err != nil {
-			return err
-		}
-		if err := p.ConsumeRune('\n'); err != nil {
-			return err
-		}
-		return nil
-	}
-	if p.Current() == scanner.EOF {
-		return nil
-	}
-	return fmt.Errorf("expected delimiter, newline or EOF, got %c", p.Current())
-}
-
-func (p *Parser) readUnquotedField() (string, error) {
-	return p.ReadWhile(func(r rune) bool {
-		return r != ';' && r != '\n' && r != '\r' && r != scanner.EOF
-	})
-}
-
-func oneOf(s string, ss ...string) error {
-	if len(ss) == 0 {
-		return nil
-	}
-	for _, c := range ss {
-		if s == c {
+	p.reader.FieldsPerRecord = -1
+	p.reader.LazyQuotes = true
+	p.reader.TrimLeadingSpace = true
+	p.reader.Comma = ';'
+	for {
+		var err = p.readLine()
+		if err == io.EOF {
 			return nil
 		}
+		if err != nil {
+			return err
+		}
 	}
-	return fmt.Errorf("expected %q, got %q", ss, s)
+}
+
+func (p *Parser) readLine() error {
+	var (
+		line []string
+		err  error
+	)
+	if line, err = p.reader.Read(); err != nil {
+		return err
+	}
+	switch len(line) {
+	case 2:
+		return p.readHeaderLine(line)
+	case 6:
+		return p.readBookingLine(line)
+	default:
+		return nil
+	}
+}
+
+type headerField int
+
+const (
+	hfHeader headerField = iota
+	hfData
+)
+
+func (p *Parser) readHeaderLine(l []string) error {
+	var currencyHeaders = map[string]bool{
+		"Währung:":  true,
+		"Currency:": true,
+	}
+	var err error
+	if currencyHeaders[l[hfHeader]] {
+		if p.currency, err = commodities.Get(l[hfData]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type bookingField int
+
+const (
+	bfBuchungsdatum bookingField = iota
+	bfAvisierungstext
+	bfGutschriftInCHF
+	bfLastschriftInCHF
+	bfValuta
+	bfSaldoInCHF
+)
+
+func (p *Parser) readBookingLine(l []string) error {
+	if isHeader(l) {
+		return nil
+	}
+	var (
+		date   time.Time
+		amount decimal.Decimal
+		err    error
+	)
+	if date, err = time.Parse("2006-01-02", l[bfBuchungsdatum]); err != nil {
+		return err
+	}
+	if amount, err = parseAmount(l); err != nil {
+		return err
+	}
+	p.builder.AddTransaction(&ledger.Transaction{
+		Date:        date,
+		Description: l[bfAvisierungstext],
+		Postings: []*ledger.Posting{
+			ledger.NewPosting(accounts.TBDAccount(), p.account, p.currency, amount),
+		},
+	})
+	return nil
+}
+
+func parseAmount(l []string) (decimal.Decimal, error) {
+	var (
+		amount decimal.Decimal
+		field  bookingField
+	)
+	switch {
+	case len(l[bfGutschriftInCHF]) > 0 && len(l[bfLastschriftInCHF]) == 0:
+		field = bfGutschriftInCHF
+	case len(l[bfGutschriftInCHF]) == 0 && len(l[bfLastschriftInCHF]) > 0:
+		field = bfLastschriftInCHF
+	default:
+		return amount, fmt.Errorf("invalid amount fields %q %q", l[bfGutschriftInCHF], l[bfLastschriftInCHF])
+	}
+	return decimal.NewFromString(l[field])
+}
+
+func isHeader(s []string) bool {
+	return s[bfBuchungsdatum] == "Buchungsdatum"
 }

@@ -160,3 +160,15 @@ func (s *Scanner) ParseString(str string) error {
 	}
 	return nil
 }
+
+// ReadN reads a string with n runes
+func (s *Scanner) ReadN(n int) (string, error) {
+	var b strings.Builder
+	for i := 0; i < n; i++ {
+		b.WriteRune(s.Current())
+		if err := s.Advance(); err != nil {
+			return "", err
+		}
+	}
+	return b.String(), nil
+}

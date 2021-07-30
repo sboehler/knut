@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -26,7 +27,10 @@ import (
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/accounts"
+	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/scanner"
+	"github.com/shopspring/decimal"
 )
 
 // Parser parses a journal
@@ -142,7 +146,7 @@ func (p *Parser) consumeComment() error {
 
 func (p *Parser) parseDirective() (ledger.Directive, error) {
 	p.markStart()
-	d, err := scanner.ParseDate(p.scanner)
+	d, err := p.parseDate()
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +177,7 @@ func (p *Parser) parseDirective() (ledger.Directive, error) {
 }
 
 func (p *Parser) parseTransaction(d time.Time) (*ledger.Transaction, error) {
-	desc, err := scanner.ReadQuotedString(p.scanner)
+	desc, err := p.parseQuotedString()
 	if err != nil {
 		return nil, err
 	}
@@ -238,28 +242,28 @@ func (p *Parser) parseAccrual() (*ledger.Accrual, error) {
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	dateFrom, err := scanner.ParseDate(p.scanner)
+	dateFrom, err := p.parseDate()
 	if err != nil {
 		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	dateTo, err := scanner.ParseDate(p.scanner)
+	dateTo, err := p.parseDate()
 	if err != nil {
 		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	account, err := scanner.ParseAccount(p.scanner)
+	account, err := p.parseAccount()
 	if err != nil {
 		return nil, err
 	}
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
 		return nil, err
 	}
-	d, err := scanner.ParseDate(p.scanner)
+	d, err := p.parseDate()
 	if err != nil {
 		return nil, err
 	}
@@ -287,32 +291,32 @@ func (p *Parser) parsePostings() ([]*ledger.Posting, error) {
 	)
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		var posting ledger.Posting
-		if posting.Credit, err = scanner.ParseAccount(p.scanner); err != nil {
+		if posting.Credit, err = p.parseAccount(); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		if posting.Debit, err = scanner.ParseAccount(p.scanner); err != nil {
+		if posting.Debit, err = p.parseAccount(); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		if posting.Amount, err = scanner.ParseDecimal(p.scanner); err != nil {
+		if posting.Amount, err = p.parseDecimal(); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		if posting.Commodity, err = scanner.ParseCommodity(p.scanner); err != nil {
+		if posting.Commodity, err = p.parseCommodity(); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
 		if unicode.IsLetter(p.current()) || unicode.IsDigit(p.current()) {
-			if posting.Target, err = scanner.ParseCommodity(p.scanner); err != nil {
+			if posting.Target, err = p.parseCommodity(); err != nil {
 				return nil, err
 			}
 			if err = p.consumeWhitespace1(); err != nil {
@@ -344,7 +348,7 @@ func (p *Parser) parseOpen(d time.Time) (*ledger.Open, error) {
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	account, err := scanner.ParseAccount(p.scanner)
+	account, err := p.parseAccount()
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +366,7 @@ func (p *Parser) parseClose(d time.Time) (*ledger.Close, error) {
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	account, err := scanner.ParseAccount(p.scanner)
+	account, err := p.parseAccount()
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +384,7 @@ func (p *Parser) parsePrice(d time.Time) (*ledger.Price, error) {
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	commodity, err := scanner.ParseCommodity(p.scanner)
+	commodity, err := p.parseCommodity()
 	if err != nil {
 		return nil, err
 	}
@@ -388,14 +392,14 @@ func (p *Parser) parsePrice(d time.Time) (*ledger.Price, error) {
 		return nil, err
 	}
 
-	price, err := scanner.ParseDecimal(p.scanner)
+	price, err := p.parseDecimal()
 	if err != nil {
 		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	target, err := scanner.ParseCommodity(p.scanner)
+	target, err := p.parseCommodity()
 	if err != nil {
 		return nil, err
 	}
@@ -415,21 +419,21 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*ledger.Assertion, error) {
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	account, err := scanner.ParseAccount(p.scanner)
+	account, err := p.parseAccount()
 	if err != nil {
 		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	amount, err := scanner.ParseDecimal(p.scanner)
+	amount, err := p.parseDecimal()
 	if err != nil {
 		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	commodity, err := scanner.ParseCommodity(p.scanner)
+	commodity, err := p.parseCommodity()
 	if err != nil {
 		return nil, err
 	}
@@ -449,21 +453,21 @@ func (p *Parser) parseValue(d time.Time) (*ledger.Value, error) {
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	account, err := scanner.ParseAccount(p.scanner)
+	account, err := p.parseAccount()
 	if err != nil {
 		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	amount, err := scanner.ParseDecimal(p.scanner)
+	amount, err := p.parseDecimal()
 	if err != nil {
 		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	commodity, err := scanner.ParseCommodity(p.scanner)
+	commodity, err := p.parseCommodity()
 	if err != nil {
 		return nil, err
 	}
@@ -484,7 +488,7 @@ func (p *Parser) parseInclude() (*ledger.Include, error) {
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	i, err := scanner.ReadQuotedString(p.scanner)
+	i, err := p.parseQuotedString()
 	if err != nil {
 		return nil, err
 	}
@@ -503,6 +507,16 @@ func (p *Parser) consumeNewline() error {
 		return p.scanner.ConsumeRune('\n')
 	}
 	return nil
+}
+
+func (p *Parser) parseAccount() (*accounts.Account, error) {
+	s, err := p.scanner.ReadWhile(func(r rune) bool {
+		return r == ':' || unicode.IsLetter(r) || unicode.IsDigit(r)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return accounts.Get(s)
 }
 
 func (p *Parser) consumeWhitespace1() error {
@@ -527,14 +541,14 @@ func (p *Parser) parseLot() (*ledger.Lot, error) {
 	if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
 		return nil, err
 	}
-	price, err := scanner.ParseFloat(p.scanner)
+	price, err := p.parseFloat()
 	if err != nil {
 		return nil, err
 	}
 	if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
 		return nil, err
 	}
-	commodity, err := scanner.ParseCommodity(p.scanner)
+	commodity, err := p.parseCommodity()
 	if err != nil {
 		return nil, err
 	}
@@ -554,14 +568,14 @@ func (p *Parser) parseLot() (*ledger.Lot, error) {
 		}
 		switch {
 		case p.current() == '"':
-			if label, err = scanner.ReadQuotedString(p.scanner); err != nil {
+			if label, err = p.parseQuotedString(); err != nil {
 				return nil, err
 			}
 			if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
 				return nil, err
 			}
 		case unicode.IsDigit(p.current()):
-			if d, err = scanner.ParseDate(p.scanner); err != nil {
+			if d, err = p.parseDate(); err != nil {
 				return nil, err
 			}
 			if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
@@ -607,7 +621,7 @@ func (p *Parser) parseTag() (ledger.Tag, error) {
 	}
 	var b strings.Builder
 	b.WriteRune('#')
-	i, err := scanner.ParseIdentifier(p.scanner)
+	i, err := p.parseIdentifier()
 	if err != nil {
 		return "", err
 	}
@@ -615,6 +629,79 @@ func (p *Parser) parseTag() (ledger.Tag, error) {
 	return ledger.Tag(b.String()), nil
 }
 
+// parseQuotedString parses a quoted string
+func (p *Parser) parseQuotedString() (string, error) {
+	if err := p.scanner.ConsumeRune('"'); err != nil {
+		return "", err
+	}
+	s, err := p.scanner.ReadWhile(func(r rune) bool {
+		return r != '"'
+	})
+	if err != nil {
+		return s, err
+	}
+	if err := p.scanner.ConsumeRune('"'); err != nil {
+		return s, err
+	}
+	return s, nil
+}
+
+// parseIdentifier parses an identifier
+func (p *Parser) parseIdentifier() (string, error) {
+	var s strings.Builder
+	if !(unicode.IsLetter(p.scanner.Current()) || unicode.IsDigit(p.scanner.Current())) {
+		return "", fmt.Errorf("expected identifier, got %q", p.scanner.Current())
+	}
+	for unicode.IsLetter(p.scanner.Current()) || unicode.IsDigit(p.scanner.Current()) {
+		s.WriteRune(p.scanner.Current())
+		if err := p.scanner.Advance(); err != nil {
+			return s.String(), err
+		}
+	}
+	return s.String(), nil
+}
+
+// parseDecimal parses a decimal number
+func (p *Parser) parseDecimal() (decimal.Decimal, error) {
+	var b strings.Builder
+	for unicode.IsDigit(p.scanner.Current()) || p.scanner.Current() == '.' || p.scanner.Current() == '-' {
+		b.WriteRune(p.scanner.Current())
+		if err := p.scanner.Advance(); err != nil {
+			return decimal.Zero, err
+		}
+	}
+	return decimal.NewFromString(b.String())
+}
+
+// parseDate parses a date as YYYY-MM-DD
+func (p *Parser) parseDate() (time.Time, error) {
+	d, err := p.scanner.ReadN(10)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Parse("2006-01-02", d)
+}
+
+// parseFloat parses a floating point number
+func (p *Parser) parseFloat() (float64, error) {
+	var b strings.Builder
+	for unicode.IsDigit(p.scanner.Current()) || p.scanner.Current() == '.' || p.scanner.Current() == '-' {
+		b.WriteRune(p.scanner.Current())
+		if err := p.scanner.Advance(); err != nil {
+			return 0, err
+		}
+	}
+	return strconv.ParseFloat(b.String(), 64)
+}
+
+// parseCommodity parses a commodity
+func (p *Parser) parseCommodity() (*commodities.Commodity, error) {
+	i, err := p.parseIdentifier()
+	if err != nil {
+		return nil, err
+	}
+	return commodities.Get(i)
+}
 func isWhitespace(ch rune) bool {
 	return ch == ' ' || ch == '\t' || ch == '\r'
 }

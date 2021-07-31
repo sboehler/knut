@@ -2,65 +2,96 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/server/model"
 )
 
 func TestInsertPrice(t *testing.T) {
+	type tipTest struct {
+		price model.Price
+		want  Scenario
+	}
+
 	var (
-		date1  = time.Date(2021, time.May, 14, 0, 0, 0, 0, time.UTC)
-		date2  = date1.AddDate(0, 0, 1)
-		date3  = date2.AddDate(0, 0, 1)
-		ctx    = context.Background()
-		db     = createAndMigrateInMemoryDB(ctx, t)
-		prices = []model.Price{
-			{
-				Date:              date1,
-				CommodityID:       1,
-				TargetCommodityID: 1,
-				Price:             10,
+		date1    = date.Date(2021, 5, 1)
+		date2    = date.Date(2021, 5, 2)
+		ctx      = context.Background()
+		scenario = Scenario{
+			Commodities: []model.Commodity{
+				{Name: "CHF"},
+				{Name: "USD"},
 			},
-			{
-				Date:              date2,
-				CommodityID:       1,
-				TargetCommodityID: 1,
-				Price:             11,
-			},
-			{
-				Date:              date3,
-				CommodityID:       1,
-				TargetCommodityID: 1,
-				Price:             12,
-			},
-			{
-				Date:              date3,
-				CommodityID:       1,
-				TargetCommodityID: 1,
-				Price:             13,
+			Prices: []model.Price{
+				{Date: date1, CommodityID: 0, TargetCommodityID: 1, Price: 10},
 			},
 		}
-		want = []model.Price{
-			prices[0],
-			prices[1],
-			prices[3],
+
+		tests = []func(Scenario) tipTest{
+			func(s Scenario) tipTest {
+				return tipTest{
+					price: model.Price{
+						Date:              date1,
+						CommodityID:       s.Commodities[0].ID,
+						TargetCommodityID: s.Commodities[1].ID,
+						Price:             20,
+					},
+					want: Scenario{
+						Commodities: s.Commodities,
+						Prices: []model.Price{
+							{
+								Date:              date1,
+								CommodityID:       s.Commodities[0].ID,
+								TargetCommodityID: s.Commodities[1].ID,
+								Price:             20,
+							},
+						},
+					},
+				}
+			},
+			func(s Scenario) tipTest {
+				return tipTest{
+					price: model.Price{Date: date2,
+						CommodityID:       s.Commodities[0].ID,
+						TargetCommodityID: s.Commodities[1].ID,
+						Price:             20,
+					},
+					want: Scenario{
+						Commodities: s.Commodities,
+						Prices: append(s.Prices, model.Price{
+							Date:              date2,
+							CommodityID:       s.Commodities[0].ID,
+							TargetCommodityID: s.Commodities[1].ID,
+							Price:             20,
+						}),
+					},
+				}
+			},
 		}
 	)
-	_ = populateCommodities(ctx, t, db, []string{"AAA"})
-	for _, price := range prices {
 
-		_, err := InsertPrice(ctx, db, price)
+	for _, test := range tests {
+		var (
+			db   = createAndMigrateInMemoryDB(ctx, t)
+			s    = Save(ctx, t, db, scenario.DeepCopy())
+			test = test(s)
+		)
+
+		_, err := InsertPrice(ctx, db, test.price)
+
+		fmt.Println(s, test, err)
 
 		if err != nil {
 			t.Fatalf("InsertPrice() returned unexpected error: %v", err)
 		}
-	}
-
-	got := listPrices(ctx, t, db)
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("InsertPrice() mismatch (-want +got):\n%s", diff)
+		var got = Load(ctx, t, db)
+		if diff := cmp.Diff(test.want, got); diff != "" {
+			t.Errorf("InsertPrice() mismatch (-want +got):\n%s", diff)
+		}
 	}
 }
 

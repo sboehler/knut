@@ -11,21 +11,37 @@ import (
 // CreateAccount creates an account in the current version.
 func CreateAccount(ctx context.Context, db db, name string, openDate time.Time, closeDate *time.Time) (model.Account, error) {
 	var (
-		account model.Account
-		row     *sql.Row
-		err     error
+		id  model.AccountID
+		err error
 	)
-	row = db.QueryRowContext(ctx, `INSERT INTO account_ids DEFAULT VALUES RETURNING id`)
+	if id, err = createAccountID(ctx, db); err != nil {
+		return model.Account{}, err
+	}
+	return createAccount(ctx, db, id, name, openDate, closeDate)
+}
+
+func createAccountID(ctx context.Context, db db) (model.AccountID, error) {
+	var (
+		row = db.QueryRowContext(ctx,
+			`INSERT INTO account_ids DEFAULT VALUES RETURNING id`,
+		)
+		res model.AccountID
+	)
 	if row.Err() != nil {
-		return account, row.Err()
+		return res, row.Err()
 	}
-	if err = row.Scan(&account.ID); err != nil {
-		return account, err
-	}
-	row = db.QueryRowContext(ctx,
-		`INSERT INTO accounts(id, name, open_date, close_date) VALUES (?, ?, ?, ?)
-		returning id, name, datetime(open_date), datetime(close_date)`,
-		account.ID, name, openDate, closeDate)
+	return res, row.Scan(&res)
+}
+
+func createAccount(ctx context.Context, db db, id model.AccountID, name string, openDate time.Time, closeDate *time.Time) (model.Account, error) {
+	var (
+		row = db.QueryRowContext(ctx,
+			`INSERT INTO accounts(id, name, open_date, close_date) 
+			 VALUES (?, ?, ?, ?)
+			 RETURNING id, name, datetime(open_date), datetime(close_date)`,
+			id, name, openDate, closeDate)
+		account model.Account
+	)
 	if row.Err() != nil {
 		return account, row.Err()
 	}
@@ -34,10 +50,11 @@ func CreateAccount(ctx context.Context, db db, name string, openDate time.Time, 
 
 // ListAccounts lists all accounts.
 func ListAccounts(ctx context.Context, db db) ([]model.Account, error) {
-	rows, err := db.QueryContext(ctx, `
-	SELECT id, name, datetime(open_date), datetime(close_date) 
-	FROM accounts 
-	ORDER BY name`)
+	rows, err := db.QueryContext(ctx,
+		`SELECT id, name, datetime(open_date), datetime(close_date) 
+		 FROM accounts 
+		 ORDER BY name`,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -50,23 +67,21 @@ func ListAccounts(ctx context.Context, db db) ([]model.Account, error) {
 		}
 		res = append(res, account)
 	}
-	if rows.Err() != nil && rows.Err() != sql.ErrNoRows {
-		return nil, rows.Err()
-	}
-	return res, nil
+	return res, ignoreNoRows(rows.Err())
 }
 
 // UpdateAccount updates an account in the current version.
 func UpdateAccount(ctx context.Context, db db, id model.AccountID, name string, openDate time.Time, closeDate *time.Time) (model.Account, error) {
 	var (
-		row     *sql.Row
+		row = db.QueryRowContext(ctx,
+			`UPDATE accounts
+			 SET name = ?, open_date = ?, close_date = ?
+			 WHERE id = ?
+			 RETURNING id, name, datetime(open_date), datetime(close_date)`,
+			name, openDate, closeDate, id)
 		account model.Account
 	)
-	if row = db.QueryRowContext(ctx,
-		`UPDATE accounts
-		SET name = ?, open_date = ?, close_date = ?
-		WHERE id = ?
-		RETURNING id, name, datetime(open_date), datetime(close_date)`, name, openDate, closeDate, id); row.Err() != nil {
+	if row.Err() != nil {
 		return account, row.Err()
 	}
 	return account, rowToAccount(row, &account)
@@ -78,25 +93,28 @@ type scan interface {
 
 // DeleteAccount deletes an account in the current version.
 func DeleteAccount(ctx context.Context, db db, id model.AccountID) error {
-	_, err := db.ExecContext(ctx, `DELETE FROM accounts WHERE id = ?`, id)
+	_, err := db.ExecContext(ctx,
+		`DELETE FROM accounts
+		 WHERE id = ?`,
+		id)
 	return err
 }
 
 func rowToAccount(row scan, res *model.Account) error {
 	var (
-		err       error
 		openDate  string
 		closeDate sql.NullString
+		err       error
 	)
 	if err = row.Scan(&res.ID, &res.Name, &openDate, &closeDate); err != nil {
 		return err
 	}
-	if err = parseDatetime(openDate, &res.OpenDate); err != nil {
+	if res.OpenDate, err = parseDatetime(openDate); err != nil {
 		return err
 	}
 	if closeDate.Valid {
 		var t time.Time
-		if err = parseDatetime(closeDate.String, &t); err != nil {
+		if t, err = parseDatetime(closeDate.String); err != nil {
 			return err
 		}
 		res.CloseDate = &t

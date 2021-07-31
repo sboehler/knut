@@ -2,7 +2,7 @@ package repo
 
 import (
 	"context"
-	"database/sql"
+	"time"
 
 	"github.com/sboehler/knut/lib/server/model"
 )
@@ -10,133 +10,176 @@ import (
 // CreateTransaction creates transaction.
 func CreateTransaction(ctx context.Context, db db, t model.Transaction) (model.Transaction, error) {
 	var (
-		row *sql.Row
+		res model.Transaction
 		err error
 	)
-	if row = db.QueryRowContext(ctx, `INSERT INTO transaction_ids DEFAULT VALUES RETURNING id`); row.Err() != nil {
-		return t, row.Err()
+	if t.ID, err = createTransactionID(ctx, db); err != nil {
+		return res, err
 	}
-	if err = row.Scan(&t.ID); err != nil {
-		return t, err
+	if res, err = createTransaction(ctx, db, t.ID, t.Date, t.Description); err != nil {
+		return res, err
 	}
-	if row = db.QueryRowContext(ctx,
-		`INSERT INTO transactions_history(id, date, description) VALUES (?, ?, ?) returning id, datetime(date), description`,
-		t.ID, t.Date, t.Description); row.Err() != nil {
-		return t, row.Err()
+	res.Bookings, err = createBookings(ctx, db, t.ID, t.Bookings)
+	return res, err
+}
+
+func createTransactionID(ctx context.Context, db db) (model.TransactionID, error) {
+	var (
+		row = db.QueryRowContext(ctx,
+			`INSERT INTO transaction_ids
+			 DEFAULT VALUES
+			 RETURNING id`,
+		)
+		res model.TransactionID
+	)
+	if row.Err() != nil {
+		return res, row.Err()
 	}
-	var res model.Transaction
-	if err = rowToTrx(row, &res); err != nil {
-		return t, err
+	return res, row.Scan(&res)
+}
+
+func createTransaction(ctx context.Context, db db, id model.TransactionID, date time.Time, desc string) (model.Transaction, error) {
+	var row = db.QueryRowContext(ctx,
+		`INSERT INTO transactions_history(id, date, description) 
+			 VALUES (?, ?, ?)
+			 RETURNING id, datetime(date), description`,
+		id, date, desc)
+	if row.Err() != nil {
+		return model.Transaction{}, row.Err()
 	}
-	for _, b := range t.Bookings {
-		var resB model.Booking
-		if resB, err = insertBooking(ctx, db, t.ID, b); err != nil {
-			return t, err
-		}
-		res.Bookings = append(res.Bookings, resB)
-	}
-	return res, nil
+	return rowToTrx(row)
 }
 
 // UpdateTransaction updates a transaction.
 func UpdateTransaction(ctx context.Context, db db, t model.Transaction) (model.Transaction, error) {
 	var (
-		row *sql.Row
 		res model.Transaction
 		err error
 	)
-	if row = db.QueryRowContext(ctx,
-		`UPDATE transactions SET date = ?, description = ?
-		WHERE id = ?
-		RETURNING id, datetime(date), description`, t.Date, t.Description, t.ID); row.Err() != nil {
-		return res, row.Err()
-	}
-	if err = rowToTrx(row, &res); err != nil {
+	if res, err = updateTransaction(ctx, db, t.ID, t.Date, t.Description); err != nil {
 		return res, err
 	}
-	for _, b := range t.Bookings {
-		var resB model.Booking
-		if resB, err = insertBooking(ctx, db, t.ID, b); err != nil {
-			return res, err
-		}
-		res.Bookings = append(res.Bookings, resB)
+	res.Bookings, err = createBookings(ctx, db, t.ID, t.Bookings)
+	return res, err
+}
+
+func updateTransaction(ctx context.Context, db db, id model.TransactionID, date time.Time, desc string) (model.Transaction, error) {
+	var row = db.QueryRowContext(ctx,
+		`UPDATE transactions
+		 SET date = ?, description = ?
+		 WHERE id = ?
+		 RETURNING id, datetime(date), description`,
+		date, desc, id)
+	if row.Err() != nil {
+		return model.Transaction{}, row.Err()
 	}
-	return res, nil
+	return rowToTrx(row)
 }
 
 // ListTransactions fetches all transactions.
 func ListTransactions(ctx context.Context, db db) ([]model.Transaction, error) {
-	bookings, err := ListBookings(ctx, db)
-	if err != nil {
+	var (
+		bookings          map[model.TransactionID][]model.Booking
+		transactions, res []model.Transaction
+		err               error
+	)
+	if transactions, err = listTransactions(ctx, db); err != nil {
 		return nil, err
 	}
-	rows, err := db.QueryContext(ctx,
-		`SELECT id, datetime(date), description 
-		FROM transactions 
-		ORDER BY date, description, id`)
-	if err != nil {
+	if bookings, err = listBookings(ctx, db); err != nil {
 		return nil, err
 	}
-	var res []model.Transaction
-	defer rows.Close()
-	for rows.Next() {
-		var t model.Transaction
-		if err := rowToTrx(rows, &t); err != nil {
-			return nil, err
-		}
+	for _, t := range transactions {
 		t.Bookings = bookings[t.ID]
 		res = append(res, t)
-	}
-	if rows.Err() != nil && rows.Err() != sql.ErrNoRows {
-		return nil, rows.Err()
 	}
 	return res, nil
 }
 
-// ListBookings lists all bookings.
-func ListBookings(ctx context.Context, db db) (map[model.TransactionID][]model.Booking, error) {
-	rows, err := db.QueryContext(ctx, `SELECT id, amount, commodity_id, credit_account_id, debit_account_id FROM bookings`)
+func listTransactions(ctx context.Context, db db) ([]model.Transaction, error) {
+	var (
+		rows, err = db.QueryContext(ctx,
+			`SELECT id, datetime(date), description 
+			 FROM transactions 
+			 ORDER BY date, description, id`)
+		res []model.Transaction
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var res = make(map[model.TransactionID][]model.Booking)
+	for rows.Next() {
+		var t model.Transaction
+		if t, err = rowToTrx(rows); err != nil {
+			return nil, err
+		}
+		res = append(res, t)
+	}
+	return res, ignoreNoRows(rows.Err())
+}
+
+// listBookings lists all bookings.
+func listBookings(ctx context.Context, db db) (map[model.TransactionID][]model.Booking, error) {
+	var (
+		rows, err = db.QueryContext(ctx,
+			`SELECT id, amount, commodity_id, credit_account_id, debit_account_id
+			 FROM bookings`,
+		)
+		res = make(map[model.TransactionID][]model.Booking)
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 	for rows.Next() {
 		var b model.Booking
-		if err := rowToBooking(rows, &b); err != nil {
+		if b, err = rowToBooking(rows); err != nil {
 			return nil, err
 		}
 		res[b.ID] = append(res[b.ID], b)
 	}
-	if rows.Err() != nil && rows.Err() != sql.ErrNoRows {
-		return nil, rows.Err()
+	return res, ignoreNoRows(rows.Err())
+}
+
+func createBookings(ctx context.Context, db db, id model.TransactionID, bs []model.Booking) ([]model.Booking, error) {
+	var res []model.Booking
+	for _, b := range bs {
+		var (
+			row = db.QueryRowContext(ctx,
+				`INSERT INTO bookings(id, amount, commodity_id, credit_account_id, debit_account_id)
+				 VALUES (?, ?, ?, ?, ?)
+				 RETURNING id, amount, commodity_id, credit_account_id, debit_account_id`,
+				id, b.Amount, b.CommodityID, b.CreditAccountID, b.DebitAccountID)
+			err error
+		)
+		if row.Err() != nil {
+			return nil, row.Err()
+		}
+		b, err = rowToBooking(row)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, b)
 	}
 	return res, nil
 }
 
-func insertBooking(ctx context.Context, db db, tid model.TransactionID, b model.Booking) (model.Booking, error) {
-	var row *sql.Row
-	if row = db.QueryRowContext(ctx,
-		`INSERT INTO bookings(id, amount, commodity_id, credit_account_id, debit_account_id) VALUES (?, ?, ?, ?, ?)
-		returning id, amount, commodity_id, credit_account_id, debit_account_id`,
-		tid, b.Amount, b.CommodityID, b.CreditAccountID, b.DebitAccountID); row.Err() != nil {
-		return b, row.Err()
+func rowToTrx(row scan) (model.Transaction, error) {
+	var (
+		s   string
+		res model.Transaction
+		err error
+	)
+	if err = row.Scan(&res.ID, &s, &res.Description); err != nil {
+		return res, err
 	}
-	var res model.Booking
-	if err := rowToBooking(row, &res); err != nil {
+	if res.Date, err = parseDatetime(s); err != nil {
 		return res, err
 	}
 	return res, nil
 }
 
-func rowToTrx(row scan, t *model.Transaction) error {
-	var d string
-	if err := row.Scan(&t.ID, &d, &t.Description); err != nil {
-		return err
-	}
-	return parseDatetime(d, &t.Date)
-}
-
-func rowToBooking(row scan, res *model.Booking) error {
-	return row.Scan(&res.ID, &res.Amount, &res.CommodityID, &res.CreditAccountID, &res.DebitAccountID)
+func rowToBooking(row scan) (model.Booking, error) {
+	var res model.Booking
+	return res, row.Scan(&res.ID, &res.Amount, &res.CommodityID, &res.CreditAccountID, &res.DebitAccountID)
 }

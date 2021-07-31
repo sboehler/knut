@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/sboehler/knut/lib/server/model"
 )
@@ -10,10 +9,14 @@ import (
 // CreateCommodity creates a new commodity.
 func CreateCommodity(ctx context.Context, db db, name string) (model.Commodity, error) {
 	var (
+		row = db.QueryRowContext(ctx,
+			`INSERT INTO commodities (name)
+			 VALUES (?) 
+			 returning id, name`,
+			name)
 		res model.Commodity
-		row *sql.Row
 	)
-	if row = db.QueryRowContext(ctx, "INSERT INTO commodities (name) VALUES (?) returning id, name", name); row.Err() != nil {
+	if row.Err() != nil {
 		return res, row.Err()
 	}
 	return res, row.Scan(&res.ID, &res.Name)
@@ -21,12 +24,18 @@ func CreateCommodity(ctx context.Context, db db, name string) (model.Commodity, 
 
 // ListCommodities lists all commodities, alphabetically sorted by name.
 func ListCommodities(ctx context.Context, db db) ([]model.Commodity, error) {
-	rows, err := db.QueryContext(ctx, "SELECT id, name FROM commodities ORDER BY name")
+	var (
+		rows, err = db.QueryContext(ctx,
+			`SELECT id, name
+			 FROM commodities
+			 ORDER BY name`,
+		)
+		res []model.Commodity
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var res []model.Commodity
 	for rows.Next() {
 		var c model.Commodity
 		if err = rows.Scan(&c.ID, &c.Name); err != nil {
@@ -34,5 +43,5 @@ func ListCommodities(ctx context.Context, db db) ([]model.Commodity, error) {
 		}
 		res = append(res, c)
 	}
-	return res, rows.Err()
+	return res, ignoreNoRows(rows.Err())
 }

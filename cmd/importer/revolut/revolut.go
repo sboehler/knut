@@ -91,6 +91,7 @@ type parser struct {
 func (p *parser) parse() error {
 	p.reader.TrimLeadingSpace = true
 	p.reader.Comma = ';'
+	p.reader.FieldsPerRecord = 0
 
 	var (
 		r   []string
@@ -115,26 +116,39 @@ func (p *parser) parse() error {
 	}
 }
 
+type bookingField int
+
+const (
+	bfCompletedDate bookingField = iota
+	bfReference
+	bfPaidOut
+	bfPaidIn
+	bfExchangeOut
+	bfExchangeIn
+	bfBalance
+	bfExchangeRate
+	bfCategory
+)
+
 var re = regexp.MustCompile(`Paid Out \(([A-Za-z]+)\)`)
 
 func (p *parser) parseHeader(r []string) error {
 	if len(r) != 9 {
 		return fmt.Errorf("expected record with 9 items, got %v", r)
 	}
-	var groups = re.FindStringSubmatch(r[2])
+	var groups = re.FindStringSubmatch(r[bfPaidOut])
 	if len(groups) != 2 {
-		return fmt.Errorf("could not extract currency from header field: %q", r[2])
+		return fmt.Errorf("could not extract currency from header field: %q", r[bfPaidOut])
 	}
 	var err error
 	p.currency, err = commodities.Get(groups[1])
 	return err
 }
 
-var replacer = strings.NewReplacer("'", "")
-
 var (
 	fxSellRegex = regexp.MustCompile(`Sold [A-Z]+ to [A-Z]+`)
 	fxBuyRegex  = regexp.MustCompile(`Bought [A-Z]+ from [A-Z]+`)
+	space       = regexp.MustCompile(`\s+`)
 )
 
 func (p *parser) parseBooking(r []string) error {
@@ -146,7 +160,7 @@ func (p *parser) parseBooking(r []string) error {
 		return err
 	}
 	if date != p.date {
-		balance, err := decimal.NewFromString(replacer.Replace(r[6]))
+		balance, err := parseDecimal(r[6])
 		if err != nil {
 			return err
 		}
@@ -160,54 +174,55 @@ func (p *parser) parseBooking(r []string) error {
 	}
 
 	var words []string
-	for _, i := range []int{1, 7, 8} {
-		words = append(words, strings.Fields(r[i])...)
+	for _, field := range []bookingField{bfReference, bfExchangeRate, bfCategory} {
+		words = append(words, r[field])
 	}
 	var (
-		desc = strings.Join(words, " ")
-		amt  decimal.Decimal
+		desc   = strings.TrimSpace(space.ReplaceAllString(strings.Join(words, " "), " "))
+		amount decimal.Decimal
+		field  bookingField
+		sign   = decimal.NewFromInt(1)
 	)
-	if len(r[2]) > 0 && len(r[3]) == 0 {
-		// credit booking
-		if amt, err = decimal.NewFromString(replacer.Replace(r[2])); err != nil {
-			return err
-		}
-	} else if len(r[2]) == 0 && len(r[3]) > 0 {
-		// debit booking
-		if amt, err = decimal.NewFromString(replacer.Replace(r[3])); err != nil {
-			return err
-		}
-		amt = amt.Neg()
-	} else {
+	switch {
+
+	case len(r[bfPaidOut]) > 0 && len(r[bfPaidIn]) == 0:
+		field = bfPaidOut
+		sign = sign.Neg()
+	case len(r[bfPaidOut]) == 0 && len(r[bfPaidIn]) > 0:
+		field = bfPaidIn
+	default:
 		return fmt.Errorf("invalid record with two amounts: %v", r)
 	}
-
+	if amount, err = parseDecimal(r[field]); err != nil {
+		return err
+	}
+	amount = amount.Mul(sign)
 	var t = ledger.Transaction{
 		Date:        date,
 		Description: desc,
 	}
 	switch {
-	case fxSellRegex.MatchString(r[1]):
-		otherCommodity, otherAmount, err := parseCombiField(r[4])
+	case fxSellRegex.MatchString(r[bfReference]):
+		otherCommodity, otherAmount, err := parseCombiField(r[bfExchangeOut])
 		if err != nil {
 			return err
 		}
 		t.Postings = []*ledger.Posting{
-			ledger.NewPosting(p.account, accounts.ValuationAccount(), p.currency, amt),
+			ledger.NewPosting(accounts.ValuationAccount(), p.account, p.currency, amount),
 			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount),
 		}
-	case fxBuyRegex.MatchString(r[1]):
-		otherCommodity, otherAmount, err := parseCombiField(r[5])
+	case fxBuyRegex.MatchString(r[bfReference]):
+		otherCommodity, otherAmount, err := parseCombiField(r[bfExchangeIn])
 		if err != nil {
 			return err
 		}
 		t.Postings = []*ledger.Posting{
-			ledger.NewPosting(p.account, accounts.ValuationAccount(), p.currency, amt),
+			ledger.NewPosting(accounts.ValuationAccount(), p.account, p.currency, amount),
 			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg()),
 		}
 	default:
 		t.Postings = []*ledger.Posting{
-			ledger.NewPosting(p.account, accounts.TBDAccount(), p.currency, amt),
+			ledger.NewPosting(accounts.TBDAccount(), p.account, p.currency, amount),
 		}
 	}
 	p.builder.AddTransaction(&t)
@@ -227,8 +242,13 @@ func parseCombiField(f string) (*commodities.Commodity, decimal.Decimal, error) 
 	if otherCommodity, err = commodities.Get(fs[0]); err != nil {
 		return nil, decimal.Decimal{}, err
 	}
-	if otherAmount, err = decimal.NewFromString(replacer.Replace(fs[1])); err != nil {
+	if otherAmount, err = parseDecimal(fs[1]); err != nil {
 		return nil, decimal.Decimal{}, err
 	}
 	return otherCommodity, otherAmount, nil
+}
+
+func parseDecimal(s string) (decimal.Decimal, error) {
+	s = strings.ReplaceAll(s, "'", "")
+	return decimal.NewFromString(s)
 }

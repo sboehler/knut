@@ -26,8 +26,8 @@ import (
 
 // FromDirectives reads directives from the given channel and
 // builds a Ledger if successful.
-func FromDirectives(filter Filter, results <-chan interface{}) (Ledger, error) {
-	var b = NewBuilder(filter)
+func FromDirectives(accountFilter *AccountFilter, commodityFilter *CommodityFilter, results <-chan interface{}) (Ledger, error) {
+	var b = NewBuilder(accountFilter, commodityFilter)
 	for res := range results {
 		switch t := res.(type) {
 		case error:
@@ -61,16 +61,14 @@ func FromDirectives(filter Filter, results <-chan interface{}) (Ledger, error) {
 
 // Builder maps dates to days
 type Builder struct {
-	filter Filter
-	days   map[time.Time]*Day
+	accountFilter   *AccountFilter
+	commodityFilter *CommodityFilter
+	days            map[time.Time]*Day
 }
 
 // NewBuilder creates a new builder.
-func NewBuilder(f Filter) *Builder {
-	return &Builder{
-		filter: f,
-		days:   make(map[time.Time]*Day),
-	}
+func NewBuilder(af *AccountFilter, cf *CommodityFilter) *Builder {
+	return &Builder{af, cf, make(map[time.Time]*Day)}
 }
 
 // Build creates a new
@@ -99,10 +97,10 @@ func (b *Builder) getOrCreate(d time.Time) *Day {
 func (b *Builder) AddTransaction(t *Transaction) {
 	var filtered []*Posting
 	for _, p := range t.Postings {
-		if !b.filter.MatchAccount(p.Credit) && !b.filter.MatchAccount(p.Debit) {
+		if !b.accountFilter.match(p.Credit) && !b.accountFilter.match(p.Debit) {
 			continue
 		}
-		if !b.filter.MatchCommodity(p.Commodity) {
+		if !b.commodityFilter.match(p.Commodity) {
 			continue
 		}
 		filtered = append(filtered, p)
@@ -122,7 +120,7 @@ func (b *Builder) AddOpening(o *Open) {
 
 // AddClosing adds a close directive.
 func (b *Builder) AddClosing(close *Close) {
-	if !b.filter.MatchAccount(close.Account) {
+	if !b.accountFilter.match(close.Account) {
 		return
 	}
 	var s = b.getOrCreate(close.Date)
@@ -137,7 +135,7 @@ func (b *Builder) AddPrice(p *Price) {
 
 // AddAssertion adds an assertion directive.
 func (b *Builder) AddAssertion(a *Assertion) {
-	if !b.filter.MatchAccount(a.Account) || !b.filter.MatchCommodity(a.Commodity) {
+	if !b.accountFilter.match(a.Account) || !b.commodityFilter.match(a.Commodity) {
 		return
 	}
 	var s = b.getOrCreate(a.Date)
@@ -146,7 +144,7 @@ func (b *Builder) AddAssertion(a *Assertion) {
 
 // AddValue adds an value directive.
 func (b *Builder) AddValue(a *Value) {
-	if !b.filter.MatchAccount(a.Account) || !b.filter.MatchCommodity(a.Commodity) {
+	if !b.accountFilter.match(a.Account) || !b.commodityFilter.match(a.Commodity) {
 		return
 	}
 	var s = b.getOrCreate(a.Date)
@@ -166,4 +164,22 @@ func (b Filter) MatchAccount(a *accounts.Account) bool {
 // MatchCommodity returns whether this filter matches the given Commodity.
 func (b Filter) MatchCommodity(c *commodities.Commodity) bool {
 	return b.CommoditiesFilter == nil || b.CommoditiesFilter.MatchString(c.String())
+}
+
+// AccountFilter filters accounts.
+type AccountFilter struct {
+	Regex *regexp.Regexp
+}
+
+func (f *AccountFilter) match(a *accounts.Account) bool {
+	return f == nil || f.Regex.MatchString(a.String())
+}
+
+// CommodityFilter filters commodities.
+type CommodityFilter struct {
+	Regex *regexp.Regexp
+}
+
+func (f *CommodityFilter) match(a *commodities.Commodity) bool {
+	return f == nil || f.Regex.MatchString(a.String())
 }

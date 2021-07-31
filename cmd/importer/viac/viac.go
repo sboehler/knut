@@ -80,7 +80,7 @@ func run(cmd *cobra.Command, args []string) error {
 	var resp response
 	json.Unmarshal(b, &resp)
 
-	var builder = ledger.NewBuilder(ledger.Filter{})
+	var builder = ledger.NewBuilder(nil, nil)
 	for _, dv := range resp.DailyValues {
 		d, err := time.Parse("2006-01-02", dv.Date)
 		if err != nil {

@@ -105,12 +105,13 @@ func execute(cmd *cobra.Command, args []string) error {
 }
 
 type pipeline struct {
-	Journal        journal.Journal
-	LedgerFilter   ledger.Filter
-	BalanceBuilder balance.Builder
-	ReportBuilder  report.Builder
-	ReportRenderer report.Renderer
-	TextRenderer   table.TextRenderer
+	Journal         journal.Journal
+	AccountFilter   *ledger.AccountFilter
+	CommodityFilter *ledger.CommodityFilter
+	BalanceBuilder  balance.Builder
+	ReportBuilder   report.Builder
+	ReportRenderer  report.Renderer
+	TextRenderer    table.TextRenderer
 }
 
 func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
@@ -198,11 +199,9 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			Close:     close,
 			Diff:      diff,
 		}
-		ledgerFilter = ledger.Filter{
-			CommoditiesFilter: filterCommodities,
-			AccountsFilter:    filterAccounts,
-		}
-		reportBuilder = report.Builder{
+		accountFilter   = ledger.AccountFilter{Regex: filterAccounts}
+		commodityFilter = ledger.CommodityFilter{Regex: filterCommodities}
+		reportBuilder   = report.Builder{
 			Value:    valuation != nil,
 			Collapse: collapse,
 		}
@@ -216,12 +215,13 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		}
 	)
 	return &pipeline{
-		Journal:        journal,
-		LedgerFilter:   ledgerFilter,
-		BalanceBuilder: balanceBuilder,
-		ReportBuilder:  reportBuilder,
-		ReportRenderer: reportRenderer,
-		TextRenderer:   tableRenderer,
+		Journal:         journal,
+		AccountFilter:   &accountFilter,
+		CommodityFilter: &commodityFilter,
+		BalanceBuilder:  balanceBuilder,
+		ReportBuilder:   reportBuilder,
+		ReportRenderer:  reportRenderer,
+		TextRenderer:    tableRenderer,
 	}, nil
 }
 
@@ -232,7 +232,7 @@ func processPipeline(w io.Writer, ppl *pipeline) error {
 		r   *report.Report
 		err error
 	)
-	if l, err = ledger.FromDirectives(ppl.LedgerFilter, ppl.Journal.Parse()); err != nil {
+	if l, err = ledger.FromDirectives(ppl.AccountFilter, ppl.CommodityFilter, ppl.Journal.Parse()); err != nil {
 		return err
 	}
 	if bal, err = ppl.BalanceBuilder.Build(l); err != nil {

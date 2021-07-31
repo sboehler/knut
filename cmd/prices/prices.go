@@ -167,7 +167,7 @@ func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]*ledger.Pri
 }
 
 func writeFile(prices map[time.Time]*ledger.Price, filepath string) error {
-	var b = ledger.NewBuilder(ledger.Filter{})
+	var b = ledger.NewBuilder(nil, nil)
 	for _, price := range prices {
 		b.AddPrice(price)
 	}

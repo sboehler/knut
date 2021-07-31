@@ -49,9 +49,10 @@ func (s handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type pipeline struct {
-	Journal        journal.Journal
-	LedgerFilter   ledger.Filter
-	BalanceBuilder balance.Builder
+	Journal         journal.Journal
+	accountFilter   *ledger.AccountFilter
+	commodityFilter *ledger.CommodityFilter
+	BalanceBuilder  balance.Builder
 }
 
 func buildPipeline(file string, query url.Values) (*pipeline, error) {
@@ -96,11 +97,8 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 		Journal: journal.Journal{
 			File: file,
 		},
-		LedgerFilter: ledger.Filter{
-			CommoditiesFilter: commoditiesFilter,
-			AccountsFilter:    accountsFilter,
-		},
-
+		accountFilter:   &ledger.AccountFilter{Regex: accountsFilter},
+		commodityFilter: &ledger.CommodityFilter{Regex: commoditiesFilter},
 		BalanceBuilder: balance.Builder{
 			From:      from,
 			To:        to,
@@ -114,7 +112,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 }
 
 func (ppl *pipeline) process(w io.Writer) error {
-	l, err := ledger.FromDirectives(ppl.LedgerFilter, ppl.Journal.Parse())
+	l, err := ledger.FromDirectives(ppl.accountFilter, ppl.commodityFilter, ppl.Journal.Parse())
 	if err != nil {
 		return err
 	}

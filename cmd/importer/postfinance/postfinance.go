@@ -64,7 +64,7 @@ func run(cmd *cobra.Command, args []string) error {
 	var p = Parser{
 		reader:  csv.NewReader(bufio.NewReader(charmap.ISO8859_1.NewDecoder().Reader(file))),
 		account: account,
-		builder: ledger.NewBuilder(ledger.Filter{}),
+		builder: ledger.NewBuilder(nil, nil),
 	}
 	if err = p.parse(); err != nil {
 		return err

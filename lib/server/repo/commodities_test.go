@@ -60,24 +60,27 @@ func TestCreateCommodity(t *testing.T) {
 
 func TestListCommodity(t *testing.T) {
 	var (
-		ctx   = context.Background()
-		db    = createAndMigrateInMemoryDB(ctx, t)
-		names = []string{"CCC", "BBB", "AAA"}
-		want  = populateCommodities(ctx, t, db, names)
+		ctx      = context.Background()
+		db       = createAndMigrateInMemoryDB(ctx, t)
+		scenario = Save(ctx, t, db, Scenario{
+			Commodities: []model.Commodity{
+				{Name: "CHF"}, {Name: "EUR"}, {Name: "USD"},
+			},
+		})
 	)
-	sort.Slice(want, func(i, j int) bool {
-		return want[i].Name < want[j].Name
-	})
 
-	got, err := ListCommodities(ctx, db)
+	tx := beginTransaction(ctx, t, db)
+	defer tx.Rollback()
+
+	got, err := ListCommodities(ctx, tx)
 
 	if err != nil {
-		t.Errorf("List() returned unexpected error: %v", err)
+		t.Errorf("ListCommodities() returned unexpected error: %v", err)
 	}
-	if len(got) == 0 {
-		t.Errorf("List() returned no results")
-	}
-	if diff := cmp.Diff(want, got); diff != "" {
+	sort.Slice(got, func(i, j int) bool {
+		return got[i].Less(got[j])
+	})
+	if diff := cmp.Diff(scenario.Commodities, got); diff != "" {
 		t.Errorf("List() mismatch (-want +got):\n%s", diff)
 	}
 }

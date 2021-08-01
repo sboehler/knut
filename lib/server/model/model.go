@@ -15,6 +15,12 @@ type Commodity struct {
 	Name string
 }
 
+// Less defines an ordering on the price directive. It has no semantics,
+// but can be used in tests, for example.
+func (p Commodity) Less(p1 Commodity) bool {
+	return p.ID < p1.ID
+}
+
 // Price represents a price.
 type Price struct {
 	Date                           time.Time

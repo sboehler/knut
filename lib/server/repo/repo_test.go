@@ -110,7 +110,7 @@ func Load(ctx context.Context, t *testing.T, db db) Scenario {
 
 func (s Scenario) Normalize() Scenario {
 	sort.Slice(s.Commodities, func(i, j int) bool {
-		return s.Commodities[i].ID < s.Commodities[j].ID
+		return s.Commodities[i].Less(s.Commodities[j])
 	})
 	sort.Slice(s.Accounts, func(i, j int) bool {
 		return s.Accounts[i].ID < s.Accounts[j].ID

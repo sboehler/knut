@@ -22,6 +22,18 @@ type Price struct {
 	Price                          float64
 }
 
+// Less defines an ordering on the price directive. It has no semantics,
+// but can be used in tests, for example.
+func (p Price) Less(p1 Price) bool {
+	if p.CommodityID != p1.CommodityID {
+		return p.CommodityID < p1.CommodityID
+	}
+	if p.TargetCommodityID != p1.TargetCommodityID {
+		return p.TargetCommodityID < p1.TargetCommodityID
+	}
+	return p.Date.Before(p1.Date)
+}
+
 // AccountID is the ID of an account.
 type AccountID int
 

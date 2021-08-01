@@ -108,7 +108,7 @@ func Load(ctx context.Context, t *testing.T, db db) Scenario {
 	return res
 }
 
-func (s Scenario) Normalize() {
+func (s Scenario) Normalize() Scenario {
 	sort.Slice(s.Commodities, func(i, j int) bool {
 		return s.Commodities[i].ID < s.Commodities[j].ID
 	})
@@ -116,14 +116,7 @@ func (s Scenario) Normalize() {
 		return s.Accounts[i].ID < s.Accounts[j].ID
 	})
 	sort.Slice(s.Prices, func(i, j int) bool {
-		var p1, p2 = s.Prices[i], s.Prices[j]
-		if p1.CommodityID != p2.CommodityID {
-			return p1.CommodityID < p2.CommodityID
-		}
-		if p1.TargetCommodityID != p2.TargetCommodityID {
-			return p1.TargetCommodityID < p2.TargetCommodityID
-		}
-		return p1.Date.Before(p2.Date)
+		return s.Prices[i].Less(s.Prices[j])
 	})
 	for _, t := range s.Transactions {
 		sort.Slice(t.Bookings, func(i, j int) bool {
@@ -143,6 +136,7 @@ func (s Scenario) Normalize() {
 	sort.Slice(s.Transactions, func(i, j int) bool {
 		return s.Transactions[i].ID < s.Transactions[j].ID
 	})
+	return s
 }
 
 func (s Scenario) DeepCopy() Scenario {

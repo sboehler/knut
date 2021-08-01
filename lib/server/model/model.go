@@ -51,6 +51,11 @@ type Account struct {
 	CloseDate *time.Time
 }
 
+// Less defines an ordering on Account.
+func (a Account) Less(a2 Account) bool {
+	return a.ID < a2.ID
+}
+
 // Transaction represents a transaction.
 type Transaction struct {
 	ID          TransactionID

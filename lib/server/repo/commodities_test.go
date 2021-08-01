@@ -69,10 +69,7 @@ func TestListCommodity(t *testing.T) {
 		})
 	)
 
-	tx := beginTransaction(ctx, t, db)
-	defer tx.Rollback()
-
-	got, err := ListCommodities(ctx, tx)
+	got, err := ListCommodities(ctx, db)
 
 	if err != nil {
 		t.Errorf("ListCommodities() returned unexpected error: %v", err)

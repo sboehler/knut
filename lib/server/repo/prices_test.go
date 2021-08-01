@@ -162,7 +162,6 @@ func TestDeletePrices(t *testing.T) {
 			if diff := cmp.Diff(want, got); diff != "" {
 				t.Errorf("DeletePrice() mismatch (-want +got):\n%s", diff)
 			}
-
 		})
 	}
 }

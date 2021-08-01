@@ -2,71 +2,95 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/server/model"
 )
 
 func TestCreateAccount(t *testing.T) {
 	var (
-		name     = "MyAccount"
-		openDate = time.Date(2021, time.May, 14, 0, 0, 0, 0, time.UTC)
+		d        = date.Date(2020, time.December, 31)
 		ctx      = context.Background()
 		db       = createAndMigrateInMemoryDB(ctx, t)
-		want     = model.Account{
-			ID:       1,
-			Name:     name,
-			OpenDate: openDate,
+		scenario = Save(ctx, t, db, Scenario{
+			Accounts: []model.Account{
+				{Name: "MyAccount", OpenDate: date.Date(2021, time.May, 14)},
+			},
+		})
+		tests = []struct {
+			desc      string
+			name      string
+			openDate  time.Time
+			closeDate *time.Time
+		}{
+			{
+				desc:      "new account",
+				name:      "Another account",
+				openDate:  date.Date(2021, 7, 31),
+				closeDate: &d,
+			},
+			{
+				desc:      "duplicate account",
+				name:      "MyAccount",
+				openDate:  date.Date(2021, 6, 31),
+				closeDate: &d,
+			},
+			{
+				desc:     "account without close date",
+				name:     "MyAccount",
+				openDate: date.Date(2021, 6, 31),
+			},
 		}
 	)
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			db := beginTransaction(ctx, t, db)
+			defer db.Rollback()
 
-	got, err := CreateAccount(ctx, db, name, openDate, nil)
-
-	if err != nil {
-		t.Fatalf("CreateAccount() returned unexpected error: %v", err)
-	}
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("CreateAccount() mismatch (-want +got):\n%s", diff)
+			c, err := CreateAccount(ctx, db, test.name, test.openDate, test.closeDate)
+			if err != nil {
+				t.Fatalf("CreateAccount returned unexpected error %v", err)
+			}
+			var (
+				want = Scenario{Accounts: append(scenario.Accounts, c)}
+				got  = Load(ctx, t, db)
+			)
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("CreateAccount() mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 
 func TestListAccounts(t *testing.T) {
 	var (
-		t1 = time.Date(2021, time.May, 14, 0, 0, 0, 0, time.UTC)
-		t2 = time.Date(2022, time.May, 14, 0, 0, 0, 0, time.UTC)
+		t1 = date.Date(2021, time.May, 14)
+		t2 = date.Date(2022, time.May, 14)
 	)
 	var (
-		ctx = context.Background()
-		db  = createAndMigrateInMemoryDB(ctx, t)
-		as  = []model.Account{
-			{
-				Name:     "One",
-				OpenDate: t2,
+		ctx      = context.Background()
+		db       = createAndMigrateInMemoryDB(ctx, t)
+		scenario = Save(ctx, t, db, Scenario{
+			Accounts: []model.Account{
+				{Name: "Account1", OpenDate: t1},
+				{Name: "Account2", OpenDate: t1, CloseDate: &t2},
+				{Name: "Account3", OpenDate: t2},
 			},
-			{
-				Name:      "Two",
-				OpenDate:  t1,
-				CloseDate: &t2,
-			},
-		}
+		})
 	)
-	var want = populateAccounts(ctx, t, db, as)
-	sort.Slice(want, func(i, j int) bool {
-		return want[i].Name < want[j].Name
-	})
 
 	got, err := ListAccounts(ctx, db)
 
 	if err != nil {
 		t.Fatalf("ListAccounts() returned unexpected error: %v", err)
 	}
-	if len(got) == 0 {
-		t.Errorf("ListAccounts() returned no results")
-	}
-	if diff := cmp.Diff(want, got); diff != "" {
+	sort.Slice(got, func(i, j int) bool { return got[i].Less(got[j]) })
+	if diff := cmp.Diff(scenario.Accounts, got); diff != "" {
 		t.Errorf("ListAccounts() mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -77,26 +101,54 @@ func TestUpdateAccounts(t *testing.T) {
 		t2 = time.Date(2022, time.May, 14, 0, 0, 0, 0, time.UTC)
 	)
 	var (
-		ctx = context.Background()
-		db  = createAndMigrateInMemoryDB(ctx, t)
-		as  = []model.Account{
+		ctx      = context.Background()
+		db       = createAndMigrateInMemoryDB(ctx, t)
+		scenario = Save(ctx, t, db, Scenario{
+			Accounts: []model.Account{
+				{Name: "Account1", OpenDate: t1},
+				{Name: "Account2", OpenDate: t1, CloseDate: &t2},
+				{Name: "Account3", OpenDate: t2},
+			},
+		})
+		tests = []struct {
+			desc   string
+			update model.Account
+		}{
 			{
-				Name:     "One",
-				OpenDate: t2,
+				desc: "update name",
+				update: model.Account{
+					ID: scenario.Accounts[1].ID, Name: "New Name", OpenDate: t1, CloseDate: nil},
 			},
 		}
 	)
-	_ = populateAccounts(ctx, t, db, as)
-	var before = listAccounts(ctx, t, db)
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			db := beginTransaction(ctx, t, db)
+			defer db.Rollback()
 
-	got, err := UpdateAccount(ctx, db, before[0].ID, "Two", t1, &t2)
+			a, err := UpdateAccount(ctx, db, test.update.ID, test.update.Name, test.update.OpenDate, test.update.CloseDate)
 
-	if err != nil {
-		t.Fatalf("UpdateAccount() returned unexpected error: %v", err)
-	}
-	var after = listAccounts(ctx, t, db)
-	if diff := cmp.Diff(after[0], got); diff != "" {
-		t.Errorf("ListAccounts() mismatch (-want +got):\n%s", diff)
+			if err != nil {
+				t.Fatalf("UpdateAccount() returned unexpected error: %v", err)
+			}
+			if a.ID != test.update.ID || a.Name != test.update.Name || a.OpenDate != test.update.OpenDate || a.CloseDate != test.update.CloseDate {
+				t.Fatalf("UpdateAccount() did not update account, want = %v, got = %v", test.update, a)
+			}
+			var (
+				got  = Load(ctx, t, db)
+				want = Scenario{}
+			)
+			for _, acc := range scenario.Accounts {
+				if acc.ID != test.update.ID {
+					want.Accounts = append(want.Accounts, acc)
+				} else {
+					want.Accounts = append(want.Accounts, a)
+				}
+			}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("UpdateAccounts() mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 
@@ -106,29 +158,40 @@ func TestDeleteAccounts(t *testing.T) {
 		t2 = time.Date(2022, time.May, 14, 0, 0, 0, 0, time.UTC)
 	)
 	var (
-		ctx = context.Background()
-		db  = createAndMigrateInMemoryDB(ctx, t)
-		as  = []model.Account{
-			{
-				Name:     "One",
-				OpenDate: t2,
+		ctx      = context.Background()
+		db       = createAndMigrateInMemoryDB(ctx, t)
+		scenario = Save(ctx, t, db, Scenario{
+			Accounts: []model.Account{
+				{Name: "Account1", OpenDate: t1},
+				{Name: "Account2", OpenDate: t1, CloseDate: &t2},
+				{Name: "Account3", OpenDate: t2},
 			},
-			{
-				Name:      "Two",
-				OpenDate:  t1,
-				CloseDate: &t2,
-			},
-		}
+		})
 	)
-	_ = populateAccounts(ctx, t, db, as)
-	var before = listAccounts(ctx, t, db)
 
-	if err := DeleteAccount(ctx, db, before[0].ID); err != nil {
-		t.Fatalf("DeleteAccount() returned unexpected error: %v", err)
-	}
-	var after = listAccounts(ctx, t, db)
-	if diff := cmp.Diff(before[1:], after); diff != "" {
-		t.Errorf("ListAccounts() mismatch (-want +got):\n%s", diff)
+	for i, acc := range scenario.Accounts {
+		t.Run(fmt.Sprintf("delete account %d", i), func(t *testing.T) {
+			db := beginTransaction(ctx, t, db)
+			defer db.Rollback()
+
+			err := DeleteAccount(ctx, db, acc.ID)
+
+			if err != nil {
+				t.Fatalf("DeleteAccount returned unexpected error %v", err)
+			}
+			var (
+				got  = Load(ctx, t, db)
+				want = Scenario{}
+			)
+			for _, a := range scenario.Accounts {
+				if a.ID != acc.ID {
+					want.Accounts = append(want.Accounts, a)
+				}
+			}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("DeleteAccounts() mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 
@@ -141,15 +204,6 @@ func populateAccounts(ctx context.Context, t *testing.T, db db, accounts []model
 			t.Fatalf("CreateAccount() returned unexpected error: %v", err)
 		}
 		res = append(res, a)
-	}
-	return res
-}
-
-func listAccounts(ctx context.Context, t *testing.T, db db) []model.Account {
-	t.Helper()
-	res, err := ListAccounts(ctx, db)
-	if err != nil {
-		t.Fatalf("ListAccount() returned unexpected error: %v", err)
 	}
 	return res
 }

@@ -194,16 +194,3 @@ func TestDeleteAccounts(t *testing.T) {
 		})
 	}
 }
-
-func populateAccounts(ctx context.Context, t *testing.T, db db, accounts []model.Account) []model.Account {
-	t.Helper()
-	var res []model.Account
-	for _, account := range accounts {
-		a, err := CreateAccount(ctx, db, account.Name, account.OpenDate, account.CloseDate)
-		if err != nil {
-			t.Fatalf("CreateAccount() returned unexpected error: %v", err)
-		}
-		res = append(res, a)
-	}
-	return res
-}

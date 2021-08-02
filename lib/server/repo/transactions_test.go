@@ -2,219 +2,156 @@ package repo
 
 import (
 	"context"
+	"sort"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/server/model"
 	"github.com/shopspring/decimal"
 )
 
+func createTransactionScenario(ctx context.Context, t *testing.T, db db) Scenario {
+	return Save(ctx, t, db, Scenario{
+		Commodities: []model.Commodity{{Name: "AAA"}, {Name: "BBB"}, {Name: "CCC"}},
+		Accounts:    []model.Account{{Name: "Foo"}, {Name: "Bar"}, {Name: "Baz"}},
+		Transactions: []model.Transaction{
+			{
+				Date: date.Date(2021, time.May, 14), Description: "desc1", Bookings: []model.Booking{
+					{Amount: decimal.RequireFromString("4.23"), CommodityID: 0, CreditAccountID: 0, DebitAccountID: 1},
+					{Amount: decimal.RequireFromString("3.23"), CommodityID: 1, CreditAccountID: 1, DebitAccountID: 0},
+				},
+			},
+			{
+				Date: date.Date(2021, time.May, 15), Description: "desc2", Bookings: []model.Booking{
+					{Amount: decimal.RequireFromString("8.90"), CommodityID: 0, CreditAccountID: 0, DebitAccountID: 1},
+					{Amount: decimal.RequireFromString("20.3"), CommodityID: 1, CreditAccountID: 1, DebitAccountID: 2},
+				},
+			},
+			{
+				Date: date.Date(2021, time.May, 16), Description: "desc3", Bookings: []model.Booking{
+					{Amount: decimal.RequireFromString("3.23"), CommodityID: 2, CreditAccountID: 0, DebitAccountID: 1},
+				},
+			},
+		},
+	})
+}
+
 func TestCreateTransaction(t *testing.T) {
 	var (
-		date     = time.Date(2021, time.May, 14, 0, 0, 0, 0, time.UTC)
 		ctx      = context.Background()
 		db       = createAndMigrateInMemoryDB(ctx, t)
-		bookings = []model.Booking{
+		scenario = createTransactionScenario(ctx, t, db)
+		tests    = []struct {
+			desc string
+			trx  model.Transaction
+		}{
 			{
-				ID:              1,
-				Amount:          decimal.RequireFromString("4.23"),
-				CommodityID:     1,
-				CreditAccountID: 1,
-				DebitAccountID:  2,
+				desc: "new transaction",
+				trx: model.Transaction{
+					Date:        date.Date(2021, time.May, 31),
+					Description: "new transaction",
+					Bookings: []model.Booking{
+						{
+
+							Amount:          decimal.NewFromInt(200),
+							CommodityID:     scenario.Commodities[0].ID,
+							CreditAccountID: scenario.Accounts[0].ID,
+							DebitAccountID:  scenario.Accounts[1].ID,
+						},
+					},
+				},
 			},
 		}
-		trx = model.Transaction{
-			Date:        date,
-			Description: "desc",
-			Bookings:    bookings,
-		}
-		want = model.Transaction{
-			ID:          1,
-			Date:        date,
-			Description: "desc",
-			Bookings:    bookings,
-		}
 	)
-	populateCommodities(ctx, t, db, []string{"AAA"})
-	populateAccounts(ctx, t, db, []model.Account{{Name: "Foo"}, {Name: "Bar"}})
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			db := beginTransaction(ctx, t, db)
+			defer db.Rollback()
 
-	got, err := CreateTransaction(ctx, db, trx)
+			created, err := CreateTransaction(ctx, db, test.trx)
 
-	if err != nil {
-		t.Fatalf("CreateTransaction() returned unexpected error: %v", err)
-	}
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("CreateTransaction() mismatch (-want +got):\n%s", diff)
+			if err != nil {
+				t.Fatalf("CreateTransaction() returned unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(test.trx, created, cmpopts.IgnoreFields(created, "ID")); diff != "" {
+				t.Errorf("CreateTransaction() mismatch (-want +got):\n%s", diff)
+			}
+			got := Load(ctx, t, db)
+			want := Scenario{
+				Commodities:  scenario.Commodities,
+				Accounts:     scenario.Accounts,
+				Transactions: append(scenario.Transactions, created),
+			}
+			sort.Slice(want.Transactions, func(i, j int) bool { return want.Transactions[i].Less(want.Transactions[j]) })
+			for _, t := range want.Transactions {
+				sort.Slice(t.Bookings, func(i, j int) bool { return t.Bookings[i].Less(t.Bookings[j]) })
+			}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("CreateTransaction() mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 
 func TestListTransaction(t *testing.T) {
 	var (
-		date1 = time.Date(2021, time.May, 14, 0, 0, 0, 0, time.UTC)
-		date2 = time.Date(2021, time.May, 15, 0, 0, 0, 0, time.UTC)
-		date3 = time.Date(2021, time.May, 16, 0, 0, 0, 0, time.UTC)
-		ctx   = context.Background()
-		db    = createAndMigrateInMemoryDB(ctx, t)
-		trx   = []model.Transaction{
-			{
-				ID:          1,
-				Date:        date1,
-				Description: "desc1",
-				Bookings: []model.Booking{
-					{
-						ID:              1,
-						Amount:          decimal.RequireFromString("4.23"),
-						CommodityID:     1,
-						CreditAccountID: 1,
-						DebitAccountID:  2,
-					},
-				},
-			},
-			{
-				ID:          2,
-				Date:        date2,
-				Description: "desc2",
-				Bookings: []model.Booking{
-					{
-						ID:              2,
-						Amount:          decimal.RequireFromString("3.23"),
-						CommodityID:     1,
-						CreditAccountID: 2,
-						DebitAccountID:  1,
-					},
-				},
-			},
-			{
-				ID:          3,
-				Date:        date3,
-				Description: "desc3",
-				Bookings: []model.Booking{
-					{
-						ID:              3,
-						Amount:          decimal.RequireFromString("3.23"),
-						CommodityID:     1,
-						CreditAccountID: 2,
-						DebitAccountID:  1,
-					},
-				},
-			},
-		}
+		ctx      = context.Background()
+		db       = createAndMigrateInMemoryDB(ctx, t)
+		scenario = createTransactionScenario(ctx, t, db)
 	)
-	populateCommodities(ctx, t, db, []string{"AAA", "BBB", "CCC"})
-	populateAccounts(ctx, t, db, []model.Account{{Name: "Foo"}, {Name: "Bar"}})
-	populateTransactions(ctx, t, db, trx)
 
 	got, err := ListTransactions(ctx, db)
 
 	if err != nil {
 		t.Fatalf("ListTransactions() returned unexpected error: %v", err)
 	}
-	if diff := cmp.Diff(trx, got); diff != "" {
+	sort.Slice(got, func(i, j int) bool { return got[i].Less(got[j]) })
+	for _, t := range got {
+		sort.Slice(t.Bookings, func(i, j int) bool { return t.Bookings[i].Less(t.Bookings[j]) })
+	}
+	if diff := cmp.Diff(scenario.Transactions, got); diff != "" {
 		t.Errorf("ListTransactions() mismatch (-want +got):\n%s", diff)
 	}
 }
 
 func TestUpdateTransaction(t *testing.T) {
 	var (
-		date1 = time.Date(2021, time.May, 14, 0, 0, 0, 0, time.UTC)
-		date2 = time.Date(2021, time.May, 15, 0, 0, 0, 0, time.UTC)
-		date3 = time.Date(2021, time.May, 16, 0, 0, 0, 0, time.UTC)
-		ctx   = context.Background()
-		db    = createAndMigrateInMemoryDB(ctx, t)
-		trx   = []model.Transaction{
-			{
-				ID:          1,
-				Date:        date1,
-				Description: "desc1",
-				Bookings: []model.Booking{
-					{
-						ID:              1,
-						Amount:          decimal.RequireFromString("4.23"),
-						CommodityID:     1,
-						CreditAccountID: 1,
-						DebitAccountID:  2,
-					},
-				},
-			},
-			{
-				ID:          2,
-				Date:        date2,
-				Description: "desc2",
-				Bookings: []model.Booking{
-					{
-						ID:              2,
-						Amount:          decimal.RequireFromString("3.23"),
-						CommodityID:     1,
-						CreditAccountID: 2,
-						DebitAccountID:  1,
-					},
-				},
-			},
-			{
-				ID:          3,
-				Date:        date3,
-				Description: "desc3",
-				Bookings: []model.Booking{
-					{
-						ID:              3,
-						Amount:          decimal.RequireFromString("3.23"),
-						CommodityID:     1,
-						CreditAccountID: 2,
-						DebitAccountID:  1,
-					},
-				},
-			},
-		}
+		ctx      = context.Background()
+		db       = createAndMigrateInMemoryDB(ctx, t)
+		scenario = createTransactionScenario(ctx, t, db)
+
 		update = model.Transaction{
-			ID:          3,
-			Date:        date2,
-			Description: "desc4",
+			ID: scenario.Transactions[0].ID, Date: date.Date(2021, time.June, 1), Description: "desc4",
 			Bookings: []model.Booking{
 				{
-					ID:              3,
-					Amount:          decimal.RequireFromString("5.23"),
-					CommodityID:     1,
-					CreditAccountID: 1,
-					DebitAccountID:  2,
+					Amount:          decimal.RequireFromString("15.23"),
+					CommodityID:     scenario.Commodities[0].ID,
+					CreditAccountID: scenario.Accounts[2].ID,
+					DebitAccountID:  scenario.Accounts[0].ID,
 				},
 			},
 		}
-		want = []model.Transaction{
-			trx[0],
-			trx[1],
-			update,
-		}
 	)
-	populateCommodities(ctx, t, db, []string{"AAA", "BBB", "CCC"})
-	populateAccounts(ctx, t, db, []model.Account{{Name: "Foo"}, {Name: "Bar"}})
-	populateTransactions(ctx, t, db, trx)
 
-	_, err := UpdateTransaction(ctx, db, update)
+	updated, err := UpdateTransaction(ctx, db, update)
 
 	if err != nil {
 		t.Fatalf("UpdateTransaction() returned unexpected error: %v", err)
 	}
-
-	got, err := ListTransactions(ctx, db)
-	if err != nil {
-		t.Fatalf("ListTransactions() returned unexpected error: %v", err)
+	if diff := cmp.Diff(update, updated); diff != "" {
+		t.Errorf("UpdateTransaction() mismatch (-want +got):\n%s", diff)
 	}
-
+	var (
+		got  = Load(ctx, t, db)
+		want = Scenario{
+			Commodities:  scenario.Commodities,
+			Accounts:     scenario.Accounts,
+			Transactions: append([]model.Transaction{updated}, scenario.Transactions[1:]...)}
+	)
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("UpdateTransactions() mismatch (-want +got):\n%s", diff)
 	}
-}
-
-func populateTransactions(ctx context.Context, t *testing.T, db db, ts []model.Transaction) []model.Transaction {
-	t.Helper()
-	var res []model.Transaction
-	for _, trx := range ts {
-		trx, err := CreateTransaction(ctx, db, trx)
-		if err != nil {
-			t.Fatalf("CreateTransaction() returned unexpected error: %v", err)
-		}
-		res = append(res, trx)
-	}
-	return res
 }

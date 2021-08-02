@@ -165,12 +165,3 @@ func TestDeletePrices(t *testing.T) {
 		})
 	}
 }
-
-func populatePrices(ctx context.Context, t *testing.T, db db, prices []model.Price) {
-	t.Helper()
-	for _, price := range prices {
-		if _, err := InsertPrice(ctx, db, price); err != nil {
-			t.Fatalf("InsertPrice() returned unexpected error: %v", err)
-		}
-	}
-}

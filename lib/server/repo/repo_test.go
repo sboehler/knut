@@ -22,19 +22,6 @@ func createAndMigrateInMemoryDB(ctx context.Context, t *testing.T) *sql.DB {
 	return db
 }
 
-func populateCommodities(ctx context.Context, t *testing.T, db *sql.DB, names []string) []model.Commodity {
-	t.Helper()
-	var res []model.Commodity
-	for _, name := range names {
-		c, err := CreateCommodity(ctx, db, name)
-		if err != nil {
-			t.Fatalf("Create(ctx, %s) returned unexpected error: %v", name, err)
-		}
-		res = append(res, c)
-	}
-	return res
-}
-
 type Scenario struct {
 	Commodities  []model.Commodity
 	Accounts     []model.Account
@@ -73,6 +60,8 @@ func Save(ctx context.Context, t *testing.T, db db, s Scenario) Scenario {
 		var bp []model.Booking
 		for _, b := range trx.Bookings {
 			b.CommodityID = sp.Commodities[b.CommodityID].ID
+			b.CreditAccountID = sp.Accounts[b.CreditAccountID].ID
+			b.DebitAccountID = sp.Accounts[b.DebitAccountID].ID
 			bp = append(bp, b)
 		}
 		trx.Bookings = bp
@@ -104,8 +93,7 @@ func Load(ctx context.Context, t *testing.T, db db) Scenario {
 	if res.Transactions, err = ListTransactions(ctx, db); err != nil {
 		t.Fatalf("ListTransactions returned an unexpected error %v", err)
 	}
-	res.Normalize()
-	return res
+	return res.Normalize()
 }
 
 func (s Scenario) Normalize() Scenario {
@@ -120,21 +108,11 @@ func (s Scenario) Normalize() Scenario {
 	})
 	for _, t := range s.Transactions {
 		sort.Slice(t.Bookings, func(i, j int) bool {
-			var b1, b2 = t.Bookings[i], t.Bookings[j]
-			if b1.CommodityID != b2.CommodityID {
-				return b1.CommodityID < b2.CommodityID
-			}
-			if b1.CreditAccountID != b2.CreditAccountID {
-				return b1.CreditAccountID < b2.CreditAccountID
-			}
-			if b1.DebitAccountID != b2.DebitAccountID {
-				return b1.DebitAccountID < b2.DebitAccountID
-			}
-			return b1.Amount.LessThan(b2.Amount)
+			return t.Bookings[i].Less(t.Bookings[j])
 		})
 	}
 	sort.Slice(s.Transactions, func(i, j int) bool {
-		return s.Transactions[i].ID < s.Transactions[j].ID
+		return s.Transactions[i].Less(s.Transactions[j])
 	})
 	return s
 }

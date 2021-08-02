@@ -64,13 +64,31 @@ type Transaction struct {
 	Bookings    []Booking
 }
 
+// Less defines an ordering on Transaction.
+func (t Transaction) Less(t2 Transaction) bool {
+	return t.ID < t2.ID
+}
+
 // TransactionID is the ID of a booking.
 type TransactionID int
 
 // Booking represents a booking.
 type Booking struct {
-	ID                              TransactionID
 	Amount                          decimal.Decimal
 	CommodityID                     CommodityID
 	CreditAccountID, DebitAccountID AccountID
+}
+
+// Less defines an ordering on Transaction.
+func (b Booking) Less(b2 Booking) bool {
+	if b.CommodityID != b2.CommodityID {
+		return b.CommodityID < b2.CommodityID
+	}
+	if b.CreditAccountID != b2.CreditAccountID {
+		return b.CreditAccountID < b2.CreditAccountID
+	}
+	if b.DebitAccountID != b2.DebitAccountID {
+		return b.DebitAccountID < b2.DebitAccountID
+	}
+	return b.Amount.LessThan(b2.Amount)
 }

@@ -132,11 +132,14 @@ func listBookings(ctx context.Context, db db) (map[model.TransactionID][]model.B
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var b model.Booking
-		if b, err = rowToBooking(rows); err != nil {
+		var (
+			b  model.Booking
+			id model.TransactionID
+		)
+		if id, b, err = rowToBooking(rows); err != nil {
 			return nil, err
 		}
-		res[b.ID] = append(res[b.ID], b)
+		res[id] = append(res[id], b)
 	}
 	return res, ignoreNoRows(rows.Err())
 }
@@ -155,7 +158,7 @@ func createBookings(ctx context.Context, db db, id model.TransactionID, bs []mod
 		if row.Err() != nil {
 			return nil, row.Err()
 		}
-		b, err = rowToBooking(row)
+		_, b, err = rowToBooking(row)
 		if err != nil {
 			return nil, err
 		}
@@ -179,7 +182,10 @@ func rowToTrx(row scan) (model.Transaction, error) {
 	return res, nil
 }
 
-func rowToBooking(row scan) (model.Booking, error) {
-	var res model.Booking
-	return res, row.Scan(&res.ID, &res.Amount, &res.CommodityID, &res.CreditAccountID, &res.DebitAccountID)
+func rowToBooking(row scan) (model.TransactionID, model.Booking, error) {
+	var (
+		res model.Booking
+		id  model.TransactionID
+	)
+	return id, res, row.Scan(&id, &res.Amount, &res.CommodityID, &res.CreditAccountID, &res.DebitAccountID)
 }

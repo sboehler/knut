@@ -11,6 +11,7 @@ import (
 
 	// use SQLite3
 	_ "github.com/mattn/go-sqlite3"
+	"go.uber.org/multierr"
 )
 
 //go:embed sql idem
@@ -22,10 +23,11 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 		db  *sql.DB
 		err error
 	)
-	db, err = sql.Open("sqlite3", fmt.Sprintf("file:%s?_mutex=full&_journal=wal&cache=shared", path))
+	db, err = sql.Open("sqlite3", fmt.Sprintf("file:%s?_mutex=no&_journal=wal", path))
 	if err != nil {
 		return nil, err
 	}
+	db.SetMaxOpenConns(1)
 	if err := migrate(ctx, db); err != nil {
 		return nil, err
 	}
@@ -100,4 +102,19 @@ func migrate(ctx context.Context, db *sql.DB) error {
 		}
 	}
 	return nil
+}
+
+// WithTX runs the provided function in the context of a transaction.
+func WithTX(ctx context.Context, db *sql.DB, fn func(tx *sql.Tx) error) error {
+	var (
+		err error
+		tx  *sql.Tx
+	)
+	if tx, err = db.BeginTx(ctx, nil); err != nil {
+		return err
+	}
+	if err = fn(tx); err != nil {
+		return multierr.Append(err, tx.Rollback())
+	}
+	return tx.Commit()
 }

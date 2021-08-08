@@ -22,7 +22,7 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 		db  *sql.DB
 		err error
 	)
-	db, err = sql.Open("sqlite3", fmt.Sprintf("file:%s", path))
+	db, err = sql.Open("sqlite3", fmt.Sprintf("file:%s?_mutex=full&_journal=wal&cache=shared", path))
 	if err != nil {
 		return nil, err
 	}

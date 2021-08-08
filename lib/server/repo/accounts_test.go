@@ -97,10 +97,8 @@ func TestListAccounts(t *testing.T) {
 
 func TestUpdateAccounts(t *testing.T) {
 	var (
-		t1 = time.Date(2021, time.May, 14, 0, 0, 0, 0, time.UTC)
-		t2 = time.Date(2022, time.May, 14, 0, 0, 0, 0, time.UTC)
-	)
-	var (
+		t1       = time.Date(2021, time.May, 14, 0, 0, 0, 0, time.UTC)
+		t2       = time.Date(2022, time.May, 14, 0, 0, 0, 0, time.UTC)
 		ctx      = context.Background()
 		db       = createAndMigrateInMemoryDB(ctx, t)
 		scenario = Save(ctx, t, db, Scenario{
@@ -136,13 +134,11 @@ func TestUpdateAccounts(t *testing.T) {
 			}
 			var (
 				got  = Load(ctx, t, db)
-				want = Scenario{}
+				want = scenario.DeepCopy()
 			)
-			for _, acc := range scenario.Accounts {
-				if acc.ID != test.update.ID {
-					want.Accounts = append(want.Accounts, acc)
-				} else {
-					want.Accounts = append(want.Accounts, a)
+			for i, acc := range want.Accounts {
+				if acc.ID == test.update.ID {
+					want.Accounts[i] = test.update
 				}
 			}
 			if diff := cmp.Diff(want, got); diff != "" {

@@ -97,6 +97,7 @@ func (p *parser) parse() error {
 	if err := p.skipHeader(); err != nil {
 		return err
 	}
+	p.reader.FieldsPerRecord = -1
 	for {
 		if err := p.readLine(); err != nil {
 			if err == io.EOF {
@@ -135,6 +136,12 @@ func (p *parser) readLine() error {
 	}
 	if r[fieldBuchungstext] == "Saldovortrag" {
 		return nil
+	}
+	if len(r) == 11 {
+		return nil
+	}
+	if len(r) != 13 {
+		return fmt.Errorf("record %v with invalid length %d", r, len(r))
 	}
 	if err := p.parseBooking(r); err != nil {
 		return err

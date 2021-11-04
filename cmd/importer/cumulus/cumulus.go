@@ -103,7 +103,6 @@ func (p *parser) parse() error {
 
 func (p *parser) readLine() error {
 	r, err := p.reader.Read()
-	fmt.Println(r)
 	if err != nil {
 		return err
 	}

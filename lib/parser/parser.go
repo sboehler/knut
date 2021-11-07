@@ -285,55 +285,55 @@ func (p *Parser) parseAccrual() (*ledger.Accrual, error) {
 }
 
 func (p *Parser) parsePostings() ([]*ledger.Posting, error) {
-	var (
-		postings []*ledger.Posting
-		err      error
-	)
+	var postings []*ledger.Posting
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
-		var posting ledger.Posting
-		if posting.Credit, err = p.parseAccount(); err != nil {
+		var (
+			credit, debit *accounts.Account
+			amount        decimal.Decimal
+			commodity     *commodities.Commodity
+			lot           *ledger.Lot
+
+			err error
+		)
+		if credit, err = p.parseAccount(); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		if posting.Debit, err = p.parseAccount(); err != nil {
+		if debit, err = p.parseAccount(); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		if posting.Amount, err = p.parseDecimal(); err != nil {
+		if amount, err = p.parseDecimal(); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		if posting.Commodity, err = p.parseCommodity(); err != nil {
+		if commodity, err = p.parseCommodity(); err != nil {
 			return nil, err
 		}
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
-		}
-		if unicode.IsLetter(p.current()) || unicode.IsDigit(p.current()) {
-			if posting.Target, err = p.parseCommodity(); err != nil {
-				return nil, err
-			}
-			if err = p.consumeWhitespace1(); err != nil {
-				return nil, err
-			}
-		} else {
-			posting.Target = posting.Commodity
 		}
 		if p.current() == '{' {
-			if posting.Lot, err = p.parseLot(); err != nil {
+			if lot, err = p.parseLot(); err != nil {
 				return nil, err
 			}
 			if err = p.consumeWhitespace1(); err != nil {
 				return nil, err
 			}
 		}
-		postings = append(postings, &posting)
+		postings = append(postings, &ledger.Posting{
+			Credit:    credit,
+			Debit:     debit,
+			Amount:    amount,
+			Commodity: commodity,
+			Lot:       lot,
+		})
 		if err = p.consumeRestOfWhitespaceLine(); err != nil {
 			return nil, err
 		}

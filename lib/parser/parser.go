@@ -176,28 +176,28 @@ func (p *Parser) parseDirective() (ledger.Directive, error) {
 	return result, nil
 }
 
-func (p *Parser) parseTransaction(d time.Time) (*ledger.Transaction, error) {
+func (p *Parser) parseTransaction(d time.Time) (ledger.Transaction, error) {
 	desc, err := p.parseQuotedString()
 	if err != nil {
-		return nil, err
+		return ledger.Transaction{}, err
 	}
 
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Transaction{}, err
 	}
 
 	tags, err := p.parseTags()
 	if err != nil {
-		return nil, err
+		return ledger.Transaction{}, err
 	}
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
-		return nil, err
+		return ledger.Transaction{}, err
 	}
 	postings, err := p.parsePostings()
 	if err != nil {
-		return nil, err
+		return ledger.Transaction{}, err
 	}
-	return &ledger.Transaction{
+	return ledger.Transaction{
 		Pos:         p.getRange(),
 		Date:        d,
 		Description: desc,
@@ -207,20 +207,20 @@ func (p *Parser) parseTransaction(d time.Time) (*ledger.Transaction, error) {
 
 }
 
-func (p *Parser) parseAccrual() (*ledger.Accrual, error) {
+func (p *Parser) parseAccrual() (ledger.Accrual, error) {
 	p.markStart()
 	if err := p.scanner.ConsumeRune('@'); err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	if err := p.scanner.ParseString("accrue"); err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	periodStr, err := p.scanner.ReadWhile(unicode.IsLetter)
 	if err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	var period date.Period
 	switch periodStr {
@@ -237,44 +237,44 @@ func (p *Parser) parseAccrual() (*ledger.Accrual, error) {
 	case "yearly":
 		period = date.Yearly
 	default:
-		return nil, fmt.Errorf("expected \"once\", \"daily\", \"weekly\", \"monthly\", \"quarterly\" or \"yearly\", got %q", periodStr)
+		return ledger.Accrual{}, fmt.Errorf("expected \"once\", \"daily\", \"weekly\", \"monthly\", \"quarterly\" or \"yearly\", got %q", periodStr)
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	dateFrom, err := p.parseDate()
 	if err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	dateTo, err := p.parseDate()
 	if err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	account, err := p.parseAccount()
 	if err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	d, err := p.parseDate()
 	if err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
 	t, err := p.parseTransaction(d)
 	if err != nil {
-		return nil, err
+		return ledger.Accrual{}, err
 	}
-	return &ledger.Accrual{
+	return ledger.Accrual{
 		Pos:         p.getRange(),
 		T0:          dateFrom,
 		T1:          dateTo,
@@ -341,69 +341,69 @@ func (p *Parser) parsePostings() ([]ledger.Posting, error) {
 	return postings, nil
 }
 
-func (p *Parser) parseOpen(d time.Time) (*ledger.Open, error) {
+func (p *Parser) parseOpen(d time.Time) (ledger.Open, error) {
 	if err := p.scanner.ParseString("open"); err != nil {
-		return nil, err
+		return ledger.Open{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Open{}, err
 	}
 	account, err := p.parseAccount()
 	if err != nil {
-		return nil, err
+		return ledger.Open{}, err
 	}
-	return &ledger.Open{
+	return ledger.Open{
 		Pos:     p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
 }
 
-func (p *Parser) parseClose(d time.Time) (*ledger.Close, error) {
+func (p *Parser) parseClose(d time.Time) (ledger.Close, error) {
 	if err := p.scanner.ParseString("close"); err != nil {
-		return nil, err
+		return ledger.Close{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Close{}, err
 	}
 	account, err := p.parseAccount()
 	if err != nil {
-		return nil, err
+		return ledger.Close{}, err
 	}
-	return &ledger.Close{
+	return ledger.Close{
 		Pos:     p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
 }
 
-func (p *Parser) parsePrice(d time.Time) (*ledger.Price, error) {
+func (p *Parser) parsePrice(d time.Time) (ledger.Price, error) {
 	if err := p.scanner.ParseString("price"); err != nil {
-		return nil, err
+		return ledger.Price{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Price{}, err
 	}
 	commodity, err := p.parseCommodity()
 	if err != nil {
-		return nil, err
+		return ledger.Price{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Price{}, err
 	}
 
 	price, err := p.parseDecimal()
 	if err != nil {
-		return nil, err
+		return ledger.Price{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Price{}, err
 	}
 	target, err := p.parseCommodity()
 	if err != nil {
-		return nil, err
+		return ledger.Price{}, err
 	}
-	return &ledger.Price{
+	return ledger.Price{
 		Pos:       p.getRange(),
 		Date:      d,
 		Commodity: commodity,
@@ -412,32 +412,32 @@ func (p *Parser) parsePrice(d time.Time) (*ledger.Price, error) {
 	}, nil
 }
 
-func (p *Parser) parseBalanceAssertion(d time.Time) (*ledger.Assertion, error) {
+func (p *Parser) parseBalanceAssertion(d time.Time) (ledger.Assertion, error) {
 	if err := p.scanner.ParseString("balance"); err != nil {
-		return nil, err
+		return ledger.Assertion{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Assertion{}, err
 	}
 	account, err := p.parseAccount()
 	if err != nil {
-		return nil, err
+		return ledger.Assertion{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Assertion{}, err
 	}
 	amount, err := p.parseDecimal()
 	if err != nil {
-		return nil, err
+		return ledger.Assertion{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Assertion{}, err
 	}
 	commodity, err := p.parseCommodity()
 	if err != nil {
-		return nil, err
+		return ledger.Assertion{}, err
 	}
-	return &ledger.Assertion{
+	return ledger.Assertion{
 		Pos:       p.getRange(),
 		Date:      d,
 		Account:   account,
@@ -446,32 +446,32 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*ledger.Assertion, error) {
 	}, nil
 }
 
-func (p *Parser) parseValue(d time.Time) (*ledger.Value, error) {
+func (p *Parser) parseValue(d time.Time) (ledger.Value, error) {
 	if err := p.scanner.ParseString("value"); err != nil {
-		return nil, err
+		return ledger.Value{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Value{}, err
 	}
 	account, err := p.parseAccount()
 	if err != nil {
-		return nil, err
+		return ledger.Value{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Value{}, err
 	}
 	amount, err := p.parseDecimal()
 	if err != nil {
-		return nil, err
+		return ledger.Value{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Value{}, err
 	}
 	commodity, err := p.parseCommodity()
 	if err != nil {
-		return nil, err
+		return ledger.Value{}, err
 	}
-	return &ledger.Value{
+	return ledger.Value{
 		Pos:       p.getRange(),
 		Date:      d,
 		Account:   account,
@@ -480,24 +480,24 @@ func (p *Parser) parseValue(d time.Time) (*ledger.Value, error) {
 	}, nil
 }
 
-func (p *Parser) parseInclude() (*ledger.Include, error) {
+func (p *Parser) parseInclude() (ledger.Include, error) {
 	p.markStart()
 	if err := p.scanner.ParseString("include"); err != nil {
-		return nil, err
+		return ledger.Include{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
+		return ledger.Include{}, err
 	}
 	i, err := p.parseQuotedString()
 	if err != nil {
-		return nil, err
+		return ledger.Include{}, err
 	}
-	result := &ledger.Include{
+	result := ledger.Include{
 		Pos:  p.getRange(),
 		Path: i,
 	}
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
-		return nil, err
+		return ledger.Include{}, err
 	}
 	return result, nil
 }

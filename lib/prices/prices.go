@@ -32,7 +32,7 @@ type Prices map[*commodities.Commodity]map[*commodities.Commodity]decimal.Decima
 var one = decimal.NewFromInt(1)
 
 // Insert inserts a new price.
-func (p Prices) Insert(pr *ledger.Price) {
+func (p Prices) Insert(pr ledger.Price) {
 	p.addPrice(pr.Target, pr.Commodity, pr.Price)
 	p.addPrice(pr.Commodity, pr.Target, one.Div(pr.Price).Truncate(8))
 }

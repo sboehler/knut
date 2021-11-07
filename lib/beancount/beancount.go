@@ -34,11 +34,11 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 		return err
 	}
 	l[0].Openings = append(l[0].Openings,
-		&ledger.Open{
+		ledger.Open{
 			Date:    l[0].Date,
 			Account: accounts.ValuationAccount(),
 		},
-		&ledger.Open{
+		ledger.Open{
 			Date:    l[0].Date,
 			Account: accounts.RetainedEarningsAccount(),
 		},
@@ -70,7 +70,7 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 	return nil
 }
 
-func writeTrx(w io.Writer, t *ledger.Transaction, c *commodities.Commodity) error {
+func writeTrx(w io.Writer, t ledger.Transaction, c *commodities.Commodity) error {
 	if _, err := fmt.Fprintf(w, `%s * "%s"`, t.Date.Format("2006-01-02"), t.Description); err != nil {
 		return err
 	}

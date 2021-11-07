@@ -83,7 +83,7 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 	var directives []ledger.Directive
 	for i := range p.ParseAll() {
 		switch d := i.(type) {
-		case *ledger.Transaction:
+		case ledger.Transaction:
 			bayesModel.Infer(d, account)
 			directives = append(directives, d)
 		case ledger.Directive:
@@ -121,7 +121,7 @@ func train(file string, exclude *accounts.Account) (*bayes.Model, error) {
 		switch t := r.(type) {
 		case error:
 			return nil, t
-		case *ledger.Transaction:
+		case ledger.Transaction:
 			m.Update(t)
 		}
 	}

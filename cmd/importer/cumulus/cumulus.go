@@ -161,7 +161,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 			ledger.NewPosting(accounts.TBDAccount(), p.account, chf, amount),
 		},
 	}
-	p.builder.AddTransaction(p.last)
+	p.builder.AddTransaction(*p.last)
 	return true, nil
 }
 
@@ -239,7 +239,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	if chf, err = commodities.Get("CHF"); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(ledger.Transaction{
 		Date:        date,
 		Description: r[rfBeschreibung],
 		Postings: []ledger.Posting{

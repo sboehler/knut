@@ -32,19 +32,19 @@ func FromDirectives(accountFilter *AccountFilter, commodityFilter *CommodityFilt
 		switch t := res.(type) {
 		case error:
 			return nil, t
-		case *Open:
+		case Open:
 			b.AddOpening(t)
-		case *Price:
+		case Price:
 			b.AddPrice(t)
-		case *Transaction:
+		case Transaction:
 			b.AddTransaction(t)
-		case *Assertion:
+		case Assertion:
 			b.AddAssertion(t)
-		case *Value:
+		case Value:
 			b.AddValue(t)
-		case *Close:
+		case Close:
 			b.AddClosing(t)
-		case *Accrual:
+		case Accrual:
 			trx, err := t.Expand()
 			if err != nil {
 				return nil, err
@@ -53,7 +53,7 @@ func FromDirectives(accountFilter *AccountFilter, commodityFilter *CommodityFilt
 				b.AddTransaction(t)
 			}
 		default:
-			return nil, fmt.Errorf("unknown: %v", t)
+			return nil, fmt.Errorf("unknown: %#v", t)
 		}
 	}
 	return b.Build(), nil
@@ -94,7 +94,7 @@ func (b *Builder) getOrCreate(d time.Time) *Day {
 }
 
 // AddTransaction adds a transaction directive.
-func (b *Builder) AddTransaction(t *Transaction) {
+func (b *Builder) AddTransaction(t Transaction) {
 	var filtered []Posting
 	for _, p := range t.Postings {
 		if !b.accountFilter.match(p.Credit) && !b.accountFilter.match(p.Debit) {
@@ -113,13 +113,13 @@ func (b *Builder) AddTransaction(t *Transaction) {
 }
 
 // AddOpening adds an open directive.
-func (b *Builder) AddOpening(o *Open) {
+func (b *Builder) AddOpening(o Open) {
 	var s = b.getOrCreate(o.Date)
 	s.Openings = append(s.Openings, o)
 }
 
 // AddClosing adds a close directive.
-func (b *Builder) AddClosing(close *Close) {
+func (b *Builder) AddClosing(close Close) {
 	if !b.accountFilter.match(close.Account) {
 		return
 	}
@@ -128,13 +128,13 @@ func (b *Builder) AddClosing(close *Close) {
 }
 
 // AddPrice adds a price directive.
-func (b *Builder) AddPrice(p *Price) {
+func (b *Builder) AddPrice(p Price) {
 	var s = b.getOrCreate(p.Date)
 	s.Prices = append(s.Prices, p)
 }
 
 // AddAssertion adds an assertion directive.
-func (b *Builder) AddAssertion(a *Assertion) {
+func (b *Builder) AddAssertion(a Assertion) {
 	if !b.accountFilter.match(a.Account) || !b.commodityFilter.match(a.Commodity) {
 		return
 	}
@@ -143,7 +143,7 @@ func (b *Builder) AddAssertion(a *Assertion) {
 }
 
 // AddValue adds an value directive.
-func (b *Builder) AddValue(a *Value) {
+func (b *Builder) AddValue(a Value) {
 	if !b.accountFilter.match(a.Account) || !b.commodityFilter.match(a.Commodity) {
 		return
 	}

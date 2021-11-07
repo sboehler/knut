@@ -162,7 +162,7 @@ func parseDate(cmd *cobra.Command, name string) (time.Time, error) {
 	return time.Parse("2006-01-02", s)
 }
 
-func generate(c config) ([]*ledger.Open, []*ledger.Price, []*ledger.Transaction) {
+func generate(c config) ([]*ledger.Open, []*ledger.Price, []ledger.Transaction) {
 	rand.Seed(c.seed)
 	var (
 		accounts     = generateAccounts(c)
@@ -217,12 +217,12 @@ func generateOpenings(c config, as []*accounts.Account) []*ledger.Open {
 	return res
 }
 
-func generateTransactions(c config, cs []*commodities.Commodity, as []*accounts.Account) []*ledger.Transaction {
-	var trx []*ledger.Transaction
+func generateTransactions(c config, cs []*commodities.Commodity, as []*accounts.Account) []ledger.Transaction {
+	var trx []ledger.Transaction
 	var dates = date.Series(c.from.AddDate(0, 0, 1), c.to, date.Daily)
 	for i := 0; i < c.transactions; i++ {
 
-		trx = append(trx, &ledger.Transaction{
+		trx = append(trx, ledger.Transaction{
 			Date:        dates[rand.Intn(len(dates))],
 			Description: generateIdentifier(200),
 			Postings: []ledger.Posting{

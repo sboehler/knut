@@ -169,7 +169,7 @@ func (p *Parser) readBookingLine(l []string) error {
 	if amount, err = parseAmount(l); err != nil {
 		return err
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(ledger.Transaction{
 		Date:        date,
 		Description: l[bfAvisierungstext],
 		Postings: []ledger.Posting{

@@ -144,7 +144,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if chf, err = commodities.Get("CHF"); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(ledger.Transaction{
 		Date:        d,
 		Description: desc,
 		Postings: []ledger.Posting{

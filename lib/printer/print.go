@@ -23,7 +23,7 @@ func New() *Printer {
 // PrintDirective prints a directive to the given Writer.
 func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err error) {
 	switch d := directive.(type) {
-	case *ledger.Transaction:
+	case ledger.Transaction:
 		return p.printTransaction(w, d)
 	case *ledger.Open:
 		return p.printOpen(w, d)
@@ -43,7 +43,7 @@ func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err 
 	return 0, fmt.Errorf("unknown directive: %v", directive)
 }
 
-func (p Printer) printTransaction(w io.Writer, t *ledger.Transaction) (n int, err error) {
+func (p Printer) printTransaction(w io.Writer, t ledger.Transaction) (n int, err error) {
 	c, err := fmt.Fprintf(w, "%s \"%s\"", t.Date.Format("2006-01-02"), t.Description)
 	n += c
 	if err != nil {
@@ -201,13 +201,13 @@ func (p *Printer) PrintLedger(w io.Writer, l ledger.Ledger) (int, error) {
 func (p *Printer) Initialize(directive []ledger.Directive) {
 	for _, d := range directive {
 		switch t := d.(type) {
-		case *ledger.Transaction:
+		case ledger.Transaction:
 			p.updatePadding(t)
 		}
 	}
 }
 
-func (p *Printer) updatePadding(t *ledger.Transaction) {
+func (p *Printer) updatePadding(t ledger.Transaction) {
 	for _, pt := range t.Postings {
 		var cr, dr = utf8.RuneCountInString(pt.Credit.String()), utf8.RuneCountInString(pt.Debit.String())
 		if p.Padding < cr {

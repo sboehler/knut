@@ -29,12 +29,12 @@ import (
 // Day groups all commands for a given date.
 type Day struct {
 	Date         time.Time
-	Prices       []*Price
-	Assertions   []*Assertion
-	Values       []*Value
-	Openings     []*Open
-	Transactions []*Transaction
-	Closings     []*Close
+	Prices       []Price
+	Assertions   []Assertion
+	Values       []Value
+	Openings     []Open
+	Transactions []Transaction
+	Closings     []Close
 }
 
 // Ledger is a ledger.
@@ -196,16 +196,16 @@ type Accrual struct {
 	Period      date.Period
 	T0, T1      time.Time
 	Account     *accounts.Account
-	Transaction *Transaction
+	Transaction Transaction
 }
 
 // Position returns the position.
-func (a *Accrual) Position() model.Range {
+func (a Accrual) Position() model.Range {
 	return a.Pos
 }
 
 // Expand expands an accrual transaction.
-func (a *Accrual) Expand() ([]*Transaction, error) {
+func (a Accrual) Expand() ([]Transaction, error) {
 	var t = a.Transaction
 	if l := len(t.Postings); l != 1 {
 		return nil, fmt.Errorf("%s: accrual expansion: number of postings is %d, must be 1", a.Transaction.Position().Start, l)
@@ -232,7 +232,7 @@ func (a *Accrual) Expand() ([]*Transaction, error) {
 		dates       = date.Series(a.T0, a.T1, a.Period)[1:]
 		amount, rem = posting.Amount.QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
 
-		result []*Transaction
+		result []Transaction
 	)
 	if crAccountMulti != drAccountMulti {
 		for i, date := range dates {
@@ -240,7 +240,7 @@ func (a *Accrual) Expand() ([]*Transaction, error) {
 			if i == 0 {
 				a = a.Add(rem)
 			}
-			result = append(result, &Transaction{
+			result = append(result, Transaction{
 				Pos:         t.Pos,
 				Date:        date,
 				Tags:        t.Tags,
@@ -252,7 +252,7 @@ func (a *Accrual) Expand() ([]*Transaction, error) {
 		}
 	}
 	if crAccountSingle != drAccountSingle {
-		result = append(result, &Transaction{
+		result = append(result, Transaction{
 			Pos:         t.Pos,
 			Date:        t.Date,
 			Tags:        t.Tags,

@@ -296,12 +296,12 @@ func (b *Balance) valuateTransaction(t *ledger.Transaction) error {
 	if b.Valuation == nil {
 		return nil
 	}
-	for _, posting := range t.Postings {
+	for i, posting := range t.Postings {
 		if b.Valuation == posting.Commodity {
-			posting.Value = posting.Amount
+			t.Postings[i].Value = posting.Amount
 		} else {
 			var err error
-			if posting.Value, err = b.NormalizedPrices.Valuate(posting.Commodity, posting.Amount); err != nil {
+			if t.Postings[i].Value, err = b.NormalizedPrices.Valuate(posting.Commodity, posting.Amount); err != nil {
 				return Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
 			}
 		}

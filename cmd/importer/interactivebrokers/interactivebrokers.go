@@ -281,7 +281,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(accounts.EquityAccount(), p.options.account, stock, qty),
 			ledger.NewPosting(accounts.EquityAccount(), p.options.account, currency, proceeds),
 			ledger.NewPosting(p.options.fee, p.options.account, currency, fee),
@@ -333,7 +333,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
-	var postings = []*ledger.Posting{
+	var postings = []ledger.Posting{
 		ledger.NewPosting(accounts.EquityAccount(), p.options.account, stock, qty),
 		ledger.NewPosting(accounts.EquityAccount(), p.options.account, currency, proceeds),
 	}
@@ -390,7 +390,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(accounts.TBDAccount(), p.options.account, currency, amount),
 		},
 	})
@@ -441,7 +441,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(p.options.dividend, p.options.account, currency, amount),
 			ledger.NewPosting(p.options.dividend, p.options.dividend, security, decimal.Zero),
 		},
@@ -503,7 +503,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(p.options.tax, p.options.account, currency, amount),
 			ledger.NewPosting(p.options.tax, p.options.tax, security, decimal.Zero),
 		},
@@ -535,7 +535,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(p.options.interest, p.options.account, currency, amount)},
 	})
 	return true, nil

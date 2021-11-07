@@ -207,7 +207,7 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		t.Postings = []*ledger.Posting{
+		t.Postings = []ledger.Posting{
 			ledger.NewPosting(accounts.ValuationAccount(), p.account, p.currency, amount),
 			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount),
 		}
@@ -216,12 +216,12 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		t.Postings = []*ledger.Posting{
+		t.Postings = []ledger.Posting{
 			ledger.NewPosting(accounts.ValuationAccount(), p.account, p.currency, amount),
 			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg()),
 		}
 	default:
-		t.Postings = []*ledger.Posting{
+		t.Postings = []ledger.Posting{
 			ledger.NewPosting(accounts.TBDAccount(), p.account, p.currency, amount),
 		}
 	}

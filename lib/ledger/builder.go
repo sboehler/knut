@@ -95,7 +95,7 @@ func (b *Builder) getOrCreate(d time.Time) *Day {
 
 // AddTransaction adds a transaction directive.
 func (b *Builder) AddTransaction(t *Transaction) {
-	var filtered []*Posting
+	var filtered []Posting
 	for _, p := range t.Postings {
 		if !b.accountFilter.match(p.Credit) && !b.accountFilter.match(p.Debit) {
 			continue

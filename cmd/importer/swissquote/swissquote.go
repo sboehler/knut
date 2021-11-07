@@ -252,7 +252,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: desc,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(accounts.EquityAccount(), p.options.account, r.symbol, qty),
 			ledger.NewPosting(accounts.EquityAccount(), p.options.account, r.currency, proceeds),
 			ledger.NewPosting(p.options.fee, p.options.account, r.currency, fee),
@@ -282,7 +282,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: desc,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(accounts.EquityAccount(), p.options.account, p.last.currency, p.last.netAmount),
 			ledger.NewPosting(accounts.EquityAccount(), p.options.account, r.currency, r.netAmount),
 		},
@@ -300,7 +300,7 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 	if _, ok := w[r.trxType]; !ok {
 		return false, nil
 	}
-	var postings = []*ledger.Posting{
+	var postings = []ledger.Posting{
 		ledger.NewPosting(p.options.dividend, p.options.account, r.currency, r.price),
 	}
 	if !r.fee.IsZero() {
@@ -321,7 +321,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(p.options.fee, p.options.account, r.currency, r.netAmount),
 		},
 	})
@@ -341,7 +341,7 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(accounts.TBDAccount(), p.options.account, r.currency, r.netAmount),
 		},
 	})
@@ -355,7 +355,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(p.options.interest, p.options.account, r.currency, r.netAmount),
 		},
 	})
@@ -366,7 +366,7 @@ func (p *parser) parseCatchall(r *record) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(accounts.TBDAccount(), p.options.account, r.currency, r.netAmount),
 		},
 	})

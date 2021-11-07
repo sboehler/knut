@@ -284,8 +284,8 @@ func (p *Parser) parseAccrual() (*ledger.Accrual, error) {
 	}, nil
 }
 
-func (p *Parser) parsePostings() ([]*ledger.Posting, error) {
-	var postings []*ledger.Posting
+func (p *Parser) parsePostings() ([]ledger.Posting, error) {
+	var postings []ledger.Posting
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		var (
 			credit, debit *accounts.Account
@@ -327,7 +327,7 @@ func (p *Parser) parsePostings() ([]*ledger.Posting, error) {
 				return nil, err
 			}
 		}
-		postings = append(postings, &ledger.Posting{
+		postings = append(postings, ledger.Posting{
 			Credit:    credit,
 			Debit:     debit,
 			Amount:    amount,

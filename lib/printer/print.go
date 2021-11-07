@@ -86,7 +86,7 @@ func (p Printer) printAccrual(w io.Writer, a *ledger.Accrual) (n int, err error)
 	return n + c, err
 }
 
-func (p Printer) printPosting(w io.Writer, t *ledger.Posting) (int, error) {
+func (p Printer) printPosting(w io.Writer, t ledger.Posting) (int, error) {
 	var n int
 	c, err := fmt.Fprintf(w, "%s %s %s %s", p.rightPad(t.Credit), p.rightPad(t.Debit), leftPad(10, t.Amount.String()), t.Commodity)
 	n += c

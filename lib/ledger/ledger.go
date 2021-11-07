@@ -98,12 +98,12 @@ type Posting struct {
 
 // NewPosting creates a new posting from the given parameters. If amount is negative, it
 // will be inverted and the accounts reversed.
-func NewPosting(crAccount, drAccount *accounts.Account, commodity *commodities.Commodity, amt decimal.Decimal) *Posting {
+func NewPosting(crAccount, drAccount *accounts.Account, commodity *commodities.Commodity, amt decimal.Decimal) Posting {
 	if amt.IsNegative() {
 		crAccount, drAccount = drAccount, crAccount
 		amt = amt.Neg()
 	}
-	return &Posting{
+	return Posting{
 		Credit:    crAccount,
 		Debit:     drAccount,
 		Amount:    amt,
@@ -128,7 +128,7 @@ type Transaction struct {
 	Date        time.Time
 	Description string
 	Tags        []Tag
-	Postings    []*Posting
+	Postings    []Posting
 }
 
 // Position returns the Position.
@@ -245,7 +245,7 @@ func (a *Accrual) Expand() ([]*Transaction, error) {
 				Date:        date,
 				Tags:        t.Tags,
 				Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description, i+1, len(dates)),
-				Postings: []*Posting{
+				Postings: []Posting{
 					NewPosting(crAccountMulti, drAccountMulti, posting.Commodity, a),
 				},
 			})
@@ -257,7 +257,7 @@ func (a *Accrual) Expand() ([]*Transaction, error) {
 			Date:        t.Date,
 			Tags:        t.Tags,
 			Description: t.Description,
-			Postings: []*Posting{
+			Postings: []Posting{
 				NewPosting(crAccountSingle, drAccountSingle, posting.Commodity, posting.Amount),
 			},
 		})

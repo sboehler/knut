@@ -157,7 +157,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	p.last = &ledger.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(accounts.TBDAccount(), p.account, chf, amount),
 		},
 	}
@@ -242,7 +242,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: r[rfBeschreibung],
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(accounts.TBDAccount(), p.account, chf, amount),
 		},
 	})

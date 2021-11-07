@@ -172,7 +172,7 @@ func (p *Parser) readBookingLine(l []string) error {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: l[bfAvisierungstext],
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(accounts.TBDAccount(), p.account, p.currency, amount),
 		},
 	})

@@ -147,7 +147,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        d,
 		Description: desc,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(p.account, accounts.TBDAccount(), chf, amt),
 		},
 	})

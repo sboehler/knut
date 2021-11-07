@@ -225,7 +225,7 @@ func generateTransactions(c config, cs []*commodities.Commodity, as []*accounts.
 		trx = append(trx, &ledger.Transaction{
 			Date:        dates[rand.Intn(len(dates))],
 			Description: generateIdentifier(200),
-			Postings: []*ledger.Posting{
+			Postings: []ledger.Posting{
 				ledger.NewPosting(as[rand.Intn(len(as))], as[rand.Intn(len(as))], cs[rand.Intn(len(cs))], decimal.NewFromFloat(rand.Float64()*1000).Round(4)),
 			},
 		})

@@ -119,7 +119,7 @@ func dedup(ss []string) map[string]bool {
 	return res
 }
 
-func tokenize(trx *ledger.Transaction, posting *ledger.Posting, account *accounts.Account) []string {
+func tokenize(trx *ledger.Transaction, posting ledger.Posting, account *accounts.Account) []string {
 	var tokens = append(strings.Fields(trx.Description), posting.Commodity.String(), posting.Amount.String())
 	if account == posting.Credit {
 		tokens = append(tokens, "credit", posting.Debit.String())

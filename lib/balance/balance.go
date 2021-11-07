@@ -216,7 +216,7 @@ func (b *Balance) computeClosingTransactions() []*ledger.Transaction {
 			Date:        b.Date,
 			Description: fmt.Sprintf("Closing %v to retained earnings", pos),
 			Tags:        nil,
-			Postings: []*ledger.Posting{
+			Postings: []ledger.Posting{
 				{
 					Amount:    va,
 					Value:     b.Values[pos],
@@ -268,7 +268,7 @@ func (b *Balance) computeValuationTransactions() ([]*ledger.Transaction, error) 
 		result = append(result, &ledger.Transaction{
 			Date:        b.Date,
 			Description: desc,
-			Postings: []*ledger.Posting{
+			Postings: []ledger.Posting{
 				{
 					Value:     diff,
 					Credit:    accounts.ValuationAccount(),
@@ -318,7 +318,7 @@ func (b *Balance) processValue(v *ledger.Value) (*ledger.Transaction, error) {
 		Date:        v.Date,
 		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
 		Tags:        nil,
-		Postings: []*ledger.Posting{
+		Postings: []ledger.Posting{
 			ledger.NewPosting(accounts.ValuationAccount(), v.Account, pos.Commodity, v.Amount.Sub(b.Amounts[pos])),
 		},
 	}, nil

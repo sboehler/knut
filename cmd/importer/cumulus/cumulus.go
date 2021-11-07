@@ -69,22 +69,24 @@ func run(cmd *cobra.Command, args []string) error {
 	p := parser{
 		reader:  reader,
 		account: account,
-		builder: ledger.NewBuilder(nil, nil),
 	}
 	if err = p.parse(); err != nil {
 		return err
 	}
+	var builder = ledger.NewBuilder(nil, nil)
+	for _, trx := range p.transactions {
+		builder.AddTransaction(trx)
+	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	_, err = printer.New().PrintLedger(w, p.builder.Build())
+	_, err = printer.New().PrintLedger(w, builder.Build())
 	return err
 }
 
 type parser struct {
-	reader  *csv.Reader
-	account *accounts.Account
-	builder *ledger.Builder
-	last    *ledger.Transaction
+	reader       *csv.Reader
+	account      *accounts.Account
+	transactions []ledger.Transaction
 }
 
 func (p *parser) parse() error {
@@ -154,14 +156,13 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if chf, err = commodities.Get("CHF"); err != nil {
 		return false, err
 	}
-	p.last = &ledger.Transaction{
+	p.transactions = append(p.transactions, ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []ledger.Posting{
 			ledger.NewPosting(accounts.TBDAccount(), p.account, chf, amount),
 		},
-	}
-	p.builder.AddTransaction(*p.last)
+	})
 	return true, nil
 }
 
@@ -200,10 +201,11 @@ func (p *parser) parseFXComment(r []string) (bool, error) {
 		len(r[bfBelastungCHF]) == 0) {
 		return false, nil
 	}
-	if p.last == nil {
+	if len(p.transactions) == 0 {
 		return false, fmt.Errorf("fx comment but no previous transaction")
 	}
-	p.last.Description = fmt.Sprintf("%s %s", p.last.Description, r[bfBeschreibung])
+	var t = &p.transactions[len(p.transactions)-1]
+	t.Description = fmt.Sprintf("%s %s", t.Description, r[bfBeschreibung])
 	return true, nil
 }
 
@@ -239,7 +241,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	if chf, err = commodities.Get("CHF"); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.transactions = append(p.transactions, ledger.Transaction{
 		Date:        date,
 		Description: r[rfBeschreibung],
 		Postings: []ledger.Posting{

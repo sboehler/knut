@@ -25,19 +25,19 @@ func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err 
 	switch d := directive.(type) {
 	case ledger.Transaction:
 		return p.printTransaction(w, d)
-	case *ledger.Open:
+	case ledger.Open:
 		return p.printOpen(w, d)
-	case *ledger.Close:
+	case ledger.Close:
 		return p.printClose(w, d)
-	case *ledger.Assertion:
+	case ledger.Assertion:
 		return p.printAssertion(w, d)
-	case *ledger.Include:
+	case ledger.Include:
 		return p.printInclude(w, d)
-	case *ledger.Price:
+	case ledger.Price:
 		return p.printPrice(w, d)
-	case *ledger.Accrual:
+	case ledger.Accrual:
 		return p.printAccrual(w, d)
-	case *ledger.Value:
+	case ledger.Value:
 		return p.printValue(w, d)
 	}
 	return 0, fmt.Errorf("unknown directive: %v", directive)
@@ -76,7 +76,7 @@ func (p Printer) printTransaction(w io.Writer, t ledger.Transaction) (n int, err
 	return n, nil
 }
 
-func (p Printer) printAccrual(w io.Writer, a *ledger.Accrual) (n int, err error) {
+func (p Printer) printAccrual(w io.Writer, a ledger.Accrual) (n int, err error) {
 	c, err := fmt.Fprintf(w, "@accrue %s %s %s %s\n", a.Period, a.T0.Format("2006-01-02"), a.T1.Format("2006-01-02"), a.Account)
 	n += c
 	if err != nil {
@@ -130,27 +130,27 @@ func (p Printer) printLot(w io.Writer, l *ledger.Lot) (int, error) {
 	return n, nil
 }
 
-func (p Printer) printOpen(w io.Writer, o *ledger.Open) (int, error) {
+func (p Printer) printOpen(w io.Writer, o ledger.Open) (int, error) {
 	return fmt.Fprintf(w, "%s open %s", o.Date.Format("2006-01-02"), o.Account)
 }
 
-func (p Printer) printClose(w io.Writer, c *ledger.Close) (int, error) {
+func (p Printer) printClose(w io.Writer, c ledger.Close) (int, error) {
 	return fmt.Fprintf(w, "%s close %s", c.Date.Format("2006-01-02"), c.Account)
 }
 
-func (p Printer) printPrice(w io.Writer, pr *ledger.Price) (int, error) {
+func (p Printer) printPrice(w io.Writer, pr ledger.Price) (int, error) {
 	return fmt.Fprintf(w, "%s price %s %s %s", pr.Date.Format("2006-01-02"), pr.Commodity, pr.Price, pr.Target)
 }
 
-func (p Printer) printInclude(w io.Writer, i *ledger.Include) (int, error) {
+func (p Printer) printInclude(w io.Writer, i ledger.Include) (int, error) {
 	return fmt.Fprintf(w, "include \"%s\"", i.Path)
 }
 
-func (p Printer) printAssertion(w io.Writer, a *ledger.Assertion) (int, error) {
+func (p Printer) printAssertion(w io.Writer, a ledger.Assertion) (int, error) {
 	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity)
 }
 
-func (p Printer) printValue(w io.Writer, v *ledger.Value) (int, error) {
+func (p Printer) printValue(w io.Writer, v ledger.Value) (int, error) {
 	return fmt.Fprintf(w, "%s value %s %s %s", v.Date.Format("2006-01-02"), v.Account, v.Amount, v.Commodity)
 }
 

@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/sboehler/knut/lib/date"
@@ -34,7 +35,7 @@ import (
 type Balance struct {
 	Date             time.Time
 	Amounts, Values  map[CommodityAccount]decimal.Decimal
-	Account          map[*accounts.Account]bool
+	accounts         Accounts
 	Valuation        *commodities.Commodity
 	NormalizedPrices prices.NormalizedPrices
 }
@@ -42,12 +43,9 @@ type Balance struct {
 // New creates a new balance.
 func New(valuation *commodities.Commodity) *Balance {
 	return &Balance{
-		Amounts: make(map[CommodityAccount]decimal.Decimal),
-		Values:  make(map[CommodityAccount]decimal.Decimal),
-		Account: map[*accounts.Account]bool{
-			accounts.ValuationAccount():        true,
-			accounts.RetainedEarningsAccount(): true,
-		},
+		Amounts:   make(map[CommodityAccount]decimal.Decimal),
+		Values:    make(map[CommodityAccount]decimal.Decimal),
+		accounts:  make(Accounts),
 		Valuation: valuation,
 	}
 }
@@ -63,9 +61,7 @@ func (b *Balance) Copy() *Balance {
 	for pos, val := range b.Values {
 		nb.Values[pos] = val
 	}
-	for acc := range b.Account {
-		nb.Account[acc] = true
-	}
+	nb.accounts = b.accounts.Copy()
 	return nb
 }
 
@@ -89,10 +85,9 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 
 	// open accounts
 	for _, o := range day.Openings {
-		if _, isOpen := b.Account[o.Account]; isOpen {
-			return fmt.Errorf("account %v is already open", o)
+		if err := b.accounts.Open(o.Account); err != nil {
+			return err
 		}
-		b.Account[o.Account] = true
 	}
 
 	// valuate and book journal transaction amounts
@@ -157,9 +152,6 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 
 	// close accounts
 	for _, c := range day.Closings {
-		if _, isOpen := b.Account[c.Account]; !isOpen {
-			return Error{c, "account is not open"}
-		}
 		for pos, amount := range b.Amounts {
 			if pos.Account != c.Account {
 				continue
@@ -170,17 +162,19 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 			delete(b.Amounts, pos)
 			delete(b.Values, pos)
 		}
-		delete(b.Account, c.Account)
+		if err := b.accounts.Close(c.Account); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (b *Balance) bookTransactionAmounts(t ledger.Transaction) error {
 	for _, posting := range t.Postings {
-		if _, isOpen := b.Account[posting.Credit]; !isOpen {
+		if !b.accounts.IsOpen(posting.Credit) {
 			return Error{t, fmt.Sprintf("credit account %s is not open", posting.Credit)}
 		}
-		if _, isOpen := b.Account[posting.Debit]; !isOpen {
+		if !b.accounts.IsOpen(posting.Debit) {
 			return Error{t, fmt.Sprintf("debit account %s is not open", posting.Debit)}
 		}
 		var (
@@ -264,6 +258,10 @@ func (b *Balance) computeValuationTransactions() ([]ledger.Transaction, error) {
 			desc = fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity, pos.Account)
 			descCache[pos] = desc
 		}
+		valAcc, err := valuationAccountFor(pos.Account)
+		if err != nil {
+			panic(fmt.Sprintf("could not obtain valuation account for account %s", pos.Account))
+		}
 		// create a transaction to adjust the valuation
 		result = append(result, ledger.Transaction{
 			Date:        b.Date,
@@ -271,13 +269,12 @@ func (b *Balance) computeValuationTransactions() ([]ledger.Transaction, error) {
 			Postings: []ledger.Posting{
 				{
 					Value:     diff,
-					Credit:    accounts.ValuationAccount(),
+					Credit:    valAcc,
 					Debit:     pos.Account,
 					Commodity: pos.Commodity,
 				},
 			},
 		})
-
 	}
 	sort.Slice(result, func(i, j int) bool {
 		var p, q = result[i].Postings[0], result[j].Postings[0]
@@ -290,6 +287,12 @@ func (b *Balance) computeValuationTransactions() ([]ledger.Transaction, error) {
 		return p.Commodity.String() < q.Commodity.String()
 	})
 	return result, nil
+}
+
+func valuationAccountFor(a *accounts.Account) (*accounts.Account, error) {
+	suffix := a.Split()[1:]
+	segments := append(accounts.ValuationAccount().Split(), suffix...)
+	return accounts.Get(strings.Join(segments, ":"))
 }
 
 func (b *Balance) valuateTransaction(t ledger.Transaction) error {
@@ -311,8 +314,12 @@ func (b *Balance) valuateTransaction(t ledger.Transaction) error {
 }
 
 func (b *Balance) processValue(v ledger.Value) (ledger.Transaction, error) {
-	if _, isOpen := b.Account[v.Account]; !isOpen {
+	if !b.accounts.IsOpen(v.Account) {
 		return ledger.Transaction{}, Error{v, "account is not open"}
+	}
+	valAcc, err := valuationAccountFor(v.Account)
+	if err != nil {
+		return ledger.Transaction{}, err
 	}
 	var pos = CommodityAccount{v.Account, v.Commodity}
 	return ledger.Transaction{
@@ -320,13 +327,13 @@ func (b *Balance) processValue(v ledger.Value) (ledger.Transaction, error) {
 		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
 		Tags:        nil,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(accounts.ValuationAccount(), v.Account, pos.Commodity, v.Amount.Sub(b.Amounts[pos])),
+			ledger.NewPosting(valAcc, v.Account, pos.Commodity, v.Amount.Sub(b.Amounts[pos])),
 		},
 	}, nil
 }
 
 func (b *Balance) processBalanceAssertion(a ledger.Assertion) error {
-	if _, isOpen := b.Account[a.Account]; !isOpen {
+	if !b.accounts.IsOpen(a.Account) {
 		return Error{a, "account is not open"}
 	}
 	var pos = CommodityAccount{a.Account, a.Commodity}
@@ -454,4 +461,42 @@ func (b Builder) createDateSeries(l ledger.Ledger) []time.Time {
 		return date.Series(from, to, *b.Period)
 	}
 	return []time.Time{from, to}
+}
+
+// Accounts keeps track of accounts.
+type Accounts map[*accounts.Account]bool
+
+// Open opens an account.
+func (oa Accounts) Open(a *accounts.Account) error {
+	if oa[a] {
+		return fmt.Errorf("account %v is already open", a)
+	}
+	oa[a] = true
+	return nil
+}
+
+// Close closes an account.
+func (oa Accounts) Close(a *accounts.Account) error {
+	if !oa[a] {
+		return fmt.Errorf("account %v is already closed", a)
+	}
+	delete(oa, a)
+	return nil
+}
+
+// IsOpen returns whether an account is open.
+func (oa Accounts) IsOpen(a *accounts.Account) bool {
+	if oa[a] {
+		return true
+	}
+	return a.Type() == accounts.EQUITY
+}
+
+// Copy copies accounts.
+func (oa Accounts) Copy() Accounts {
+	var res = make(map[*accounts.Account]bool, len(oa))
+	for a := range oa {
+		res[a] = true
+	}
+	return res
 }

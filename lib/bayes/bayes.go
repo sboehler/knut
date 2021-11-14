@@ -43,7 +43,7 @@ func (m *Model) Update(t ledger.Transaction) {
 	for _, p := range t.Postings {
 		m.accounts++
 		m.accountCounts[p.Credit]++
-		for _, token := range tokenize(t, p, p.Credit) {
+		for _, token := range tokenize(t, &p, p.Credit) {
 			tc, ok := m.tokenCounts[token]
 			if !ok {
 				tc = make(map[*accounts.Account]int)
@@ -53,7 +53,7 @@ func (m *Model) Update(t ledger.Transaction) {
 		}
 		m.accounts++
 		m.accountCounts[p.Debit]++
-		for _, token := range tokenize(t, p, p.Debit) {
+		for _, token := range tokenize(t, &p, p.Debit) {
 			tc, ok := m.tokenCounts[token]
 			if !ok {
 				tc = make(map[*accounts.Account]int)
@@ -67,7 +67,8 @@ func (m *Model) Update(t ledger.Transaction) {
 
 // Infer replaces the given account with an inferred account.
 func (m *Model) Infer(trx ledger.Transaction, tbd *accounts.Account) {
-	for _, posting := range trx.Postings {
+	for i := range trx.Postings {
+		var posting = &trx.Postings[i]
 		var tokens []string
 		if posting.Credit == tbd {
 			tokens = tokenize(trx, posting, posting.Credit)
@@ -119,7 +120,7 @@ func dedup(ss []string) map[string]bool {
 	return res
 }
 
-func tokenize(trx ledger.Transaction, posting ledger.Posting, account *accounts.Account) []string {
+func tokenize(trx ledger.Transaction, posting *ledger.Posting, account *accounts.Account) []string {
 	var tokens = append(strings.Fields(trx.Description), posting.Commodity.String(), posting.Amount.String())
 	if account == posting.Credit {
 		tokens = append(tokens, "credit", posting.Debit.String())

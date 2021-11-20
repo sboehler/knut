@@ -55,7 +55,8 @@ func init() {
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	account, err := flags.GetAccountFlag(cmd, "account")
+	var accs = accounts.New()
+	account, err := flags.GetAccountFlag(cmd, accs, "account")
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,7 @@ func run(cmd *cobra.Command, args []string) error {
 		p      = parser{
 			reader:  reader,
 			account: account,
-			builder: ledger.NewBuilder(nil, nil),
+			builder: ledger.NewBuilder(accs, nil, nil),
 		}
 	)
 	if err = p.parse(); err != nil {
@@ -208,8 +209,8 @@ func (p *parser) parseBooking(r []string) error {
 			return err
 		}
 		t.Postings = []ledger.Posting{
-			ledger.NewPosting(accounts.ValuationAccount(), p.account, p.currency, amount),
-			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount),
+			ledger.NewPosting(p.builder.Accounts.ValuationAccount(), p.account, p.currency, amount),
+			ledger.NewPosting(p.builder.Accounts.ValuationAccount(), p.account, otherCommodity, otherAmount),
 		}
 	case fxBuyRegex.MatchString(r[bfReference]):
 		otherCommodity, otherAmount, err := parseCombiField(r[bfExchangeIn])
@@ -217,12 +218,12 @@ func (p *parser) parseBooking(r []string) error {
 			return err
 		}
 		t.Postings = []ledger.Posting{
-			ledger.NewPosting(accounts.ValuationAccount(), p.account, p.currency, amount),
-			ledger.NewPosting(accounts.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg()),
+			ledger.NewPosting(p.builder.Accounts.ValuationAccount(), p.account, p.currency, amount),
+			ledger.NewPosting(p.builder.Accounts.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg()),
 		}
 	default:
 		t.Postings = []ledger.Posting{
-			ledger.NewPosting(accounts.TBDAccount(), p.account, p.currency, amount),
+			ledger.NewPosting(p.builder.Accounts.TBDAccount(), p.account, p.currency, amount),
 		}
 	}
 	p.builder.AddTransaction(t)

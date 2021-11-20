@@ -65,15 +65,31 @@ var accountTypes = map[string]AccountType{
 	"Income":      INCOME,
 }
 
-var (
+// Accounts is a thread-safe collection of accounts.
+type Accounts struct {
 	mutex    sync.RWMutex
-	accounts = make(map[string]*Account)
-)
+	accounts map[string]*Account
+}
 
-func get(name string) (*Account, bool) {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	c, ok := accounts[name]
+// New creates a new thread-safe collection of accounts.
+func New() *Accounts {
+	return &Accounts{
+		accounts: make(map[string]*Account),
+	}
+}
+
+// Get creates a new account.
+func (a *Accounts) Get(name string) (*Account, error) {
+	if a, ok := a.get(name); ok {
+		return a, nil
+	}
+	return a.create(name)
+}
+
+func (a *Accounts) get(name string) (*Account, bool) {
+	a.mutex.RLock()
+	defer a.mutex.RUnlock()
+	c, ok := a.accounts[name]
 	return c, ok
 }
 
@@ -88,11 +104,11 @@ func isValidSegment(s string) bool {
 	}
 	return true
 }
-func create(name string) (*Account, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (a *Accounts) create(name string) (*Account, error) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
 	// check if the account has been created in the meantime
-	if a, ok := accounts[name]; ok {
+	if a, ok := a.accounts[name]; ok {
 		return a, nil
 	}
 	var segments = strings.Split(name, ":")
@@ -108,49 +124,47 @@ func create(name string) (*Account, error) {
 			return nil, fmt.Errorf("account name %q has an invalid segment %q", name, s)
 		}
 	}
-	var a = &Account{
+	var res = &Account{
 		accountType: at,
 		name:        name,
 	}
-	accounts[name] = a
-	return a, nil
-}
-
-var valuationAccount, equityAccount, retainedEarningsAccount, tbdAccount *Account
-
-func init() {
-	var err error
-	if valuationAccount, err = Get("Equity:Valuation"); err != nil {
-		panic("Could not create valuationAccount")
-	}
-	if equityAccount, err = Get("Equity:Equity"); err != nil {
-		panic("Could not create equityAccount")
-	}
-	if retainedEarningsAccount, err = Get("Equity:RetainedEarnings"); err != nil {
-		panic("Could not create valuationAccount")
-	}
-	if tbdAccount, err = Get("Expenses:TBD"); err != nil {
-		panic("Could not create Expenses:TBD account")
-	}
+	a.accounts[name] = res
+	return res, nil
 }
 
 // ValuationAccount returns the account for automatic valuation bookings.
-func ValuationAccount() *Account {
-	return valuationAccount
+func (a *Accounts) ValuationAccount() *Account {
+	res, err := a.Get("Equity:Valuation")
+	if err != nil {
+		panic("could not create valuation account")
+	}
+	return res
 }
 
 // EquityAccount is the equity account used for trades
-func EquityAccount() *Account {
-	return equityAccount
+func (a *Accounts) EquityAccount() *Account {
+	res, err := a.Get("Equity:Equity")
+	if err != nil {
+		panic("Could not create equityAccount")
+	}
+	return res
 }
 
 // RetainedEarningsAccount returns the account for automatic valuation bookings.
-func RetainedEarningsAccount() *Account {
-	return retainedEarningsAccount
+func (a *Accounts) RetainedEarningsAccount() *Account {
+	res, err := a.Get("Equity:RetainedEarnings")
+	if err != nil {
+		panic("Could not create valuationAccount")
+	}
+	return res
 }
 
 // TBDAccount returns the TBD account.
-func TBDAccount() *Account {
+func (a *Accounts) TBDAccount() *Account {
+	tbdAccount, err := a.Get("Expenses:TBD")
+	if err != nil {
+		panic("Could not create Expenses:TBD account")
+	}
 	return tbdAccount
 }
 
@@ -158,14 +172,6 @@ func TBDAccount() *Account {
 type Account struct {
 	accountType AccountType
 	name        string
-}
-
-// Get creates a new account.
-func Get(name string) (*Account, error) {
-	if a, ok := get(name); ok {
-		return a, nil
-	}
-	return create(name)
 }
 
 // Split returns the account name split into segments.

@@ -58,25 +58,26 @@ func run(cmd *cobra.Command, args []string) {
 
 func execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
+		accs         = accounts.New()
 		trainingFile string
 		account      *accounts.Account
 		err          error
 	)
-	if account, err = flags.GetAccountFlag(cmd, "account"); err != nil {
+	if account, err = flags.GetAccountFlag(cmd, accs, "account"); err != nil {
 		return err
 	}
 	if trainingFile, err = cmd.Flags().GetString("training-file"); err != nil {
 		return err
 	}
-	return infer(trainingFile, args[0], account)
+	return infer(accs, trainingFile, args[0], account)
 }
 
-func infer(trainingFile string, targetFile string, account *accounts.Account) error {
-	bayesModel, err := train(trainingFile, account)
+func infer(accs *accounts.Accounts, trainingFile string, targetFile string, account *accounts.Account) error {
+	bayesModel, err := train(accs, trainingFile, account)
 	if err != nil {
 		return err
 	}
-	p, cls, err := parser.FromPath(targetFile)
+	p, cls, err := parser.FromPath(accounts.New(), targetFile)
 	if err != nil {
 		return err
 	}
@@ -112,9 +113,9 @@ func infer(trainingFile string, targetFile string, account *accounts.Account) er
 	return multierr.Append(err, atomic.ReplaceFile(tmpfile.Name(), targetFile))
 }
 
-func train(file string, exclude *accounts.Account) (*bayes.Model, error) {
+func train(accs *accounts.Accounts, file string, exclude *accounts.Account) (*bayes.Model, error) {
 	var (
-		j = journal.Journal{File: file}
+		j = journal.Journal{Accounts: accs, File: file}
 		m = bayes.NewModel()
 	)
 	for r := range j.Parse() {

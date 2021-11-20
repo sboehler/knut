@@ -31,6 +31,7 @@ import (
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/report"
 	"github.com/sboehler/knut/lib/table"
@@ -105,6 +106,7 @@ func execute(cmd *cobra.Command, args []string) error {
 }
 
 type pipeline struct {
+	Accounts        *accounts.Accounts
 	Journal         journal.Journal
 	AccountFilter   *ledger.AccountFilter
 	CommodityFilter *ledger.CommodityFilter
@@ -187,8 +189,10 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	}
 
 	var (
+		accs    = accounts.New()
 		journal = journal.Journal{
-			File: args[0],
+			File:     args[0],
+			Accounts: accs,
 		}
 		balanceBuilder = balance.Builder{
 			From:      from,
@@ -215,6 +219,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		}
 	)
 	return &pipeline{
+		Accounts:        accs,
 		Journal:         journal,
 		AccountFilter:   &accountFilter,
 		CommodityFilter: &commodityFilter,
@@ -232,7 +237,7 @@ func processPipeline(w io.Writer, ppl *pipeline) error {
 		r   *report.Report
 		err error
 	)
-	if l, err = ledger.FromDirectives(ppl.AccountFilter, ppl.CommodityFilter, ppl.Journal.Parse()); err != nil {
+	if l, err = ledger.FromDirectives(ppl.Accounts, ppl.AccountFilter, ppl.CommodityFilter, ppl.Journal.Parse()); err != nil {
 		return err
 	}
 	if bal, err = ppl.BalanceBuilder.Build(l); err != nil {

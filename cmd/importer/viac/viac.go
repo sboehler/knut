@@ -27,6 +27,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 )
@@ -52,6 +53,7 @@ func init() {
 }
 
 func run(cmd *cobra.Command, args []string) error {
+	var accs = accounts.New()
 	dateString, err := cmd.Flags().GetString("from")
 	if err != nil {
 		return err
@@ -60,7 +62,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	account, err := flags.GetAccountFlag(cmd, "account")
+	account, err := flags.GetAccountFlag(cmd, accs, "account")
 	if err != nil {
 		return err
 	}
@@ -80,7 +82,7 @@ func run(cmd *cobra.Command, args []string) error {
 	var resp response
 	json.Unmarshal(b, &resp)
 
-	var builder = ledger.NewBuilder(nil, nil)
+	var builder = ledger.NewBuilder(accs, nil, nil)
 	for _, dv := range resp.DailyValues {
 		d, err := time.Parse("2006-01-02", dv.Date)
 		if err != nil {

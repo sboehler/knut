@@ -28,6 +28,7 @@ import (
 
 	"github.com/sboehler/knut/lib/format"
 	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/parser"
 )
 
@@ -99,7 +100,7 @@ func formatFile(target string) error {
 }
 
 func readDirectives(target string) (directives []ledger.Directive, err error) {
-	p, close, err := parser.FromPath(target)
+	p, close, err := parser.FromPath(accounts.New(), target)
 	if err != nil {
 		return nil, err
 	}

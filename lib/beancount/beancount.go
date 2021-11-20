@@ -20,7 +20,6 @@ import (
 	"regexp"
 
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 )
@@ -33,18 +32,18 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 	if _, err := io.WriteString(w, "\n\n"); err != nil {
 		return err
 	}
-	l[0].Openings = append(l[0].Openings,
+	l.Days[0].Openings = append(l.Days[0].Openings,
 		ledger.Open{
-			Date:    l[0].Date,
-			Account: accounts.ValuationAccount(),
+			Date:    l.Days[0].Date,
+			Account: l.Accounts.ValuationAccount(),
 		},
 		ledger.Open{
-			Date:    l[0].Date,
-			Account: accounts.RetainedEarningsAccount(),
+			Date:    l.Days[0].Date,
+			Account: l.Accounts.RetainedEarningsAccount(),
 		},
 	)
 	var p printer.Printer
-	for _, day := range l {
+	for _, day := range l.Days {
 		for _, open := range day.Openings {
 			if _, err := p.PrintDirective(w, open); err != nil {
 				return err

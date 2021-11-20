@@ -11,12 +11,12 @@ import (
 )
 
 // GetAccountFlag is a helper to get an account passed as a flag to the command.
-func GetAccountFlag(cmd *cobra.Command, flag string) (*accounts.Account, error) {
+func GetAccountFlag(cmd *cobra.Command, as *accounts.Accounts, flag string) (*accounts.Account, error) {
 	name, err := cmd.Flags().GetString(flag)
 	if err != nil {
 		return nil, err
 	}
-	return accounts.Get(name)
+	return as.Get(name)
 }
 
 // GetDateFlag is a helper to get a date passed as a flag to the command.

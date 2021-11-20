@@ -18,16 +18,18 @@ import (
 	"fmt"
 	"sort"
 	"time"
+
+	"github.com/sboehler/knut/lib/model/accounts"
 )
 
 // FromDirectives reads directives from the given channel and
 // builds a Ledger if successful.
-func FromDirectives(accountFilter *AccountFilter, commodityFilter *CommodityFilter, results <-chan interface{}) (Ledger, error) {
-	var b = NewBuilder(accountFilter, commodityFilter)
+func FromDirectives(accs *accounts.Accounts, accountFilter *AccountFilter, commodityFilter *CommodityFilter, results <-chan interface{}) (Ledger, error) {
+	var b = NewBuilder(accs, accountFilter, commodityFilter)
 	for res := range results {
 		switch t := res.(type) {
 		case error:
-			return nil, t
+			return Ledger{}, t
 		case Open:
 			b.AddOpening(t)
 		case Price:
@@ -43,7 +45,7 @@ func FromDirectives(accountFilter *AccountFilter, commodityFilter *CommodityFilt
 		case Accrual:
 			b.AddAccrual(t)
 		default:
-			return nil, fmt.Errorf("unknown: %#v", t)
+			return Ledger{}, fmt.Errorf("unknown: %#v", t)
 		}
 	}
 	return b.Build(), nil
@@ -54,11 +56,12 @@ type Builder struct {
 	accountFilter   *AccountFilter
 	commodityFilter *CommodityFilter
 	days            map[time.Time]*Day
+	Accounts        *accounts.Accounts
 }
 
 // NewBuilder creates a new builder.
-func NewBuilder(af *AccountFilter, cf *CommodityFilter) *Builder {
-	return &Builder{af, cf, make(map[time.Time]*Day)}
+func NewBuilder(accs *accounts.Accounts, af *AccountFilter, cf *CommodityFilter) *Builder {
+	return &Builder{af, cf, make(map[time.Time]*Day), accs}
 }
 
 // Build creates a new
@@ -70,7 +73,10 @@ func (b *Builder) Build() Ledger {
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Date.Before(result[j].Date)
 	})
-	return result
+	return Ledger{
+		Days:     result,
+		Accounts: b.Accounts,
+	}
 
 }
 

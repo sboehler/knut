@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/printer"
@@ -58,6 +59,7 @@ func run(cmd *cobra.Command, args []string) {
 const concurrency = 5
 
 func execute(cmd *cobra.Command, args []string) (errors error) {
+	var accs = accounts.New()
 	configs, err := readConfig(args[0])
 	if err != nil {
 		return err
@@ -76,7 +78,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	for _, cfg := range configs {
 		sema <- true
 		go func(c config) {
-			if err := fetch(args[0], c); err != nil {
+			if err := fetch(accs, args[0], c); err != nil {
 				errCh <- err
 			}
 			bar.Increment()
@@ -89,16 +91,16 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	return errors
 }
 
-func fetch(f string, cfg config) error {
+func fetch(accs *accounts.Accounts, f string, cfg config) error {
 	var absPath = filepath.Join(filepath.Dir(f), cfg.File)
-	l, err := readFile(absPath)
+	l, err := readFile(accs, absPath)
 	if err != nil {
 		return err
 	}
 	if err := fetchPrices(cfg, time.Now().AddDate(-1, 0, 0), time.Now(), l); err != nil {
 		return err
 	}
-	if err := writeFile(l, absPath); err != nil {
+	if err := writeFile(accs, l, absPath); err != nil {
 		return err
 	}
 	return nil
@@ -119,8 +121,8 @@ func readConfig(path string) ([]config, error) {
 	return t, nil
 }
 
-func readFile(filepath string) (res map[time.Time]ledger.Price, err error) {
-	p, cls, err := parser.FromPath(filepath)
+func readFile(accs *accounts.Accounts, filepath string) (res map[time.Time]ledger.Price, err error) {
+	p, cls, err := parser.FromPath(accs, filepath)
 	if err != nil {
 		return nil, err
 	}
@@ -166,8 +168,8 @@ func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]ledger.Pric
 	return nil
 }
 
-func writeFile(prices map[time.Time]ledger.Price, filepath string) error {
-	var b = ledger.NewBuilder(nil, nil)
+func writeFile(accs *accounts.Accounts, prices map[time.Time]ledger.Price, filepath string) error {
+	var b = ledger.NewBuilder(accs, nil, nil)
 	for _, price := range prices {
 		b.AddPrice(price)
 	}

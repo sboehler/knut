@@ -16,6 +16,7 @@ import (
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/shopspring/decimal"
 )
@@ -49,6 +50,7 @@ func (s handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type pipeline struct {
+	Accounts        *accounts.Accounts
 	Journal         journal.Journal
 	accountFilter   *ledger.AccountFilter
 	commodityFilter *ledger.CommodityFilter
@@ -94,6 +96,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 	}
 
 	return &pipeline{
+		Accounts: accounts.New(),
 		Journal: journal.Journal{
 			File: file,
 		},
@@ -112,7 +115,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 }
 
 func (ppl *pipeline) process(w io.Writer) error {
-	l, err := ledger.FromDirectives(ppl.accountFilter, ppl.commodityFilter, ppl.Journal.Parse())
+	l, err := ledger.FromDirectives(ppl.Accounts, ppl.accountFilter, ppl.commodityFilter, ppl.Journal.Parse())
 	if err != nil {
 		return err
 	}

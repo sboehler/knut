@@ -8,12 +8,14 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/parser"
 )
 
 // Journal represents a journal on disk.
 type Journal struct {
-	File string
+	File     string
+	Accounts *accounts.Accounts
 }
 
 // Parse parses the journal at the path, and branches out for include files
@@ -39,7 +41,7 @@ func (j *Journal) Parse() chan interface{} {
 }
 
 func (j *Journal) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, file string) (err error) {
-	p, cls, err := parser.FromPath(file)
+	p, cls, err := parser.FromPath(j.Accounts, file)
 	if err != nil {
 		return err
 	}

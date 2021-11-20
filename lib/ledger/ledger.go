@@ -38,12 +38,15 @@ type Day struct {
 }
 
 // Ledger is a ledger.
-type Ledger []*Day
+type Ledger struct {
+	Days     []*Day
+	Accounts *accounts.Accounts
+}
 
 // MinDate returns the minimum date for this ledger, as the first
 // date on which an account is opened (ignoring prices, for example).
 func (l Ledger) MinDate() (time.Time, bool) {
-	for _, s := range l {
+	for _, s := range l.Days {
 		if len(s.Openings) > 0 {
 			return s.Date, true
 		}
@@ -53,10 +56,10 @@ func (l Ledger) MinDate() (time.Time, bool) {
 
 // MaxDate returns the maximum date for the given ledger.
 func (l Ledger) MaxDate() (time.Time, bool) {
-	if len(l) == 0 {
+	if len(l.Days) == 0 {
 		return time.Time{}, false
 	}
-	return l[len(l)-1].Date, true
+	return l.Days[len(l.Days)-1].Date, true
 }
 
 // Range describes a range of locations in a file.

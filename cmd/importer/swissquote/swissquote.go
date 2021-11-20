@@ -63,22 +63,23 @@ type options struct {
 
 func run(cmd *cobra.Command, args []string) error {
 	var (
-		o   options
-		err error
+		accs = accounts.New()
+		o    options
+		err  error
 	)
-	if o.account, err = flags.GetAccountFlag(cmd, "account"); err != nil {
+	if o.account, err = flags.GetAccountFlag(cmd, accs, "account"); err != nil {
 		return err
 	}
-	if o.dividend, err = flags.GetAccountFlag(cmd, "dividend"); err != nil {
+	if o.dividend, err = flags.GetAccountFlag(cmd, accs, "dividend"); err != nil {
 		return err
 	}
-	if o.interest, err = flags.GetAccountFlag(cmd, "interest"); err != nil {
+	if o.interest, err = flags.GetAccountFlag(cmd, accs, "interest"); err != nil {
 		return err
 	}
-	if o.tax, err = flags.GetAccountFlag(cmd, "tax"); err != nil {
+	if o.tax, err = flags.GetAccountFlag(cmd, accs, "tax"); err != nil {
 		return err
 	}
-	if o.fee, err = flags.GetAccountFlag(cmd, "fee"); err != nil {
+	if o.fee, err = flags.GetAccountFlag(cmd, accs, "fee"); err != nil {
 		return err
 	}
 	f, err := os.Open(args[0])
@@ -90,7 +91,7 @@ func run(cmd *cobra.Command, args []string) error {
 		p      = parser{
 			reader:  reader,
 			options: o,
-			builder: ledger.NewBuilder(nil, nil),
+			builder: ledger.NewBuilder(accs, nil, nil),
 		}
 	)
 	if err = p.parse(); err != nil {
@@ -253,8 +254,8 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 		Date:        r.date,
 		Description: desc,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(accounts.EquityAccount(), p.options.account, r.symbol, qty),
-			ledger.NewPosting(accounts.EquityAccount(), p.options.account, r.currency, proceeds),
+			ledger.NewPosting(p.builder.Accounts.EquityAccount(), p.options.account, r.symbol, qty),
+			ledger.NewPosting(p.builder.Accounts.EquityAccount(), p.options.account, r.currency, proceeds),
 			ledger.NewPosting(p.options.fee, p.options.account, r.currency, fee),
 		},
 	})
@@ -283,8 +284,8 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		Date:        r.date,
 		Description: desc,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(accounts.EquityAccount(), p.options.account, p.last.currency, p.last.netAmount),
-			ledger.NewPosting(accounts.EquityAccount(), p.options.account, r.currency, r.netAmount),
+			ledger.NewPosting(p.builder.Accounts.EquityAccount(), p.options.account, p.last.currency, p.last.netAmount),
+			ledger.NewPosting(p.builder.Accounts.EquityAccount(), p.options.account, r.currency, r.netAmount),
 		},
 	})
 	p.last = nil
@@ -342,7 +343,7 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(accounts.TBDAccount(), p.options.account, r.currency, r.netAmount),
+			ledger.NewPosting(p.builder.Accounts.TBDAccount(), p.options.account, r.currency, r.netAmount),
 		},
 	})
 	return true, nil
@@ -367,7 +368,7 @@ func (p *parser) parseCatchall(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(accounts.TBDAccount(), p.options.account, r.currency, r.netAmount),
+			ledger.NewPosting(p.builder.Accounts.TBDAccount(), p.options.account, r.currency, r.netAmount),
 		},
 	})
 	return true, nil

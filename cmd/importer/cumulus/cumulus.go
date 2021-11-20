@@ -57,7 +57,8 @@ func init() {
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	account, err := flags.GetAccountFlag(cmd, "account")
+	var accs = accounts.New()
+	account, err := flags.GetAccountFlag(cmd, accs, "account")
 	if err != nil {
 		return err
 	}
@@ -67,13 +68,14 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	reader := csv.NewReader(bufio.NewReader(f))
 	p := parser{
-		reader:  reader,
-		account: account,
+		accounts: accs,
+		reader:   reader,
+		account:  account,
 	}
 	if err = p.parse(); err != nil {
 		return err
 	}
-	var builder = ledger.NewBuilder(nil, nil)
+	var builder = ledger.NewBuilder(accs, nil, nil)
 	for _, trx := range p.transactions {
 		builder.AddTransaction(trx)
 	}
@@ -86,6 +88,7 @@ func run(cmd *cobra.Command, args []string) error {
 type parser struct {
 	reader       *csv.Reader
 	account      *accounts.Account
+	accounts     *accounts.Accounts
 	transactions []ledger.Transaction
 }
 
@@ -160,7 +163,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(accounts.TBDAccount(), p.account, chf, amount),
+			ledger.NewPosting(p.accounts.TBDAccount(), p.account, chf, amount),
 		},
 	})
 	return true, nil
@@ -245,7 +248,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 		Date:        date,
 		Description: r[rfBeschreibung],
 		Postings: []ledger.Posting{
-			ledger.NewPosting(accounts.TBDAccount(), p.account, chf, amount),
+			ledger.NewPosting(p.accounts.TBDAccount(), p.account, chf, amount),
 		},
 	})
 	return true, nil

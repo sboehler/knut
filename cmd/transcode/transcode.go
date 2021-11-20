@@ -23,6 +23,7 @@ import (
 	"github.com/sboehler/knut/lib/beancount"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 
 	"github.com/spf13/cobra"
@@ -62,14 +63,15 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 		return fmt.Errorf("missing --commodity flag, please provide a valuation commodity")
 	}
 	var (
+		accs      = accounts.New()
 		commodity *commodities.Commodity
-		j         = journal.Journal{File: args[0]}
+		j         = journal.Journal{Accounts: accs, File: args[0]}
 		l         ledger.Ledger
 	)
 	if commodity, err = commodities.Get(c); err != nil {
 		return err
 	}
-	if l, err = ledger.FromDirectives(nil, nil, j.Parse()); err != nil {
+	if l, err = ledger.FromDirectives(accs, nil, nil, j.Parse()); err != nil {
 		return err
 	}
 	var balanceBuilder = balance.Builder{Valuation: commodity}

@@ -18,14 +18,12 @@ import (
 	"fmt"
 	"sort"
 	"time"
-
-	"github.com/sboehler/knut/lib/model/accounts"
 )
 
 // FromDirectives reads directives from the given channel and
 // builds a Ledger if successful.
-func FromDirectives(accs *accounts.Accounts, filter Filter, results <-chan interface{}) (Ledger, error) {
-	var b = NewBuilder(accs, filter)
+func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (Ledger, error) {
+	var b = NewBuilder(ctx, filter)
 	for res := range results {
 		switch t := res.(type) {
 		case error:
@@ -53,14 +51,14 @@ func FromDirectives(accs *accounts.Accounts, filter Filter, results <-chan inter
 
 // Builder maps dates to days
 type Builder struct {
-	filter   Filter
-	days     map[time.Time]*Day
-	Accounts *accounts.Accounts
+	filter  Filter
+	days    map[time.Time]*Day
+	Context Context
 }
 
 // NewBuilder creates a new builder.
-func NewBuilder(accs *accounts.Accounts, f Filter) *Builder {
-	return &Builder{f, make(map[time.Time]*Day), accs}
+func NewBuilder(ctx Context, f Filter) *Builder {
+	return &Builder{f, make(map[time.Time]*Day), ctx}
 }
 
 // Build creates a new
@@ -73,8 +71,8 @@ func (b *Builder) Build() Ledger {
 		return result[i].Date.Before(result[j].Date)
 	})
 	return Ledger{
-		Days:     result,
-		Accounts: b.Accounts,
+		Days:    result,
+		Context: b.Context,
 	}
 
 }

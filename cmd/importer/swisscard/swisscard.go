@@ -55,8 +55,8 @@ func init() {
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	var accs = accounts.New()
-	account, err := flags.GetAccountFlag(cmd, accs, "account")
+	var ctx = ledger.NewContext()
+	account, err := flags.GetAccountFlag(cmd, ctx, "account")
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func run(cmd *cobra.Command, args []string) error {
 		p      = parser{
 			reader:  reader,
 			account: account,
-			builder: ledger.NewBuilder(accs, ledger.Filter{}),
+			builder: ledger.NewBuilder(ctx, ledger.Filter{}),
 		}
 	)
 	if err = p.parse(); err != nil {
@@ -149,7 +149,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		Date:        d,
 		Description: desc,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(p.account, p.builder.Accounts.TBDAccount(), chf, amt),
+			ledger.NewPosting(p.account, p.builder.Context.TBDAccount(), chf, amt),
 		},
 	})
 	return true, nil

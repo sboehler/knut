@@ -176,7 +176,7 @@ func generate(c config) ([]*ledger.Open, []*ledger.Price, []ledger.Transaction) 
 
 func generateAccounts(c config) []*accounts.Account {
 	var (
-		accs  = accounts.New()
+		ctx   = ledger.NewContext()
 		as    []*accounts.Account
 		types = []string{"Assets", "Liabilities", "Income", "Expenses"}
 	)
@@ -185,7 +185,7 @@ func generateAccounts(c config) []*accounts.Account {
 		s.WriteString(types[rand.Intn(4)])
 		s.WriteRune(':')
 		s.WriteString(generateIdentifier(10))
-		a, err := accs.Get(s.String())
+		a, err := ctx.Get(s.String())
 		if err != nil {
 			panic(fmt.Sprintf("Could not create account %s", s.String()))
 		}

@@ -96,7 +96,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 
 	return &pipeline{
 		Parser: parser.RecursiveParser{
-			Accounts: accounts.New(),
+			Context: ledger.NewContext(),
 			File:     file,
 		},
 		Filter: ledger.Filter{

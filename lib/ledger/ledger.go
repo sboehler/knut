@@ -39,8 +39,8 @@ type Day struct {
 
 // Ledger is a ledger.
 type Ledger struct {
-	Days     []*Day
-	Accounts *accounts.Accounts
+	Days    []*Day
+	Context Context
 }
 
 // MinDate returns the minimum date for this ledger, as the first
@@ -60,6 +60,67 @@ func (l Ledger) MaxDate() (time.Time, bool) {
 		return time.Time{}, false
 	}
 	return l.Days[len(l.Days)-1].Date, true
+}
+
+// Context has context for this ledger, namely a collection of
+// referenced accounts and commodities.
+type Context struct {
+	accounts    *accounts.Accounts
+	commodities *commodities.Commodities
+}
+
+// NewContext creates a new, empty context.
+func NewContext() Context {
+	return Context{
+		accounts:    accounts.New(),
+		commodities: commodities.New(),
+	}
+}
+
+// Get returns an account.
+func (c Context) Get(name string) (*accounts.Account, error) {
+	return c.accounts.Get(name)
+}
+
+// GetCommodity returns a commodity.
+func (c Context) GetCommodity(name string) (*commodities.Commodity, error) {
+	return c.commodities.Get(name)
+}
+
+// ValuationAccount returns the account for automatic valuation bookings.
+func (c Context) ValuationAccount() *accounts.Account {
+	res, err := c.accounts.Get("Equity:Valuation")
+	if err != nil {
+		panic("could not create valuation account")
+	}
+	return res
+}
+
+// EquityAccount is the equity account used for trades
+func (c Context) EquityAccount() *accounts.Account {
+	res, err := c.accounts.Get("Equity:Equity")
+	if err != nil {
+		panic("Could not create equityAccount")
+	}
+	return res
+}
+
+// RetainedEarningsAccount returns the account for automatic valuation bookings.
+func (c Context) RetainedEarningsAccount() *accounts.Account {
+	res, err := c.accounts.Get("Equity:RetainedEarnings")
+	if err != nil {
+		panic("Could not create valuationAccount")
+	}
+	return res
+}
+
+// TBDAccount returns the TBD account.
+func (c Context) TBDAccount() *accounts.Account {
+	tbdAccount, err := c.accounts.Get("Expenses:TBD")
+	if err != nil {
+		panic("Could not create Expenses:TBD account")
+	}
+	return tbdAccount
 }
 
 // Range describes a range of locations in a file.

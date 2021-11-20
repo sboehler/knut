@@ -64,23 +64,23 @@ type options struct {
 
 func run(cmd *cobra.Command, args []string) error {
 	var (
-		accs = accounts.New()
-		o    options
-		err  error
+		ctx = ledger.NewContext()
+		o   options
+		err error
 	)
-	if o.account, err = flags.GetAccountFlag(cmd, accs, "account"); err != nil {
+	if o.account, err = flags.GetAccountFlag(cmd, ctx, "account"); err != nil {
 		return err
 	}
-	if o.dividend, err = flags.GetAccountFlag(cmd, accs, "dividend"); err != nil {
+	if o.dividend, err = flags.GetAccountFlag(cmd, ctx, "dividend"); err != nil {
 		return err
 	}
-	if o.interest, err = flags.GetAccountFlag(cmd, accs, "interest"); err != nil {
+	if o.interest, err = flags.GetAccountFlag(cmd, ctx, "interest"); err != nil {
 		return err
 	}
-	if o.tax, err = flags.GetAccountFlag(cmd, accs, "tax"); err != nil {
+	if o.tax, err = flags.GetAccountFlag(cmd, ctx, "tax"); err != nil {
 		return err
 	}
-	if o.fee, err = flags.GetAccountFlag(cmd, accs, "fee"); err != nil {
+	if o.fee, err = flags.GetAccountFlag(cmd, ctx, "fee"); err != nil {
 		return err
 	}
 	f, err := os.Open(args[0])
@@ -91,7 +91,7 @@ func run(cmd *cobra.Command, args []string) error {
 		p = parser{
 			reader:  csv.NewReader(bufio.NewReader(f)),
 			options: o,
-			builder: ledger.NewBuilder(accs, ledger.Filter{}),
+			builder: ledger.NewBuilder(ctx, ledger.Filter{}),
 		}
 	)
 	if err = p.parse(); err != nil {
@@ -283,8 +283,8 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Accounts.EquityAccount(), p.options.account, stock, qty),
-			ledger.NewPosting(p.builder.Accounts.EquityAccount(), p.options.account, currency, proceeds),
+			ledger.NewPosting(p.builder.Context.EquityAccount(), p.options.account, stock, qty),
+			ledger.NewPosting(p.builder.Context.EquityAccount(), p.options.account, currency, proceeds),
 			ledger.NewPosting(p.options.fee, p.options.account, currency, fee),
 		},
 	})
@@ -335,8 +335,8 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
 	var postings = []ledger.Posting{
-		ledger.NewPosting(p.builder.Accounts.EquityAccount(), p.options.account, stock, qty),
-		ledger.NewPosting(p.builder.Accounts.EquityAccount(), p.options.account, currency, proceeds),
+		ledger.NewPosting(p.builder.Context.EquityAccount(), p.options.account, stock, qty),
+		ledger.NewPosting(p.builder.Context.EquityAccount(), p.options.account, currency, proceeds),
 	}
 	if !fee.IsZero() {
 		postings = append(postings, ledger.NewPosting(p.options.fee, p.options.account, p.baseCurrency, fee))
@@ -392,7 +392,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Accounts.TBDAccount(), p.options.account, currency, amount),
+			ledger.NewPosting(p.builder.Context.TBDAccount(), p.options.account, currency, amount),
 		},
 	})
 	return true, nil

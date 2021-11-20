@@ -34,7 +34,7 @@ import (
 
 // Parser parses a journal
 type Parser struct {
-	accounts *accounts.Accounts
+	context  ledger.Context
 	scanner  *scanner.Scanner
 	startPos scanner.Location
 }
@@ -52,23 +52,23 @@ func (p *Parser) getRange() ledger.Range {
 }
 
 // New creates a new parser
-func New(accs *accounts.Accounts, path string, r io.RuneReader) (*Parser, error) {
+func New(ctx ledger.Context, path string, r io.RuneReader) (*Parser, error) {
 	s, err := scanner.New(r, path)
 	if err != nil {
 		return nil, err
 	}
 	return &Parser{
-		accounts: accs,
-		scanner:  s}, nil
+		context: ctx,
+		scanner: s}, nil
 }
 
 // FromPath creates a new parser for the given file.
-func FromPath(accs *accounts.Accounts, path string) (*Parser, func() error, error) {
+func FromPath(ctx ledger.Context, path string) (*Parser, func() error, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, nil, err
 	}
-	p, err := New(accs, path, bufio.NewReader(f))
+	p, err := New(ctx, path, bufio.NewReader(f))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -521,7 +521,7 @@ func (p *Parser) parseAccount() (*accounts.Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	return p.accounts.Get(s)
+	return p.context.Get(s)
 }
 
 func (p *Parser) consumeWhitespace1() error {

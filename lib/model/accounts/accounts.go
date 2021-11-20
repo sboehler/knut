@@ -132,42 +132,6 @@ func (a *Accounts) create(name string) (*Account, error) {
 	return res, nil
 }
 
-// ValuationAccount returns the account for automatic valuation bookings.
-func (a *Accounts) ValuationAccount() *Account {
-	res, err := a.Get("Equity:Valuation")
-	if err != nil {
-		panic("could not create valuation account")
-	}
-	return res
-}
-
-// EquityAccount is the equity account used for trades
-func (a *Accounts) EquityAccount() *Account {
-	res, err := a.Get("Equity:Equity")
-	if err != nil {
-		panic("Could not create equityAccount")
-	}
-	return res
-}
-
-// RetainedEarningsAccount returns the account for automatic valuation bookings.
-func (a *Accounts) RetainedEarningsAccount() *Account {
-	res, err := a.Get("Equity:RetainedEarnings")
-	if err != nil {
-		panic("Could not create valuationAccount")
-	}
-	return res
-}
-
-// TBDAccount returns the TBD account.
-func (a *Accounts) TBDAccount() *Account {
-	tbdAccount, err := a.Get("Expenses:TBD")
-	if err != nil {
-		panic("Could not create Expenses:TBD account")
-	}
-	return tbdAccount
-}
-
 // Account represents an account which can be used in bookings.
 type Account struct {
 	accountType AccountType

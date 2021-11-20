@@ -8,13 +8,12 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
 )
 
 // RecursiveParser parses a file hierarchy recursively.
 type RecursiveParser struct {
-	File     string
-	Accounts *accounts.Accounts
+	File    string
+	Context ledger.Context
 }
 
 // Parse parses the journal at the path, and branches out for include files
@@ -40,7 +39,7 @@ func (j *RecursiveParser) Parse() chan interface{} {
 }
 
 func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, file string) (err error) {
-	p, cls, err := FromPath(j.Accounts, file)
+	p, cls, err := FromPath(j.Context, file)
 	if err != nil {
 		return err
 	}
@@ -69,5 +68,5 @@ func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interfa
 
 // BuildLedger builds a ledger.
 func (j *RecursiveParser) BuildLedger(f ledger.Filter) (ledger.Ledger, error) {
-	return ledger.FromDirectives(j.Accounts, f, j.Parse())
+	return ledger.FromDirectives(j.Context, f, j.Parse())
 }

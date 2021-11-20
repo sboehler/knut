@@ -190,7 +190,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	var (
 		parser = parser.RecursiveParser{
 			File:     args[0],
-			Accounts: accounts.New(),
+			Context: ledger.NewContext(),
 		}
 		balanceBuilder = balance.Builder{
 			From:      from,

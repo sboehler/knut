@@ -53,10 +53,10 @@ func run(cmd *cobra.Command, args []string) error {
 	var (
 		file    *os.File
 		account *accounts.Account
-		accs    = accounts.New()
+		ctx     = ledger.NewContext()
 		err     error
 	)
-	if account, err = flags.GetAccountFlag(cmd, accs, "account"); err != nil {
+	if account, err = flags.GetAccountFlag(cmd, ctx, "account"); err != nil {
 		return err
 	}
 	if file, err = os.Open(args[0]); err != nil {
@@ -65,7 +65,7 @@ func run(cmd *cobra.Command, args []string) error {
 	var p = Parser{
 		reader:  csv.NewReader(bufio.NewReader(charmap.ISO8859_1.NewDecoder().Reader(file))),
 		account: account,
-		builder: ledger.NewBuilder(accs, ledger.Filter{}),
+		builder: ledger.NewBuilder(ctx, ledger.Filter{}),
 	}
 	if err = p.parse(); err != nil {
 		return err
@@ -174,7 +174,7 @@ func (p *Parser) readBookingLine(l []string) error {
 		Date:        date,
 		Description: l[bfAvisierungstext],
 		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Accounts.TBDAccount(), p.account, p.currency, amount),
+			ledger.NewPosting(p.builder.Context.TBDAccount(), p.account, p.currency, amount),
 		},
 	})
 	return nil

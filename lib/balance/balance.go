@@ -36,15 +36,15 @@ type Balance struct {
 	Date             time.Time
 	Amounts, Values  map[CommodityAccount]decimal.Decimal
 	openAccounts     Accounts
-	accounts         *accounts.Accounts
+	accounts         ledger.Context
 	Valuation        *commodities.Commodity
 	NormalizedPrices prices.NormalizedPrices
 }
 
 // New creates a new balance.
-func New(valuation *commodities.Commodity, accs *accounts.Accounts) *Balance {
+func New(valuation *commodities.Commodity, ctx ledger.Context) *Balance {
 	return &Balance{
-		accounts:     accs,
+		accounts:     ctx,
 		Amounts:      make(map[CommodityAccount]decimal.Decimal),
 		Values:       make(map[CommodityAccount]decimal.Decimal),
 		openAccounts: make(Accounts),
@@ -406,7 +406,7 @@ type Builder struct {
 // Build builds a sequence of balances.
 func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
 	var (
-		bal    = New(b.Valuation, l.Accounts)
+		bal    = New(b.Valuation, l.Context)
 		dates  = b.createDateSeries(l)
 		ps     = make(prices.Prices)
 		result []*Balance

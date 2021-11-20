@@ -6,12 +6,13 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 )
 
 // GetAccountFlag is a helper to get an account passed as a flag to the command.
-func GetAccountFlag(cmd *cobra.Command, as *accounts.Accounts, flag string) (*accounts.Account, error) {
+func GetAccountFlag(cmd *cobra.Command, as ledger.Context, flag string) (*accounts.Account, error) {
 	name, err := cmd.Flags().GetString(flag)
 	if err != nil {
 		return nil, err

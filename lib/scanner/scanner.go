@@ -19,8 +19,6 @@ import (
 	"io"
 	"strings"
 	"unicode/utf8"
-
-	"github.com/sboehler/knut/lib/model"
 )
 
 // Scanner is a backtracking reader.
@@ -30,8 +28,8 @@ type Scanner struct {
 	current rune
 	// Path is the file path.
 	Path string
-	// pos is the current position in the stream.
-	pos model.FilePosition
+	// Location is the current position in the stream.
+	Location Location
 }
 
 // New creates a new Scanner.
@@ -47,8 +45,7 @@ func New(r io.RuneReader, path string) (*Scanner, error) {
 		reader:  r,
 		current: ch,
 		Path:    path,
-		pos: model.FilePosition{
-			Path:    path,
+		Location: Location{
 			Line:    1,
 			Column:  1,
 			BytePos: 0,
@@ -70,14 +67,9 @@ func (s *Scanner) Current() rune {
 	return s.current
 }
 
-// Position returns the current position.
-func (s *Scanner) Position() model.FilePosition {
-	return s.pos
-}
-
 // ParseError creates a new parser error with the current position.
 func (s *Scanner) ParseError(err error) error {
-	return fmt.Errorf("%s: %v", s.pos, err)
+	return fmt.Errorf("%s:%s: %v", s.Path, s.Location, err)
 }
 
 // Advance reads a rune.
@@ -89,13 +81,13 @@ func (s *Scanner) Advance() error {
 		}
 		ch = EOF
 	}
-	s.pos.BytePos += utf8.RuneLen(s.current)
-	s.pos.RunePos++
+	s.Location.BytePos += utf8.RuneLen(s.current)
+	s.Location.RunePos++
 	if s.current == '\n' {
-		s.pos.Line++
-		s.pos.Column = 1
+		s.Location.Line++
+		s.Location.Column = 1
 	} else {
-		s.pos.Column++
+		s.Location.Column++
 	}
 	s.current = ch
 	return nil
@@ -171,4 +163,13 @@ func (s *Scanner) ReadN(n int) (string, error) {
 		}
 	}
 	return b.String(), nil
+}
+
+// Location describes a location in the Scanner's stream.
+type Location struct {
+	BytePos, RunePos, Line, Column int
+}
+
+func (p Location) String() string {
+	return fmt.Sprintf("%d:%d", p.Line, p.Column)
 }

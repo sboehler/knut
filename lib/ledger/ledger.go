@@ -21,9 +21,9 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/scanner"
 )
 
 // Day groups all commands for a given date.
@@ -59,33 +59,45 @@ func (l Ledger) MaxDate() (time.Time, bool) {
 	return l[len(l)-1].Date, true
 }
 
+// Range describes a range of locations in a file.
+type Range struct {
+	Path       string
+	Start, End scanner.Location
+}
+
+// Position returns the Range itself.
+func (r Range) Position() Range {
+	return r
+}
+
 // Directive is an element in a journal with a position.
 type Directive interface {
-	Position() model.Range
+	Position() Range
 }
+
+var (
+	_ Directive = (*Open)(nil)
+	_ Directive = (*Close)(nil)
+	_ Directive = (*Transaction)(nil)
+	_ Directive = (*Value)(nil)
+	_ Directive = (*Assertion)(nil)
+	_ Directive = (*Price)(nil)
+	_ Directive = (*Include)(nil)
+	_ Directive = (*Accrual)(nil)
+)
 
 // Open represents an open command.
 type Open struct {
-	Pos     model.Range
+	Range
 	Date    time.Time
 	Account *accounts.Account
-}
-
-// Position returns the position.
-func (o Open) Position() model.Range {
-	return o.Pos
 }
 
 // Close represents a close command.
 type Close struct {
-	Pos     model.Range
+	Range
 	Date    time.Time
 	Account *accounts.Account
-}
-
-// Position returns the position.
-func (c Close) Position() model.Range {
-	return c.Pos
 }
 
 // Posting represents a posting.
@@ -124,84 +136,54 @@ type Tag string
 
 // Transaction represents a transaction.
 type Transaction struct {
-	Pos         model.Range
+	Range
 	Date        time.Time
 	Description string
 	Tags        []Tag
 	Postings    []Posting
 }
 
-// Position returns the Position.
-func (t Transaction) Position() model.Range {
-	return t.Pos
-}
-
 // Price represents a price command.
 type Price struct {
-	Pos       model.Range
+	Range
 	Date      time.Time
 	Commodity *commodities.Commodity
 	Target    *commodities.Commodity
 	Price     decimal.Decimal
 }
 
-// Position returns the model.Range.
-func (p Price) Position() model.Range {
-	return p.Pos
-}
-
 // Include represents an include directive.
 type Include struct {
-	Pos  model.Range
+	Range
 	Date time.Time
 	Path string
 }
 
-// Position returns the model.Range.
-func (i Include) Position() model.Range {
-	return i.Pos
-}
-
 // Assertion represents a balance assertion.
 type Assertion struct {
-	Pos       model.Range
+	Range
 	Date      time.Time
 	Account   *accounts.Account
 	Amount    decimal.Decimal
 	Commodity *commodities.Commodity
-}
-
-// Position returns the model.Range.
-func (a Assertion) Position() model.Range {
-	return a.Pos
 }
 
 // Value represents a value directive.
 type Value struct {
-	Pos       model.Range
+	Range
 	Date      time.Time
 	Account   *accounts.Account
 	Amount    decimal.Decimal
 	Commodity *commodities.Commodity
 }
 
-// Position returns the model.Range.
-func (v Value) Position() model.Range {
-	return v.Pos
-}
-
 // Accrual represents an accrual.
 type Accrual struct {
-	Pos         model.Range
+	Range
 	Period      date.Period
 	T0, T1      time.Time
 	Account     *accounts.Account
 	Transaction Transaction
-}
-
-// Position returns the position.
-func (a Accrual) Position() model.Range {
-	return a.Pos
 }
 
 // Expand expands an accrual transaction.
@@ -241,7 +223,7 @@ func (a Accrual) Expand() ([]Transaction, error) {
 				a = a.Add(rem)
 			}
 			result = append(result, Transaction{
-				Pos:         t.Pos,
+				Range:       t.Range,
 				Date:        date,
 				Tags:        t.Tags,
 				Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description, i+1, len(dates)),
@@ -253,7 +235,7 @@ func (a Accrual) Expand() ([]Transaction, error) {
 	}
 	if crAccountSingle != drAccountSingle {
 		result = append(result, Transaction{
-			Pos:         t.Pos,
+			Range:       t.Range,
 			Date:        t.Date,
 			Tags:        t.Tags,
 			Description: t.Description,

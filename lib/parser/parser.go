@@ -26,7 +26,6 @@ import (
 
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/scanner"
@@ -36,18 +35,18 @@ import (
 // Parser parses a journal
 type Parser struct {
 	scanner  *scanner.Scanner
-	startPos model.FilePosition
+	startPos scanner.Location
 }
 
 func (p *Parser) markStart() {
-	p.startPos = p.scanner.Position()
+	p.startPos = p.scanner.Location
 }
 
-func (p *Parser) getRange() model.Range {
-	var pos = p.scanner.Position()
-	return model.Range{
+func (p *Parser) getRange() ledger.Range {
+	return ledger.Range{
 		Start: p.startPos,
-		End:   pos,
+		End:   p.scanner.Location,
+		Path:  p.scanner.Path,
 	}
 }
 
@@ -198,7 +197,7 @@ func (p *Parser) parseTransaction(d time.Time) (ledger.Transaction, error) {
 		return ledger.Transaction{}, err
 	}
 	return ledger.Transaction{
-		Pos:         p.getRange(),
+		Range:       p.getRange(),
 		Date:        d,
 		Description: desc,
 		Tags:        tags,
@@ -275,7 +274,7 @@ func (p *Parser) parseAccrual() (ledger.Accrual, error) {
 		return ledger.Accrual{}, err
 	}
 	return ledger.Accrual{
-		Pos:         p.getRange(),
+		Range:       p.getRange(),
 		T0:          dateFrom,
 		T1:          dateTo,
 		Period:      period,
@@ -353,7 +352,7 @@ func (p *Parser) parseOpen(d time.Time) (ledger.Open, error) {
 		return ledger.Open{}, err
 	}
 	return ledger.Open{
-		Pos:     p.getRange(),
+		Range:   p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
@@ -371,7 +370,7 @@ func (p *Parser) parseClose(d time.Time) (ledger.Close, error) {
 		return ledger.Close{}, err
 	}
 	return ledger.Close{
-		Pos:     p.getRange(),
+		Range:   p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
@@ -404,7 +403,7 @@ func (p *Parser) parsePrice(d time.Time) (ledger.Price, error) {
 		return ledger.Price{}, err
 	}
 	return ledger.Price{
-		Pos:       p.getRange(),
+		Range:     p.getRange(),
 		Date:      d,
 		Commodity: commodity,
 		Price:     price,
@@ -438,7 +437,7 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (ledger.Assertion, error) {
 		return ledger.Assertion{}, err
 	}
 	return ledger.Assertion{
-		Pos:       p.getRange(),
+		Range:     p.getRange(),
 		Date:      d,
 		Account:   account,
 		Amount:    amount,
@@ -472,7 +471,7 @@ func (p *Parser) parseValue(d time.Time) (ledger.Value, error) {
 		return ledger.Value{}, err
 	}
 	return ledger.Value{
-		Pos:       p.getRange(),
+		Range:     p.getRange(),
 		Date:      d,
 		Account:   account,
 		Amount:    amount,
@@ -493,8 +492,8 @@ func (p *Parser) parseInclude() (ledger.Include, error) {
 		return ledger.Include{}, err
 	}
 	result := ledger.Include{
-		Pos:  p.getRange(),
-		Path: i,
+		Range: p.getRange(),
+		Path:  i,
 	}
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
 		return ledger.Include{}, err

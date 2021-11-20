@@ -29,10 +29,10 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/report"
 	"github.com/sboehler/knut/lib/table"
 
@@ -107,7 +107,7 @@ func execute(cmd *cobra.Command, args []string) error {
 
 type pipeline struct {
 	Accounts        *accounts.Accounts
-	Journal         journal.Journal
+	Parser          parser.RecursiveParser
 	AccountFilter   *ledger.AccountFilter
 	CommodityFilter *ledger.CommodityFilter
 	BalanceBuilder  balance.Builder
@@ -189,7 +189,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	}
 
 	var (
-		journal = journal.Journal{
+		parser = parser.RecursiveParser{
 			File:     args[0],
 			Accounts: accounts.New(),
 		}
@@ -218,7 +218,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		}
 	)
 	return &pipeline{
-		Journal:         journal,
+		Parser:          parser,
 		AccountFilter:   &accountFilter,
 		CommodityFilter: &commodityFilter,
 		BalanceBuilder:  balanceBuilder,
@@ -235,7 +235,7 @@ func processPipeline(w io.Writer, ppl *pipeline) error {
 		r   *report.Report
 		err error
 	)
-	if l, err = ppl.Journal.BuildLedger(ppl.AccountFilter, ppl.CommodityFilter); err != nil {
+	if l, err = ppl.Parser.BuildLedger(ppl.AccountFilter, ppl.CommodityFilter); err != nil {
 		return err
 	}
 	if bal, err = ppl.BalanceBuilder.Build(l); err != nil {

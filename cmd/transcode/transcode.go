@@ -21,10 +21,10 @@ import (
 
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/beancount"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/parser"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
@@ -65,7 +65,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
 		accs      = accounts.New()
 		commodity *commodities.Commodity
-		j         = journal.Journal{Accounts: accs, File: args[0]}
+		j         = parser.RecursiveParser{Accounts: accs, File: args[0]}
 		l         ledger.Ledger
 	)
 	if commodity, err = commodities.Get(c); err != nil {

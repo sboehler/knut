@@ -14,10 +14,10 @@ import (
 
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/parser"
 	"github.com/shopspring/decimal"
 )
 
@@ -51,7 +51,7 @@ func (s handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type pipeline struct {
 	Accounts        *accounts.Accounts
-	Journal         journal.Journal
+	Parser          parser.RecursiveParser
 	accountFilter   *ledger.AccountFilter
 	commodityFilter *ledger.CommodityFilter
 	BalanceBuilder  balance.Builder
@@ -96,9 +96,9 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 	}
 
 	return &pipeline{
-		Accounts: accounts.New(),
-		Journal: journal.Journal{
-			File: file,
+		Parser: parser.RecursiveParser{
+			Accounts: accounts.New(),
+			File:     file,
 		},
 		accountFilter:   &ledger.AccountFilter{Regex: accountsFilter},
 		commodityFilter: &ledger.CommodityFilter{Regex: commoditiesFilter},
@@ -115,7 +115,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 }
 
 func (ppl *pipeline) process(w io.Writer) error {
-	l, err := ledger.FromDirectives(ppl.Accounts, ppl.accountFilter, ppl.commodityFilter, ppl.Journal.Parse())
+	l, err := ppl.Parser.BuildLedger(ppl.accountFilter, ppl.commodityFilter)
 	if err != nil {
 		return err
 	}

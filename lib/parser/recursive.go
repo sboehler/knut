@@ -1,4 +1,4 @@
-package journal
+package parser
 
 import (
 	"path"
@@ -9,17 +9,16 @@ import (
 
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/parser"
 )
 
-// Journal represents a journal on disk.
-type Journal struct {
+// RecursiveParser parses a file hierarchy recursively.
+type RecursiveParser struct {
 	File     string
 	Accounts *accounts.Accounts
 }
 
 // Parse parses the journal at the path, and branches out for include files
-func (j *Journal) Parse() chan interface{} {
+func (j *RecursiveParser) Parse() chan interface{} {
 	var (
 		ch = make(chan interface{}, 100)
 		wg sync.WaitGroup
@@ -40,8 +39,8 @@ func (j *Journal) Parse() chan interface{} {
 	return ch
 }
 
-func (j *Journal) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, file string) (err error) {
-	p, cls, err := parser.FromPath(j.Accounts, file)
+func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, file string) (err error) {
+	p, cls, err := FromPath(j.Accounts, file)
 	if err != nil {
 		return err
 	}
@@ -69,6 +68,6 @@ func (j *Journal) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, fi
 }
 
 // BuildLedger builds a ledger.
-func (j *Journal) BuildLedger(af *ledger.AccountFilter, cf *ledger.CommodityFilter) (ledger.Ledger, error) {
+func (j *RecursiveParser) BuildLedger(af *ledger.AccountFilter, cf *ledger.CommodityFilter) (ledger.Ledger, error) {
 	return ledger.FromDirectives(j.Accounts, af, cf, j.Parse())
 }

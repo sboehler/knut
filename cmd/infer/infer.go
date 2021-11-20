@@ -28,7 +28,6 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/bayes"
 	"github.com/sboehler/knut/lib/format"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/parser"
@@ -115,7 +114,7 @@ func infer(accs *accounts.Accounts, trainingFile string, targetFile string, acco
 
 func train(accs *accounts.Accounts, file string, exclude *accounts.Account) (*bayes.Model, error) {
 	var (
-		j = journal.Journal{Accounts: accs, File: file}
+		j = parser.RecursiveParser{Accounts: accs, File: file}
 		m = bayes.NewModel()
 	)
 	for r := range j.Parse() {

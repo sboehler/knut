@@ -705,7 +705,7 @@ func (p *Parser) parseCommodity() (*commodities.Commodity, error) {
 	if err != nil {
 		return nil, err
 	}
-	return commodities.Get(i)
+	return p.context.GetCommodity(i)
 }
 func isWhitespace(ch rune) bool {
 	return ch == ' ' || ch == '\t' || ch == '\r'

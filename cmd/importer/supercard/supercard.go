@@ -183,7 +183,7 @@ func (p *parser) parseBooking(r []string) error {
 	if amount, err = p.parseAmount(r); err != nil {
 		return err
 	}
-	if commodity, err = commodities.Get(currency); err != nil {
+	if commodity, err = p.builder.Context.GetCommodity(currency); err != nil {
 		return err
 	}
 	p.builder.AddTransaction(ledger.Transaction{

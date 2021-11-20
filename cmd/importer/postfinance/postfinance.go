@@ -137,7 +137,7 @@ func (p *Parser) readHeaderLine(l []string) error {
 	}
 	var err error
 	if currencyHeaders[l[hfHeader]] {
-		if p.currency, err = commodities.Get(l[hfData]); err != nil {
+		if p.currency, err = p.builder.Context.GetCommodity(l[hfData]); err != nil {
 			return err
 		}
 	}

@@ -142,7 +142,7 @@ func (p *parser) parseHeader(r []string) error {
 		return fmt.Errorf("could not extract currency from header field: %q", r[bfPaidOut])
 	}
 	var err error
-	p.currency, err = commodities.Get(groups[1])
+	p.currency, err = p.builder.Context.GetCommodity(groups[1])
 	return err
 }
 
@@ -204,7 +204,7 @@ func (p *parser) parseBooking(r []string) error {
 	}
 	switch {
 	case fxSellRegex.MatchString(r[bfReference]):
-		otherCommodity, otherAmount, err := parseCombiField(r[bfExchangeOut])
+		otherCommodity, otherAmount, err := p.parseCombiField(r[bfExchangeOut])
 		if err != nil {
 			return err
 		}
@@ -213,7 +213,7 @@ func (p *parser) parseBooking(r []string) error {
 			ledger.NewPosting(p.builder.Context.ValuationAccount(), p.account, otherCommodity, otherAmount),
 		}
 	case fxBuyRegex.MatchString(r[bfReference]):
-		otherCommodity, otherAmount, err := parseCombiField(r[bfExchangeIn])
+		otherCommodity, otherAmount, err := p.parseCombiField(r[bfExchangeIn])
 		if err != nil {
 			return err
 		}
@@ -230,7 +230,7 @@ func (p *parser) parseBooking(r []string) error {
 	return nil
 }
 
-func parseCombiField(f string) (*commodities.Commodity, decimal.Decimal, error) {
+func (p *parser) parseCombiField(f string) (*commodities.Commodity, decimal.Decimal, error) {
 	var fs = strings.Fields(f)
 	if len(fs) != 2 {
 		return nil, decimal.Decimal{}, fmt.Errorf("expected currency and amount, got %s", f)
@@ -240,7 +240,7 @@ func parseCombiField(f string) (*commodities.Commodity, decimal.Decimal, error) 
 		otherAmount    decimal.Decimal
 		err            error
 	)
-	if otherCommodity, err = commodities.Get(fs[0]); err != nil {
+	if otherCommodity, err = p.builder.Context.GetCommodity(fs[0]); err != nil {
 		return nil, decimal.Decimal{}, err
 	}
 	if otherAmount, err = parseDecimal(fs[1]); err != nil {

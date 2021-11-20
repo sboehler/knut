@@ -78,19 +78,37 @@ func New() *Accounts {
 	}
 }
 
-// Get creates a new account.
 func (a *Accounts) Get(name string) (*Account, error) {
-	if a, ok := a.get(name); ok {
-		return a, nil
-	}
-	return a.create(name)
-}
-
-func (a *Accounts) get(name string) (*Account, bool) {
 	a.mutex.RLock()
-	defer a.mutex.RUnlock()
-	c, ok := a.accounts[name]
-	return c, ok
+	res, ok := a.accounts[name]
+	a.mutex.RUnlock()
+	if !ok {
+		a.mutex.Lock()
+		defer a.mutex.Unlock()
+		// check if the account has been created in the meantime
+		if a, ok := a.accounts[name]; ok {
+			return a, nil
+		}
+		var segments = strings.Split(name, ":")
+		if len(segments) < 2 {
+			return nil, fmt.Errorf("invalid account name: %q", name)
+		}
+		at, ok := accountTypes[segments[0]]
+		if !ok {
+			return nil, fmt.Errorf("account name %q has an invalid account type %q", name, segments[0])
+		}
+		for _, s := range segments[1:] {
+			if !isValidSegment(s) {
+				return nil, fmt.Errorf("account name %q has an invalid segment %q", name, s)
+			}
+		}
+		res = &Account{
+			accountType: at,
+			name:        name,
+		}
+		a.accounts[name] = res
+	}
+	return res, nil
 }
 
 func isValidSegment(s string) bool {
@@ -103,33 +121,6 @@ func isValidSegment(s string) bool {
 		}
 	}
 	return true
-}
-func (a *Accounts) create(name string) (*Account, error) {
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
-	// check if the account has been created in the meantime
-	if a, ok := a.accounts[name]; ok {
-		return a, nil
-	}
-	var segments = strings.Split(name, ":")
-	if len(segments) < 2 {
-		return nil, fmt.Errorf("invalid account name: %q", name)
-	}
-	at, ok := accountTypes[segments[0]]
-	if !ok {
-		return nil, fmt.Errorf("account name %q has an invalid account type %q", name, segments[0])
-	}
-	for _, s := range segments[1:] {
-		if !isValidSegment(s) {
-			return nil, fmt.Errorf("account name %q has an invalid segment %q", name, s)
-		}
-	}
-	var res = &Account{
-		accountType: at,
-		name:        name,
-	}
-	a.accounts[name] = res
-	return res, nil
 }
 
 // Account represents an account which can be used in bookings.

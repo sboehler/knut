@@ -142,7 +142,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if amt, err = decimal.NewFromString(replacer.Replace(r[3])); err != nil {
 		return false, err
 	}
-	if chf, err = commodities.Get("CHF"); err != nil {
+	if chf, err = p.builder.Context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
 	p.builder.AddTransaction(ledger.Transaction{

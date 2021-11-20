@@ -156,7 +156,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if amount, err = parseAmount(r[bfBelastungCHF], r[bfGutschriftCHF]); err != nil {
 		return false, err
 	}
-	if chf, err = commodities.Get("CHF"); err != nil {
+	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
 	p.transactions = append(p.transactions, ledger.Transaction{
@@ -241,7 +241,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	if amount, err = parseAmount(r[rfBelastungCHF], r[rfGutschriftCHF]); err != nil {
 		return false, err
 	}
-	if chf, err = commodities.Get("CHF"); err != nil {
+	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
 	p.transactions = append(p.transactions, ledger.Transaction{

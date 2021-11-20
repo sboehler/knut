@@ -40,10 +40,10 @@ func GetRegexFlag(cmd *cobra.Command, flag string) (*regexp.Regexp, error) {
 }
 
 // GetCommodityFlag is a helper to get a commodity passed as a flag to the command.
-func GetCommodityFlag(cmd *cobra.Command, name string) (*commodities.Commodity, error) {
+func GetCommodityFlag(cmd *cobra.Command, ctx ledger.Context, name string) (*commodities.Commodity, error) {
 	s, err := cmd.Flags().GetString(name)
 	if err != nil {
 		return nil, err
 	}
-	return commodities.Get(s)
+	return ctx.GetCommodity(s)
 }

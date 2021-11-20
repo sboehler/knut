@@ -134,7 +134,7 @@ func (p *parser) readLine() error {
 	if err != nil {
 		return err
 	}
-	r, err := lineToRecord(l)
+	r, err := p.lineToRecord(l)
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ const (
 	fWährung
 )
 
-func lineToRecord(l []string) (*record, error) {
+func (p *parser) lineToRecord(l []string) (*record, error) {
 	var (
 		r = record{
 			orderNo: l[fAuftragNo],
@@ -194,7 +194,7 @@ func lineToRecord(l []string) (*record, error) {
 		return nil, err
 	}
 	if len(l[fSymbol]) > 0 {
-		if r.symbol, err = commodities.Get(l[fSymbol]); err != nil {
+		if r.symbol, err = p.builder.Context.GetCommodity(l[fSymbol]); err != nil {
 			return nil, err
 		}
 	}
@@ -216,7 +216,7 @@ func lineToRecord(l []string) (*record, error) {
 	if r.balance, err = parseDecimal(l[fSaldo]); err != nil {
 		return nil, err
 	}
-	if r.currency, err = commodities.Get(l[fWährung]); err != nil {
+	if r.currency, err = p.builder.Context.GetCommodity(l[fWährung]); err != nil {
 		return nil, err
 	}
 	return &r, nil

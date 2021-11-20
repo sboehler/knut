@@ -48,6 +48,7 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 type config struct {
+	context                                       ledger.Context
 	accounts, transactions, includes, commodities int
 	seed                                          int64
 	from, to                                      time.Time
@@ -126,6 +127,7 @@ func readConfig(cmd *cobra.Command, args []string) (config, error) {
 		c   config
 		err error
 	)
+	c.context = ledger.NewContext()
 	if c.accounts, err = cmd.Flags().GetInt("accounts"); err != nil {
 		return c, err
 	}
@@ -176,7 +178,6 @@ func generate(c config) ([]*ledger.Open, []*ledger.Price, []ledger.Transaction) 
 
 func generateAccounts(c config) []*accounts.Account {
 	var (
-		ctx   = ledger.NewContext()
 		as    []*accounts.Account
 		types = []string{"Assets", "Liabilities", "Income", "Expenses"}
 	)
@@ -185,7 +186,7 @@ func generateAccounts(c config) []*accounts.Account {
 		s.WriteString(types[rand.Intn(4)])
 		s.WriteRune(':')
 		s.WriteString(generateIdentifier(10))
-		a, err := ctx.GetAccount(s.String())
+		a, err := c.context.GetAccount(s.String())
 		if err != nil {
 			panic(fmt.Sprintf("Could not create account %s", s.String()))
 		}
@@ -197,7 +198,7 @@ func generateAccounts(c config) []*accounts.Account {
 func generateCommodities(c config) []*commodities.Commodity {
 	var res []*commodities.Commodity
 	for i := 0; i < c.commodities; i++ {
-		commodity, err := commodities.Get(fmt.Sprintf("COMMODITY%d", i))
+		commodity, err := c.context.GetCommodity(fmt.Sprintf("COMMODITY%d", i))
 		if err != nil {
 			panic("invalid commodity")
 		}

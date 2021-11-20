@@ -117,6 +117,7 @@ type pipeline struct {
 
 func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	var (
+		ctx      = ledger.NewContext()
 		from, to *time.Time
 		err      error
 	)
@@ -142,7 +143,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	}
 	var valuation *commodities.Commodity
 	if cmd.Flags().Changed("val") {
-		if valuation, err = flags.GetCommodityFlag(cmd, "val"); err != nil {
+		if valuation, err = flags.GetCommodityFlag(cmd, ctx, "val"); err != nil {
 			return nil, err
 		}
 	}
@@ -189,8 +190,8 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 
 	var (
 		parser = parser.RecursiveParser{
-			File:     args[0],
-			Context: ledger.NewContext(),
+			File:    args[0],
+			Context: ctx,
 		}
 		balanceBuilder = balance.Builder{
 			From:      from,

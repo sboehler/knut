@@ -96,7 +96,7 @@ func fetch(ctx ledger.Context, f string, cfg config) error {
 	if err != nil {
 		return err
 	}
-	if err := fetchPrices(cfg, time.Now().AddDate(-1, 0, 0), time.Now(), l); err != nil {
+	if err := fetchPrices(ctx, cfg, time.Now().AddDate(-1, 0, 0), time.Now(), l); err != nil {
 		return err
 	}
 	if err := writeFile(ctx, l, absPath); err != nil {
@@ -140,7 +140,7 @@ func readFile(ctx ledger.Context, filepath string) (res map[time.Time]ledger.Pri
 	return prices, nil
 }
 
-func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]ledger.Price) error {
+func fetchPrices(ctx ledger.Context, cfg config, t0, t1 time.Time, results map[time.Time]ledger.Price) error {
 	var (
 		c                 = yahoo.New()
 		quotes            []yahoo.Quote
@@ -150,10 +150,10 @@ func fetchPrices(cfg config, t0, t1 time.Time, results map[time.Time]ledger.Pric
 	if quotes, err = c.Fetch(cfg.Symbol, t0, t1); err != nil {
 		return err
 	}
-	if commodity, err = commodities.Get(cfg.Commodity); err != nil {
+	if commodity, err = ctx.GetCommodity(cfg.Commodity); err != nil {
 		return err
 	}
-	if target, err = commodities.Get(cfg.TargetCommodity); err != nil {
+	if target, err = ctx.GetCommodity(cfg.TargetCommodity); err != nil {
 		return err
 	}
 	for _, i := range quotes {

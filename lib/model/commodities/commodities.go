@@ -26,6 +26,15 @@ type Commodity struct {
 	name string
 }
 
+func (c Commodity) String() string {
+	return c.name
+}
+
+// MarshalJSON marshals a commodity to JSON.
+func (c Commodity) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.name)
+}
+
 // Commodities is a thread-safe collection of commodities.
 type Commodities struct {
 	commodities map[string]*Commodity
@@ -39,11 +48,25 @@ func New() *Commodities {
 	}
 }
 
-func (c *Commodities) get(name string) (*Commodity, bool) {
+// Get creates a new commodity.
+func (c *Commodities) Get(name string) (*Commodity, error) {
 	c.mutex.RLock()
-	defer c.mutex.RUnlock()
 	res, ok := c.commodities[name]
-	return res, ok
+	c.mutex.RUnlock()
+	if !ok {
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
+		// check if the commodity has been created in the meantime
+		if res, ok = c.commodities[name]; ok {
+			return res, nil
+		}
+		if !isValidCommodity(name) {
+			return nil, fmt.Errorf("invalid commodity name %q", name)
+		}
+		res = &Commodity{name}
+		c.commodities[name] = res
+	}
+	return res, nil
 }
 
 func isValidCommodity(s string) bool {
@@ -56,44 +79,4 @@ func isValidCommodity(s string) bool {
 		}
 	}
 	return true
-}
-
-func (c *Commodities) create(name string) (*Commodity, error) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	// check if the commodity has been created in the meantime
-	if res, ok := c.commodities[name]; ok {
-		return res, nil
-	}
-	if !isValidCommodity(name) {
-		return nil, fmt.Errorf("invalid commodity name %q", name)
-	}
-	var res = &Commodity{name}
-	c.commodities[name] = res
-	return res, nil
-}
-
-// Get creates a new commodity.
-func (c *Commodities) Get(name string) (*Commodity, error) {
-	if c, ok := c.get(name); ok {
-		return c, nil
-	}
-	return c.create(name)
-}
-
-func (c Commodity) String() string {
-	return c.name
-}
-
-// MarshalJSON marshals a commodity to JSON.
-func (c Commodity) MarshalJSON() ([]byte, error) {
-	return json.Marshal(c.name)
-}
-
-// TODO: remove
-var cs = New()
-
-// Get creates a new commodity.
-func Get(name string) (*Commodity, error) {
-	return cs.Get(name)
 }

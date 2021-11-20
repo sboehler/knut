@@ -27,7 +27,6 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 )
 
@@ -73,7 +72,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	commodity, err := commodities.Get("CHF")
+	commodity, err := ctx.GetCommodity("CHF")
 	if err != nil {
 		return err
 	}

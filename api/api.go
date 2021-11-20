@@ -58,6 +58,7 @@ type pipeline struct {
 
 func buildPipeline(file string, query url.Values) (*pipeline, error) {
 	var (
+		ctx                               = ledger.NewContext()
 		period                            *date.Period
 		commoditiesFilter, accountsFilter *regexp.Regexp
 		from, to                          *time.Time
@@ -84,7 +85,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 	if last, err = parseInt(query, "last"); err != nil {
 		return nil, err
 	}
-	if valuation, err = parseCommodity(query, "valuation"); err != nil {
+	if valuation, err = parseCommodity(query, ctx, "valuation"); err != nil {
 		return nil, err
 	}
 	if diff, err = parseBool(query, "diff"); err != nil {
@@ -96,8 +97,8 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 
 	return &pipeline{
 		Parser: parser.RecursiveParser{
-			Context: ledger.NewContext(),
-			File:     file,
+			Context: ctx,
+			File:    file,
 		},
 		Filter: ledger.Filter{
 			AccountsFilter:    accountsFilter,
@@ -228,7 +229,7 @@ func parseBool(query url.Values, key string) (bool, error) {
 	return strconv.ParseBool(s)
 }
 
-func parseCommodity(query url.Values, key string) (*commodities.Commodity, error) {
+func parseCommodity(query url.Values, ctx ledger.Context, key string) (*commodities.Commodity, error) {
 	var (
 		s   string
 		ok  bool
@@ -237,7 +238,7 @@ func parseCommodity(query url.Values, key string) (*commodities.Commodity, error
 	if s, ok, err = getOne(query, key); err != nil || !ok {
 		return nil, err
 	}
-	return commodities.Get(s)
+	return ctx.GetCommodity(s)
 }
 
 func getOne(query url.Values, key string) (string, bool, error) {

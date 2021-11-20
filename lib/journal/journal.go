@@ -67,3 +67,8 @@ func (j *Journal) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, fi
 	}
 	return nil
 }
+
+// BuildLedger builds a ledger.
+func (j *Journal) BuildLedger(af *ledger.AccountFilter, cf *ledger.CommodityFilter) (ledger.Ledger, error) {
+	return ledger.FromDirectives(j.Accounts, af, cf, j.Parse())
+}

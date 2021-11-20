@@ -189,10 +189,9 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	}
 
 	var (
-		accs    = accounts.New()
 		journal = journal.Journal{
 			File:     args[0],
-			Accounts: accs,
+			Accounts: accounts.New(),
 		}
 		balanceBuilder = balance.Builder{
 			From:      from,
@@ -219,7 +218,6 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		}
 	)
 	return &pipeline{
-		Accounts:        accs,
 		Journal:         journal,
 		AccountFilter:   &accountFilter,
 		CommodityFilter: &commodityFilter,
@@ -237,7 +235,7 @@ func processPipeline(w io.Writer, ppl *pipeline) error {
 		r   *report.Report
 		err error
 	)
-	if l, err = ledger.FromDirectives(ppl.Accounts, ppl.AccountFilter, ppl.CommodityFilter, ppl.Journal.Parse()); err != nil {
+	if l, err = ppl.Journal.BuildLedger(ppl.AccountFilter, ppl.CommodityFilter); err != nil {
 		return err
 	}
 	if bal, err = ppl.BalanceBuilder.Build(l); err != nil {

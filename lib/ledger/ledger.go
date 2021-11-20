@@ -187,12 +187,9 @@ type Accrual struct {
 }
 
 // Expand expands an accrual transaction.
-func (a Accrual) Expand() ([]Transaction, error) {
-	var t = a.Transaction
-	if l := len(t.Postings); l != 1 {
-		return nil, fmt.Errorf("%s: accrual expansion: number of postings is %d, must be 1", a.Transaction.Position().Start, l)
-	}
+func (a Accrual) Expand() []Transaction {
 	var (
+		t                                                                = a.Transaction
 		posting                                                          = t.Postings[0]
 		crAccountSingle, drAccountSingle, crAccountMulti, drAccountMulti = a.Account, a.Account, a.Account, a.Account
 	)
@@ -245,7 +242,7 @@ func (a Accrual) Expand() ([]Transaction, error) {
 		})
 
 	}
-	return result, nil
+	return result
 }
 
 func isAL(a *accounts.Account) bool {

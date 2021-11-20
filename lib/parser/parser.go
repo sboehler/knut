@@ -273,6 +273,9 @@ func (p *Parser) parseAccrual() (ledger.Accrual, error) {
 	if err != nil {
 		return ledger.Accrual{}, err
 	}
+	if len(t.Postings) != 1 {
+		return ledger.Accrual{}, fmt.Errorf("accrual transaction must have exactly one posting: %v", t)
+	}
 	return ledger.Accrual{
 		Range:       p.getRange(),
 		T0:          dateFrom,

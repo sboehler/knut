@@ -41,13 +41,7 @@ func FromDirectives(accountFilter *AccountFilter, commodityFilter *CommodityFilt
 		case Close:
 			b.AddClosing(t)
 		case Accrual:
-			trx, err := t.Expand()
-			if err != nil {
-				return nil, err
-			}
-			for _, t := range trx {
-				b.AddTransaction(t)
-			}
+			b.AddAccrual(t)
 		default:
 			return nil, fmt.Errorf("unknown: %#v", t)
 		}
@@ -105,6 +99,13 @@ func (b *Builder) AddTransaction(t Transaction) {
 		t.Postings = filtered
 		var s = b.getOrCreate(t.Date)
 		s.Transactions = append(s.Transactions, t)
+	}
+}
+
+// AddAccrual adds an accrual directive.
+func (b *Builder) AddAccrual(t Accrual) {
+	for _, t := range t.Expand() {
+		b.AddTransaction(t)
 	}
 }
 

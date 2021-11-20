@@ -185,7 +185,7 @@ func generateAccounts(c config) []*accounts.Account {
 		s.WriteString(types[rand.Intn(4)])
 		s.WriteRune(':')
 		s.WriteString(generateIdentifier(10))
-		a, err := ctx.Get(s.String())
+		a, err := ctx.GetAccount(s.String())
 		if err != nil {
 			panic(fmt.Sprintf("Could not create account %s", s.String()))
 		}

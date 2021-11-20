@@ -296,7 +296,7 @@ func (b *Balance) computeValuationTransactions() ([]ledger.Transaction, error) {
 func (b Balance) valuationAccountFor(a *accounts.Account) (*accounts.Account, error) {
 	suffix := a.Split()[1:]
 	segments := append(b.accounts.ValuationAccount().Split(), suffix...)
-	return b.accounts.Get(strings.Join(segments, ":"))
+	return b.accounts.GetAccount(strings.Join(segments, ":"))
 }
 
 func (b *Balance) valuateTransaction(t ledger.Transaction) error {

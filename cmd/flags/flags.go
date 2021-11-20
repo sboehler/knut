@@ -17,7 +17,7 @@ func GetAccountFlag(cmd *cobra.Command, as ledger.Context, flag string) (*accoun
 	if err != nil {
 		return nil, err
 	}
-	return as.Get(name)
+	return as.GetAccount(name)
 }
 
 // GetDateFlag is a helper to get a date passed as a flag to the command.

@@ -77,8 +77,8 @@ func NewContext() Context {
 	}
 }
 
-// Get returns an account.
-func (c Context) Get(name string) (*accounts.Account, error) {
+// GetAccount returns an account.
+func (c Context) GetAccount(name string) (*accounts.Account, error) {
 	return c.accounts.Get(name)
 }
 

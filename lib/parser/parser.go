@@ -521,7 +521,7 @@ func (p *Parser) parseAccount() (*accounts.Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	return p.context.Get(s)
+	return p.context.GetAccount(s)
 }
 
 func (p *Parser) consumeWhitespace1() error {

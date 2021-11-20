@@ -92,7 +92,7 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 		}
 	}
 
-	// valuate and book journal transaction amounts
+	// book journal transaction amounts
 	for _, t := range day.Transactions {
 		if err = b.bookTransactionAmounts(t); err != nil {
 			return err
@@ -117,6 +117,8 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 			return err
 		}
 	}
+
+	// valuate transactions and book transaction values
 	for _, t := range day.Transactions {
 		if err := b.valuateTransaction(t); err != nil {
 			return err

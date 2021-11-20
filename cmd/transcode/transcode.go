@@ -71,7 +71,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	if commodity, err = commodities.Get(c); err != nil {
 		return err
 	}
-	if l, err = ledger.FromDirectives(accs, nil, nil, j.Parse()); err != nil {
+	if l, err = ledger.FromDirectives(accs, ledger.Filter{}, j.Parse()); err != nil {
 		return err
 	}
 	var balanceBuilder = balance.Builder{Valuation: commodity}

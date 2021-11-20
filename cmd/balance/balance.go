@@ -106,14 +106,13 @@ func execute(cmd *cobra.Command, args []string) error {
 }
 
 type pipeline struct {
-	Accounts        *accounts.Accounts
-	Parser          parser.RecursiveParser
-	AccountFilter   *ledger.AccountFilter
-	CommodityFilter *ledger.CommodityFilter
-	BalanceBuilder  balance.Builder
-	ReportBuilder   report.Builder
-	ReportRenderer  report.Renderer
-	TextRenderer    table.TextRenderer
+	Accounts       *accounts.Accounts
+	Parser         parser.RecursiveParser
+	Filter         ledger.Filter
+	BalanceBuilder balance.Builder
+	ReportBuilder  report.Builder
+	ReportRenderer report.Renderer
+	TextRenderer   table.TextRenderer
 }
 
 func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
@@ -202,9 +201,11 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			Close:     close,
 			Diff:      diff,
 		}
-		accountFilter   = ledger.AccountFilter{Regex: filterAccounts}
-		commodityFilter = ledger.CommodityFilter{Regex: filterCommodities}
-		reportBuilder   = report.Builder{
+		filter = ledger.Filter{
+			AccountsFilter:    filterAccounts,
+			CommoditiesFilter: filterCommodities,
+		}
+		reportBuilder = report.Builder{
 			Value:    valuation != nil,
 			Collapse: collapse,
 		}
@@ -218,13 +219,12 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		}
 	)
 	return &pipeline{
-		Parser:          parser,
-		AccountFilter:   &accountFilter,
-		CommodityFilter: &commodityFilter,
-		BalanceBuilder:  balanceBuilder,
-		ReportBuilder:   reportBuilder,
-		ReportRenderer:  reportRenderer,
-		TextRenderer:    tableRenderer,
+		Parser:         parser,
+		Filter:         filter,
+		BalanceBuilder: balanceBuilder,
+		ReportBuilder:  reportBuilder,
+		ReportRenderer: reportRenderer,
+		TextRenderer:   tableRenderer,
 	}, nil
 }
 
@@ -235,7 +235,7 @@ func processPipeline(w io.Writer, ppl *pipeline) error {
 		r   *report.Report
 		err error
 	)
-	if l, err = ppl.Parser.BuildLedger(ppl.AccountFilter, ppl.CommodityFilter); err != nil {
+	if l, err = ppl.Parser.BuildLedger(ppl.Filter); err != nil {
 		return err
 	}
 	if bal, err = ppl.BalanceBuilder.Build(l); err != nil {

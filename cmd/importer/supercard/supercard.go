@@ -70,7 +70,7 @@ func run(cmd *cobra.Command, args []string) error {
 		p      = parser{
 			reader:  reader,
 			account: account,
-			builder: ledger.NewBuilder(accs, nil, nil),
+			builder: ledger.NewBuilder(accs, ledger.Filter{}),
 		}
 	)
 	if err = p.parse(); err != nil {

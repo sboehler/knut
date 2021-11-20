@@ -24,8 +24,8 @@ import (
 
 // FromDirectives reads directives from the given channel and
 // builds a Ledger if successful.
-func FromDirectives(accs *accounts.Accounts, accountFilter *AccountFilter, commodityFilter *CommodityFilter, results <-chan interface{}) (Ledger, error) {
-	var b = NewBuilder(accs, accountFilter, commodityFilter)
+func FromDirectives(accs *accounts.Accounts, filter Filter, results <-chan interface{}) (Ledger, error) {
+	var b = NewBuilder(accs, filter)
 	for res := range results {
 		switch t := res.(type) {
 		case error:
@@ -53,15 +53,14 @@ func FromDirectives(accs *accounts.Accounts, accountFilter *AccountFilter, commo
 
 // Builder maps dates to days
 type Builder struct {
-	accountFilter   *AccountFilter
-	commodityFilter *CommodityFilter
-	days            map[time.Time]*Day
-	Accounts        *accounts.Accounts
+	filter   Filter
+	days     map[time.Time]*Day
+	Accounts *accounts.Accounts
 }
 
 // NewBuilder creates a new builder.
-func NewBuilder(accs *accounts.Accounts, af *AccountFilter, cf *CommodityFilter) *Builder {
-	return &Builder{af, cf, make(map[time.Time]*Day), accs}
+func NewBuilder(accs *accounts.Accounts, f Filter) *Builder {
+	return &Builder{f, make(map[time.Time]*Day), accs}
 }
 
 // Build creates a new
@@ -93,10 +92,10 @@ func (b *Builder) getOrCreate(d time.Time) *Day {
 func (b *Builder) AddTransaction(t Transaction) {
 	var filtered []Posting
 	for _, p := range t.Postings {
-		if !b.accountFilter.match(p.Credit) && !b.accountFilter.match(p.Debit) {
+		if !b.filter.MatchAccount(p.Credit) && !b.filter.MatchAccount(p.Debit) {
 			continue
 		}
-		if !b.commodityFilter.match(p.Commodity) {
+		if !b.filter.MatchCommodity(p.Commodity) {
 			continue
 		}
 		filtered = append(filtered, p)
@@ -123,7 +122,7 @@ func (b *Builder) AddOpening(o Open) {
 
 // AddClosing adds a close directive.
 func (b *Builder) AddClosing(close Close) {
-	if !b.accountFilter.match(close.Account) {
+	if !b.filter.MatchAccount(close.Account) {
 		return
 	}
 	var s = b.getOrCreate(close.Date)
@@ -138,7 +137,7 @@ func (b *Builder) AddPrice(p Price) {
 
 // AddAssertion adds an assertion directive.
 func (b *Builder) AddAssertion(a Assertion) {
-	if !b.accountFilter.match(a.Account) || !b.commodityFilter.match(a.Commodity) {
+	if !b.filter.MatchAccount(a.Account) || !b.filter.MatchCommodity(a.Commodity) {
 		return
 	}
 	var s = b.getOrCreate(a.Date)
@@ -147,7 +146,7 @@ func (b *Builder) AddAssertion(a Assertion) {
 
 // AddValue adds an value directive.
 func (b *Builder) AddValue(a Value) {
-	if !b.accountFilter.match(a.Account) || !b.commodityFilter.match(a.Commodity) {
+	if !b.filter.MatchAccount(a.Account) || !b.filter.MatchCommodity(a.Commodity) {
 		return
 	}
 	var s = b.getOrCreate(a.Date)

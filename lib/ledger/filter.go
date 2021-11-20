@@ -21,21 +21,3 @@ func (b Filter) MatchAccount(a *accounts.Account) bool {
 func (b Filter) MatchCommodity(c *commodities.Commodity) bool {
 	return b.CommoditiesFilter == nil || b.CommoditiesFilter.MatchString(c.String())
 }
-
-// AccountFilter filters accounts.
-type AccountFilter struct {
-	Regex *regexp.Regexp
-}
-
-func (f *AccountFilter) match(a *accounts.Account) bool {
-	return f == nil || f.Regex.MatchString(a.String())
-}
-
-// CommodityFilter filters commodities.
-type CommodityFilter struct {
-	Regex *regexp.Regexp
-}
-
-func (f *CommodityFilter) match(a *commodities.Commodity) bool {
-	return f == nil || f.Regex.MatchString(a.String())
-}

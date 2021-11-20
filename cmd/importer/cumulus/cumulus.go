@@ -75,7 +75,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err = p.parse(); err != nil {
 		return err
 	}
-	var builder = ledger.NewBuilder(accs, nil, nil)
+	var builder = ledger.NewBuilder(accs, ledger.Filter{})
 	for _, trx := range p.transactions {
 		builder.AddTransaction(trx)
 	}

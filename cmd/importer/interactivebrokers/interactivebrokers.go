@@ -91,7 +91,7 @@ func run(cmd *cobra.Command, args []string) error {
 		p = parser{
 			reader:  csv.NewReader(bufio.NewReader(f)),
 			options: o,
-			builder: ledger.NewBuilder(accs, nil, nil),
+			builder: ledger.NewBuilder(accs, ledger.Filter{}),
 		}
 	)
 	if err = p.parse(); err != nil {

@@ -50,11 +50,10 @@ func (s handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type pipeline struct {
-	Accounts        *accounts.Accounts
-	Parser          parser.RecursiveParser
-	accountFilter   *ledger.AccountFilter
-	commodityFilter *ledger.CommodityFilter
-	BalanceBuilder  balance.Builder
+	Accounts       *accounts.Accounts
+	Parser         parser.RecursiveParser
+	Filter         ledger.Filter
+	BalanceBuilder balance.Builder
 }
 
 func buildPipeline(file string, query url.Values) (*pipeline, error) {
@@ -100,8 +99,10 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 			Accounts: accounts.New(),
 			File:     file,
 		},
-		accountFilter:   &ledger.AccountFilter{Regex: accountsFilter},
-		commodityFilter: &ledger.CommodityFilter{Regex: commoditiesFilter},
+		Filter: ledger.Filter{
+			AccountsFilter:    accountsFilter,
+			CommoditiesFilter: commoditiesFilter,
+		},
 		BalanceBuilder: balance.Builder{
 			From:      from,
 			To:        to,
@@ -115,7 +116,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 }
 
 func (ppl *pipeline) process(w io.Writer) error {
-	l, err := ppl.Parser.BuildLedger(ppl.accountFilter, ppl.commodityFilter)
+	l, err := ppl.Parser.BuildLedger(ppl.Filter)
 	if err != nil {
 		return err
 	}

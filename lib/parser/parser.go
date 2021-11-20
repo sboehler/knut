@@ -26,8 +26,6 @@ import (
 
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/scanner"
 	"github.com/shopspring/decimal"
 )
@@ -293,9 +291,9 @@ func (p *Parser) parsePostings() ([]ledger.Posting, error) {
 	var postings []ledger.Posting
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		var (
-			credit, debit *accounts.Account
+			credit, debit *ledger.Account
 			amount        decimal.Decimal
-			commodity     *commodities.Commodity
+			commodity     *ledger.Commodity
 			lot           *ledger.Lot
 
 			err error
@@ -514,7 +512,7 @@ func (p *Parser) consumeNewline() error {
 	return nil
 }
 
-func (p *Parser) parseAccount() (*accounts.Account, error) {
+func (p *Parser) parseAccount() (*ledger.Account, error) {
 	s, err := p.scanner.ReadWhile(func(r rune) bool {
 		return r == ':' || unicode.IsLetter(r) || unicode.IsDigit(r)
 	})
@@ -700,7 +698,7 @@ func (p *Parser) parseFloat() (float64, error) {
 }
 
 // parseCommodity parses a commodity
-func (p *Parser) parseCommodity() (*commodities.Commodity, error) {
+func (p *Parser) parseCommodity() (*ledger.Commodity, error) {
 	i, err := p.parseIdentifier()
 	if err != nil {
 		return nil, err

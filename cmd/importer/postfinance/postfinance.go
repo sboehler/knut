@@ -29,8 +29,6 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 )
 
@@ -52,7 +50,7 @@ func CreateCmd() *cobra.Command {
 func run(cmd *cobra.Command, args []string) error {
 	var (
 		file    *os.File
-		account *accounts.Account
+		account *ledger.Account
 		ctx     = ledger.NewContext()
 		err     error
 	)
@@ -83,10 +81,10 @@ func init() {
 // Parser is a parser for account statements
 type Parser struct {
 	reader  *csv.Reader
-	account *accounts.Account
+	account *ledger.Account
 	builder *ledger.Builder
 
-	currency *commodities.Commodity
+	currency *ledger.Commodity
 }
 
 func (p *Parser) parse() error {

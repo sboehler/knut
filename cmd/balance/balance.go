@@ -30,8 +30,6 @@ import (
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/report"
 	"github.com/sboehler/knut/lib/table"
@@ -106,7 +104,7 @@ func execute(cmd *cobra.Command, args []string) error {
 }
 
 type pipeline struct {
-	Accounts       *accounts.Accounts
+	Accounts       *ledger.Accounts
 	Parser         parser.RecursiveParser
 	Filter         ledger.Filter
 	BalanceBuilder balance.Builder
@@ -141,7 +139,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	if err != nil {
 		return nil, err
 	}
-	var valuation *commodities.Commodity
+	var valuation *ledger.Commodity
 	if cmd.Flags().Changed("val") {
 		if valuation, err = flags.GetCommodityFlag(cmd, ctx, "val"); err != nil {
 			return nil, err

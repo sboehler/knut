@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package commodities
+package ledger
 
 import (
 	"encoding/json"
@@ -41,8 +41,8 @@ type Commodities struct {
 	mutex       sync.RWMutex
 }
 
-// New creates a new thread-safe collection of commodities.
-func New() *Commodities {
+// NewCommodities creates a new thread-safe collection of commodities.
+func NewCommodities() *Commodities {
 	return &Commodities{
 		commodities: make(map[string]*Commodity),
 	}

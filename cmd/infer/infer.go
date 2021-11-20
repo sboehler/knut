@@ -29,7 +29,6 @@ import (
 	"github.com/sboehler/knut/lib/bayes"
 	"github.com/sboehler/knut/lib/format"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
 	"github.com/sboehler/knut/lib/parser"
 )
 
@@ -59,7 +58,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
 		ctx          = ledger.NewContext()
 		trainingFile string
-		account      *accounts.Account
+		account      *ledger.Account
 		err          error
 	)
 	if account, err = flags.GetAccountFlag(cmd, ctx, "account"); err != nil {
@@ -71,7 +70,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	return infer(ctx, trainingFile, args[0], account)
 }
 
-func infer(ctx ledger.Context, trainingFile string, targetFile string, account *accounts.Account) error {
+func infer(ctx ledger.Context, trainingFile string, targetFile string, account *ledger.Account) error {
 	bayesModel, err := train(ctx, trainingFile, account)
 	if err != nil {
 		return err
@@ -112,7 +111,7 @@ func infer(ctx ledger.Context, trainingFile string, targetFile string, account *
 	return multierr.Append(err, atomic.ReplaceFile(tmpfile.Name(), targetFile))
 }
 
-func train(ctx ledger.Context, file string, exclude *accounts.Account) (*bayes.Model, error) {
+func train(ctx ledger.Context, file string, exclude *ledger.Account) (*bayes.Model, error) {
 	var (
 		j = parser.RecursiveParser{Context: ctx, File: file}
 		m = bayes.NewModel()

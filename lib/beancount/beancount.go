@@ -20,12 +20,11 @@ import (
 	"regexp"
 
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 )
 
 // Transcode transcodes the given ledger to beancount.
-func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
+func Transcode(w io.Writer, l ledger.Ledger, c *ledger.Commodity) error {
 	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c); err != nil {
 		return err
 	}
@@ -69,7 +68,7 @@ func Transcode(w io.Writer, l ledger.Ledger, c *commodities.Commodity) error {
 	return nil
 }
 
-func writeTrx(w io.Writer, t ledger.Transaction, c *commodities.Commodity) error {
+func writeTrx(w io.Writer, t ledger.Transaction, c *ledger.Commodity) error {
 	if _, err := fmt.Fprintf(w, `%s * "%s"`, t.Date.Format("2006-01-02"), t.Description); err != nil {
 		return err
 	}
@@ -91,7 +90,7 @@ func writeTrx(w io.Writer, t ledger.Transaction, c *commodities.Commodity) error
 }
 
 // WriteTo pretty-prints a posting.
-func writePosting(w io.Writer, p ledger.Posting, c *commodities.Commodity) error {
+func writePosting(w io.Writer, p ledger.Posting, c *ledger.Commodity) error {
 	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit, p.Value.Neg(), stripNonAlphanum(c)); err != nil {
 		return err
 	}
@@ -110,6 +109,6 @@ func writePosting(w io.Writer, p ledger.Posting, c *commodities.Commodity) error
 
 var regex = regexp.MustCompile("[^a-zA-Z]")
 
-func stripNonAlphanum(c *commodities.Commodity) string {
+func stripNonAlphanum(c *ledger.Commodity) string {
 	return regex.ReplaceAllString(c.String(), "X")
 }

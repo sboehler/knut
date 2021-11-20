@@ -30,8 +30,6 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 )
 
@@ -58,7 +56,7 @@ func init() {
 }
 
 type options struct {
-	account, dividend, tax, fee, interest *accounts.Account
+	account, dividend, tax, fee, interest *ledger.Account
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -234,7 +232,7 @@ type record struct {
 	date                                               time.Time
 	orderNo, trxType, name, isin                       string
 	quantity, price, fee, interest, netAmount, balance decimal.Decimal
-	currency, symbol                                   *commodities.Commodity
+	currency, symbol                                   *ledger.Commodity
 }
 
 func (p *parser) parseTrade(r *record) (bool, error) {

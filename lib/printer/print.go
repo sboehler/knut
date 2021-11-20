@@ -7,7 +7,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
 )
 
 // Printer prints directives.
@@ -233,7 +232,7 @@ func (p Printer) writeLn(w io.Writer, d interface{}, count *int) error {
 	return nil
 }
 
-func (p Printer) rightPad(a *accounts.Account) string {
+func (p Printer) rightPad(a *ledger.Account) string {
 	var b strings.Builder
 	b.WriteString(a.String())
 	for i := utf8.RuneCountInString(a.String()); i < p.Padding; i++ {

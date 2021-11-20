@@ -30,8 +30,6 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 )
 
@@ -87,7 +85,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 type parser struct {
 	reader       *csv.Reader
-	account      *accounts.Account
+	account      *ledger.Account
 	context      ledger.Context
 	transactions []ledger.Transaction
 }
@@ -147,7 +145,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		err    error
 		desc   = r[bfBeschreibung]
 		amount decimal.Decimal
-		chf    *commodities.Commodity
+		chf    *ledger.Commodity
 		date   time.Time
 	)
 	if date, err = time.Parse("02.01.2006", r[bfEinkaufsDatum]); err != nil {
@@ -233,7 +231,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 		err    error
 		amount decimal.Decimal
 		date   time.Time
-		chf    *commodities.Commodity
+		chf    *ledger.Commodity
 	)
 	if date, err = time.Parse("02.01.2006", r[rfEinkaufsDatum]); err != nil {
 		return false, err

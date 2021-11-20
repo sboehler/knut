@@ -13,8 +13,6 @@ import (
 
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
@@ -176,9 +174,9 @@ func generate(c config) ([]*ledger.Open, []*ledger.Price, []ledger.Transaction) 
 	return opens, prices, transactions
 }
 
-func generateAccounts(c config) []*accounts.Account {
+func generateAccounts(c config) []*ledger.Account {
 	var (
-		as    []*accounts.Account
+		as    []*ledger.Account
 		types = []string{"Assets", "Liabilities", "Income", "Expenses"}
 	)
 	for i := 0; i < c.accounts; i++ {
@@ -195,8 +193,8 @@ func generateAccounts(c config) []*accounts.Account {
 	return as
 }
 
-func generateCommodities(c config) []*commodities.Commodity {
-	var res []*commodities.Commodity
+func generateCommodities(c config) []*ledger.Commodity {
+	var res []*ledger.Commodity
 	for i := 0; i < c.commodities; i++ {
 		commodity, err := c.context.GetCommodity(fmt.Sprintf("COMMODITY%d", i))
 		if err != nil {
@@ -207,7 +205,7 @@ func generateCommodities(c config) []*commodities.Commodity {
 	return res
 }
 
-func generateOpenings(c config, as []*accounts.Account) []*ledger.Open {
+func generateOpenings(c config, as []*ledger.Account) []*ledger.Open {
 	var res []*ledger.Open
 
 	for _, a := range as {
@@ -219,7 +217,7 @@ func generateOpenings(c config, as []*accounts.Account) []*ledger.Open {
 	return res
 }
 
-func generateTransactions(c config, cs []*commodities.Commodity, as []*accounts.Account) []ledger.Transaction {
+func generateTransactions(c config, cs []*ledger.Commodity, as []*ledger.Account) []ledger.Transaction {
 	var trx []ledger.Transaction
 	var dates = date.Series(c.from.AddDate(0, 0, 1), c.to, date.Daily)
 	for i := 0; i < c.transactions; i++ {
@@ -237,7 +235,7 @@ func generateTransactions(c config, cs []*commodities.Commodity, as []*accounts.
 
 var stdev = 0.13 / math.Sqrt(365)
 
-func generatePrices(c config, cs []*commodities.Commodity) []*ledger.Price {
+func generatePrices(c config, cs []*ledger.Commodity) []*ledger.Price {
 	var prices []*ledger.Price
 	for _, commodity := range cs[1:] {
 		var price = decimal.NewFromFloat(1.0 + 200*rand.Float64())

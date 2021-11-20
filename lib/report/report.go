@@ -22,17 +22,16 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/sboehler/knut/lib/balance"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/vector"
 )
 
 // Report is a balance report for a range of dates.
 type Report struct {
 	Dates       []time.Time
-	Segments    map[accounts.AccountType]*Segment
-	Commodities []*commodities.Commodity
-	Positions   map[*commodities.Commodity]vector.Vector
+	Segments    map[ledger.AccountType]*Segment
+	Commodities []*ledger.Commodity
+	Positions   map[*ledger.Commodity]vector.Vector
 }
 
 // Position is a position.
@@ -55,7 +54,7 @@ type Collapse struct {
 
 // MatchAccount determines whether this Collapse matches the
 // given Account.
-func (c Collapse) MatchAccount(a *accounts.Account) bool {
+func (c Collapse) MatchAccount(a *ledger.Account) bool {
 	return c.Regex == nil || c.Regex.MatchString(a.String())
 }
 
@@ -82,14 +81,14 @@ func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 		segments = buildSegments(b, sortedPos)
 
 		// compute totals
-		totals = make(map[*commodities.Commodity]vector.Vector)
+		totals = make(map[*ledger.Commodity]vector.Vector)
 	)
 	for _, s := range segments {
 		s.sum(totals)
 	}
 
 	// compute sorted commodities
-	var commodities = make([]*commodities.Commodity, 0, len(totals))
+	var commodities = make([]*ledger.Commodity, 0, len(totals))
 	for c := range totals {
 		commodities = append(commodities, c)
 	}
@@ -140,8 +139,8 @@ func mergePositions(positions []map[balance.CommodityAccount]decimal.Decimal) []
 	return res
 }
 
-func buildSegments(o Builder, positions []Position) map[accounts.AccountType]*Segment {
-	var result = make(map[accounts.AccountType]*Segment)
+func buildSegments(o Builder, positions []Position) map[ledger.AccountType]*Segment {
+	var result = make(map[ledger.AccountType]*Segment)
 	for _, position := range positions {
 		var (
 			at = position.Account.Type()
@@ -161,7 +160,7 @@ func buildSegments(o Builder, positions []Position) map[accounts.AccountType]*Se
 }
 
 // shorten shortens the given account according to the given rules.
-func shorten(c []Collapse, a *accounts.Account) []string {
+func shorten(c []Collapse, a *ledger.Account) []string {
 	var s = a.Split()
 	for _, c := range c {
 		if c.MatchAccount(a) && len(s) > c.Level {

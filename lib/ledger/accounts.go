@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package accounts
+package ledger
 
 import (
 	"fmt"
@@ -71,13 +71,14 @@ type Accounts struct {
 	accounts map[string]*Account
 }
 
-// New creates a new thread-safe collection of accounts.
-func New() *Accounts {
+// NewAccounts creates a new thread-safe collection of accounts.
+func NewAccounts() *Accounts {
 	return &Accounts{
 		accounts: make(map[string]*Account),
 	}
 }
 
+// Get returns an account.
 func (a *Accounts) Get(name string) (*Account, error) {
 	a.mutex.RLock()
 	res, ok := a.accounts[name]

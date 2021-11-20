@@ -15,14 +15,14 @@
 package report
 
 import (
-	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/vector"
 )
 
 // Segment is a hierarchical segment of a report.
 type Segment struct {
 	Key         string
-	Positions   map[*commodities.Commodity]vector.Vector
+	Positions   map[*ledger.Commodity]vector.Vector
 	Subsegments []*Segment
 }
 
@@ -30,7 +30,7 @@ type Segment struct {
 func NewSegment(k string) *Segment {
 	return &Segment{
 		Key:         k,
-		Positions:   make(map[*commodities.Commodity]vector.Vector),
+		Positions:   make(map[*ledger.Commodity]vector.Vector),
 		Subsegments: nil,
 	}
 }
@@ -61,9 +61,9 @@ func (s *Segment) insert(keys []string, pos Position) {
 	}
 }
 
-func (s *Segment) sum(m map[*commodities.Commodity]vector.Vector) map[*commodities.Commodity]vector.Vector {
+func (s *Segment) sum(m map[*ledger.Commodity]vector.Vector) map[*ledger.Commodity]vector.Vector {
 	if m == nil {
-		m = make(map[*commodities.Commodity]vector.Vector)
+		m = make(map[*ledger.Commodity]vector.Vector)
 	}
 	for _, ss := range s.Subsegments {
 		ss.sum(m)

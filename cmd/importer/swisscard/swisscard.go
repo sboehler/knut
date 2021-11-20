@@ -30,8 +30,6 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 )
 
@@ -83,7 +81,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 type parser struct {
 	reader  *csv.Reader
-	account *accounts.Account
+	account *ledger.Account
 	builder *ledger.Builder
 }
 
@@ -132,7 +130,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	var (
 		err  error
 		desc = strings.Join(words, " ")
-		chf  *commodities.Commodity
+		chf  *ledger.Commodity
 		amt  decimal.Decimal
 		d    time.Time
 	)

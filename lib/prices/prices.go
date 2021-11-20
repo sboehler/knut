@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/commodities"
 
 	"github.com/shopspring/decimal"
 )
@@ -27,7 +26,7 @@ import (
 // Outer map: target commodity
 // Inner map: commodity
 // value: price in (target commodity / commodity)
-type Prices map[*commodities.Commodity]map[*commodities.Commodity]decimal.Decimal
+type Prices map[*ledger.Commodity]map[*ledger.Commodity]decimal.Decimal
 
 var one = decimal.NewFromInt(1)
 
@@ -37,23 +36,23 @@ func (p Prices) Insert(pr ledger.Price) {
 	p.addPrice(pr.Commodity, pr.Target, one.Div(pr.Price).Truncate(8))
 }
 
-func (p Prices) addPrice(target, commodity *commodities.Commodity, pr decimal.Decimal) {
+func (p Prices) addPrice(target, commodity *ledger.Commodity, pr decimal.Decimal) {
 	i, ok := p[target]
 	if !ok {
-		i = make(map[*commodities.Commodity]decimal.Decimal)
+		i = make(map[*ledger.Commodity]decimal.Decimal)
 		p[target] = i
 	}
 	i[commodity] = pr
 }
 
 // Normalize creates a normalized price map for the given commodity.
-func (p Prices) Normalize(c *commodities.Commodity) NormalizedPrices {
+func (p Prices) Normalize(c *ledger.Commodity) NormalizedPrices {
 	// prices in (target commodity / commodity)
 	var (
 		todo = NormalizedPrices{c: one}
 		done = make(NormalizedPrices)
 
-		currentC *commodities.Commodity
+		currentC *ledger.Commodity
 		currentP decimal.Decimal
 	)
 	for len(todo) > 0 {
@@ -75,10 +74,10 @@ func (p Prices) Normalize(c *commodities.Commodity) NormalizedPrices {
 
 // NormalizedPrices is a map representing the price of
 // commodities in some base commodity.
-type NormalizedPrices map[*commodities.Commodity]decimal.Decimal
+type NormalizedPrices map[*ledger.Commodity]decimal.Decimal
 
 // Valuate valuates the given amount.
-func (n NormalizedPrices) Valuate(c *commodities.Commodity, a decimal.Decimal) (decimal.Decimal, error) {
+func (n NormalizedPrices) Valuate(c *ledger.Commodity, a decimal.Decimal) (decimal.Decimal, error) {
 	price, ok := n[c]
 	if !ok {
 		return decimal.Zero, fmt.Errorf("no price found for %v in %v", c, n)

@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/printer"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
@@ -144,7 +143,7 @@ func fetchPrices(ctx ledger.Context, cfg config, t0, t1 time.Time, results map[t
 	var (
 		c                 = yahoo.New()
 		quotes            []yahoo.Quote
-		commodity, target *commodities.Commodity
+		commodity, target *ledger.Commodity
 		err               error
 	)
 	if quotes, err = c.Fetch(cfg.Symbol, t0, t1); err != nil {

@@ -22,7 +22,6 @@ import (
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/beancount"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/parser"
 
 	"github.com/spf13/cobra"
@@ -63,7 +62,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	}
 	var (
 		ctx       = ledger.NewContext()
-		commodity *commodities.Commodity
+		commodity *ledger.Commodity
 		j         = parser.RecursiveParser{Context: ctx, File: args[0]}
 		l         ledger.Ledger
 	)

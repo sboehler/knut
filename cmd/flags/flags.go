@@ -7,12 +7,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 )
 
 // GetAccountFlag is a helper to get an account passed as a flag to the command.
-func GetAccountFlag(cmd *cobra.Command, as ledger.Context, flag string) (*accounts.Account, error) {
+func GetAccountFlag(cmd *cobra.Command, as ledger.Context, flag string) (*ledger.Account, error) {
 	name, err := cmd.Flags().GetString(flag)
 	if err != nil {
 		return nil, err
@@ -40,7 +38,7 @@ func GetRegexFlag(cmd *cobra.Command, flag string) (*regexp.Regexp, error) {
 }
 
 // GetCommodityFlag is a helper to get a commodity passed as a flag to the command.
-func GetCommodityFlag(cmd *cobra.Command, ctx ledger.Context, name string) (*commodities.Commodity, error) {
+func GetCommodityFlag(cmd *cobra.Command, ctx ledger.Context, name string) (*ledger.Commodity, error) {
 	s, err := cmd.Flags().GetString(name)
 	if err != nil {
 		return nil, err

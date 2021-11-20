@@ -15,8 +15,6 @@ import (
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/parser"
 	"github.com/shopspring/decimal"
 )
@@ -50,7 +48,7 @@ func (s handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type pipeline struct {
-	Accounts       *accounts.Accounts
+	Accounts       *ledger.Accounts
 	Parser         parser.RecursiveParser
 	Filter         ledger.Filter
 	BalanceBuilder balance.Builder
@@ -63,7 +61,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 		commoditiesFilter, accountsFilter *regexp.Regexp
 		from, to                          *time.Time
 		last                              int
-		valuation                         *commodities.Commodity
+		valuation                         *ledger.Commodity
 		diff, close                       bool
 		err                               error
 	)
@@ -229,7 +227,7 @@ func parseBool(query url.Values, key string) (bool, error) {
 	return strconv.ParseBool(s)
 }
 
-func parseCommodity(query url.Values, ctx ledger.Context, key string) (*commodities.Commodity, error) {
+func parseCommodity(query url.Values, ctx ledger.Context, key string) (*ledger.Commodity, error) {
 	var (
 		s   string
 		ok  bool
@@ -253,7 +251,7 @@ func getOne(query url.Values, key string) (string, bool, error) {
 }
 
 type jsonBalance struct {
-	Valuation       *commodities.Commodity
+	Valuation       *ledger.Commodity
 	Dates           []time.Time
 	Amounts, Values map[string]map[string][]decimal.Decimal
 }

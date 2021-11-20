@@ -21,8 +21,6 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/scanner"
 )
 
@@ -37,7 +35,7 @@ type Day struct {
 	Closings     []Close
 }
 
-// Ledger is a ledger.
+// Ledger is a
 type Ledger struct {
 	Days    []*Day
 	Context Context
@@ -54,73 +52,12 @@ func (l Ledger) MinDate() (time.Time, bool) {
 	return time.Time{}, false
 }
 
-// MaxDate returns the maximum date for the given ledger.
+// MaxDate returns the maximum date for the given
 func (l Ledger) MaxDate() (time.Time, bool) {
 	if len(l.Days) == 0 {
 		return time.Time{}, false
 	}
 	return l.Days[len(l.Days)-1].Date, true
-}
-
-// Context has context for this ledger, namely a collection of
-// referenced accounts and commodities.
-type Context struct {
-	accounts    *accounts.Accounts
-	commodities *commodities.Commodities
-}
-
-// NewContext creates a new, empty context.
-func NewContext() Context {
-	return Context{
-		accounts:    accounts.New(),
-		commodities: commodities.New(),
-	}
-}
-
-// GetAccount returns an account.
-func (c Context) GetAccount(name string) (*accounts.Account, error) {
-	return c.accounts.Get(name)
-}
-
-// GetCommodity returns a commodity.
-func (c Context) GetCommodity(name string) (*commodities.Commodity, error) {
-	return c.commodities.Get(name)
-}
-
-// ValuationAccount returns the account for automatic valuation bookings.
-func (c Context) ValuationAccount() *accounts.Account {
-	res, err := c.accounts.Get("Equity:Valuation")
-	if err != nil {
-		panic("could not create valuation account")
-	}
-	return res
-}
-
-// EquityAccount is the equity account used for trades
-func (c Context) EquityAccount() *accounts.Account {
-	res, err := c.accounts.Get("Equity:Equity")
-	if err != nil {
-		panic("Could not create equityAccount")
-	}
-	return res
-}
-
-// RetainedEarningsAccount returns the account for automatic valuation bookings.
-func (c Context) RetainedEarningsAccount() *accounts.Account {
-	res, err := c.accounts.Get("Equity:RetainedEarnings")
-	if err != nil {
-		panic("Could not create valuationAccount")
-	}
-	return res
-}
-
-// TBDAccount returns the TBD account.
-func (c Context) TBDAccount() *accounts.Account {
-	tbdAccount, err := c.accounts.Get("Expenses:TBD")
-	if err != nil {
-		panic("Could not create Expenses:TBD account")
-	}
-	return tbdAccount
 }
 
 // Range describes a range of locations in a file.
@@ -154,27 +91,27 @@ var (
 type Open struct {
 	Range
 	Date    time.Time
-	Account *accounts.Account
+	Account *Account
 }
 
 // Close represents a close command.
 type Close struct {
 	Range
 	Date    time.Time
-	Account *accounts.Account
+	Account *Account
 }
 
 // Posting represents a posting.
 type Posting struct {
 	Amount, Value decimal.Decimal
-	Credit, Debit *accounts.Account
-	Commodity     *commodities.Commodity
+	Credit, Debit *Account
+	Commodity     *Commodity
 	Lot           *Lot
 }
 
 // NewPosting creates a new posting from the given parameters. If amount is negative, it
 // will be inverted and the accounts reversed.
-func NewPosting(crAccount, drAccount *accounts.Account, commodity *commodities.Commodity, amt decimal.Decimal) Posting {
+func NewPosting(crAccount, drAccount *Account, commodity *Commodity, amt decimal.Decimal) Posting {
 	if amt.IsNegative() {
 		crAccount, drAccount = drAccount, crAccount
 		amt = amt.Neg()
@@ -192,7 +129,7 @@ type Lot struct {
 	Date      time.Time
 	Label     string
 	Price     float64
-	Commodity *commodities.Commodity
+	Commodity *Commodity
 }
 
 // Tag represents a tag for a transaction or booking.
@@ -211,8 +148,8 @@ type Transaction struct {
 type Price struct {
 	Range
 	Date      time.Time
-	Commodity *commodities.Commodity
-	Target    *commodities.Commodity
+	Commodity *Commodity
+	Target    *Commodity
 	Price     decimal.Decimal
 }
 
@@ -227,18 +164,18 @@ type Include struct {
 type Assertion struct {
 	Range
 	Date      time.Time
-	Account   *accounts.Account
+	Account   *Account
 	Amount    decimal.Decimal
-	Commodity *commodities.Commodity
+	Commodity *Commodity
 }
 
 // Value represents a value directive.
 type Value struct {
 	Range
 	Date      time.Time
-	Account   *accounts.Account
+	Account   *Account
 	Amount    decimal.Decimal
-	Commodity *commodities.Commodity
+	Commodity *Commodity
 }
 
 // Accrual represents an accrual.
@@ -246,7 +183,7 @@ type Accrual struct {
 	Range
 	Period      date.Period
 	T0, T1      time.Time
-	Account     *accounts.Account
+	Account     *Account
 	Transaction Transaction
 }
 
@@ -309,10 +246,10 @@ func (a Accrual) Expand() []Transaction {
 	return result
 }
 
-func isAL(a *accounts.Account) bool {
-	return a.Type() == accounts.ASSETS || a.Type() == accounts.LIABILITIES
+func isAL(a *Account) bool {
+	return a.Type() == ASSETS || a.Type() == LIABILITIES
 }
 
-func isIE(a *accounts.Account) bool {
-	return a.Type() == accounts.INCOME || a.Type() == accounts.EXPENSES
+func isIE(a *Account) bool {
+	return a.Type() == INCOME || a.Type() == EXPENSES
 }

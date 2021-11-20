@@ -23,8 +23,6 @@ import (
 
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/prices"
 	"github.com/sboehler/knut/lib/printer"
 
@@ -37,12 +35,12 @@ type Balance struct {
 	Amounts, Values  map[CommodityAccount]decimal.Decimal
 	openAccounts     Accounts
 	accounts         ledger.Context
-	Valuation        *commodities.Commodity
+	Valuation        *ledger.Commodity
 	NormalizedPrices prices.NormalizedPrices
 }
 
 // New creates a new balance.
-func New(valuation *commodities.Commodity, ctx ledger.Context) *Balance {
+func New(valuation *ledger.Commodity, ctx ledger.Context) *Balance {
 	return &Balance{
 		accounts:     ctx,
 		Amounts:      make(map[CommodityAccount]decimal.Decimal),
@@ -207,7 +205,7 @@ func (b *Balance) computeClosingTransactions() []ledger.Transaction {
 	var result []ledger.Transaction
 	for pos, va := range b.Amounts {
 		var at = pos.Account.Type()
-		if at != accounts.INCOME && at != accounts.EXPENSES {
+		if at != ledger.INCOME && at != ledger.EXPENSES {
 			continue
 		}
 		result = append(result, ledger.Transaction{
@@ -244,7 +242,7 @@ func (b *Balance) computeValuationTransactions() ([]ledger.Transaction, error) {
 			continue
 		}
 		var at = pos.Account.Type()
-		if at != accounts.ASSETS && at != accounts.LIABILITIES {
+		if at != ledger.ASSETS && at != ledger.LIABILITIES {
 			continue
 		}
 		value, err := b.NormalizedPrices.Valuate(pos.Commodity, va)
@@ -293,7 +291,7 @@ func (b *Balance) computeValuationTransactions() ([]ledger.Transaction, error) {
 	return result, nil
 }
 
-func (b Balance) valuationAccountFor(a *accounts.Account) (*accounts.Account, error) {
+func (b Balance) valuationAccountFor(a *ledger.Account) (*ledger.Account, error) {
 	suffix := a.Split()[1:]
 	segments := append(b.accounts.ValuationAccount().Split(), suffix...)
 	return b.accounts.GetAccount(strings.Join(segments, ":"))
@@ -379,8 +377,8 @@ func (be Error) Error() string {
 
 // CommodityAccount represents a position.
 type CommodityAccount struct {
-	Account   *accounts.Account
-	Commodity *commodities.Commodity
+	Account   *ledger.Account
+	Commodity *ledger.Commodity
 }
 
 // Less establishes a partial ordering of commodity accounts.
@@ -399,7 +397,7 @@ type Builder struct {
 	From, To    *time.Time
 	Period      *date.Period
 	Last        int
-	Valuation   *commodities.Commodity
+	Valuation   *ledger.Commodity
 	Close, Diff bool
 }
 
@@ -468,10 +466,10 @@ func (b Builder) createDateSeries(l ledger.Ledger) []time.Time {
 }
 
 // Accounts keeps track of accounts.
-type Accounts map[*accounts.Account]bool
+type Accounts map[*ledger.Account]bool
 
 // Open opens an account.
-func (oa Accounts) Open(a *accounts.Account) error {
+func (oa Accounts) Open(a *ledger.Account) error {
 	if oa[a] {
 		return fmt.Errorf("account %v is already open", a)
 	}
@@ -480,7 +478,7 @@ func (oa Accounts) Open(a *accounts.Account) error {
 }
 
 // Close closes an account.
-func (oa Accounts) Close(a *accounts.Account) error {
+func (oa Accounts) Close(a *ledger.Account) error {
 	if !oa[a] {
 		return fmt.Errorf("account %v is already closed", a)
 	}
@@ -489,16 +487,16 @@ func (oa Accounts) Close(a *accounts.Account) error {
 }
 
 // IsOpen returns whether an account is open.
-func (oa Accounts) IsOpen(a *accounts.Account) bool {
+func (oa Accounts) IsOpen(a *ledger.Account) bool {
 	if oa[a] {
 		return true
 	}
-	return a.Type() == accounts.EQUITY
+	return a.Type() == ledger.EQUITY
 }
 
 // Copy copies accounts.
 func (oa Accounts) Copy() Accounts {
-	var res = make(map[*accounts.Account]bool, len(oa))
+	var res = make(map[*ledger.Account]bool, len(oa))
 	for a := range oa {
 		res[a] = true
 	}

@@ -30,8 +30,6 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
 	"github.com/sboehler/knut/lib/printer"
 )
 
@@ -59,7 +57,7 @@ func init() {
 }
 
 type options struct {
-	account, dividend, tax, fee, interest *accounts.Account
+	account, dividend, tax, fee, interest *ledger.Account
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -107,7 +105,7 @@ type parser struct {
 	reader           *csv.Reader
 	options          options
 	builder          *ledger.Builder
-	baseCurrency     *commodities.Commodity
+	baseCurrency     *ledger.Commodity
 	dateFrom, dateTo time.Time
 }
 
@@ -246,7 +244,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency, stock           *commodities.Commodity
+		currency, stock           *ledger.Commodity
 		date                      time.Time
 		desc                      string
 		qty, price, proceeds, fee decimal.Decimal
@@ -302,7 +300,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		return false, fmt.Errorf("base currency is not defined")
 	}
 	var (
-		currency, stock           *commodities.Commodity
+		currency, stock           *ledger.Commodity
 		date                      time.Time
 		desc                      string
 		qty, price, proceeds, fee decimal.Decimal
@@ -368,7 +366,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency *commodities.Commodity
+		currency *ledger.Commodity
 		date     time.Time
 		desc     string
 		amount   decimal.Decimal
@@ -417,7 +415,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency, security *commodities.Commodity
+		currency, security *ledger.Commodity
 		date               time.Time
 		desc               = r[dfDescription]
 		amount             decimal.Decimal
@@ -480,7 +478,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	}
 	var (
 		desc               = r[wtfDescription]
-		currency, security *commodities.Commodity
+		currency, security *ledger.Commodity
 		date               time.Time
 		amount             decimal.Decimal
 		symbol             string
@@ -518,7 +516,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency *commodities.Commodity
+		currency *ledger.Commodity
 		date     time.Time
 		amount   decimal.Decimal
 		desc     = r[dfDescription]
@@ -572,7 +570,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
 	var (
-		symbol *commodities.Commodity
+		symbol *ledger.Commodity
 		amt    decimal.Decimal
 		err    error
 	)
@@ -618,7 +616,7 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
 	var (
-		symbol *commodities.Commodity
+		symbol *ledger.Commodity
 		amount decimal.Decimal
 		err    error
 	)

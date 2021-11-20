@@ -15,8 +15,7 @@
 package report
 
 import (
-	"github.com/sboehler/knut/lib/model/accounts"
-	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/table"
 	"github.com/sboehler/knut/lib/vector"
 )
@@ -59,12 +58,12 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 
 	var g1, g2 []*Segment
 
-	for _, at := range accounts.AccountTypes {
+	for _, at := range ledger.AccountTypes {
 		s, ok := rn.report.Segments[at]
 		if !ok {
 			continue
 		}
-		if at == accounts.ASSETS || at == accounts.LIABILITIES {
+		if at == ledger.ASSETS || at == ledger.LIABILITIES {
 			g1 = append(g1, s)
 		} else {
 			g2 = append(g2, s)
@@ -78,7 +77,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 			rn.table.AddEmptyRow()
 		}
 
-		var totals = make(map[*commodities.Commodity]vector.Vector)
+		var totals = make(map[*ledger.Commodity]vector.Vector)
 		for _, s := range g1 {
 			s.sum(totals)
 		}
@@ -92,7 +91,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 			render(s)
 			rn.table.AddEmptyRow()
 		}
-		var totals = make(map[*commodities.Commodity]vector.Vector)
+		var totals = make(map[*ledger.Commodity]vector.Vector)
 		for _, s := range g2 {
 			s.sum(totals)
 		}

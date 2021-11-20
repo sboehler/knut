@@ -21,21 +21,29 @@ import (
 	"unicode"
 )
 
-var (
-	commodities = make(map[string]*Commodity)
-	mutex       sync.RWMutex
-)
-
 // Commodity represents a currency or security.
 type Commodity struct {
 	name string
 }
 
-func get(name string) (*Commodity, bool) {
-	mutex.RLock()
-	defer mutex.RUnlock()
-	c, ok := commodities[name]
-	return c, ok
+// Commodities is a thread-safe collection of commodities.
+type Commodities struct {
+	commodities map[string]*Commodity
+	mutex       sync.RWMutex
+}
+
+// New creates a new thread-safe collection of commodities.
+func New() *Commodities {
+	return &Commodities{
+		commodities: make(map[string]*Commodity),
+	}
+}
+
+func (c *Commodities) get(name string) (*Commodity, bool) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	res, ok := c.commodities[name]
+	return res, ok
 }
 
 func isValidCommodity(s string) bool {
@@ -50,27 +58,27 @@ func isValidCommodity(s string) bool {
 	return true
 }
 
-func create(name string) (*Commodity, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (c *Commodities) create(name string) (*Commodity, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	// check if the commodity has been created in the meantime
-	if c, ok := commodities[name]; ok {
-		return c, nil
+	if res, ok := c.commodities[name]; ok {
+		return res, nil
 	}
 	if !isValidCommodity(name) {
 		return nil, fmt.Errorf("invalid commodity name %q", name)
 	}
-	var c = &Commodity{name}
-	commodities[name] = c
-	return c, nil
+	var res = &Commodity{name}
+	c.commodities[name] = res
+	return res, nil
 }
 
 // Get creates a new commodity.
-func Get(name string) (*Commodity, error) {
-	if c, ok := get(name); ok {
+func (c *Commodities) Get(name string) (*Commodity, error) {
+	if c, ok := c.get(name); ok {
 		return c, nil
 	}
-	return create(name)
+	return c.create(name)
 }
 
 func (c Commodity) String() string {
@@ -80,4 +88,12 @@ func (c Commodity) String() string {
 // MarshalJSON marshals a commodity to JSON.
 func (c Commodity) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.name)
+}
+
+// TODO: remove
+var cs = New()
+
+// Get creates a new commodity.
+func Get(name string) (*Commodity, error) {
+	return cs.Get(name)
 }

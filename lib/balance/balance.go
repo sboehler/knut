@@ -15,8 +15,8 @@
 package balance
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sboehler/knut/lib/date"
@@ -103,8 +103,6 @@ func (b *Balance) bookValue(t ledger.Transaction) error {
 	return nil
 }
 
-// Options has options for processing a ledger
-
 // Diffs creates the difference balances for the given
 // slice of balances. The returned slice is one element smaller
 // than the input slice. The balances are mutated.
@@ -124,7 +122,7 @@ type Error struct {
 func (be Error) Error() string {
 	var (
 		p printer.Printer
-		b bytes.Buffer
+		b strings.Builder
 	)
 	fmt.Fprintf(&b, "%s:\n", be.directive.Position().Start)
 	p.PrintDirective(&b, be.directive)
@@ -160,32 +158,48 @@ type Builder struct {
 
 // Build builds a sequence of balances.
 func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
-	var result []*Balance
-	var ppl = []Processor{
-		DateUpdater{},
-		&Snapshotter{Dates: l.Dates(b.From, b.To, b.Period), Result: &result},
-		PriceUpdater{pr: make(prices.Prices)},
-		AccountOpener{},
-		TransactionBooker{},
-		ValueBooker{},
-		Asserter{},
-		TransactionValuator{},
-		ValuationTransactionComputer{},
-		AccountCloser{},
+	var (
+		result     []*Balance
+		processors = []Processor{
+			DateUpdater{},
+			&Snapshotter{
+				From:   b.From,
+				To:     b.To,
+				Period: b.Period,
+				Last:   b.Last,
+				Diff:   b.Diff,
+				Result: &result},
+			AccountOpener{},
+			TransactionBooker{},
+			ValueBooker{},
+			Asserter{},
+			new(PriceUpdater),
+			TransactionValuator{},
+			ValuationTransactionComputer{},
+			AccountCloser{},
+		}
+		bal = New(l.Context, b.Valuation)
+	)
+	for _, pr := range processors {
+		if f, ok := pr.(Initializer); ok {
+			if err := f.Initialize(l); err != nil {
+				return nil, err
+			}
+		}
 	}
-	var bal = New(l.Context, b.Valuation)
 	for _, step := range l.Days {
-		for _, pr := range ppl {
+		for _, pr := range processors {
 			if err := pr.Process(bal, step); err != nil {
 				return nil, err
 			}
 		}
 	}
-	if b.Diff {
-		result = Diffs(result)
-	}
-	if b.Last > 0 && b.Last < len(result) {
-		result = result[len(result)-b.Last:]
+	for _, pr := range processors {
+		if f, ok := pr.(Finalizer); ok {
+			if err := f.Finalize(bal); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return result, nil
 }

@@ -5,13 +5,24 @@ import (
 	"sort"
 	"time"
 
+	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/prices"
 )
 
+// Initializer gets called before processing.
+type Initializer interface {
+	Initialize(l ledger.Ledger) error
+}
+
 // Processor processes the balance and the ledger day.
 type Processor interface {
 	Process(b *Balance, d *ledger.Day) error
+}
+
+// Finalizer gets called after all days have been processed.
+type Finalizer interface {
+	Finalize(b *Balance) error
 }
 
 // DateUpdater keeps track of open accounts.
@@ -27,30 +38,57 @@ func (a DateUpdater) Process(b *Balance, d *ledger.Day) error {
 
 // Snapshotter keeps track of open accounts.
 type Snapshotter struct {
-	Result *[]*Balance
-	Dates  []time.Time
-	index  int
+	From, To *time.Time
+	Last     int
+	Diff     bool
+	Period   *date.Period
+	Result   *[]*Balance
+	dates    []time.Time
+	index    int
 }
 
-var _ Processor = (*Snapshotter)(nil)
+var (
+	_ Initializer = (*Snapshotter)(nil)
+	_ Processor   = (*Snapshotter)(nil)
+	_ Finalizer   = (*Snapshotter)(nil)
+)
+
+// Initialize implements Initializer.
+func (a *Snapshotter) Initialize(l ledger.Ledger) error {
+	a.dates = l.Dates(a.From, a.To, a.Period)
+	var offset = 0
+	if a.Diff {
+		offset = 1
+	}
+	if a.Last > 0 && a.Last < len(a.dates)-offset {
+		a.dates = a.dates[len(a.dates)-a.Last-offset:]
+	}
+	*a.Result = make([]*Balance, len(a.dates))
+	return nil
+}
 
 // Process implements Processor.
 func (a *Snapshotter) Process(b *Balance, d *ledger.Day) error {
-	if len(a.Dates) == 0 || a.index >= len(a.Dates) {
+	if len(a.dates) == 0 || a.index >= len(a.dates) {
 		return nil
 	}
-	if len(*a.Result) == 0 {
-		*a.Result = make([]*Balance, len(a.Dates))
-		(*a.Result)[0] = b
-	}
-	for d.Date.After(a.Dates[a.index]) && (*a.Result)[a.index] == b {
+	for ; a.index < len(a.dates) && d.Date.After(a.dates[a.index]); a.index++ {
 		var cp = b.Copy()
-		cp.Date = a.Dates[a.index]
+		cp.Date = a.dates[a.index]
 		(*a.Result)[a.index] = cp
-		if a.index < len(a.Dates)-1 {
-			a.index++
-			(*a.Result)[a.index] = b
-		}
+	}
+	return nil
+}
+
+// Finalize implements Finalizer.
+func (a *Snapshotter) Finalize(b *Balance) error {
+	for ; a.index < len(a.dates); a.index++ {
+		var cp = b.Copy()
+		cp.Date = a.dates[a.index]
+		(*a.Result)[a.index] = cp
+	}
+	if a.Diff {
+		*a.Result = Diffs(*a.Result)
 	}
 	return nil
 }
@@ -60,10 +98,19 @@ type PriceUpdater struct {
 	pr prices.Prices
 }
 
-var _ Processor = (*PriceUpdater)(nil)
+var (
+	_ Initializer = (*PriceUpdater)(nil)
+	_ Processor   = (*PriceUpdater)(nil)
+)
+
+// Initialize implements Initializer.
+func (a *PriceUpdater) Initialize(_ ledger.Ledger) error {
+	a.pr = make(prices.Prices)
+	return nil
+}
 
 // Process implements Processor.
-func (a PriceUpdater) Process(b *Balance, d *ledger.Day) error {
+func (a *PriceUpdater) Process(b *Balance, d *ledger.Day) error {
 	if b.Valuation == nil {
 		return nil
 	}

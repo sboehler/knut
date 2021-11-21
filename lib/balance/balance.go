@@ -17,8 +17,6 @@ package balance
 import (
 	"bytes"
 	"fmt"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/sboehler/knut/lib/date"
@@ -77,7 +75,6 @@ func (b *Balance) Minus(bo *Balance) {
 
 // Update updates the balance with the given Day
 func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool) error {
-	var err error
 
 	// update date
 	b.Date = day.Date
@@ -93,7 +90,6 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 		return err
 	}
 
-	// create and book value transactions
 	var vb ValueBooker
 	if err := vb.Process(b, day); err != nil {
 		return err
@@ -104,57 +100,26 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 		return err
 	}
 
-	// valuate transactions and book transaction values
-	for _, t := range day.Transactions {
-		if err := b.valuateTransaction(t); err != nil {
-			return err
-		}
-		if err := b.bookTransactionValues(t); err != nil {
-			return err
-		}
-	}
-
-	// compute and append valuation transactions
-	var valTrx []ledger.Transaction
-	if valTrx, err = b.computeValuationTransactions(); err != nil {
+	var tv TransactionValuator
+	if err := tv.Process(b, day); err != nil {
 		return err
 	}
-	for _, t := range valTrx {
-		if err := b.bookTransactionValues(t); err != nil {
-			return err
-		}
-	}
-	day.Transactions = append(day.Transactions, valTrx...)
 
-	// close income and expense accounts if necessary
+	var vtc ValuationTransactionComputer
+	if err := vtc.Process(b, day); err != nil {
+		return err
+	}
+
 	if close {
-		var closingTransactions = b.computeClosingTransactions()
-		day.Transactions = append(day.Transactions, closingTransactions...)
-		for _, t := range closingTransactions {
-			if err := b.bookAmount(t); err != nil {
-				return err
-			}
-			if err := b.bookTransactionValues(t); err != nil {
-				return err
-			}
+		var pc PeriodCloser
+		if err := pc.Process(b, day); err != nil {
+			return err
 		}
 	}
 
-	// close accounts
-	for _, c := range day.Closings {
-		for pos, amount := range b.Amounts {
-			if pos.Account != c.Account {
-				continue
-			}
-			if !amount.IsZero() || !b.Values[pos].IsZero() {
-				return Error{c, "account has nonzero position"}
-			}
-			delete(b.Amounts, pos)
-			delete(b.Values, pos)
-		}
-		if err := b.Accounts.Close(c.Account); err != nil {
-			return err
-		}
+	var ac AccountCloser
+	if err := ac.Process(b, day); err != nil {
+		return err
 	}
 	return nil
 }
@@ -177,7 +142,7 @@ func (b *Balance) bookAmount(t ledger.Transaction) error {
 	return nil
 }
 
-func (b *Balance) bookTransactionValues(t ledger.Transaction) error {
+func (b *Balance) bookValue(t ledger.Transaction) error {
 	for _, posting := range t.Postings {
 		var (
 			crPos = CommodityAccount{posting.Credit, posting.Commodity}
@@ -185,120 +150,6 @@ func (b *Balance) bookTransactionValues(t ledger.Transaction) error {
 		)
 		b.Values[crPos] = b.Values[crPos].Sub(posting.Value)
 		b.Values[drPos] = b.Values[drPos].Add(posting.Value)
-	}
-	return nil
-}
-
-func (b *Balance) computeClosingTransactions() []ledger.Transaction {
-	var result []ledger.Transaction
-	for pos, va := range b.Amounts {
-		var at = pos.Account.Type()
-		if at != ledger.INCOME && at != ledger.EXPENSES {
-			continue
-		}
-		result = append(result, ledger.Transaction{
-			Date:        b.Date,
-			Description: fmt.Sprintf("Closing %v to retained earnings", pos),
-			Tags:        nil,
-			Postings: []ledger.Posting{
-				{
-					Amount:    va,
-					Value:     b.Values[pos],
-					Commodity: pos.Commodity,
-					Credit:    pos.Account,
-					Debit:     b.Context.RetainedEarningsAccount(),
-				},
-			},
-		})
-	}
-	return result
-}
-
-var descCache = make(map[CommodityAccount]string)
-
-// computeValuationTransactions checks whether the valuation for the positions
-// corresponds to the amounts. If not, the difference is due to a valuation
-// change of the previous amount, and a transaction is created to adjust the
-// valuation.
-func (b *Balance) computeValuationTransactions() ([]ledger.Transaction, error) {
-	if b.Valuation == nil {
-		return nil, nil
-	}
-	var result []ledger.Transaction
-	for pos, va := range b.Amounts {
-		if pos.Commodity == b.Valuation {
-			continue
-		}
-		var at = pos.Account.Type()
-		if at != ledger.ASSETS && at != ledger.LIABILITIES {
-			continue
-		}
-		value, err := b.NormalizedPrices.Valuate(pos.Commodity, va)
-		if err != nil {
-			panic(fmt.Sprintf("no valuation found for commodity %s", pos.Commodity))
-		}
-		var diff = value.Sub(b.Values[pos])
-		if diff.IsZero() {
-			continue
-		}
-		var desc string
-		if s, ok := descCache[pos]; ok {
-			desc = s
-		} else {
-			desc = fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity, pos.Account)
-			descCache[pos] = desc
-		}
-		valAcc, err := b.valuationAccountFor(pos.Account)
-		if err != nil {
-			panic(fmt.Sprintf("could not obtain valuation account for account %s", pos.Account))
-		}
-		// create a transaction to adjust the valuation
-		result = append(result, ledger.Transaction{
-			Date:        b.Date,
-			Description: desc,
-			Postings: []ledger.Posting{
-				{
-					Value:     diff,
-					Credit:    valAcc,
-					Debit:     pos.Account,
-					Commodity: pos.Commodity,
-				},
-			},
-		})
-	}
-	sort.Slice(result, func(i, j int) bool {
-		var p, q = result[i].Postings[0], result[j].Postings[0]
-		if p.Credit != q.Credit {
-			return p.Credit.String() < q.Credit.String()
-		}
-		if p.Debit != q.Debit {
-			return p.Debit.String() < q.Debit.String()
-		}
-		return p.Commodity.String() < q.Commodity.String()
-	})
-	return result, nil
-}
-
-func (b Balance) valuationAccountFor(a *ledger.Account) (*ledger.Account, error) {
-	suffix := a.Split()[1:]
-	segments := append(b.Context.ValuationAccount().Split(), suffix...)
-	return b.Context.GetAccount(strings.Join(segments, ":"))
-}
-
-func (b *Balance) valuateTransaction(t ledger.Transaction) error {
-	if b.Valuation == nil {
-		return nil
-	}
-	for i := range t.Postings {
-		var posting = &t.Postings[i]
-		if b.Valuation == posting.Commodity {
-			posting.Value = posting.Amount
-			continue
-		}
-		var err error
-		if posting.Value, err = b.NormalizedPrices.Valuate(posting.Commodity, posting.Amount); err != nil {
-			return Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
-		}
 	}
 	return nil
 }

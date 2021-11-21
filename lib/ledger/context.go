@@ -1,5 +1,7 @@
 package ledger
 
+import "strings"
+
 // Context has context for this ledger, namely a collection of
 // referenced accounts and
 type Context struct {
@@ -59,4 +61,12 @@ func (c Context) TBDAccount() *Account {
 		panic("Could not create Expenses:TBD account")
 	}
 	return tbdAccount
+}
+
+// ValuationAccountFor returns the valuation account which corresponds to
+// the given Asset or Liability account.
+func (c Context) ValuationAccountFor(a *Account) (*Account, error) {
+	suffix := a.Split()[1:]
+	segments := append(c.ValuationAccount().Split(), suffix...)
+	return c.GetAccount(strings.Join(segments, ":"))
 }

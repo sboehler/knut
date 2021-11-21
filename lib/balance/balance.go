@@ -162,6 +162,7 @@ type Builder struct {
 func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
 	var result []*Balance
 	var ppl = []Processor{
+		DateUpdater{},
 		&Snapshotter{Dates: l.Dates(b.From, b.To, b.Period), Result: &result},
 		PriceUpdater{pr: make(prices.Prices)},
 		AccountOpener{},

@@ -14,6 +14,17 @@ type Processor interface {
 	Process(b *Balance, d *ledger.Day) error
 }
 
+// DateUpdater keeps track of open accounts.
+type DateUpdater struct{}
+
+var _ Processor = (*DateUpdater)(nil)
+
+// Process implements Processor.
+func (a DateUpdater) Process(b *Balance, d *ledger.Day) error {
+	b.Date = d.Date
+	return nil
+}
+
 // Snapshotter keeps track of open accounts.
 type Snapshotter struct {
 	Result *[]*Balance

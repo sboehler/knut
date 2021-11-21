@@ -73,57 +73,6 @@ func (b *Balance) Minus(bo *Balance) {
 	}
 }
 
-// Update updates the balance with the given Day
-func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool) error {
-
-	// update date
-	b.Date = day.Date
-	b.NormalizedPrices = np
-
-	var ao AccountOpener
-	if err := ao.Process(b, day); err != nil {
-		return err
-	}
-
-	var tb TransactionBooker
-	if err := tb.Process(b, day); err != nil {
-		return err
-	}
-
-	var vb ValueBooker
-	if err := vb.Process(b, day); err != nil {
-		return err
-	}
-
-	var ba Asserter
-	if err := ba.Process(b, day); err != nil {
-		return err
-	}
-
-	var tv TransactionValuator
-	if err := tv.Process(b, day); err != nil {
-		return err
-	}
-
-	var vtc ValuationTransactionComputer
-	if err := vtc.Process(b, day); err != nil {
-		return err
-	}
-
-	if close {
-		var pc PeriodCloser
-		if err := pc.Process(b, day); err != nil {
-			return err
-		}
-	}
-
-	var ac AccountCloser
-	if err := ac.Process(b, day); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (b *Balance) bookAmount(t ledger.Transaction) error {
 	for _, posting := range t.Postings {
 		if !b.Accounts.IsOpen(posting.Credit) {
@@ -211,36 +160,25 @@ type Builder struct {
 
 // Build builds a sequence of balances.
 func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
-	var (
-		bal    = New(l.Context, b.Valuation)
-		dates  = b.createDateSeries(l)
-		ps     = make(prices.Prices)
-		result []*Balance
-		index  int
-		close  bool
-		np     prices.NormalizedPrices
-	)
-	for _, date := range dates {
-		for ; index < len(l.Days); index++ {
-			var step = l.Days[index]
-			if step.Date.After(date) {
-				break
-			}
-			if b.Valuation != nil {
-				for _, p := range step.Prices {
-					ps.Insert(p)
-				}
-				np = ps.Normalize(b.Valuation)
-			}
-			if err := bal.Update(step, np, close); err != nil {
+	var result []*Balance
+	var ppl = []Processor{
+		&Snapshotter{Dates: l.Dates(b.From, b.To, b.Period), Result: &result},
+		PriceUpdater{pr: make(prices.Prices)},
+		AccountOpener{},
+		TransactionBooker{},
+		ValueBooker{},
+		Asserter{},
+		TransactionValuator{},
+		ValuationTransactionComputer{},
+		AccountCloser{},
+	}
+	var bal = New(l.Context, b.Valuation)
+	for _, step := range l.Days {
+		for _, pr := range ppl {
+			if err := pr.Process(bal, step); err != nil {
 				return nil, err
 			}
-			close = false
 		}
-		var balCopy = bal.Copy()
-		balCopy.Date = date
-		result = append(result, balCopy)
-		close = b.Close
 	}
 	if b.Diff {
 		result = Diffs(result)
@@ -249,28 +187,6 @@ func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
 		result = result[len(result)-b.Last:]
 	}
 	return result, nil
-}
-
-func (b Builder) createDateSeries(l ledger.Ledger) []time.Time {
-	var from, to time.Time
-	if b.From != nil {
-		from = *b.From
-	} else if d, ok := l.MinDate(); ok {
-		from = d
-	} else {
-		return nil
-	}
-	if b.To != nil {
-		to = *b.To
-	} else if d, ok := l.MaxDate(); ok {
-		to = d
-	} else {
-		return nil
-	}
-	if b.Period != nil {
-		return date.Series(from, to, *b.Period)
-	}
-	return []time.Time{from, to}
 }
 
 // Accounts keeps track of open accounts.

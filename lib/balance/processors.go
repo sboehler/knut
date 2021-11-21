@@ -3,13 +3,64 @@ package balance
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/prices"
 )
 
 // Processor processes the balance and the ledger day.
 type Processor interface {
 	Process(b *Balance, d *ledger.Day) error
+}
+
+// Snapshotter keeps track of open accounts.
+type Snapshotter struct {
+	Result *[]*Balance
+	Dates  []time.Time
+	index  int
+}
+
+var _ Processor = (*Snapshotter)(nil)
+
+// Process implements Processor.
+func (a *Snapshotter) Process(b *Balance, d *ledger.Day) error {
+	if len(a.Dates) == 0 || a.index >= len(a.Dates) {
+		return nil
+	}
+	if len(*a.Result) == 0 {
+		*a.Result = make([]*Balance, len(a.Dates))
+		(*a.Result)[0] = b
+	}
+	for d.Date.After(a.Dates[a.index]) && (*a.Result)[a.index] == b {
+		var cp = b.Copy()
+		cp.Date = a.Dates[a.index]
+		(*a.Result)[a.index] = cp
+		if a.index < len(a.Dates)-1 {
+			a.index++
+			(*a.Result)[a.index] = b
+		}
+	}
+	return nil
+}
+
+// PriceUpdater keeps track of prices.
+type PriceUpdater struct {
+	pr prices.Prices
+}
+
+var _ Processor = (*PriceUpdater)(nil)
+
+// Process implements Processor.
+func (a PriceUpdater) Process(b *Balance, d *ledger.Day) error {
+	if b.Valuation == nil {
+		return nil
+	}
+	for _, p := range d.Prices {
+		a.pr.Insert(p)
+	}
+	b.NormalizedPrices = a.pr.Normalize(b.Valuation)
+	return nil
 }
 
 // AccountOpener keeps track of open accounts.

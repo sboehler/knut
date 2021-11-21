@@ -33,26 +33,26 @@ import (
 type Balance struct {
 	Date             time.Time
 	Amounts, Values  map[CommodityAccount]decimal.Decimal
-	openAccounts     Accounts
-	accounts         ledger.Context
+	Accounts         Accounts
+	Context          ledger.Context
 	Valuation        *ledger.Commodity
 	NormalizedPrices prices.NormalizedPrices
 }
 
 // New creates a new balance.
-func New(valuation *ledger.Commodity, ctx ledger.Context) *Balance {
+func New(ctx ledger.Context, valuation *ledger.Commodity) *Balance {
 	return &Balance{
-		accounts:     ctx,
-		Amounts:      make(map[CommodityAccount]decimal.Decimal),
-		Values:       make(map[CommodityAccount]decimal.Decimal),
-		openAccounts: make(Accounts),
-		Valuation:    valuation,
+		Context:   ctx,
+		Amounts:   make(map[CommodityAccount]decimal.Decimal),
+		Values:    make(map[CommodityAccount]decimal.Decimal),
+		Accounts:  make(Accounts),
+		Valuation: valuation,
 	}
 }
 
 // Copy deeply copies the balance
 func (b *Balance) Copy() *Balance {
-	var nb = New(b.Valuation, b.accounts)
+	var nb = New(b.Context, b.Valuation)
 	nb.Date = b.Date
 	nb.NormalizedPrices = b.NormalizedPrices
 	for pos, amt := range b.Amounts {
@@ -61,7 +61,7 @@ func (b *Balance) Copy() *Balance {
 	for pos, val := range b.Values {
 		nb.Values[pos] = val
 	}
-	nb.openAccounts = b.openAccounts.Copy()
+	nb.Accounts = b.Accounts.Copy()
 	return nb
 }
 
@@ -85,7 +85,7 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 
 	// open accounts
 	for _, o := range day.Openings {
-		if err := b.openAccounts.Open(o.Account); err != nil {
+		if err := b.Accounts.Open(o.Account); err != nil {
 			return err
 		}
 	}
@@ -164,7 +164,7 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 			delete(b.Amounts, pos)
 			delete(b.Values, pos)
 		}
-		if err := b.openAccounts.Close(c.Account); err != nil {
+		if err := b.Accounts.Close(c.Account); err != nil {
 			return err
 		}
 	}
@@ -173,10 +173,10 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 
 func (b *Balance) bookTransactionAmounts(t ledger.Transaction) error {
 	for _, posting := range t.Postings {
-		if !b.openAccounts.IsOpen(posting.Credit) {
+		if !b.Accounts.IsOpen(posting.Credit) {
 			return Error{t, fmt.Sprintf("credit account %s is not open", posting.Credit)}
 		}
-		if !b.openAccounts.IsOpen(posting.Debit) {
+		if !b.Accounts.IsOpen(posting.Debit) {
 			return Error{t, fmt.Sprintf("debit account %s is not open", posting.Debit)}
 		}
 		var (
@@ -218,7 +218,7 @@ func (b *Balance) computeClosingTransactions() []ledger.Transaction {
 					Value:     b.Values[pos],
 					Commodity: pos.Commodity,
 					Credit:    pos.Account,
-					Debit:     b.accounts.RetainedEarningsAccount(),
+					Debit:     b.Context.RetainedEarningsAccount(),
 				},
 			},
 		})
@@ -293,8 +293,8 @@ func (b *Balance) computeValuationTransactions() ([]ledger.Transaction, error) {
 
 func (b Balance) valuationAccountFor(a *ledger.Account) (*ledger.Account, error) {
 	suffix := a.Split()[1:]
-	segments := append(b.accounts.ValuationAccount().Split(), suffix...)
-	return b.accounts.GetAccount(strings.Join(segments, ":"))
+	segments := append(b.Context.ValuationAccount().Split(), suffix...)
+	return b.Context.GetAccount(strings.Join(segments, ":"))
 }
 
 func (b *Balance) valuateTransaction(t ledger.Transaction) error {
@@ -316,7 +316,7 @@ func (b *Balance) valuateTransaction(t ledger.Transaction) error {
 }
 
 func (b *Balance) processValue(v ledger.Value) (ledger.Transaction, error) {
-	if !b.openAccounts.IsOpen(v.Account) {
+	if !b.Accounts.IsOpen(v.Account) {
 		return ledger.Transaction{}, Error{v, "account is not open"}
 	}
 	valAcc, err := b.valuationAccountFor(v.Account)
@@ -335,7 +335,7 @@ func (b *Balance) processValue(v ledger.Value) (ledger.Transaction, error) {
 }
 
 func (b *Balance) processBalanceAssertion(a ledger.Assertion) error {
-	if !b.openAccounts.IsOpen(a.Account) {
+	if !b.Accounts.IsOpen(a.Account) {
 		return Error{a, "account is not open"}
 	}
 	var pos = CommodityAccount{a.Account, a.Commodity}
@@ -404,7 +404,7 @@ type Builder struct {
 // Build builds a sequence of balances.
 func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
 	var (
-		bal    = New(b.Valuation, l.Context)
+		bal    = New(l.Context, b.Valuation)
 		dates  = b.createDateSeries(l)
 		ps     = make(prices.Prices)
 		result []*Balance
@@ -465,7 +465,7 @@ func (b Builder) createDateSeries(l ledger.Ledger) []time.Time {
 	return []time.Time{from, to}
 }
 
-// Accounts keeps track of accounts.
+// Accounts keeps track of open accounts.
 type Accounts map[*ledger.Account]bool
 
 // Open opens an account.

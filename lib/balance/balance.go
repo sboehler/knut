@@ -83,37 +83,25 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 	b.Date = day.Date
 	b.NormalizedPrices = np
 
-	// open accounts
-	for _, o := range day.Openings {
-		if err := b.Accounts.Open(o.Account); err != nil {
-			return err
-		}
+	var ao AccountOpener
+	if err := ao.Process(b, day); err != nil {
+		return err
 	}
 
-	// book journal transaction amounts
-	for _, t := range day.Transactions {
-		if err = b.bookTransactionAmounts(t); err != nil {
-			return err
-		}
+	var tb TransactionBooker
+	if err := tb.Process(b, day); err != nil {
+		return err
 	}
 
 	// create and book value transactions
-	for _, v := range day.Values {
-		var t ledger.Transaction
-		if t, err = b.processValue(v); err != nil {
-			return err
-		}
-		if err = b.bookTransactionAmounts(t); err != nil {
-			return err
-		}
-		day.Transactions = append(day.Transactions, t)
+	var vb ValueBooker
+	if err := vb.Process(b, day); err != nil {
+		return err
 	}
 
-	// process balance assertions
-	for _, a := range day.Assertions {
-		if err := b.processBalanceAssertion(a); err != nil {
-			return err
-		}
+	var ba Asserter
+	if err := ba.Process(b, day); err != nil {
+		return err
 	}
 
 	// valuate transactions and book transaction values
@@ -143,7 +131,7 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 		var closingTransactions = b.computeClosingTransactions()
 		day.Transactions = append(day.Transactions, closingTransactions...)
 		for _, t := range closingTransactions {
-			if err := b.bookTransactionAmounts(t); err != nil {
+			if err := b.bookAmount(t); err != nil {
 				return err
 			}
 			if err := b.bookTransactionValues(t); err != nil {
@@ -171,7 +159,7 @@ func (b *Balance) Update(day *ledger.Day, np prices.NormalizedPrices, close bool
 	return nil
 }
 
-func (b *Balance) bookTransactionAmounts(t ledger.Transaction) error {
+func (b *Balance) bookAmount(t ledger.Transaction) error {
 	for _, posting := range t.Postings {
 		if !b.Accounts.IsOpen(posting.Credit) {
 			return Error{t, fmt.Sprintf("credit account %s is not open", posting.Credit)}
@@ -311,37 +299,6 @@ func (b *Balance) valuateTransaction(t ledger.Transaction) error {
 		if posting.Value, err = b.NormalizedPrices.Valuate(posting.Commodity, posting.Amount); err != nil {
 			return Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
 		}
-	}
-	return nil
-}
-
-func (b *Balance) processValue(v ledger.Value) (ledger.Transaction, error) {
-	if !b.Accounts.IsOpen(v.Account) {
-		return ledger.Transaction{}, Error{v, "account is not open"}
-	}
-	valAcc, err := b.valuationAccountFor(v.Account)
-	if err != nil {
-		return ledger.Transaction{}, err
-	}
-	var pos = CommodityAccount{v.Account, v.Commodity}
-	return ledger.Transaction{
-		Date:        v.Date,
-		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
-		Tags:        nil,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(valAcc, v.Account, pos.Commodity, v.Amount.Sub(b.Amounts[pos])),
-		},
-	}, nil
-}
-
-func (b *Balance) processBalanceAssertion(a ledger.Assertion) error {
-	if !b.Accounts.IsOpen(a.Account) {
-		return Error{a, "account is not open"}
-	}
-	var pos = CommodityAccount{a.Account, a.Commodity}
-	va, ok := b.Amounts[pos]
-	if !ok || !va.Equal(a.Amount) {
-		return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va, pos.Commodity)}
 	}
 	return nil
 }

@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/prices"
 	"github.com/sboehler/knut/lib/printer"
@@ -145,44 +144,4 @@ func (p CommodityAccount) Less(p1 CommodityAccount) bool {
 		return p.Account.String() < p1.Account.String()
 	}
 	return p.Commodity.String() < p1.Commodity.String()
-}
-
-// Builder builds a sequence of balances.
-type Builder struct {
-	From, To    *time.Time
-	Period      date.Period
-	Last        int
-	Valuation   *ledger.Commodity
-	Close, Diff bool
-}
-
-// Build builds a sequence of balances.
-func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
-	var (
-		balance = New(l.Context, b.Valuation)
-		result  []*Balance
-		steps   = []ledger.Process{
-			DateUpdater{balance},
-			&Snapshotter{
-				Balance: balance,
-				From:    b.From,
-				To:      b.To,
-				Period:  b.Period,
-				Last:    b.Last,
-				Diff:    b.Diff,
-				Result:  &result},
-			AccountOpener{balance},
-			TransactionBooker{balance},
-			ValueBooker{balance},
-			Asserter{balance},
-			&PriceUpdater{Balance: balance},
-			TransactionValuator{balance},
-			ValuationTransactionComputer{balance},
-			AccountCloser{balance},
-		}
-	)
-	if err := l.Process(steps); err != nil {
-		return nil, err
-	}
-	return result, nil
 }

@@ -62,10 +62,11 @@ func (s handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type pipeline struct {
-	Accounts       *ledger.Accounts
-	Parser         parser.RecursiveParser
-	Filter         ledger.Filter
-	BalanceBuilder balance.Builder
+	Accounts        *ledger.Accounts
+	Parser          parser.RecursiveParser
+	Filter          ledger.Filter
+	ProcessingSteps []ledger.Process
+	Balances        *[]*balance.Balance
 }
 
 func buildPipeline(file string, query url.Values) (*pipeline, error) {
@@ -76,7 +77,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 		from, to                          *time.Time
 		last                              int
 		valuation                         *ledger.Commodity
-		diff, close                       bool
+		diff                              bool
 		err                               error
 	)
 	if period, err = parsePeriod(query, "period"); err != nil {
@@ -103,9 +104,30 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 	if diff, err = parseBool(query, "diff"); err != nil {
 		return nil, err
 	}
-	if close, err = parseBool(query, "close"); err != nil {
-		return nil, err
-	}
+
+	var (
+		bal    = balance.New(ctx, valuation)
+		result []*balance.Balance
+		steps  = []ledger.Process{
+			balance.DateUpdater{Balance: bal},
+			&balance.Snapshotter{
+				Balance: bal,
+				From:    from,
+				To:      to,
+				Period:  period,
+				Last:    last,
+				Diff:    diff,
+				Result:  &result},
+			balance.AccountOpener{Balance: bal},
+			balance.TransactionBooker{Balance: bal},
+			balance.ValueBooker{Balance: bal},
+			balance.Asserter{Balance: bal},
+			&balance.PriceUpdater{Balance: bal},
+			balance.TransactionValuator{Balance: bal},
+			balance.ValuationTransactionComputer{Balance: bal},
+			balance.AccountCloser{Balance: bal},
+		}
+	)
 
 	return &pipeline{
 		Parser: parser.RecursiveParser{
@@ -116,15 +138,8 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 			AccountsFilter:    accountsFilter,
 			CommoditiesFilter: commoditiesFilter,
 		},
-		BalanceBuilder: balance.Builder{
-			From:      from,
-			To:        to,
-			Period:    period,
-			Last:      last,
-			Valuation: valuation,
-			Close:     close,
-			Diff:      diff,
-		},
+		Balances:        &result,
+		ProcessingSteps: steps,
 	}, nil
 }
 
@@ -133,12 +148,11 @@ func (ppl *pipeline) process(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	b, err := ppl.BalanceBuilder.Build(l)
-	if err != nil {
+	if l.Process(ppl.ProcessingSteps); err != nil {
 		return err
 	}
 	var (
-		j = balanceToJSON(b)
+		j = balanceToJSON(*ppl.Balances)
 		e = json.NewEncoder(w)
 	)
 	return e.Encode(j)

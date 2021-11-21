@@ -57,7 +57,7 @@ type pipeline struct {
 func buildPipeline(file string, query url.Values) (*pipeline, error) {
 	var (
 		ctx                               = ledger.NewContext()
-		period                            *date.Period
+		period                            date.Period
 		commoditiesFilter, accountsFilter *regexp.Regexp
 		from, to                          *time.Time
 		last                              int
@@ -138,7 +138,7 @@ var periods = map[string]date.Period{
 	"years":    date.Yearly,
 }
 
-func parsePeriod(query url.Values, key string) (*date.Period, error) {
+func parsePeriod(query url.Values, key string) (date.Period, error) {
 	var (
 		period date.Period
 		value  string
@@ -146,15 +146,15 @@ func parsePeriod(query url.Values, key string) (*date.Period, error) {
 		err    error
 	)
 	if value, ok, err = getOne(query, key); err != nil {
-		return nil, err
+		return date.Once, err
 	}
 	if !ok {
-		return nil, nil
+		return date.Once, nil
 	}
 	if period, ok = periods[value]; !ok {
-		return nil, fmt.Errorf("invalid period %q", value)
+		return date.Once, fmt.Errorf("invalid period %q", value)
 	}
-	return &period, nil
+	return period, nil
 }
 
 func parseRegex(query url.Values, key string) (*regexp.Regexp, error) {

@@ -133,6 +133,12 @@ func TestSeries(t *testing.T) {
 		{
 			t0:     Date(2020, 5, 19),
 			t1:     Date(2020, 5, 22),
+			period: Once,
+			result: []time.Time{Date(2020, 5, 19), Date(2020, 5, 22)},
+		},
+		{
+			t0:     Date(2020, 5, 19),
+			t1:     Date(2020, 5, 22),
 			period: Daily,
 			result: []time.Time{Date(2020, 5, 18), Date(2020, 5, 19), Date(2020, 5, 20), Date(2020, 5, 21), Date(2020, 5, 22)},
 		},

@@ -61,7 +61,7 @@ func (l Ledger) MaxDate() (time.Time, bool) {
 }
 
 // Dates returns a series of dates.
-func (l Ledger) Dates(from, to *time.Time, period *date.Period) []time.Time {
+func (l Ledger) Dates(from, to *time.Time, period date.Period) []time.Time {
 	var t0, t1 time.Time
 	if from != nil {
 		t0 = *from
@@ -77,10 +77,7 @@ func (l Ledger) Dates(from, to *time.Time, period *date.Period) []time.Time {
 	} else {
 		return nil
 	}
-	if period != nil {
-		return date.Series(t0, t1, *period)
-	}
-	return []time.Time{t0, t1}
+	return date.Series(t0, t1, period)
 }
 
 // Range describes a range of locations in a file.

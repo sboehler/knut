@@ -41,7 +41,7 @@ type Snapshotter struct {
 	From, To *time.Time
 	Last     int
 	Diff     bool
-	Period   *date.Period
+	Period   date.Period
 	Result   *[]*Balance
 	dates    []time.Time
 	index    int

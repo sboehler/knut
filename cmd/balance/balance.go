@@ -246,7 +246,7 @@ func processPipeline(w io.Writer, ppl *pipeline) error {
 	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(r), w)
 }
 
-func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {
+func parsePeriod(cmd *cobra.Command, arg string) (date.Period, error) {
 	var (
 		periods = []struct {
 			name   string
@@ -259,8 +259,8 @@ func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {
 			{"years", date.Yearly},
 		}
 
-		errors error
-		result *date.Period
+		errors  error
+		results []date.Period
 	)
 	for _, tuple := range periods {
 		v, err := cmd.Flags().GetBool(tuple.name)
@@ -268,12 +268,19 @@ func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {
 			errors = multierr.Append(errors, err)
 			continue
 		}
-		if v && result == nil {
-			var p = tuple.period
-			result = &p
+		if v {
+			results = append(results, tuple.period)
 		}
 	}
-	return result, errors
+	if errors != nil {
+		return date.Once, errors
+	}
+	if len(results) > 1 {
+		return date.Once, fmt.Errorf("received multiple conflicting periods: %v", results)
+	} else if len(results) == 0 {
+		return date.Once, nil
+	}
+	return results[0], nil
 }
 
 func parseCollapse(cmd *cobra.Command, name string) ([]report.Collapse, error) {

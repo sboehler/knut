@@ -103,6 +103,9 @@ func EndOf(d time.Time, p Period) time.Time {
 // Series returns a series of dates in the given interval,
 // which contains both t0 and t1.
 func Series(t0, t1 time.Time, p Period) []time.Time {
+	if p == Once {
+		return []time.Time{t0, t1}
+	}
 	var (
 		res = []time.Time{StartOf(t0, p).AddDate(0, 0, -1)}
 		t   = t0

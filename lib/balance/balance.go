@@ -150,7 +150,7 @@ func (p CommodityAccount) Less(p1 CommodityAccount) bool {
 // Builder builds a sequence of balances.
 type Builder struct {
 	From, To    *time.Time
-	Period      *date.Period
+	Period      date.Period
 	Last        int
 	Valuation   *ledger.Commodity
 	Close, Diff bool

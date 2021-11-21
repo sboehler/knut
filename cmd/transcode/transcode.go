@@ -72,8 +72,21 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	if l, err = ledger.FromDirectives(ctx, ledger.Filter{}, j.Parse()); err != nil {
 		return err
 	}
-	var balanceBuilder = balance.Builder{Valuation: commodity}
-	if _, err := balanceBuilder.Build(l); err != nil {
+	var (
+		bal   = balance.New(ctx, commodity)
+		steps = []ledger.Process{
+			balance.DateUpdater{Balance: bal},
+			balance.AccountOpener{Balance: bal},
+			balance.TransactionBooker{Balance: bal},
+			balance.ValueBooker{Balance: bal},
+			balance.Asserter{Balance: bal},
+			&balance.PriceUpdater{Balance: bal},
+			balance.TransactionValuator{Balance: bal},
+			balance.ValuationTransactionComputer{Balance: bal},
+			balance.AccountCloser{Balance: bal},
+		}
+	)
+	if err := l.Process(steps); err != nil {
 		return err
 	}
 	var w = bufio.NewWriter(cmd.OutOrStdout())

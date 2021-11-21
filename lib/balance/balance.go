@@ -181,7 +181,7 @@ func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
 			AccountCloser{balance},
 		}
 	)
-	if err := (ledger.Processor{Steps: steps}).Process(l); err != nil {
+	if err := l.Process(steps); err != nil {
 		return nil, err
 	}
 	return result, nil

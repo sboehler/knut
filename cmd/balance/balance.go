@@ -28,14 +28,12 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/balance"
-	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/report"
 	"github.com/sboehler/knut/lib/table"
 
 	"github.com/spf13/cobra"
-	"go.uber.org/multierr"
 )
 
 // CreateCmd creates the command.
@@ -66,7 +64,6 @@ func CreateCmd() *cobra.Command {
 	c.Flags().StringArrayP("collapse", "c", nil, "<level>,<regex>")
 	c.Flags().String("account", "", "filter accounts with a regex")
 	c.Flags().String("commodity", "", "filter commodities with a regex")
-	c.Flags().Bool("close", false, "close income and expenses accounts after every period")
 	c.Flags().Int32("digits", 0, "round to number of digits")
 	c.Flags().BoolP("thousands", "k", false, "show numbers in units of 1000")
 	c.Flags().Bool("color", false, "print output in color")
@@ -104,13 +101,14 @@ func execute(cmd *cobra.Command, args []string) error {
 }
 
 type pipeline struct {
-	Accounts       *ledger.Accounts
-	Parser         parser.RecursiveParser
-	Filter         ledger.Filter
-	BalanceBuilder balance.Builder
-	ReportBuilder  report.Builder
-	ReportRenderer report.Renderer
-	TextRenderer   table.TextRenderer
+	Accounts        *ledger.Accounts
+	Parser          parser.RecursiveParser
+	Filter          ledger.Filter
+	ProcessingSteps []ledger.Process
+	Balances        *[]*balance.Balance
+	ReportBuilder   report.Builder
+	ReportRenderer  report.Renderer
+	TextRenderer    table.TextRenderer
 }
 
 func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
@@ -157,11 +155,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	if err != nil {
 		return nil, err
 	}
-	close, err := cmd.Flags().GetBool("close")
-	if err != nil {
-		return nil, err
-	}
-	period, err := parsePeriod(cmd, "period")
+	period, err := flags.GetPeriodFlag(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -191,14 +185,26 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			File:    args[0],
 			Context: ctx,
 		}
-		balanceBuilder = balance.Builder{
-			From:      from,
-			To:        to,
-			Period:    period,
-			Last:      last,
-			Valuation: valuation,
-			Close:     close,
-			Diff:      diff,
+		bal    = balance.New(ctx, valuation)
+		result []*balance.Balance
+		steps  = []ledger.Process{
+			balance.DateUpdater{Balance: bal},
+			&balance.Snapshotter{
+				Balance: bal,
+				From:    from,
+				To:      to,
+				Period:  period,
+				Last:    last,
+				Diff:    diff,
+				Result:  &result},
+			balance.AccountOpener{Balance: bal},
+			balance.TransactionBooker{Balance: bal},
+			balance.ValueBooker{Balance: bal},
+			balance.Asserter{Balance: bal},
+			&balance.PriceUpdater{Balance: bal},
+			balance.TransactionValuator{Balance: bal},
+			balance.ValuationTransactionComputer{Balance: bal},
+			balance.AccountCloser{Balance: bal},
 		}
 		filter = ledger.Filter{
 			AccountsFilter:    filterAccounts,
@@ -218,12 +224,13 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		}
 	)
 	return &pipeline{
-		Parser:         parser,
-		Filter:         filter,
-		BalanceBuilder: balanceBuilder,
-		ReportBuilder:  reportBuilder,
-		ReportRenderer: reportRenderer,
-		TextRenderer:   tableRenderer,
+		Parser:          parser,
+		Filter:          filter,
+		ProcessingSteps: steps,
+		Balances:        &result,
+		ReportBuilder:   reportBuilder,
+		ReportRenderer:  reportRenderer,
+		TextRenderer:    tableRenderer,
 	}, nil
 }
 
@@ -237,50 +244,14 @@ func processPipeline(w io.Writer, ppl *pipeline) error {
 	if l, err = ppl.Parser.BuildLedger(ppl.Filter); err != nil {
 		return err
 	}
-	if bal, err = ppl.BalanceBuilder.Build(l); err != nil {
+	if err := l.Process(ppl.ProcessingSteps); err != nil {
 		return err
 	}
+	bal = *ppl.Balances
 	if r, err = ppl.ReportBuilder.Build(bal); err != nil {
 		return err
 	}
 	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(r), w)
-}
-
-func parsePeriod(cmd *cobra.Command, arg string) (date.Period, error) {
-	var (
-		periods = []struct {
-			name   string
-			period date.Period
-		}{
-			{"days", date.Daily},
-			{"weeks", date.Weekly},
-			{"months", date.Monthly},
-			{"quarters", date.Quarterly},
-			{"years", date.Yearly},
-		}
-
-		errors  error
-		results []date.Period
-	)
-	for _, tuple := range periods {
-		v, err := cmd.Flags().GetBool(tuple.name)
-		if err != nil {
-			errors = multierr.Append(errors, err)
-			continue
-		}
-		if v {
-			results = append(results, tuple.period)
-		}
-	}
-	if errors != nil {
-		return date.Once, errors
-	}
-	if len(results) > 1 {
-		return date.Once, fmt.Errorf("received multiple conflicting periods: %v", results)
-	} else if len(results) == 0 {
-		return date.Once, nil
-	}
-	return results[0], nil
 }
 
 func parseCollapse(cmd *cobra.Command, name string) ([]report.Collapse, error) {

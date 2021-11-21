@@ -29,14 +29,9 @@ type Finalizer interface {
 	Finalize() error
 }
 
-// Processor processes a ledger.
-type Processor struct {
-	Steps []Process
-}
-
 // Process processes a ledger.
-func (b Processor) Process(l Ledger) error {
-	for _, pr := range b.Steps {
+func (l Ledger) Process(steps []Process) error {
+	for _, pr := range steps {
 		if f, ok := pr.(Initializer); ok {
 			if err := f.Initialize(l); err != nil {
 				return err
@@ -44,13 +39,13 @@ func (b Processor) Process(l Ledger) error {
 		}
 	}
 	for _, day := range l.Days {
-		for _, pr := range b.Steps {
+		for _, pr := range steps {
 			if err := pr.Process(day); err != nil {
 				return err
 			}
 		}
 	}
-	for _, pr := range b.Steps {
+	for _, pr := range steps {
 		if f, ok := pr.(Finalizer); ok {
 			if err := f.Finalize(); err != nil {
 				return err

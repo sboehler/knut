@@ -15,11 +15,14 @@
 package flags
 
 import (
+	"fmt"
 	"regexp"
 	"time"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/multierr"
 
+	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
 )
 
@@ -58,4 +61,42 @@ func GetCommodityFlag(cmd *cobra.Command, ctx ledger.Context, name string) (*led
 		return nil, err
 	}
 	return ctx.GetCommodity(s)
+}
+
+// GetPeriodFlag parses a period from a set of flags.
+func GetPeriodFlag(cmd *cobra.Command) (date.Period, error) {
+	var (
+		periods = []struct {
+			name   string
+			period date.Period
+		}{
+			{"days", date.Daily},
+			{"weeks", date.Weekly},
+			{"months", date.Monthly},
+			{"quarters", date.Quarterly},
+			{"years", date.Yearly},
+		}
+
+		errors  error
+		results []date.Period
+	)
+	for _, tuple := range periods {
+		v, err := cmd.Flags().GetBool(tuple.name)
+		if err != nil {
+			errors = multierr.Append(errors, err)
+			continue
+		}
+		if v {
+			results = append(results, tuple.period)
+		}
+	}
+	if errors != nil {
+		return date.Once, errors
+	}
+	if len(results) > 1 {
+		return date.Once, fmt.Errorf("received multiple conflicting periods: %v", results)
+	} else if len(results) == 0 {
+		return date.Once, nil
+	}
+	return results[0], nil
 }

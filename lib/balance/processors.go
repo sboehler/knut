@@ -10,34 +10,22 @@ import (
 	"github.com/sboehler/knut/lib/prices"
 )
 
-// Initializer gets called before processing.
-type Initializer interface {
-	Initialize(l ledger.Ledger) error
-}
-
-// Processor processes the balance and the ledger day.
-type Processor interface {
-	Process(b *Balance, d *ledger.Day) error
-}
-
-// Finalizer gets called after all days have been processed.
-type Finalizer interface {
-	Finalize(b *Balance) error
-}
-
 // DateUpdater keeps track of open accounts.
-type DateUpdater struct{}
+type DateUpdater struct {
+	Balance *Balance
+}
 
-var _ Processor = (*DateUpdater)(nil)
+var _ ledger.Process = (*DateUpdater)(nil)
 
 // Process implements Processor.
-func (a DateUpdater) Process(b *Balance, d *ledger.Day) error {
-	b.Date = d.Date
+func (a DateUpdater) Process(d *ledger.Day) error {
+	a.Balance.Date = d.Date
 	return nil
 }
 
 // Snapshotter keeps track of open accounts.
 type Snapshotter struct {
+	Balance  *Balance
 	From, To *time.Time
 	Last     int
 	Diff     bool
@@ -48,9 +36,9 @@ type Snapshotter struct {
 }
 
 var (
-	_ Initializer = (*Snapshotter)(nil)
-	_ Processor   = (*Snapshotter)(nil)
-	_ Finalizer   = (*Snapshotter)(nil)
+	_ ledger.Initializer = (*Snapshotter)(nil)
+	_ ledger.Process     = (*Snapshotter)(nil)
+	_ ledger.Finalizer   = (*Snapshotter)(nil)
 )
 
 // Initialize implements Initializer.
@@ -68,12 +56,12 @@ func (a *Snapshotter) Initialize(l ledger.Ledger) error {
 }
 
 // Process implements Processor.
-func (a *Snapshotter) Process(b *Balance, d *ledger.Day) error {
+func (a *Snapshotter) Process(d *ledger.Day) error {
 	if len(a.dates) == 0 || a.index >= len(a.dates) {
 		return nil
 	}
 	for ; a.index < len(a.dates) && d.Date.After(a.dates[a.index]); a.index++ {
-		var cp = b.Copy()
+		var cp = a.Balance.Copy()
 		cp.Date = a.dates[a.index]
 		(*a.Result)[a.index] = cp
 	}
@@ -81,9 +69,9 @@ func (a *Snapshotter) Process(b *Balance, d *ledger.Day) error {
 }
 
 // Finalize implements Finalizer.
-func (a *Snapshotter) Finalize(b *Balance) error {
+func (a *Snapshotter) Finalize() error {
 	for ; a.index < len(a.dates); a.index++ {
-		var cp = b.Copy()
+		var cp = a.Balance.Copy()
 		cp.Date = a.dates[a.index]
 		(*a.Result)[a.index] = cp
 	}
@@ -95,41 +83,44 @@ func (a *Snapshotter) Finalize(b *Balance) error {
 
 // PriceUpdater keeps track of prices.
 type PriceUpdater struct {
-	pr prices.Prices
+	Balance *Balance
+	prices  prices.Prices
 }
 
 var (
-	_ Initializer = (*PriceUpdater)(nil)
-	_ Processor   = (*PriceUpdater)(nil)
+	_ ledger.Initializer = (*PriceUpdater)(nil)
+	_ ledger.Process     = (*PriceUpdater)(nil)
 )
 
 // Initialize implements Initializer.
 func (a *PriceUpdater) Initialize(_ ledger.Ledger) error {
-	a.pr = make(prices.Prices)
+	a.prices = make(prices.Prices)
 	return nil
 }
 
 // Process implements Processor.
-func (a *PriceUpdater) Process(b *Balance, d *ledger.Day) error {
-	if b.Valuation == nil {
+func (a *PriceUpdater) Process(d *ledger.Day) error {
+	if a.Balance.Valuation == nil {
 		return nil
 	}
 	for _, p := range d.Prices {
-		a.pr.Insert(p)
+		a.prices.Insert(p)
 	}
-	b.NormalizedPrices = a.pr.Normalize(b.Valuation)
+	a.Balance.NormalizedPrices = a.prices.Normalize(a.Balance.Valuation)
 	return nil
 }
 
 // AccountOpener keeps track of open accounts.
-type AccountOpener struct{}
+type AccountOpener struct {
+	Balance *Balance
+}
 
-var _ Processor = (*AccountOpener)(nil)
+var _ ledger.Process = (*AccountOpener)(nil)
 
 // Process implements Processor.
-func (a AccountOpener) Process(b *Balance, d *ledger.Day) error {
+func (a AccountOpener) Process(d *ledger.Day) error {
 	for _, o := range d.Openings {
-		if err := b.Accounts.Open(o.Account); err != nil {
+		if err := a.Balance.Accounts.Open(o.Account); err != nil {
 			return err
 		}
 	}
@@ -137,15 +128,17 @@ func (a AccountOpener) Process(b *Balance, d *ledger.Day) error {
 }
 
 // TransactionBooker books transaction amounts.
-type TransactionBooker struct{}
+type TransactionBooker struct {
+	Balance *Balance
+}
 
-var _ Processor = (*TransactionBooker)(nil)
+var _ ledger.Process = (*TransactionBooker)(nil)
 
 // Process implements Processor.
-func (tb TransactionBooker) Process(b *Balance, d *ledger.Day) error {
+func (tb TransactionBooker) Process(d *ledger.Day) error {
 	// book journal transaction amounts
 	for _, t := range d.Transactions {
-		if err := b.bookAmount(t); err != nil {
+		if err := tb.Balance.bookAmount(t); err != nil {
 			return err
 		}
 	}
@@ -153,21 +146,23 @@ func (tb TransactionBooker) Process(b *Balance, d *ledger.Day) error {
 }
 
 // ValueBooker books amounts for value directives.
-type ValueBooker struct{}
+type ValueBooker struct {
+	Balance *Balance
+}
 
-var _ Processor = (*ValueBooker)(nil)
+var _ ledger.Process = (*ValueBooker)(nil)
 
 // Process implements Processor.
-func (tb ValueBooker) Process(b *Balance, d *ledger.Day) error {
+func (tb ValueBooker) Process(d *ledger.Day) error {
 	for _, v := range d.Values {
 		var (
 			t   ledger.Transaction
 			err error
 		)
-		if t, err = tb.processValue(b, v); err != nil {
+		if t, err = tb.processValue(v); err != nil {
 			return err
 		}
-		if err = b.bookAmount(t); err != nil {
+		if err = tb.Balance.bookAmount(t); err != nil {
 			return err
 		}
 		d.Transactions = append(d.Transactions, t)
@@ -176,11 +171,11 @@ func (tb ValueBooker) Process(b *Balance, d *ledger.Day) error {
 	return nil
 }
 
-func (tb ValueBooker) processValue(b *Balance, v ledger.Value) (ledger.Transaction, error) {
-	if !b.Accounts.IsOpen(v.Account) {
+func (tb ValueBooker) processValue(v ledger.Value) (ledger.Transaction, error) {
+	if !tb.Balance.Accounts.IsOpen(v.Account) {
 		return ledger.Transaction{}, Error{v, "account is not open"}
 	}
-	valAcc, err := b.Context.ValuationAccountFor(v.Account)
+	valAcc, err := tb.Balance.Context.ValuationAccountFor(v.Account)
 	if err != nil {
 		return ledger.Transaction{}, err
 	}
@@ -190,20 +185,22 @@ func (tb ValueBooker) processValue(b *Balance, v ledger.Value) (ledger.Transacti
 		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
 		Tags:        nil,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(valAcc, v.Account, pos.Commodity, v.Amount.Sub(b.Amounts[pos])),
+			ledger.NewPosting(valAcc, v.Account, pos.Commodity, v.Amount.Sub(tb.Balance.Amounts[pos])),
 		},
 	}, nil
 }
 
 // Asserter keeps track of open accounts.
-type Asserter struct{}
+type Asserter struct {
+	Balance *Balance
+}
 
-var _ Processor = (*Asserter)(nil)
+var _ ledger.Process = (*Asserter)(nil)
 
 // Process implements Processor.
-func (as Asserter) Process(b *Balance, d *ledger.Day) error {
+func (as Asserter) Process(d *ledger.Day) error {
 	for _, a := range d.Assertions {
-		if err := as.processBalanceAssertion(b, a); err != nil {
+		if err := as.processBalanceAssertion(as.Balance, a); err != nil {
 			return err
 		}
 	}
@@ -223,17 +220,19 @@ func (as Asserter) processBalanceAssertion(b *Balance, a ledger.Assertion) error
 }
 
 // TransactionValuator valuates transactions.
-type TransactionValuator struct{}
+type TransactionValuator struct {
+	Balance *Balance
+}
 
-var _ Processor = (*TransactionValuator)(nil)
+var _ ledger.Process = (*TransactionValuator)(nil)
 
 // Process implements Processor.
-func (as TransactionValuator) Process(b *Balance, d *ledger.Day) error {
+func (as TransactionValuator) Process(d *ledger.Day) error {
 	for _, t := range d.Transactions {
-		if err := as.valuateTransaction(b, t); err != nil {
+		if err := as.valuateTransaction(as.Balance, t); err != nil {
 			return err
 		}
-		if err := b.bookValue(t); err != nil {
+		if err := as.Balance.bookValue(t); err != nil {
 			return err
 		}
 	}
@@ -259,18 +258,20 @@ func (as TransactionValuator) valuateTransaction(b *Balance, t ledger.Transactio
 }
 
 // ValuationTransactionComputer valuates transactions.
-type ValuationTransactionComputer struct{}
+type ValuationTransactionComputer struct {
+	Balance *Balance
+}
 
-var _ Processor = (*ValuationTransactionComputer)(nil)
+var _ ledger.Process = (*ValuationTransactionComputer)(nil)
 
 // Process implements Processor.
-func (vtc ValuationTransactionComputer) Process(b *Balance, d *ledger.Day) error {
-	valTrx, err := vtc.computeValuationTransactions(b)
+func (vtc ValuationTransactionComputer) Process(d *ledger.Day) error {
+	valTrx, err := vtc.computeValuationTransactions(vtc.Balance)
 	if err != nil {
 		return err
 	}
 	for _, t := range valTrx {
-		if err := b.bookValue(t); err != nil {
+		if err := vtc.Balance.bookValue(t); err != nil {
 			return err
 		}
 	}
@@ -345,43 +346,45 @@ func (vtc ValuationTransactionComputer) computeValuationTransactions(b *Balance)
 }
 
 // PeriodCloser closes the accounting period.
-type PeriodCloser struct{}
+type PeriodCloser struct {
+	Balance *Balance
+}
 
-var _ Processor = (*PeriodCloser)(nil)
+var _ ledger.Process = (*PeriodCloser)(nil)
 
 // Process implements Processor.
-func (as PeriodCloser) Process(b *Balance, d *ledger.Day) error {
-	var closingTransactions = as.computeClosingTransactions(b)
+func (as PeriodCloser) Process(d *ledger.Day) error {
+	var closingTransactions = as.computeClosingTransactions()
 	d.Transactions = append(d.Transactions, closingTransactions...)
 	for _, t := range closingTransactions {
-		if err := b.bookAmount(t); err != nil {
+		if err := as.Balance.bookAmount(t); err != nil {
 			return err
 		}
-		if err := b.bookValue(t); err != nil {
+		if err := as.Balance.bookValue(t); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (as PeriodCloser) computeClosingTransactions(b *Balance) []ledger.Transaction {
+func (as PeriodCloser) computeClosingTransactions() []ledger.Transaction {
 	var result []ledger.Transaction
-	for pos, va := range b.Amounts {
+	for pos, va := range as.Balance.Amounts {
 		var at = pos.Account.Type()
 		if at != ledger.INCOME && at != ledger.EXPENSES {
 			continue
 		}
 		result = append(result, ledger.Transaction{
-			Date:        b.Date,
+			Date:        as.Balance.Date,
 			Description: fmt.Sprintf("Closing %v to retained earnings", pos),
 			Tags:        nil,
 			Postings: []ledger.Posting{
 				{
 					Amount:    va,
-					Value:     b.Values[pos],
+					Value:     as.Balance.Values[pos],
 					Commodity: pos.Commodity,
 					Credit:    pos.Account,
-					Debit:     b.Context.RetainedEarningsAccount(),
+					Debit:     as.Balance.Context.RetainedEarningsAccount(),
 				},
 			},
 		})
@@ -390,24 +393,26 @@ func (as PeriodCloser) computeClosingTransactions(b *Balance) []ledger.Transacti
 }
 
 // AccountCloser closes accounts.
-type AccountCloser struct{}
+type AccountCloser struct {
+	Balance *Balance
+}
 
-var _ Processor = (*AccountCloser)(nil)
+var _ ledger.Process = (*AccountCloser)(nil)
 
 // Process implements Processor.
-func (vtc AccountCloser) Process(b *Balance, d *ledger.Day) error {
+func (vtc AccountCloser) Process(d *ledger.Day) error {
 	for _, c := range d.Closings {
-		for pos, amount := range b.Amounts {
+		for pos, amount := range vtc.Balance.Amounts {
 			if pos.Account != c.Account {
 				continue
 			}
-			if !amount.IsZero() || !b.Values[pos].IsZero() {
+			if !amount.IsZero() || !vtc.Balance.Values[pos].IsZero() {
 				return Error{c, "account has nonzero position"}
 			}
-			delete(b.Amounts, pos)
-			delete(b.Values, pos)
+			delete(vtc.Balance.Amounts, pos)
+			delete(vtc.Balance.Values, pos)
 		}
-		if err := b.Accounts.Close(c.Account); err != nil {
+		if err := vtc.Balance.Accounts.Close(c.Account); err != nil {
 			return err
 		}
 	}

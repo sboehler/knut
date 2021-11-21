@@ -159,47 +159,30 @@ type Builder struct {
 // Build builds a sequence of balances.
 func (b Builder) Build(l ledger.Ledger) ([]*Balance, error) {
 	var (
-		result     []*Balance
-		processors = []Processor{
-			DateUpdater{},
+		balance = New(l.Context, b.Valuation)
+		result  []*Balance
+		steps   = []ledger.Process{
+			DateUpdater{balance},
 			&Snapshotter{
-				From:   b.From,
-				To:     b.To,
-				Period: b.Period,
-				Last:   b.Last,
-				Diff:   b.Diff,
-				Result: &result},
-			AccountOpener{},
-			TransactionBooker{},
-			ValueBooker{},
-			Asserter{},
-			new(PriceUpdater),
-			TransactionValuator{},
-			ValuationTransactionComputer{},
-			AccountCloser{},
+				Balance: balance,
+				From:    b.From,
+				To:      b.To,
+				Period:  b.Period,
+				Last:    b.Last,
+				Diff:    b.Diff,
+				Result:  &result},
+			AccountOpener{balance},
+			TransactionBooker{balance},
+			ValueBooker{balance},
+			Asserter{balance},
+			&PriceUpdater{Balance: balance},
+			TransactionValuator{balance},
+			ValuationTransactionComputer{balance},
+			AccountCloser{balance},
 		}
-		bal = New(l.Context, b.Valuation)
 	)
-	for _, pr := range processors {
-		if f, ok := pr.(Initializer); ok {
-			if err := f.Initialize(l); err != nil {
-				return nil, err
-			}
-		}
-	}
-	for _, step := range l.Days {
-		for _, pr := range processors {
-			if err := pr.Process(bal, step); err != nil {
-				return nil, err
-			}
-		}
-	}
-	for _, pr := range processors {
-		if f, ok := pr.(Finalizer); ok {
-			if err := f.Finalize(bal); err != nil {
-				return nil, err
-			}
-		}
+	if err := (ledger.Processor{Steps: steps}).Process(l); err != nil {
+		return nil, err
 	}
 	return result, nil
 }

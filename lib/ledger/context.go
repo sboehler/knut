@@ -1,6 +1,9 @@
 package ledger
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // Context has context for this ledger, namely a collection of
 // referenced accounts and
@@ -31,7 +34,7 @@ func (c Context) GetCommodity(name string) (*Commodity, error) {
 func (c Context) ValuationAccount() *Account {
 	res, err := c.accounts.Get("Equity:Valuation")
 	if err != nil {
-		panic("could not create valuation account")
+		panic(fmt.Sprintf("could not create valuation account: %v", err))
 	}
 	return res
 }
@@ -40,7 +43,7 @@ func (c Context) ValuationAccount() *Account {
 func (c Context) EquityAccount() *Account {
 	res, err := c.accounts.Get("Equity:Equity")
 	if err != nil {
-		panic("Could not create equityAccount")
+		panic(fmt.Sprintf("could not create equityAccount: %v", err))
 	}
 	return res
 }
@@ -49,7 +52,7 @@ func (c Context) EquityAccount() *Account {
 func (c Context) RetainedEarningsAccount() *Account {
 	res, err := c.accounts.Get("Equity:RetainedEarnings")
 	if err != nil {
-		panic("Could not create valuationAccount")
+		panic(fmt.Sprintf("could not create valuationAccount: %v", err))
 	}
 	return res
 }
@@ -58,7 +61,7 @@ func (c Context) RetainedEarningsAccount() *Account {
 func (c Context) TBDAccount() *Account {
 	tbdAccount, err := c.accounts.Get("Expenses:TBD")
 	if err != nil {
-		panic("Could not create Expenses:TBD account")
+		panic(fmt.Sprintf("could not create Expenses:TBD account: %v", err))
 	}
 	return tbdAccount
 }

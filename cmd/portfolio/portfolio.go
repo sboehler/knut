@@ -24,15 +24,13 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/balance"
-	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/model/commodities"
+	"github.com/sboehler/knut/lib/parser"
 	"github.com/sboehler/knut/lib/performance"
 
 	"github.com/spf13/cobra"
-	"go.uber.org/multierr"
 )
 
 // CreateCmd creates the command.
@@ -96,21 +94,22 @@ func execute(cmd *cobra.Command, args []string) error {
 }
 
 type pipeline struct {
-	Journal        journal.Journal
-	LedgerFilter   ledger.Filter
-	BalanceBuilder balance.Builder
-	PerfCalc       performance.Calculator
+	Journal         parser.RecursiveParser
+	LedgerFilter    ledger.Filter
+	ProcessingSteps []ledger.Process
+	PerfCalc        performance.Calculator
 }
 
 func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	var (
+		ctx      = ledger.NewContext()
 		from, to *time.Time
 		err      error
 	)
-	if from, err = parseDate(cmd, "from"); err != nil {
+	if from, err = flags.GetDateFlag(cmd, "from"); err != nil {
 		return nil, err
 	}
-	if to, err = parseDate(cmd, "to"); err != nil {
+	if to, err = flags.GetDateFlag(cmd, "to"); err != nil {
 		return nil, err
 	}
 	if to == nil {
@@ -124,7 +123,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	if err != nil {
 		return nil, err
 	}
-	valuation, err := parseValuation(cmd, "val")
+	valuation, err := flags.GetCommodityFlag(cmd, ctx, "val")
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +131,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	// if err != nil {
 	// 	return nil, err
 	// }
-	period, err := parsePeriod(cmd, "period")
+	period, err := flags.GetPeriodFlag(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -154,15 +153,29 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	}
 
 	var (
-		journal = journal.Journal{
-			File: args[0],
+		journal = parser.RecursiveParser{
+			File:    args[0],
+			Context: ctx,
 		}
-		balanceBuilder = balance.Builder{
-			From:      from,
-			To:        to,
-			Period:    period,
-			Last:      last,
-			Valuation: valuation,
+		bal    = balance.New(ctx, valuation)
+		result []*balance.Balance
+		steps  = []ledger.Process{
+			balance.DateUpdater{Balance: bal},
+			&balance.Snapshotter{
+				Balance: bal,
+				From:    from,
+				To:      to,
+				Period:  period,
+				Last:    last,
+				Result:  &result},
+			balance.AccountOpener{Balance: bal},
+			balance.TransactionBooker{Balance: bal},
+			balance.ValueBooker{Balance: bal},
+			balance.Asserter{Balance: bal},
+			&balance.PriceUpdater{Balance: bal},
+			balance.TransactionValuator{Balance: bal},
+			balance.ValuationTransactionComputer{Balance: bal},
+			balance.AccountCloser{Balance: bal},
 		}
 		ledgerFilter = ledger.Filter{
 			CommoditiesFilter: filterCommoditiesRegex,
@@ -170,9 +183,9 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		}
 	)
 	return &pipeline{
-		Journal:        journal,
-		LedgerFilter:   ledgerFilter,
-		BalanceBuilder: balanceBuilder,
+		Journal:         journal,
+		LedgerFilter:    ledgerFilter,
+		ProcessingSteps: steps,
 		PerfCalc: performance.Calculator{
 			Filter:    ledgerFilter,
 			Valuation: valuation,
@@ -185,63 +198,13 @@ func processPipeline(w io.Writer, ppl *pipeline) error {
 		l   ledger.Ledger
 		err error
 	)
-	if l, err = ledger.FromDirectives(ledger.Filter{}, ppl.Journal.Parse()); err != nil {
+	if l, err = ppl.Journal.BuildLedger(ledger.Filter{}); err != nil {
 		return err
 	}
-	if _, err = ppl.BalanceBuilder.Build(l); err != nil {
+	if err = l.Process(ppl.ProcessingSteps); err != nil {
 		return err
 	}
 	for range ppl.PerfCalc.Perf(l) {
 	}
 	return nil
-}
-
-func parseValuation(cmd *cobra.Command, name string) (*commodities.Commodity, error) {
-	val, err := cmd.Flags().GetString(name)
-	if err != nil {
-		return nil, err
-	}
-	if len(val) == 0 {
-		return nil, nil
-	}
-	return commodities.Get(val), nil
-}
-
-func parseDate(cmd *cobra.Command, arg string) (*time.Time, error) {
-	s, err := cmd.Flags().GetString(arg)
-	if err != nil || s == "" {
-		return nil, err
-	}
-	t, err := time.Parse("2006-01-02", s)
-	return &t, err
-}
-
-func parsePeriod(cmd *cobra.Command, arg string) (*date.Period, error) {
-	var (
-		periods = []struct {
-			name   string
-			period date.Period
-		}{
-			{"days", date.Daily},
-			{"weeks", date.Weekly},
-			{"months", date.Monthly},
-			{"quarters", date.Quarterly},
-			{"years", date.Yearly},
-		}
-
-		errors error
-		result *date.Period
-	)
-	for _, tuple := range periods {
-		v, err := cmd.Flags().GetBool(tuple.name)
-		if err != nil {
-			errors = multierr.Append(errors, err)
-			continue
-		}
-		if v && result == nil {
-			var p = tuple.period
-			result = &p
-		}
-	}
-	return result, errors
 }

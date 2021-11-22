@@ -96,7 +96,7 @@ func execute(cmd *cobra.Command, args []string) error {
 type pipeline struct {
 	Journal         parser.RecursiveParser
 	LedgerFilter    ledger.Filter
-	ProcessingSteps []ledger.Process
+	ProcessingSteps []ledger.Processor
 	PerfCalc        performance.Calculator
 }
 
@@ -159,7 +159,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		}
 		bal    = balance.New(ctx, valuation)
 		result []*balance.Balance
-		steps  = []ledger.Process{
+		steps  = []ledger.Processor{
 			balance.DateUpdater{Balance: bal},
 			&balance.Snapshotter{
 				Balance: bal,

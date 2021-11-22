@@ -29,7 +29,7 @@ type DateUpdater struct {
 	Balance *Balance
 }
 
-var _ ledger.Process = (*DateUpdater)(nil)
+var _ ledger.Processor = (*DateUpdater)(nil)
 
 // Process implements Processor.
 func (a DateUpdater) Process(d *ledger.Day) error {
@@ -51,7 +51,7 @@ type Snapshotter struct {
 
 var (
 	_ ledger.Initializer = (*Snapshotter)(nil)
-	_ ledger.Process     = (*Snapshotter)(nil)
+	_ ledger.Processor     = (*Snapshotter)(nil)
 	_ ledger.Finalizer   = (*Snapshotter)(nil)
 )
 
@@ -103,7 +103,7 @@ type PriceUpdater struct {
 
 var (
 	_ ledger.Initializer = (*PriceUpdater)(nil)
-	_ ledger.Process     = (*PriceUpdater)(nil)
+	_ ledger.Processor     = (*PriceUpdater)(nil)
 )
 
 // Initialize implements Initializer.
@@ -129,7 +129,7 @@ type AccountOpener struct {
 	Balance *Balance
 }
 
-var _ ledger.Process = (*AccountOpener)(nil)
+var _ ledger.Processor = (*AccountOpener)(nil)
 
 // Process implements Processor.
 func (a AccountOpener) Process(d *ledger.Day) error {
@@ -146,7 +146,7 @@ type TransactionBooker struct {
 	Balance *Balance
 }
 
-var _ ledger.Process = (*TransactionBooker)(nil)
+var _ ledger.Processor = (*TransactionBooker)(nil)
 
 // Process implements Processor.
 func (tb TransactionBooker) Process(d *ledger.Day) error {
@@ -164,7 +164,7 @@ type ValueBooker struct {
 	Balance *Balance
 }
 
-var _ ledger.Process = (*ValueBooker)(nil)
+var _ ledger.Processor = (*ValueBooker)(nil)
 
 // Process implements Processor.
 func (tb ValueBooker) Process(d *ledger.Day) error {
@@ -209,7 +209,7 @@ type Asserter struct {
 	Balance *Balance
 }
 
-var _ ledger.Process = (*Asserter)(nil)
+var _ ledger.Processor = (*Asserter)(nil)
 
 // Process implements Processor.
 func (as Asserter) Process(d *ledger.Day) error {
@@ -238,7 +238,7 @@ type TransactionValuator struct {
 	Balance *Balance
 }
 
-var _ ledger.Process = (*TransactionValuator)(nil)
+var _ ledger.Processor = (*TransactionValuator)(nil)
 
 // Process implements Processor.
 func (as TransactionValuator) Process(d *ledger.Day) error {
@@ -276,7 +276,7 @@ type ValuationTransactionComputer struct {
 	Balance *Balance
 }
 
-var _ ledger.Process = (*ValuationTransactionComputer)(nil)
+var _ ledger.Processor = (*ValuationTransactionComputer)(nil)
 
 // Process implements Processor.
 func (vtc ValuationTransactionComputer) Process(d *ledger.Day) error {
@@ -364,7 +364,7 @@ type PeriodCloser struct {
 	Balance *Balance
 }
 
-var _ ledger.Process = (*PeriodCloser)(nil)
+var _ ledger.Processor = (*PeriodCloser)(nil)
 
 // Process implements Processor.
 func (as PeriodCloser) Process(d *ledger.Day) error {
@@ -411,7 +411,7 @@ type AccountCloser struct {
 	Balance *Balance
 }
 
-var _ ledger.Process = (*AccountCloser)(nil)
+var _ ledger.Processor = (*AccountCloser)(nil)
 
 // Process implements Processor.
 func (vtc AccountCloser) Process(d *ledger.Day) error {

@@ -74,7 +74,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	}
 	var (
 		bal   = balance.New(ctx, commodity)
-		steps = []ledger.Process{
+		steps = []ledger.Processor{
 			balance.DateUpdater{Balance: bal},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},

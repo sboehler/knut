@@ -19,8 +19,8 @@ type Initializer interface {
 	Initialize(l Ledger) error
 }
 
-// Process processes the balance and the ledger day.
-type Process interface {
+// Processor processes the balance and the ledger day.
+type Processor interface {
 	Process(d *Day) error
 }
 
@@ -30,7 +30,7 @@ type Finalizer interface {
 }
 
 // Process processes a ledger.
-func (l Ledger) Process(steps []Process) error {
+func (l Ledger) Process(steps []Processor) error {
 	for _, pr := range steps {
 		if f, ok := pr.(Initializer); ok {
 			if err := f.Initialize(l); err != nil {
@@ -52,5 +52,18 @@ func (l Ledger) Process(steps []Process) error {
 			}
 		}
 	}
+	return nil
+}
+
+// ProcessAsync processes the ledger asynchronously.
+func (l Ledger) ProcessAsync(steps []Processor) chan<- error {
+	var ch chan error
+	go func(steps []Processor) {
+		defer close(ch)
+		if err := l.Process(steps); err != nil {
+			ch <- err
+			return
+		}
+	}(steps)
 	return nil
 }

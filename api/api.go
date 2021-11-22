@@ -65,7 +65,7 @@ type pipeline struct {
 	Accounts        *ledger.Accounts
 	Parser          parser.RecursiveParser
 	Filter          ledger.Filter
-	ProcessingSteps []ledger.Process
+	ProcessingSteps []ledger.Processor
 	Balances        *[]*balance.Balance
 }
 
@@ -108,7 +108,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 	var (
 		bal    = balance.New(ctx, valuation)
 		result []*balance.Balance
-		steps  = []ledger.Process{
+		steps  = []ledger.Processor{
 			balance.DateUpdater{Balance: bal},
 			&balance.Snapshotter{
 				Balance: bal,

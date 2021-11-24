@@ -92,8 +92,8 @@ func execute(cmd *cobra.Command, args []string) error {
 }
 
 type pipeline struct {
-	Journal         parser.RecursiveParser
-	LedgerFilter    ledger.Filter
+	Parser          parser.RecursiveParser
+	Filter          ledger.Filter
 	ProcessingSteps []ledger.Processor
 	PerfCalc        performance.Calculator
 }
@@ -101,38 +101,12 @@ type pipeline struct {
 func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	var (
 		ctx = ledger.NewContext()
-		//from, to *time.Time
 		err error
 	)
-	// if from, err = flags.GetDateFlag(cmd, "from"); err != nil {
-	// 	return nil, err
-	// }
-	// if to, err = flags.GetDateFlag(cmd, "to"); err != nil {
-	// 	return nil, err
-	// }
-	// if to == nil {
-	// 	var (
-	// 		now = time.Now()
-	// 		d   = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-	// 	)
-	// 	to = &d
-	// }
-	// last, err := cmd.Flags().GetInt("last")
-	// if err != nil {
-	// 	return nil, err
-	// }
 	valuation, err := flags.GetCommodityFlag(cmd, ctx, "val")
 	if err != nil {
 		return nil, err
 	}
-	// showCommodities, err := cmd.Flags().GetBool("show-commodities")
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// period, err := flags.GetPeriodFlag(cmd)
-	// if err != nil {
-	// 	return nil, err
-	// }
 	filterAccounts, err := flags.GetRegexFlag(cmd, "account")
 	if err != nil {
 		return nil, err
@@ -141,13 +115,12 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	var (
-		journal = parser.RecursiveParser{
+		p = parser.RecursiveParser{
 			File:    args[0],
 			Context: ctx,
 		}
-		ledgerFilter = ledger.Filter{
+		filter = ledger.Filter{
 			CommoditiesFilter: filterCommodities,
 			AccountsFilter:    filterAccounts,
 		}
@@ -163,17 +136,17 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			balance.TransactionValuator{Balance: bal},
 			balance.ValuationTransactionComputer{Balance: bal},
 			balance.AccountCloser{Balance: bal},
-			&performance.Valuator{Filter: ledgerFilter, Result: res},
-			&performance.FlowComputer{Filter: ledgerFilter, Result: res},
+			&performance.Valuator{Filter: filter, Result: res},
+			&performance.FlowComputer{Filter: filter, Result: res},
 			//TODO: compute performance here
 		}
 	)
 	return &pipeline{
-		Journal:         journal,
-		LedgerFilter:    ledgerFilter,
+		Parser:          p,
+		Filter:          filter,
 		ProcessingSteps: steps,
 		PerfCalc: performance.Calculator{
-			Filter:    ledgerFilter,
+			Filter:    filter,
 			Valuation: valuation,
 		},
 	}, nil
@@ -184,7 +157,7 @@ func processPipeline(w io.Writer, ppl *pipeline) error {
 		l   ledger.Ledger
 		err error
 	)
-	if l, err = ppl.Journal.BuildLedger(ledger.Filter{}); err != nil {
+	if l, err = ppl.Parser.BuildLedger(ledger.Filter{}); err != nil {
 		return err
 	}
 	if err = l.Process(ppl.ProcessingSteps); err != nil {

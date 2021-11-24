@@ -20,9 +20,7 @@ import (
 	"io"
 	"log"
 	"os"
-	"regexp"
 	"runtime/pprof"
-	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/balance"
@@ -102,27 +100,27 @@ type pipeline struct {
 
 func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	var (
-		ctx      = ledger.NewContext()
-		from, to *time.Time
-		err      error
+		ctx = ledger.NewContext()
+		//from, to *time.Time
+		err error
 	)
-	if from, err = flags.GetDateFlag(cmd, "from"); err != nil {
-		return nil, err
-	}
-	if to, err = flags.GetDateFlag(cmd, "to"); err != nil {
-		return nil, err
-	}
-	if to == nil {
-		var (
-			now = time.Now()
-			d   = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-		)
-		to = &d
-	}
-	last, err := cmd.Flags().GetInt("last")
-	if err != nil {
-		return nil, err
-	}
+	// if from, err = flags.GetDateFlag(cmd, "from"); err != nil {
+	// 	return nil, err
+	// }
+	// if to, err = flags.GetDateFlag(cmd, "to"); err != nil {
+	// 	return nil, err
+	// }
+	// if to == nil {
+	// 	var (
+	// 		now = time.Now()
+	// 		d   = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	// 	)
+	// 	to = &d
+	// }
+	// last, err := cmd.Flags().GetInt("last")
+	// if err != nil {
+	// 	return nil, err
+	// }
 	valuation, err := flags.GetCommodityFlag(cmd, ctx, "val")
 	if err != nil {
 		return nil, err
@@ -131,23 +129,15 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	// if err != nil {
 	// 	return nil, err
 	// }
-	period, err := flags.GetPeriodFlag(cmd)
+	// period, err := flags.GetPeriodFlag(cmd)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	filterAccounts, err := flags.GetRegexFlag(cmd, "account")
 	if err != nil {
 		return nil, err
 	}
-	filterAccounts, err := cmd.Flags().GetString("account")
-	if err != nil {
-		return nil, err
-	}
-	filterAccountsRegex, err := regexp.Compile(filterAccounts)
-	if err != nil {
-		return nil, err
-	}
-	filterCommodities, err := cmd.Flags().GetString("commodity")
-	if err != nil {
-		return nil, err
-	}
-	filterCommoditiesRegex, err := regexp.Compile(filterCommodities)
+	filterCommodities, err := flags.GetRegexFlag(cmd, "commodity")
 	if err != nil {
 		return nil, err
 	}
@@ -157,17 +147,14 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			File:    args[0],
 			Context: ctx,
 		}
-		bal    = balance.New(ctx, valuation)
-		result []*balance.Balance
-		steps  = []ledger.Processor{
+		ledgerFilter = ledger.Filter{
+			CommoditiesFilter: filterCommodities,
+			AccountsFilter:    filterAccounts,
+		}
+		bal   = balance.New(ctx, valuation)
+		res   = new(performance.DailyPerfValues)
+		steps = []ledger.Processor{
 			balance.DateUpdater{Balance: bal},
-			&balance.Snapshotter{
-				Balance: bal,
-				From:    from,
-				To:      to,
-				Period:  period,
-				Last:    last,
-				Result:  &result},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
 			balance.ValueBooker{Balance: bal},
@@ -176,10 +163,9 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			balance.TransactionValuator{Balance: bal},
 			balance.ValuationTransactionComputer{Balance: bal},
 			balance.AccountCloser{Balance: bal},
-		}
-		ledgerFilter = ledger.Filter{
-			CommoditiesFilter: filterCommoditiesRegex,
-			AccountsFilter:    filterAccountsRegex,
+			&performance.Valuator{Filter: ledgerFilter, Result: res},
+			&performance.FlowComputer{Filter: ledgerFilter, Result: res},
+			//TODO: compute performance here
 		}
 	)
 	return &pipeline{

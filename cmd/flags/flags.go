@@ -17,6 +17,8 @@ package flags
 import (
 	"fmt"
 	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -24,6 +26,7 @@ import (
 
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/report"
 )
 
 // GetAccountFlag is a helper to get an account passed as a flag to the command.
@@ -99,4 +102,28 @@ func GetPeriodFlag(cmd *cobra.Command) (date.Period, error) {
 		return date.Once, nil
 	}
 	return results[0], nil
+}
+
+// GetCollapseFlag parses a flag of type -c1,<regex>.
+func GetCollapseFlag(cmd *cobra.Command, name string) ([]report.Collapse, error) {
+	collapse, err := cmd.Flags().GetStringArray(name)
+	if err != nil {
+		return nil, err
+	}
+	var res = make([]report.Collapse, 0, len(collapse))
+	for _, c := range collapse {
+		var s = strings.SplitN(c, ",", 2)
+		l, err := strconv.Atoi(s[0])
+		if err != nil {
+			return nil, fmt.Errorf("expected integer level, got %q (error: %v)", s[0], err)
+		}
+		var regex *regexp.Regexp
+		if len(s) == 2 {
+			if regex, err = regexp.Compile(s[1]); err != nil {
+				return nil, err
+			}
+		}
+		res = append(res, report.Collapse{Level: l, Regex: regex})
+	}
+	return res, nil
 }

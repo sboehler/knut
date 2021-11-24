@@ -20,10 +20,7 @@ import (
 	"io"
 	"log"
 	"os"
-	"regexp"
 	"runtime/pprof"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
@@ -127,10 +124,8 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			return nil, err
 		}
 	} else {
-		var (
-			now = time.Now()
-			d   = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-		)
+		now := time.Now()
+		d := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 		to = &d
 	}
 	last, err := cmd.Flags().GetInt("last")
@@ -159,7 +154,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	if err != nil {
 		return nil, err
 	}
-	collapse, err := parseCollapse(cmd, "collapse")
+	collapse, err := flags.GetCollapseFlag(cmd, "collapse")
 	if err != nil {
 		return nil, err
 	}
@@ -185,9 +180,9 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			File:    args[0],
 			Context: ctx,
 		}
-		bal    = balance.New(ctx, valuation)
-		result []*balance.Balance
-		steps  = []ledger.Processor{
+		bal      = balance.New(ctx, valuation)
+		balances []*balance.Balance
+		steps    = []ledger.Processor{
 			balance.DateUpdater{Balance: bal},
 			&balance.Snapshotter{
 				Balance: bal,
@@ -196,7 +191,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 				Period:  period,
 				Last:    last,
 				Diff:    diff,
-				Result:  &result},
+				Result:  &balances},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
 			balance.ValueBooker{Balance: bal},
@@ -227,7 +222,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		Parser:          parser,
 		Filter:          filter,
 		ProcessingSteps: steps,
-		Balances:        &result,
+		Balances:        &balances,
 		ReportBuilder:   reportBuilder,
 		ReportRenderer:  reportRenderer,
 		TextRenderer:    tableRenderer,
@@ -237,42 +232,17 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 func processPipeline(w io.Writer, ppl *pipeline) error {
 	var (
 		l   ledger.Ledger
-		bal []*balance.Balance
-		r   *report.Report
 		err error
 	)
 	if l, err = ppl.Parser.BuildLedger(ppl.Filter); err != nil {
 		return err
 	}
-	if err := l.Process(ppl.ProcessingSteps); err != nil {
+	if err = l.Process(ppl.ProcessingSteps); err != nil {
 		return err
 	}
-	bal = *ppl.Balances
-	if r, err = ppl.ReportBuilder.Build(bal); err != nil {
+	var r *report.Report
+	if r, err = ppl.ReportBuilder.Build(*ppl.Balances); err != nil {
 		return err
 	}
 	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(r), w)
-}
-
-func parseCollapse(cmd *cobra.Command, name string) ([]report.Collapse, error) {
-	collapse, err := cmd.Flags().GetStringArray(name)
-	if err != nil {
-		return nil, err
-	}
-	var res = make([]report.Collapse, 0, len(collapse))
-	for _, c := range collapse {
-		var s = strings.SplitN(c, ",", 2)
-		l, err := strconv.Atoi(s[0])
-		if err != nil {
-			return nil, fmt.Errorf("expected integer level, got %q (error: %v)", s[0], err)
-		}
-		var regex *regexp.Regexp
-		if len(s) == 2 {
-			if regex, err = regexp.Compile(s[1]); err != nil {
-				return nil, err
-			}
-		}
-		res = append(res, report.Collapse{Level: l, Regex: regex})
-	}
-	return res, nil
 }

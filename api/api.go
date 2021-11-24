@@ -135,8 +135,8 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 			File:    file,
 		},
 		Filter: ledger.Filter{
-			AccountsFilter:    accountsFilter,
-			CommoditiesFilter: commoditiesFilter,
+			Accounts:    accountsFilter,
+			Commodities: commoditiesFilter,
 		},
 		Balances:        &result,
 		ProcessingSteps: steps,

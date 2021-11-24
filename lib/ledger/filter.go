@@ -20,15 +20,20 @@ import (
 
 // Filter represents a filter creating a
 type Filter struct {
-	AccountsFilter, CommoditiesFilter *regexp.Regexp
+	Accounts, Commodities *regexp.Regexp
 }
 
 // MatchAccount returns whether this filterthe given Account.
 func (b Filter) MatchAccount(a *Account) bool {
-	return b.AccountsFilter == nil || b.AccountsFilter.MatchString(a.String())
+	return b.Accounts == nil || b.Accounts.MatchString(a.String())
 }
 
 // MatchCommodity returns whether this filter matches the given Commodity.
 func (b Filter) MatchCommodity(c *Commodity) bool {
-	return b.CommoditiesFilter == nil || b.CommoditiesFilter.MatchString(c.String())
+	return b.Commodities == nil || b.Commodities.MatchString(c.String())
+}
+
+// MatchPosting returns whether this filter matches the given Posting.
+func (b Filter) MatchPosting(p Posting) bool {
+	return (b.MatchAccount(p.Credit) || b.MatchAccount(p.Debit)) && b.MatchCommodity(p.Commodity)
 }

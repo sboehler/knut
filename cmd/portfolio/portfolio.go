@@ -121,8 +121,8 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			Context: ctx,
 		}
 		filter = ledger.Filter{
-			CommoditiesFilter: filterCommodities,
-			AccountsFilter:    filterAccounts,
+			Commodities: filterCommodities,
+			Accounts:    filterAccounts,
 		}
 		bal   = balance.New(ctx, valuation)
 		res   = new(performance.DailyPerfValues)

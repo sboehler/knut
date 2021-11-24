@@ -90,13 +90,9 @@ func (b *Builder) getOrCreate(d time.Time) *Day {
 func (b *Builder) AddTransaction(t Transaction) {
 	var filtered []Posting
 	for _, p := range t.Postings {
-		if !b.filter.MatchAccount(p.Credit) && !b.filter.MatchAccount(p.Debit) {
-			continue
+		if b.filter.MatchPosting(p) {
+			filtered = append(filtered, p)
 		}
-		if !b.filter.MatchCommodity(p.Commodity) {
-			continue
-		}
-		filtered = append(filtered, p)
 	}
 	if len(filtered) > 0 {
 		t.Postings = filtered
@@ -120,11 +116,10 @@ func (b *Builder) AddOpening(o Open) {
 
 // AddClosing adds a close directive.
 func (b *Builder) AddClosing(close Close) {
-	if !b.filter.MatchAccount(close.Account) {
-		return
+	if b.filter.MatchAccount(close.Account) {
+		var s = b.getOrCreate(close.Date)
+		s.Closings = append(s.Closings, close)
 	}
-	var s = b.getOrCreate(close.Date)
-	s.Closings = append(s.Closings, close)
 }
 
 // AddPrice adds a price directive.
@@ -135,18 +130,16 @@ func (b *Builder) AddPrice(p Price) {
 
 // AddAssertion adds an assertion directive.
 func (b *Builder) AddAssertion(a Assertion) {
-	if !b.filter.MatchAccount(a.Account) || !b.filter.MatchCommodity(a.Commodity) {
-		return
+	if b.filter.MatchAccount(a.Account) && b.filter.MatchCommodity(a.Commodity) {
+		var s = b.getOrCreate(a.Date)
+		s.Assertions = append(s.Assertions, a)
 	}
-	var s = b.getOrCreate(a.Date)
-	s.Assertions = append(s.Assertions, a)
 }
 
 // AddValue adds an value directive.
 func (b *Builder) AddValue(a Value) {
-	if !b.filter.MatchAccount(a.Account) || !b.filter.MatchCommodity(a.Commodity) {
-		return
+	if b.filter.MatchAccount(a.Account) && b.filter.MatchCommodity(a.Commodity) {
+		var s = b.getOrCreate(a.Date)
+		s.Values = append(s.Values, a)
 	}
-	var s = b.getOrCreate(a.Date)
-	s.Values = append(s.Values, a)
 }

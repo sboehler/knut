@@ -202,8 +202,8 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			balance.AccountCloser{Balance: bal},
 		}
 		filter = ledger.Filter{
-			AccountsFilter:    filterAccounts,
-			CommoditiesFilter: filterCommodities,
+			Accounts:    filterAccounts,
+			Commodities: filterCommodities,
 		}
 		reportBuilder = report.Builder{
 			Value:    valuation != nil,

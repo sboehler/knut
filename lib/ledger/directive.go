@@ -52,10 +52,10 @@ type Close struct {
 
 // Posting represents a posting.
 type Posting struct {
-	Amount, Value decimal.Decimal
-	Credit, Debit *Account
-	Commodity     *Commodity
-	Lot           *Lot
+	Amount, Value              decimal.Decimal
+	Credit, Debit              *Account
+	Commodity, TargetCommodity *Commodity
+	Lot                        *Lot
 }
 
 // NewPosting creates a new posting from the given parameters. If amount is negative, it
@@ -201,4 +201,10 @@ func isAL(a *Account) bool {
 
 func isIE(a *Account) bool {
 	return a.Type() == INCOME || a.Type() == EXPENSES
+}
+
+// Currency declares that a commodity is a currency.
+type Currency struct {
+	Range
+	*Commodity
 }

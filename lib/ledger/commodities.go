@@ -23,7 +23,8 @@ import (
 
 // Commodity represents a currency or security.
 type Commodity struct {
-	name string
+	name       string
+	IsCurrency bool
 }
 
 func (c Commodity) String() string {
@@ -63,10 +64,22 @@ func (c *Commodities) Get(name string) (*Commodity, error) {
 		if !isValidCommodity(name) {
 			return nil, fmt.Errorf("invalid commodity name %q", name)
 		}
-		res = &Commodity{name}
+		res = &Commodity{name: name}
 		c.commodities[name] = res
 	}
 	return res, nil
+}
+
+// TagCurrency tags the commodity as a currency.
+func (c *Commodities) TagCurrency(name string) error {
+	commodity, err := c.Get(name)
+	if err != nil {
+		return err
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	commodity.IsCurrency = true
+	return nil
 }
 
 func isValidCommodity(s string) bool {

@@ -101,6 +101,12 @@ func (p *Parser) Next() (ledger.Directive, error) {
 				return nil, p.scanner.ParseError(err)
 			}
 			return i, nil
+		case p.current() == 'c':
+			c, err := p.parseCurrency()
+			if err != nil {
+				return nil, p.scanner.ParseError(err)
+			}
+			return c, nil
 		case unicode.IsDigit(p.current()):
 			d, err := p.parseDirective()
 			if err != nil {
@@ -291,10 +297,10 @@ func (p *Parser) parsePostings() ([]ledger.Posting, error) {
 	var postings []ledger.Posting
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		var (
-			credit, debit *ledger.Account
-			amount        decimal.Decimal
-			commodity     *ledger.Commodity
-			lot           *ledger.Lot
+			credit, debit  *ledger.Account
+			amount         decimal.Decimal
+			commodity, tgt *ledger.Commodity
+			lot            *ledger.Lot
 
 			err error
 		)
@@ -322,20 +328,37 @@ func (p *Parser) parsePostings() ([]ledger.Posting, error) {
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		if p.current() == '{' {
-			if lot, err = p.parseLot(); err != nil {
-				return nil, err
-			}
-			if err = p.consumeWhitespace1(); err != nil {
-				return nil, err
+		for p.current() == '{' || p.current() == '(' {
+			switch p.current() {
+			case '{':
+				if lot != nil {
+					return nil, fmt.Errorf("duplicate lot")
+				}
+				if lot, err = p.parseLot(); err != nil {
+					return nil, err
+				}
+				if err = p.consumeWhitespace1(); err != nil {
+					return nil, err
+				}
+			case '(':
+				if lot != nil {
+					return nil, fmt.Errorf("duplicate target commodity")
+				}
+				if tgt, err = p.parseTargetCommodity(); err != nil {
+					return nil, err
+				}
+				if err = p.consumeWhitespace1(); err != nil {
+					return nil, err
+				}
 			}
 		}
 		postings = append(postings, ledger.Posting{
-			Credit:    credit,
-			Debit:     debit,
-			Amount:    amount,
-			Commodity: commodity,
-			Lot:       lot,
+			Credit:          credit,
+			Debit:           debit,
+			Amount:          amount,
+			Commodity:       commodity,
+			TargetCommodity: tgt,
+			Lot:             lot,
 		})
 		if err = p.consumeRestOfWhitespaceLine(); err != nil {
 			return nil, err
@@ -505,6 +528,28 @@ func (p *Parser) parseInclude() (ledger.Include, error) {
 	return result, nil
 }
 
+func (p *Parser) parseCurrency() (ledger.Currency, error) {
+	p.markStart()
+	if err := p.scanner.ParseString("currency"); err != nil {
+		return ledger.Currency{}, err
+	}
+	if err := p.consumeWhitespace1(); err != nil {
+		return ledger.Currency{}, err
+	}
+	i, err := p.parseCommodity()
+	if err != nil {
+		return ledger.Currency{}, err
+	}
+	result := ledger.Currency{
+		Range:     p.getRange(),
+		Commodity: i,
+	}
+	if err := p.consumeRestOfWhitespaceLine(); err != nil {
+		return ledger.Currency{}, err
+	}
+	return result, nil
+}
+
 func (p *Parser) consumeNewline() error {
 	if p.current() != scanner.EOF {
 		return p.scanner.ConsumeRune('\n')
@@ -598,6 +643,29 @@ func (p *Parser) parseLot() (*ledger.Lot, error) {
 		Price:     price,
 		Commodity: commodity,
 	}, nil
+}
+
+func (p *Parser) parseTargetCommodity() (*ledger.Commodity, error) {
+	var (
+		commodity *ledger.Commodity
+		err       error
+	)
+	if err = p.scanner.ConsumeRune('('); err != nil {
+		return nil, err
+	}
+	if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
+		return nil, err
+	}
+	if commodity, err = p.parseCommodity(); err != nil {
+		return nil, err
+	}
+	if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
+		return nil, err
+	}
+	if err = p.scanner.ConsumeRune(')'); err != nil {
+		return nil, err
+	}
+	return commodity, nil
 }
 
 func (p *Parser) parseTags() ([]ledger.Tag, error) {

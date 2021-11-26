@@ -106,6 +106,13 @@ func (p Printer) printPosting(w io.Writer, t ledger.Posting) (int, error) {
 	if err != nil {
 		return n, err
 	}
+	if t.TargetCommodity != nil {
+		c, err = fmt.Fprintf(w, " (%s)", t.TargetCommodity)
+		n += c
+		if err != nil {
+			return n, err
+		}
+	}
 	if t.Lot != nil {
 		c, err = io.WriteString(w, " ")
 		n += c

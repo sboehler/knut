@@ -93,6 +93,15 @@ type Transaction struct {
 	Postings    []Posting
 }
 
+// Commodities returns the commodities in this transaction.
+func (t Transaction) Commodities() map[*Commodity]bool {
+	var res = make(map[*Commodity]bool)
+	for _, pst := range t.Postings {
+		res[pst.Commodity] = true
+	}
+	return res
+}
+
 // Price represents a price command.
 type Price struct {
 	Range

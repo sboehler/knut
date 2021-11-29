@@ -58,7 +58,7 @@ var _ ledger.Processor = (*Valuator)(nil)
 
 // Process implements ledger.Processor.
 func (v *Valuator) Process(_ *ledger.Day) error {
-	var res = make(map[*ledger.Commodity]float64)
+	var res = make(pcv)
 	for ca, val := range v.Balance.Values {
 		var t = ca.Account.Type()
 		if t != ledger.ASSETS && t != ledger.LIABILITIES {
@@ -84,68 +84,88 @@ type FlowComputer struct {
 
 var _ ledger.Processor = (*FlowComputer)(nil)
 
+// pcv is a per-commodity value.
+type pcv map[*ledger.Commodity]float64
+
 // Process implements ledger.Processor.
 func (calc *FlowComputer) Process(step *ledger.Day) error {
-	var (
-		internalInflows  = make(map[*ledger.Commodity]float64)
-		internalOutflows = make(map[*ledger.Commodity]float64)
-		inflows          = make(map[*ledger.Commodity]float64)
-		outflows         = make(map[*ledger.Commodity]float64)
-	)
+	var internalInflows, internalOutflows, inflows, outflows pcv
 	for _, trx := range step.Transactions {
-		var gains = make(map[*ledger.Commodity]float64)
+		var cs = trx.Commodities()
+		var gains pcv
+
 		for _, pst := range trx.Postings {
 			var value, _ = pst.Value.Float64()
 			if calc.isPortfolioAccount(pst.Debit) {
 				// TODO: handle marker booking for dividends (or more general?).
 				switch pst.Credit.Type() {
 				case ledger.INCOME, ledger.EXPENSES:
-					if pst.Commodity != calc.Valuation {
-						internalInflows[pst.Commodity] += value
-						internalOutflows[calc.Valuation] -= value
+					if pst.TargetCommodity == nil {
+						if len(cs) == 1 {
+							// treat like a regular inflow
+							get(&inflows)[pst.Commodity] += value
+						} else {
+							// create an unbalanced inflow
+							get(&gains)[pst.Commodity] += value
+						}
+					} else if pst.Commodity != pst.TargetCommodity {
+						// did not change the value of target, so we need to create
+						// a virtual outflow
+						get(&internalOutflows)[pst.TargetCommodity] -= value
+						get(&internalInflows)[pst.Commodity] += value
 					}
 				case ledger.ASSETS, ledger.LIABILITIES:
 					if !calc.Filter.MatchAccount(pst.Credit) {
-						inflows[pst.Commodity] += value
+						get(&inflows)[pst.Commodity] += value
 					}
 				case ledger.EQUITY:
-					if !pst.Amount.IsZero() {
-						gains[pst.Commodity] += value
+					if !pst.Amount.IsZero() && len(cs) > 1 {
+						get(&gains)[pst.Commodity] += value
 					}
 				}
 			}
 			if calc.isPortfolioAccount(pst.Credit) {
 				switch pst.Debit.Type() {
 				case ledger.INCOME, ledger.EXPENSES:
-					if pst.Commodity != calc.Valuation {
-						internalOutflows[pst.Commodity] -= value
-						internalInflows[calc.Valuation] += value
+					if pst.TargetCommodity == nil {
+						if len(cs) == 1 {
+							// treat like a regular inflow
+							get(&outflows)[pst.Commodity] -= value
+						} else {
+							get(&gains)[pst.Commodity] -= value
+						}
+					} else if pst.Commodity != pst.TargetCommodity {
+						// did not change the value of target, so we need to create
+						// a virtual inflow
+						get(&internalOutflows)[pst.Commodity] -= value
+						get(&internalInflows)[pst.TargetCommodity] += value
 					}
 				case ledger.ASSETS, ledger.LIABILITIES:
 					if !calc.Filter.MatchAccount(pst.Debit) {
-						outflows[pst.Commodity] -= value
+						get(&outflows)[pst.Commodity] -= value
 					}
 				case ledger.EQUITY:
-					if !pst.Amount.IsZero() {
-						gains[pst.Commodity] -= value
+					if !pst.Amount.IsZero() && len(cs) > 1 {
+						get(&gains)[pst.Commodity] -= value
 					}
 				}
 			}
 		}
-		var totalGains, totalLosses float64
-		for _, gain := range gains {
-			if gain > 0 {
-				totalGains += gain
-			} else {
-				totalLosses += gain
+		if len(cs) > 1 {
+			var diff float64
+			for _, gain := range gains {
+				diff += gain
 			}
-		}
-		var diff = totalGains + totalLosses
-		for c, gain := range gains {
-			if gain > 0 {
-				internalInflows[c] += gain * (1 - 0.5*diff/totalGains)
-			} else if gain < 0 {
-				internalOutflows[c] += gain * (1 - 0.5*diff/totalLosses)
+			var s = calc.determineStructure(gains)
+			for c := range s {
+				gains[c] -= diff / float64(len(s))
+			}
+			for c, gain := range gains {
+				if gain > 0 {
+					get(&internalInflows)[c] += gain
+				} else if gain < 0 {
+					get(&internalOutflows)[c] += gain
+				}
 			}
 		}
 	}
@@ -157,6 +177,37 @@ func (calc *FlowComputer) Process(step *ledger.Day) error {
 	return nil
 }
 
+func get(m *pcv) pcv {
+	if *m == nil {
+		*m = make(pcv)
+	}
+	return *m
+}
+
+func (calc FlowComputer) determineStructure(g pcv) map[*ledger.Commodity]bool {
+	var res = make(map[*ledger.Commodity]bool)
+	for c := range g {
+		if !c.IsCurrency {
+			res[c] = true
+		}
+	}
+	if len(res) > 0 {
+		return res
+	}
+	for c := range g {
+		if c != calc.Valuation {
+			res[c] = true
+		}
+	}
+	if len(res) > 0 {
+		return res
+	}
+	for c := range g {
+		res[c] = true
+	}
+	return res
+}
+
 func (calc FlowComputer) isPortfolioAccount(a *ledger.Account) bool {
 	return (a.Type() == ledger.ASSETS || a.Type() == ledger.LIABILITIES) && calc.Filter.MatchAccount(a)
 }
@@ -165,7 +216,7 @@ func (calc FlowComputer) isPortfolioAccount(a *ledger.Account) bool {
 
 // DailyPerfValues represents monetary values and flows in a period.
 type DailyPerfValues struct {
-	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow map[*ledger.Commodity]float64
+	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow pcv
 	Err                                                      error
 }
 

@@ -17,6 +17,7 @@ package ledger
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"sync"
 	"unicode"
@@ -69,12 +70,20 @@ var accountTypes = map[string]AccountType{
 type Accounts struct {
 	mutex    sync.RWMutex
 	accounts map[string]*Account
+	roots    map[AccountType]*Account
 }
 
 // NewAccounts creates a new thread-safe collection of accounts.
 func NewAccounts() *Accounts {
 	return &Accounts{
 		accounts: make(map[string]*Account),
+		roots: map[AccountType]*Account{
+			ASSETS:      {accountType: ASSETS, segment: "Assets"},
+			LIABILITIES: {accountType: LIABILITIES, segment: "Liabilities"},
+			EQUITY:      {accountType: EQUITY, segment: "Equity"},
+			INCOME:      {accountType: INCOME, segment: "Income"},
+			EXPENSES:    {accountType: EXPENSES, segment: "Expenses"},
+		},
 	}
 }
 
@@ -83,32 +92,32 @@ func (a *Accounts) Get(name string) (*Account, error) {
 	a.mutex.RLock()
 	res, ok := a.accounts[name]
 	a.mutex.RUnlock()
-	if !ok {
-		a.mutex.Lock()
-		defer a.mutex.Unlock()
-		// check if the account has been created in the meantime
-		if a, ok := a.accounts[name]; ok {
-			return a, nil
-		}
-		var segments = strings.Split(name, ":")
-		if len(segments) < 2 {
-			return nil, fmt.Errorf("invalid account name: %q", name)
-		}
-		at, ok := accountTypes[segments[0]]
-		if !ok {
-			return nil, fmt.Errorf("account name %q has an invalid account type %q", name, segments[0])
-		}
-		for _, s := range segments[1:] {
-			if !isValidSegment(s) {
-				return nil, fmt.Errorf("account name %q has an invalid segment %q", name, s)
-			}
-		}
-		res = &Account{
-			accountType: at,
-			name:        name,
-		}
-		a.accounts[name] = res
+	if ok {
+		return res, nil
 	}
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	// check if the account has been created in the meantime
+	if a, ok := a.accounts[name]; ok {
+		return a, nil
+	}
+	var segments = strings.Split(name, ":")
+	if len(segments) < 2 {
+		return nil, fmt.Errorf("invalid account name: %q", name)
+	}
+	head, tail := segments[0], segments[1:]
+	at, ok := accountTypes[head]
+	if !ok {
+		return nil, fmt.Errorf("account name %q has an invalid account type %q", name, segments[0])
+	}
+	for _, s := range tail {
+		if !isValidSegment(s) {
+			return nil, fmt.Errorf("account name %q has an invalid segment %q", name, s)
+		}
+	}
+	root := a.roots[at]
+	res = root.insert(tail)
+	a.accounts[name] = res
 	return res, nil
 }
 
@@ -127,12 +136,41 @@ func isValidSegment(s string) bool {
 // Account represents an account which can be used in bookings.
 type Account struct {
 	accountType AccountType
-	name        string
+	segment     string
+	parent      *Account
+	children    []*Account
+}
+
+func (a *Account) insert(segments []string) *Account {
+	if len(segments) == 0 {
+		return a
+	}
+	head, tail := segments[0], segments[1:]
+	index := sort.Search(len(a.children), func(i int) bool { return a.children[i].segment >= head })
+	if index == len(a.children) || a.children[index].segment != head {
+		a.children = append(a.children, nil)
+		copy(a.children[index+1:], a.children[index:])
+		a.children[index] = &Account{
+			segment:     head,
+			accountType: a.accountType,
+			parent:      a,
+		}
+	}
+	return a.children[index].insert(tail)
 }
 
 // Split returns the account name split into segments.
 func (a Account) Split() []string {
-	return strings.Split(a.name, ":")
+	var res []string
+	if a.parent != nil {
+		res = a.parent.Split()
+	}
+	return append(res, a.segment)
+}
+
+// Name returns the name of this account.
+func (a Account) Name() string {
+	return strings.Join(a.Split(), ":")
 }
 
 // Type returns the account type.
@@ -142,10 +180,10 @@ func (a Account) Type() AccountType {
 
 // WriteTo writes the account to the writer.
 func (a Account) WriteTo(w io.Writer) (int64, error) {
-	n, err := fmt.Fprint(w, a.name)
+	n, err := fmt.Fprint(w, a.Name())
 	return int64(n), err
 }
 
 func (a Account) String() string {
-	return a.name
+	return a.Name()
 }

@@ -37,34 +37,34 @@ func NewSegment(k string) *Segment {
 
 func (s *Segment) insert(keys []string, pos Position) {
 	if len(keys) > 0 {
-		var (
-			key        = keys[0]
-			subsegment *Segment
-		)
-		for _, ss := range s.Subsegments {
-			if ss.Key == key {
-				subsegment = ss
-				break
-			}
-		}
-		if subsegment == nil {
-			subsegment = NewSegment(key)
-			s.Subsegments = append(s.Subsegments, subsegment)
-		}
-		subsegment.insert(keys[1:], pos)
+		head, tail := keys[0], keys[1:]
+		s.findOrCreateSubsegment(head).insert(tail, pos)
 	} else {
-		if existing, ok := s.Positions[pos.Commodity]; ok {
-			existing.Add(pos.Amounts)
-		} else {
-			s.Positions[pos.Commodity] = pos.Amounts
-		}
+		s.addPosition(pos.Commodity, pos.Amounts)
 	}
 }
 
-func (s *Segment) sum(m map[*ledger.Commodity]vector.Vector) map[*ledger.Commodity]vector.Vector {
-	if m == nil {
-		m = make(map[*ledger.Commodity]vector.Vector)
+func (s *Segment) findOrCreateSubsegment(key string) *Segment {
+	for _, ss := range s.Subsegments {
+		if ss.Key == key {
+			return ss
+		}
 	}
+	var subsegment = NewSegment(key)
+	s.Subsegments = append(s.Subsegments, subsegment)
+	return subsegment
+}
+
+func (s *Segment) addPosition(c *ledger.Commodity, v vector.Vector) {
+	pos, ok := s.Positions[c]
+	if !ok {
+		pos = vector.New(len(v.Values))
+		s.Positions[c] = pos
+	}
+	pos.Add(v)
+}
+
+func (s *Segment) sum(m map[*ledger.Commodity]vector.Vector) {
 	for _, ss := range s.Subsegments {
 		ss.sum(m)
 	}
@@ -74,5 +74,4 @@ func (s *Segment) sum(m map[*ledger.Commodity]vector.Vector) map[*ledger.Commodi
 		}
 		m[c].Add(a)
 	}
-	return m
 }

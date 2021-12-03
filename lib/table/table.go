@@ -110,6 +110,13 @@ func (r *Row) AddIndented(content string, indent int) *Row {
 	return r
 }
 
+// FillEmpty fills the row with empty cells.
+func (r *Row) FillEmpty() {
+	for i := len(r.cells); i < cap(r.cells); i++ {
+		r.AddEmpty()
+	}
+}
+
 type cell interface {
 	isSep() bool
 }

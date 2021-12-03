@@ -17,26 +17,33 @@ type Builder struct {
 }
 
 // Build creates a new report.
-func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
+func (b Builder) Build(bs []*balance.Balance) (*Report, error) {
 	// compute the dates and positions array
 	var (
-		dates     = make([]time.Time, 0, len(bal))
-		positions = make([]map[balance.CommodityAccount]decimal.Decimal, 0, len(bal))
+		dates     []time.Time
+		positions []Position
 	)
-	for _, ba := range bal {
-		dates = append(dates, ba.Date)
+	for i, bal := range bs {
+		dates = append(dates, bal.Date)
+		var bp map[balance.CommodityAccount]decimal.Decimal
 		if b.Value {
-			positions = append(positions, ba.Values)
+			bp = bal.Values
 		} else {
-			positions = append(positions, ba.Amounts)
+			bp = bal.Amounts
+		}
+		for ca, pos := range bp {
+			index := sort.Search(len(positions), func(i int) bool { return !positions[i].CommodityAccount.Less(ca) })
+			if index == len(positions) || positions[index].CommodityAccount != ca {
+				positions = append(positions, Position{})
+				copy(positions[index+1:], positions[index:])
+				positions[index] = Position{ca, vector.New(len(bs))}
+			}
+			positions[index].Amounts.Values[i] = pos
 		}
 	}
 	var (
-		// collect arrays of amounts by commodity account, across balances
-		sortedPos = b.mergePositions(positions)
-
 		//compute the segments
-		segments = b.buildSegments(sortedPos)
+		segments = b.buildSegments(positions)
 
 		// compute totals
 		totals = make(map[*ledger.Commodity]vector.Vector)
@@ -62,41 +69,6 @@ func (b Builder) Build(bal []*balance.Balance) (*Report, error) {
 	}, nil
 }
 
-func (Builder) mergePositions(positions []map[balance.CommodityAccount]decimal.Decimal) []Position {
-	var commodityAccounts = make(map[balance.CommodityAccount]bool)
-	for _, p := range positions {
-		for ca := range p {
-			commodityAccounts[ca] = true
-		}
-	}
-	var res = make([]Position, 0, len(commodityAccounts))
-	for ca := range commodityAccounts {
-		var (
-			vec   = vector.New(len(positions))
-			empty = true
-		)
-		for i, p := range positions {
-			if amount, exists := p[ca]; exists {
-				if !amount.IsZero() {
-					vec.Values[i] = amount
-					empty = false
-				}
-			}
-		}
-		if empty {
-			continue
-		}
-		res = append(res, Position{
-			CommodityAccount: ca,
-			Amounts:          vec,
-		})
-	}
-	sort.Slice(res, func(i, j int) bool {
-		return res[i].Less(res[j].CommodityAccount)
-	})
-	return res
-}
-
 func (b Builder) buildSegments(positions []Position) map[ledger.AccountType]*Segment {
 	var result = make(map[ledger.AccountType]*Segment)
 	for _, position := range positions {
@@ -104,15 +76,16 @@ func (b Builder) buildSegments(positions []Position) map[ledger.AccountType]*Seg
 			at = position.Account.Type()
 			k  = b.shorten(b.Collapse, position.Account)
 		)
-		// Any positions with zero keys should end up in totals.
-		if len(k) > 0 {
-			var s, ok = result[at]
-			if !ok {
-				s = NewSegment(at.String())
-				result[at] = s
-			}
-			s.insert(k[1:], position)
+		// ignore positions with zero keys
+		if len(k) == 0 {
+			continue
 		}
+		s, ok := result[at]
+		if !ok {
+			s = NewSegment(at.String())
+			result[at] = s
+		}
+		s.insert(k[1:], position)
 	}
 	return result
 }

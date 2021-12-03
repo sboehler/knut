@@ -139,10 +139,7 @@ func (rn *Renderer) renderSegment(s *Segment) {
 }
 
 func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
-	var header = rn.table.AddRow().AddIndented(segment.Key, rn.indent)
-	for range rn.report.Dates {
-		header.AddEmpty()
-	}
+	rn.table.AddRow().AddIndented(segment.Key, rn.indent).FillEmpty()
 
 	// add one row per commodity in this position
 	rn.indent += indent

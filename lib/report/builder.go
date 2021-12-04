@@ -12,8 +12,8 @@ import (
 
 // Builder contains configuration options to build a report.
 type Builder struct {
-	Value    bool
-	Collapse ledger.Mapping
+	Value   bool
+	Mapping ledger.Mapping
 }
 
 // Build creates a new report.
@@ -75,7 +75,7 @@ func (b Builder) buildSegments(positions []Position) map[ledger.AccountType]*Seg
 		var (
 			at = position.Account.Type()
 			// TODO: get rid of segments by using accounts hierarchy.
-			k = position.Account.Map(b.Collapse).Split()
+			k = position.Account.Map(b.Mapping).Split()
 		)
 		// ignore positions with zero keys
 		if len(k) == 0 {

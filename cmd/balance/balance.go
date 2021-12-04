@@ -207,7 +207,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		}
 		reportBuilder = report.Builder{
 			Value:    valuation != nil,
-			Collapse: collapse,
+			Mapping: collapse,
 		}
 		reportRenderer = report.Renderer{
 			Commodities: showCommodities || valuation == nil,

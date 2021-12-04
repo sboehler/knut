@@ -17,6 +17,7 @@ package ledger
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 	"unicode"
 )
@@ -38,46 +39,72 @@ func (c Commodity) MarshalJSON() ([]byte, error) {
 
 // Commodities is a thread-safe collection of commodities.
 type Commodities struct {
-	commodities map[string]*Commodity
+	lookup      map[string]*Commodity
+	commodities []*Commodity
 	mutex       sync.RWMutex
 }
 
 // NewCommodities creates a new thread-safe collection of commodities.
 func NewCommodities() *Commodities {
 	return &Commodities{
-		commodities: make(map[string]*Commodity),
+		lookup: make(map[string]*Commodity),
 	}
 }
 
 // Get creates a new commodity.
-func (c *Commodities) Get(name string) (*Commodity, error) {
-	c.mutex.RLock()
-	res, ok := c.commodities[name]
-	c.mutex.RUnlock()
-	if !ok {
-		c.mutex.Lock()
-		defer c.mutex.Unlock()
-		// check if the commodity has been created in the meantime
-		if res, ok = c.commodities[name]; ok {
-			return res, nil
-		}
-		if !isValidCommodity(name) {
-			return nil, fmt.Errorf("invalid commodity name %q", name)
-		}
-		res = &Commodity{name: name}
-		c.commodities[name] = res
+func (cs *Commodities) Get(name string) (*Commodity, error) {
+	cs.mutex.RLock()
+	res, ok := cs.lookup[name]
+	cs.mutex.RUnlock()
+	if ok {
+		return res, nil
 	}
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
+	// check if the commodity has been created in the meantime
+	if res, ok = cs.lookup[name]; ok {
+		return res, nil
+	}
+	if !isValidCommodity(name) {
+		return nil, fmt.Errorf("invalid commodity name %q", name)
+	}
+	res = &Commodity{name: name}
+	cs.insert(res)
+
 	return res, nil
 }
 
+func (cs *Commodities) insert(c *Commodity) {
+	index := sort.Search(len(cs.commodities), func(i int) bool { return cs.commodities[i].name >= c.name })
+	if index != len(cs.commodities) && cs.commodities[index].name == c.name {
+		return
+	}
+	cs.commodities = append(cs.commodities, nil)
+	copy(cs.commodities[index+1:], cs.commodities[index:])
+	cs.commodities[index] = c
+	cs.lookup[c.name] = c
+}
+
+// Enumerate enumerates the commodities.
+func (cs *Commodities) Enumerate() <-chan *Commodity {
+	ch := make(chan *Commodity)
+	go func() {
+		defer close(ch)
+		for _, c := range cs.commodities {
+			ch <- c
+		}
+	}()
+	return ch
+}
+
 // TagCurrency tags the commodity as a currency.
-func (c *Commodities) TagCurrency(name string) error {
-	commodity, err := c.Get(name)
+func (cs *Commodities) TagCurrency(name string) error {
+	commodity, err := cs.Get(name)
 	if err != nil {
 		return err
 	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
 	commodity.IsCurrency = true
 	return nil
 }

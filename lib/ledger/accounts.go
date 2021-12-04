@@ -70,15 +70,15 @@ var accountTypes = map[string]AccountType{
 // Accounts is a thread-safe collection of accounts.
 type Accounts struct {
 	mutex    sync.RWMutex
-	accounts map[string]*Account
-	roots    map[AccountType]*Account
+	index    map[string]*Account
+	accounts map[AccountType]*Account
 }
 
 // NewAccounts creates a new thread-safe collection of accounts.
 func NewAccounts() *Accounts {
 	return &Accounts{
-		accounts: make(map[string]*Account),
-		roots: map[AccountType]*Account{
+		index: make(map[string]*Account),
+		accounts: map[AccountType]*Account{
 			ASSETS:      {accountType: ASSETS, segment: "Assets", level: 1},
 			LIABILITIES: {accountType: LIABILITIES, segment: "Liabilities", level: 1},
 			EQUITY:      {accountType: EQUITY, segment: "Equity", level: 1},
@@ -89,17 +89,17 @@ func NewAccounts() *Accounts {
 }
 
 // Get returns an account.
-func (a *Accounts) Get(name string) (*Account, error) {
-	a.mutex.RLock()
-	res, ok := a.accounts[name]
-	a.mutex.RUnlock()
+func (as *Accounts) Get(name string) (*Account, error) {
+	as.mutex.RLock()
+	res, ok := as.index[name]
+	as.mutex.RUnlock()
 	if ok {
 		return res, nil
 	}
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
+	as.mutex.Lock()
+	defer as.mutex.Unlock()
 	// check if the account has been created in the meantime
-	if a, ok := a.accounts[name]; ok {
+	if a, ok := as.index[name]; ok {
 		return a, nil
 	}
 	var segments = strings.Split(name, ":")
@@ -116,9 +116,9 @@ func (a *Accounts) Get(name string) (*Account, error) {
 			return nil, fmt.Errorf("account name %q has an invalid segment %q", name, s)
 		}
 	}
-	root := a.roots[at]
+	root := as.accounts[at]
 	res = root.insert(tail)
-	a.accounts[name] = res
+	as.index[name] = res
 	return res, nil
 }
 
@@ -132,6 +132,34 @@ func isValidSegment(s string) bool {
 		}
 	}
 	return true
+}
+
+// PreOrder iterates over accounts in post-order.
+func (as *Accounts) PreOrder() <-chan *Account {
+	as.mutex.RLock()
+	defer as.mutex.RUnlock()
+	ch := make(chan *Account)
+	go func() {
+		defer close(ch)
+		for _, root := range as.accounts {
+			root.pre(ch)
+		}
+	}()
+	return ch
+}
+
+// PostOrder iterates over accounts in post-order.
+func (as *Accounts) PostOrder() <-chan *Account {
+	as.mutex.RLock()
+	defer as.mutex.RUnlock()
+	ch := make(chan *Account)
+	go func() {
+		defer close(ch)
+		for _, root := range as.accounts {
+			root.post(ch)
+		}
+	}()
+	return ch
 }
 
 // Account represents an account which can be used in bookings.
@@ -214,7 +242,20 @@ func (a *Account) nthParent(n int) *Account {
 		return nil
 	}
 	return a.parent.nthParent(n - 1)
+}
 
+func (a *Account) pre(ch chan<- *Account) {
+	ch <- a
+	for _, c := range a.children {
+		c.pre(ch)
+	}
+}
+
+func (a *Account) post(ch chan<- *Account) {
+	for _, c := range a.children {
+		c.post(ch)
+	}
+	ch <- a
 }
 
 // Rule is a rule to shorten accounts which match the given regex.

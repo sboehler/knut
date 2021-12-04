@@ -31,14 +31,14 @@ func (b Builder) Build(bs []*balance.Balance) (*Report, error) {
 		} else {
 			bp = bal.Amounts
 		}
-		for ca, pos := range bp {
-			index := sort.Search(len(positions), func(i int) bool { return !positions[i].CommodityAccount.Less(ca) })
-			if index == len(positions) || positions[index].CommodityAccount != ca {
+		for pos, v := range bp {
+			index := sort.Search(len(positions), func(i int) bool { return !positions[i].CommodityAccount.Less(pos) })
+			if index == len(positions) || positions[index].CommodityAccount != pos {
 				positions = append(positions, Position{})
 				copy(positions[index+1:], positions[index:])
-				positions[index] = Position{ca, vector.New(len(bs))}
+				positions[index] = Position{pos, vector.New(len(bs))}
 			}
-			positions[index].Amounts.Values[i] = pos
+			positions[index].Amounts.Values[i] = v
 		}
 	}
 	var (

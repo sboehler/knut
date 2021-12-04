@@ -25,20 +25,22 @@ func (b Builder) Build(bs []*balance.Balance) (*Report, error) {
 	)
 	for i, bal := range bs {
 		dates = append(dates, bal.Date)
-		var bp map[balance.CommodityAccount]decimal.Decimal
+		var bp map[*ledger.Account]map[*ledger.Commodity]decimal.Decimal
 		if b.Value {
 			bp = bal.Values
 		} else {
 			bp = bal.Amounts
 		}
-		for ca, pos := range bp {
-			index := sort.Search(len(positions), func(i int) bool { return !positions[i].CommodityAccount.Less(ca) })
-			if index == len(positions) || positions[index].CommodityAccount != ca {
-				positions = append(positions, Position{})
-				copy(positions[index+1:], positions[index:])
-				positions[index] = Position{ca, vector.New(len(bs))}
+		for acc, cm := range bp {
+			for com, pos := range cm {
+				index := sort.Search(len(positions), func(i int) bool { return !positions[i].Less(Position{Account: acc, Commodity: com}) })
+				if index == len(positions) || positions[index].Account != acc || positions[index].Commodity != com {
+					positions = append(positions, Position{})
+					copy(positions[index+1:], positions[index:])
+					positions[index] = Position{acc, com, vector.New(len(bs))}
+				}
+				positions[index].Amounts.Values[i] = pos
 			}
-			positions[index].Amounts.Values[i] = pos
 		}
 	}
 	var (

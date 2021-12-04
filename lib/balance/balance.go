@@ -29,7 +29,7 @@ import (
 // Balance represents a balance for accounts at the given date.
 type Balance struct {
 	Date             time.Time
-	Amounts, Values  map[CommodityAccount]decimal.Decimal
+	Amounts, Values  map[*ledger.Account]map[*ledger.Commodity]decimal.Decimal
 	Accounts         Accounts
 	Context          ledger.Context
 	Valuation        *ledger.Commodity
@@ -40,8 +40,8 @@ type Balance struct {
 func New(ctx ledger.Context, valuation *ledger.Commodity) *Balance {
 	return &Balance{
 		Context:   ctx,
-		Amounts:   make(map[CommodityAccount]decimal.Decimal),
-		Values:    make(map[CommodityAccount]decimal.Decimal),
+		Amounts:   make(map[*ledger.Account]map[*ledger.Commodity]decimal.Decimal),
+		Values:    make(map[*ledger.Account]map[*ledger.Commodity]decimal.Decimal),
 		Accounts:  make(Accounts),
 		Valuation: valuation,
 	}
@@ -64,11 +64,25 @@ func (b *Balance) Copy() *Balance {
 
 // Minus mutably subtracts the given balance from the receiver.
 func (b *Balance) Minus(bo *Balance) {
-	for pos, va := range bo.Amounts {
-		b.Amounts[pos] = b.Amounts[pos].Sub(va)
+	for acc, cm := range bo.Amounts {
+		for com, va := range cm {
+			vs, ok := b.Amounts[acc]
+			if !ok {
+				vs = make(map[*ledger.Commodity]decimal.Decimal)
+				b.Amounts[acc] = vs
+			}
+			vs[com] = vs[com].Sub(va)
+		}
 	}
-	for pos, va := range bo.Values {
-		b.Values[pos] = b.Values[pos].Sub(va)
+	for acc, cm := range bo.Values {
+		for com, va := range cm {
+			vs, ok := b.Values[acc]
+			if !ok {
+				vs = make(map[*ledger.Commodity]decimal.Decimal)
+				b.Values[acc] = vs
+			}
+			vs[com] = vs[com].Sub(va)
+		}
 	}
 }
 
@@ -80,24 +94,28 @@ func (b *Balance) bookAmount(t ledger.Transaction) error {
 		if !b.Accounts.IsOpen(posting.Debit) {
 			return Error{t, fmt.Sprintf("debit account %s is not open", posting.Debit)}
 		}
-		var (
-			crPos = CommodityAccount{posting.Credit, posting.Commodity}
-			drPos = CommodityAccount{posting.Debit, posting.Commodity}
-		)
-		b.Amounts[crPos] = b.Amounts[crPos].Sub(posting.Amount)
-		b.Amounts[drPos] = b.Amounts[drPos].Add(posting.Amount)
+		if _, ok := b.Amounts[posting.Credit]; !ok {
+			b.Amounts[posting.Credit] = make(map[*ledger.Commodity]decimal.Decimal)
+		}
+		if _, ok := b.Amounts[posting.Debit]; !ok {
+			b.Amounts[posting.Debit] = make(map[*ledger.Commodity]decimal.Decimal)
+		}
+		b.Amounts[posting.Credit][posting.Commodity] = b.Amounts[posting.Credit][posting.Commodity].Sub(posting.Amount)
+		b.Amounts[posting.Debit][posting.Commodity] = b.Amounts[posting.Debit][posting.Commodity].Add(posting.Amount)
 	}
 	return nil
 }
 
 func (b *Balance) bookValue(t ledger.Transaction) error {
 	for _, posting := range t.Postings {
-		var (
-			crPos = CommodityAccount{posting.Credit, posting.Commodity}
-			drPos = CommodityAccount{posting.Debit, posting.Commodity}
-		)
-		b.Values[crPos] = b.Values[crPos].Sub(posting.Value)
-		b.Values[drPos] = b.Values[drPos].Add(posting.Value)
+		if _, ok := b.Values[posting.Credit]; !ok {
+			b.Values[posting.Credit] = make(map[*ledger.Commodity]decimal.Decimal)
+		}
+		if _, ok := b.Values[posting.Debit]; !ok {
+			b.Values[posting.Debit] = make(map[*ledger.Commodity]decimal.Decimal)
+		}
+		b.Values[posting.Credit][posting.Commodity] = b.Values[posting.Credit][posting.Commodity].Sub(posting.Value)
+		b.Values[posting.Debit][posting.Commodity] = b.Values[posting.Debit][posting.Commodity].Add(posting.Value)
 	}
 	return nil
 }
@@ -127,21 +145,4 @@ func (be Error) Error() string {
 	p.PrintDirective(&b, be.directive)
 	fmt.Fprintf(&b, "\n%s\n", be.msg)
 	return b.String()
-}
-
-// CommodityAccount represents a position.
-type CommodityAccount struct {
-	Account   *ledger.Account
-	Commodity *ledger.Commodity
-}
-
-// Less establishes a partial ordering of commodity accounts.
-func (p CommodityAccount) Less(p1 CommodityAccount) bool {
-	if p.Account.Type() != p1.Account.Type() {
-		return p.Account.Type() < p1.Account.Type()
-	}
-	if p.Account.String() != p1.Account.String() {
-		return p.Account.String() < p1.Account.String()
-	}
-	return p.Commodity.String() < p1.Commodity.String()
 }

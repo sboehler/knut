@@ -51,7 +51,7 @@ type Snapshotter struct {
 
 var (
 	_ ledger.Initializer = (*Snapshotter)(nil)
-	_ ledger.Processor     = (*Snapshotter)(nil)
+	_ ledger.Processor   = (*Snapshotter)(nil)
 	_ ledger.Finalizer   = (*Snapshotter)(nil)
 )
 
@@ -103,7 +103,7 @@ type PriceUpdater struct {
 
 var (
 	_ ledger.Initializer = (*PriceUpdater)(nil)
-	_ ledger.Processor     = (*PriceUpdater)(nil)
+	_ ledger.Processor   = (*PriceUpdater)(nil)
 )
 
 // Initialize implements Initializer.
@@ -193,13 +193,12 @@ func (tb ValueBooker) processValue(v ledger.Value) (ledger.Transaction, error) {
 	if err != nil {
 		return ledger.Transaction{}, err
 	}
-	var pos = CommodityAccount{v.Account, v.Commodity}
 	return ledger.Transaction{
 		Date:        v.Date,
-		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
+		Description: fmt.Sprintf("Valuation adjustment for %v, %v", v.Account, v.Commodity),
 		Tags:        nil,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(valAcc, v.Account, pos.Commodity, v.Amount.Sub(tb.Balance.Amounts[pos])),
+			ledger.NewPosting(valAcc, v.Account, v.Commodity, v.Amount.Sub(tb.Balance.Amounts[v.Account][v.Commodity])),
 		},
 	}, nil
 }
@@ -225,10 +224,9 @@ func (as Asserter) processBalanceAssertion(b *Balance, a ledger.Assertion) error
 	if !b.Accounts.IsOpen(a.Account) {
 		return Error{a, "account is not open"}
 	}
-	var pos = CommodityAccount{a.Account, a.Commodity}
-	va, ok := b.Amounts[pos]
+	va, ok := b.Amounts[a.Account][a.Commodity]
 	if !ok || !va.Equal(a.Amount) {
-		return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va, pos.Commodity)}
+		return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va, a.Commodity)}
 	}
 	return nil
 }
@@ -294,8 +292,6 @@ func (vtc ValuationTransactionComputer) Process(d *ledger.Day) error {
 	return nil
 }
 
-var descCache = make(map[CommodityAccount]string)
-
 // computeValuationTransactions checks whether the valuation for the positions
 // corresponds to the amounts. If not, the difference is due to a valuation
 // change of the previous amount, and a transaction is created to adjust the
@@ -305,46 +301,42 @@ func (vtc ValuationTransactionComputer) computeValuationTransactions(b *Balance)
 		return nil, nil
 	}
 	var result []ledger.Transaction
-	for pos, va := range b.Amounts {
-		if pos.Commodity == b.Valuation {
-			continue
-		}
-		var at = pos.Account.Type()
-		if at != ledger.ASSETS && at != ledger.LIABILITIES {
-			continue
-		}
-		value, err := b.NormalizedPrices.Valuate(pos.Commodity, va)
-		if err != nil {
-			panic(fmt.Sprintf("no valuation found for commodity %s", pos.Commodity))
-		}
-		var diff = value.Sub(b.Values[pos])
-		if diff.IsZero() {
-			continue
-		}
-		var desc string
-		if s, ok := descCache[pos]; ok {
-			desc = s
-		} else {
-			desc = fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity, pos.Account)
-			descCache[pos] = desc
-		}
-		valAcc, err := b.Context.ValuationAccountFor(pos.Account)
-		if err != nil {
-			panic(fmt.Sprintf("could not obtain valuation account for account %s", pos.Account))
-		}
-		// create a transaction to adjust the valuation
-		result = append(result, ledger.Transaction{
-			Date:        b.Date,
-			Description: desc,
-			Postings: []ledger.Posting{
-				{
-					Value:     diff,
-					Credit:    valAcc,
-					Debit:     pos.Account,
-					Commodity: pos.Commodity,
+	for acc, cm := range b.Amounts {
+		for com, va := range cm {
+			if com == b.Valuation {
+				continue
+			}
+			var at = acc.Type()
+			if at != ledger.ASSETS && at != ledger.LIABILITIES {
+				continue
+			}
+			value, err := b.NormalizedPrices.Valuate(com, va)
+			if err != nil {
+				panic(fmt.Sprintf("no valuation found for commodity %s", com))
+			}
+			var diff = value.Sub(b.Values[acc][com])
+			if diff.IsZero() {
+				continue
+			}
+			var desc = fmt.Sprintf("Adjust value of %s in account %s", com, acc)
+			valAcc, err := b.Context.ValuationAccountFor(acc)
+			if err != nil {
+				panic(fmt.Sprintf("could not obtain valuation account for account %s", acc))
+			}
+			// create a transaction to adjust the valuation
+			result = append(result, ledger.Transaction{
+				Date:        b.Date,
+				Description: desc,
+				Postings: []ledger.Posting{
+					{
+						Value:     diff,
+						Credit:    valAcc,
+						Debit:     acc,
+						Commodity: com,
+					},
 				},
-			},
-		})
+			})
+		}
 	}
 	sort.Slice(result, func(i, j int) bool {
 		var p, q = result[i].Postings[0], result[j].Postings[0]
@@ -383,25 +375,27 @@ func (as PeriodCloser) Process(d *ledger.Day) error {
 
 func (as PeriodCloser) computeClosingTransactions() []ledger.Transaction {
 	var result []ledger.Transaction
-	for pos, va := range as.Balance.Amounts {
-		var at = pos.Account.Type()
-		if at != ledger.INCOME && at != ledger.EXPENSES {
-			continue
-		}
-		result = append(result, ledger.Transaction{
-			Date:        as.Balance.Date,
-			Description: fmt.Sprintf("Closing %v to retained earnings", pos),
-			Tags:        nil,
-			Postings: []ledger.Posting{
-				{
-					Amount:    va,
-					Value:     as.Balance.Values[pos],
-					Commodity: pos.Commodity,
-					Credit:    pos.Account,
-					Debit:     as.Balance.Context.RetainedEarningsAccount(),
+	for acc, cm := range as.Balance.Amounts {
+		for com, va := range cm {
+			var at = acc.Type()
+			if at != ledger.INCOME && at != ledger.EXPENSES {
+				continue
+			}
+			result = append(result, ledger.Transaction{
+				Date:        as.Balance.Date,
+				Description: fmt.Sprintf("Closing %v %v to retained earnings", acc, com),
+				Tags:        nil,
+				Postings: []ledger.Posting{
+					{
+						Amount:    va,
+						Value:     as.Balance.Values[acc][com],
+						Commodity: com,
+						Credit:    acc,
+						Debit:     as.Balance.Context.RetainedEarningsAccount(),
+					},
 				},
-			},
-		})
+			})
+		}
 	}
 	return result
 }
@@ -416,15 +410,17 @@ var _ ledger.Processor = (*AccountCloser)(nil)
 // Process implements Processor.
 func (vtc AccountCloser) Process(d *ledger.Day) error {
 	for _, c := range d.Closings {
-		for pos, amount := range vtc.Balance.Amounts {
-			if pos.Account != c.Account {
-				continue
+		for acc, cm := range vtc.Balance.Amounts {
+			for com, amount := range cm {
+				if acc != c.Account {
+					continue
+				}
+				if !amount.IsZero() || !vtc.Balance.Values[acc][com].IsZero() {
+					return Error{c, "account has nonzero position"}
+				}
+				delete(vtc.Balance.Amounts[acc], com)
+				delete(vtc.Balance.Values[acc], com)
 			}
-			if !amount.IsZero() || !vtc.Balance.Values[pos].IsZero() {
-				return Error{c, "account has nonzero position"}
-			}
-			delete(vtc.Balance.Amounts, pos)
-			delete(vtc.Balance.Values, pos)
 		}
 		if err := vtc.Balance.Accounts.Close(c.Account); err != nil {
 			return err

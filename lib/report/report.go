@@ -18,7 +18,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/vector"
 )
@@ -33,8 +32,20 @@ type Report struct {
 
 // Position is a position.
 type Position struct {
-	balance.CommodityAccount
-	Amounts vector.Vector
+	Account   *ledger.Account
+	Commodity *ledger.Commodity
+	Amounts   vector.Vector
+}
+
+// Less establishes a partial ordering of commodity accounts.
+func (p Position) Less(p1 Position) bool {
+	if p.Account.Type() != p1.Account.Type() {
+		return p.Account.Type() < p1.Account.Type()
+	}
+	if p.Account.String() != p1.Account.String() {
+		return p.Account.String() < p1.Account.String()
+	}
+	return p.Commodity.String() < p1.Commodity.String()
 }
 
 // Collapse is a rule for collapsing (shortening) accounts.

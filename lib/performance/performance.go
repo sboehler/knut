@@ -59,16 +59,19 @@ var _ ledger.Processor = (*Valuator)(nil)
 // Process implements ledger.Processor.
 func (v *Valuator) Process(_ *ledger.Day) error {
 	var res = make(pcv)
-	for ca, val := range v.Balance.Values {
-		var t = ca.Account.Type()
-		if t != ledger.ASSETS && t != ledger.LIABILITIES {
-			continue
+	for acc, cm := range v.Balance.Values {
+		for com, val := range cm {
+
+			var t = acc.Type()
+			if t != ledger.ASSETS && t != ledger.LIABILITIES {
+				continue
+			}
+			if !v.Filter.MatchAccount(acc) || !v.Filter.MatchCommodity(com) {
+				continue
+			}
+			valF, _ := val.Float64()
+			res[com] = res[com] + valF
 		}
-		if !v.Filter.MatchAccount(ca.Account) || !v.Filter.MatchCommodity(ca.Commodity) {
-			continue
-		}
-		valF, _ := val.Float64()
-		res[ca.Commodity] = res[ca.Commodity] + valF
 	}
 	v.Result.V0 = v.Result.V1
 	v.Result.V1 = res

@@ -298,14 +298,18 @@ func balanceToJSON(bs []*balance.Balance) *jsonBalance {
 		b := b
 		go func() {
 			defer wg.Done()
-			for pos, amount := range b.Amounts {
-				insert(res.Amounts, i, len(bs), pos, amount)
+			for acc, cm := range b.Amounts {
+				for com, amount := range cm {
+					insert(res.Amounts, i, len(bs), acc, com, amount)
+				}
 			}
 		}()
 		go func() {
 			defer wg.Done()
-			for pos, value := range b.Amounts {
-				insert(res.Values, i, len(bs), pos, value)
+			for acc, cm := range b.Amounts {
+				for com, value := range cm {
+					insert(res.Values, i, len(bs), acc, com, value)
+				}
 			}
 		}()
 		wg.Wait()
@@ -313,16 +317,16 @@ func balanceToJSON(bs []*balance.Balance) *jsonBalance {
 	return &res
 }
 
-func insert(m map[string]map[string][]decimal.Decimal, i int, n int, pos balance.CommodityAccount, amount decimal.Decimal) {
-	a, ok := m[pos.Account.String()]
+func insert(m map[string]map[string][]decimal.Decimal, i int, n int, acc *ledger.Account, com *ledger.Commodity, amount decimal.Decimal) {
+	a, ok := m[acc.String()]
 	if !ok {
 		a = make(map[string][]decimal.Decimal)
-		m[pos.Account.String()] = a
+		m[acc.String()] = a
 	}
-	c, ok := a[pos.Commodity.String()]
+	c, ok := a[com.String()]
 	if !ok {
 		c = make([]decimal.Decimal, n)
-		a[pos.Commodity.String()] = c
+		a[com.String()] = c
 	}
 	c[i] = amount
 }

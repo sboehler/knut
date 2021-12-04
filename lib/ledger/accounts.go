@@ -212,6 +212,21 @@ func (a Account) Type() AccountType {
 	return a.accountType
 }
 
+// Parent returns the parent of this account.
+func (a Account) Parent() *Account {
+	return a.parent
+}
+
+// Descendents returns all the descendents of this account, not including
+// the account itself.
+func (a Account) Descendents() []*Account {
+	var res []*Account
+	for _, ch := range a.children {
+		res = append(res, ch.Descendents()...)
+	}
+	return res
+}
+
 // WriteTo writes the account to the writer.
 func (a Account) WriteTo(w io.Writer) (int64, error) {
 	n, err := fmt.Fprint(w, a.Name())

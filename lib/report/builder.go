@@ -13,7 +13,7 @@ import (
 // Builder contains configuration options to build a report.
 type Builder struct {
 	Value    bool
-	Collapse []Collapse
+	Collapse ledger.Mapping
 }
 
 // Build creates a new report.
@@ -74,7 +74,8 @@ func (b Builder) buildSegments(positions []Position) map[ledger.AccountType]*Seg
 	for _, position := range positions {
 		var (
 			at = position.Account.Type()
-			k  = b.shorten(b.Collapse, position.Account)
+			// TODO: get rid of segments by using accounts hierarchy.
+			k = position.Account.Map(b.Collapse).Split()
 		)
 		// ignore positions with zero keys
 		if len(k) == 0 {
@@ -88,15 +89,4 @@ func (b Builder) buildSegments(positions []Position) map[ledger.AccountType]*Seg
 		s.insert(k[1:], position)
 	}
 	return result
-}
-
-// shorten shortens the given account according to the given rules.
-func (Builder) shorten(c []Collapse, a *ledger.Account) []string {
-	var s = a.Split()
-	for _, c := range c {
-		if c.MatchAccount(a) && len(s) > c.Level {
-			s = s[:c.Level]
-		}
-	}
-	return s
 }

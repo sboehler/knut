@@ -17,6 +17,7 @@ package ledger
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -78,11 +79,11 @@ func NewAccounts() *Accounts {
 	return &Accounts{
 		accounts: make(map[string]*Account),
 		roots: map[AccountType]*Account{
-			ASSETS:      {accountType: ASSETS, segment: "Assets"},
-			LIABILITIES: {accountType: LIABILITIES, segment: "Liabilities"},
-			EQUITY:      {accountType: EQUITY, segment: "Equity"},
-			INCOME:      {accountType: INCOME, segment: "Income"},
-			EXPENSES:    {accountType: EXPENSES, segment: "Expenses"},
+			ASSETS:      {accountType: ASSETS, segment: "Assets", level: 1},
+			LIABILITIES: {accountType: LIABILITIES, segment: "Liabilities", level: 1},
+			EQUITY:      {accountType: EQUITY, segment: "Equity", level: 1},
+			INCOME:      {accountType: INCOME, segment: "Income", level: 1},
+			EXPENSES:    {accountType: EXPENSES, segment: "Expenses", level: 1},
 		},
 	}
 }
@@ -139,6 +140,7 @@ type Account struct {
 	segment     string
 	parent      *Account
 	children    []*Account
+	level       int
 }
 
 func (a *Account) insert(segments []string) *Account {
@@ -154,13 +156,17 @@ func (a *Account) insert(segments []string) *Account {
 			segment:     head,
 			accountType: a.accountType,
 			parent:      a,
+			level:       a.level + 1,
 		}
 	}
 	return a.children[index].insert(tail)
 }
 
 // Split returns the account name split into segments.
-func (a Account) Split() []string {
+func (a *Account) Split() []string {
+	if a == nil {
+		return nil
+	}
 	var res []string
 	if a.parent != nil {
 		res = a.parent.Split()
@@ -186,4 +192,50 @@ func (a Account) WriteTo(w io.Writer) (int64, error) {
 
 func (a Account) String() string {
 	return a.Name()
+}
+
+// Map maps an account to itself or to one of its ancestors.
+func (a *Account) Map(m Mapping) *Account {
+	if len(m) == 0 {
+		return a
+	}
+	level := m.level(a)
+	if level >= a.level {
+		return a
+	}
+	return a.nthParent(a.level - level)
+}
+
+func (a *Account) nthParent(n int) *Account {
+	if n <= 0 {
+		return a
+	}
+	if a.parent == nil {
+		return nil
+	}
+	return a.parent.nthParent(n - 1)
+
+}
+
+// Rule is a rule to shorten accounts which match the given regex.
+type Rule struct {
+	Level int
+	Regex *regexp.Regexp
+}
+
+// Mapping is a set of mapping rules.
+type Mapping []Rule
+
+// level returns the level to which an account should be shortened.
+func (m Mapping) level(a *Account) int {
+	var (
+		name  = a.Name()
+		level = a.level
+	)
+	for _, c := range m {
+		if (c.Regex == nil || c.Regex.MatchString(name)) && c.Level < level {
+			level = c.Level
+		}
+	}
+	return level
 }

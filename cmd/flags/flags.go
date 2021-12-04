@@ -26,7 +26,6 @@ import (
 
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/report"
 )
 
 // GetAccountFlag is a helper to get an account passed as a flag to the command.
@@ -105,12 +104,12 @@ func GetPeriodFlag(cmd *cobra.Command) (date.Period, error) {
 }
 
 // GetCollapseFlag parses a flag of type -c1,<regex>.
-func GetCollapseFlag(cmd *cobra.Command, name string) ([]report.Collapse, error) {
+func GetCollapseFlag(cmd *cobra.Command, name string) (ledger.Mapping, error) {
 	collapse, err := cmd.Flags().GetStringArray(name)
 	if err != nil {
 		return nil, err
 	}
-	var res = make([]report.Collapse, 0, len(collapse))
+	var res = make(ledger.Mapping, 0, len(collapse))
 	for _, c := range collapse {
 		var s = strings.SplitN(c, ",", 2)
 		l, err := strconv.Atoi(s[0])
@@ -123,7 +122,7 @@ func GetCollapseFlag(cmd *cobra.Command, name string) ([]report.Collapse, error)
 				return nil, err
 			}
 		}
-		res = append(res, report.Collapse{Level: l, Regex: regex})
+		res = append(res, ledger.Rule{Level: l, Regex: regex})
 	}
 	return res, nil
 }

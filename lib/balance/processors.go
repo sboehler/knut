@@ -51,7 +51,7 @@ type Snapshotter struct {
 
 var (
 	_ ledger.Initializer = (*Snapshotter)(nil)
-	_ ledger.Processor     = (*Snapshotter)(nil)
+	_ ledger.Processor   = (*Snapshotter)(nil)
 	_ ledger.Finalizer   = (*Snapshotter)(nil)
 )
 
@@ -75,9 +75,9 @@ func (a *Snapshotter) Process(d *ledger.Day) error {
 		return nil
 	}
 	for ; a.index < len(a.dates) && d.Date.After(a.dates[a.index]); a.index++ {
-		var cp = a.Balance.Copy()
-		cp.Date = a.dates[a.index]
-		(*a.Result)[a.index] = cp
+		snapshot := a.Balance.Snapshot()
+		snapshot.Date = a.dates[a.index]
+		(*a.Result)[a.index] = snapshot
 	}
 	return nil
 }
@@ -85,9 +85,9 @@ func (a *Snapshotter) Process(d *ledger.Day) error {
 // Finalize implements Finalizer.
 func (a *Snapshotter) Finalize() error {
 	for ; a.index < len(a.dates); a.index++ {
-		var cp = a.Balance.Copy()
-		cp.Date = a.dates[a.index]
-		(*a.Result)[a.index] = cp
+		snapshot := a.Balance.Snapshot()
+		snapshot.Date = a.dates[a.index]
+		(*a.Result)[a.index] = snapshot
 	}
 	if a.Diff {
 		*a.Result = Diffs(*a.Result)
@@ -103,7 +103,7 @@ type PriceUpdater struct {
 
 var (
 	_ ledger.Initializer = (*PriceUpdater)(nil)
-	_ ledger.Processor     = (*PriceUpdater)(nil)
+	_ ledger.Processor   = (*PriceUpdater)(nil)
 )
 
 // Initialize implements Initializer.

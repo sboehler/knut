@@ -47,8 +47,8 @@ func New(ctx ledger.Context, valuation *ledger.Commodity) *Balance {
 	}
 }
 
-// Copy deeply copies the balance
-func (b *Balance) Copy() *Balance {
+// Snapshot deeply copies the balance
+func (b *Balance) Snapshot() *Balance {
 	var nb = New(b.Context, b.Valuation)
 	nb.Date = b.Date
 	nb.NormalizedPrices = b.NormalizedPrices

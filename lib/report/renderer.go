@@ -88,19 +88,19 @@ func (rn *Renderer) render(indent int, key string, negate bool, byCommodity inde
 	}
 }
 
-func (rn *Renderer) renderByCommodity(indent int, key string, negate bool, pos indexByCommodity) {
+func (rn *Renderer) renderByCommodity(indent int, key string, negate bool, byCommodity indexByCommodity) {
 	rn.table.AddRow().AddIndented(key, indent).FillEmpty()
 	for commodity := range rn.Report.Context.Commodities().Enumerate() {
-		if amounts, ok := pos[commodity]; ok {
-			rn.renderAmounts(indent+2, commodity.String(), negate, amounts)
+		if byDate, ok := byCommodity[commodity]; ok {
+			rn.renderAmounts(indent+2, commodity.String(), negate, byDate)
 		}
 	}
 }
 
-func (rn Renderer) renderAmounts(indent int, key string, negate bool, pos indexByDate) {
+func (rn Renderer) renderAmounts(indent int, key string, negate bool, byDate indexByDate) {
 	row := rn.table.AddRow().AddIndented(key, indent)
 	for _, date := range rn.Report.Dates {
-		amount, ok := pos[date]
+		amount, ok := byDate[date]
 		if !ok || amount.IsZero() {
 			row.AddEmpty()
 			continue

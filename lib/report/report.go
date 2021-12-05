@@ -24,7 +24,6 @@ import (
 
 // Report is a balance report for a range of dates.
 type Report struct {
-	Context   ledger.Context
 	Dates     []time.Time
 	Value     bool
 	Mapping   ledger.Mapping

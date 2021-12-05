@@ -206,11 +206,11 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			Commodities: filterCommodities,
 		}
 		rep = &report.Report{
-			Context: ctx,
 			Value:   valuation != nil,
 			Mapping: mapping,
 		}
 		reportRenderer = report.Renderer{
+			Context:         ctx,
 			ShowCommodities: showCommodities || valuation == nil,
 			Report:          rep,
 		}

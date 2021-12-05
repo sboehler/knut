@@ -21,6 +21,7 @@ import (
 
 // Renderer renders a report.
 type Renderer struct {
+	Context         ledger.Context
 	ShowCommodities bool
 	Report          *Report
 	table           *table.Table
@@ -41,7 +42,7 @@ func (rn *Renderer) Render() *table.Table {
 		subtree = rn.Report.Subtree()
 		al, eie []*ledger.Account
 	)
-	for acc := range rn.Report.Context.Accounts().PreOrder() {
+	for acc := range rn.Context.Accounts().PreOrder() {
 		if _, ok := subtree[acc]; !ok {
 			continue
 		}
@@ -90,7 +91,7 @@ func (rn *Renderer) render(indent int, key string, negate bool, byCommodity inde
 
 func (rn *Renderer) renderByCommodity(indent int, key string, negate bool, byCommodity indexByCommodity) {
 	rn.table.AddRow().AddIndented(key, indent).FillEmpty()
-	for commodity := range rn.Report.Context.Commodities().Enumerate() {
+	for commodity := range rn.Context.Commodities().Enumerate() {
 		if byDate, ok := byCommodity[commodity]; ok {
 			rn.renderAmounts(indent+2, commodity.String(), negate, byDate)
 		}

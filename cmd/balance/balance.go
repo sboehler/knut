@@ -103,7 +103,7 @@ type pipeline struct {
 	Filter          ledger.Filter
 	ProcessingSteps []ledger.Processor
 	Balances        *[]*balance.Balance
-	ReportBuilder   report.Builder
+	Report          report.Report
 	ReportRenderer  report.Renderer
 	TextRenderer    table.TextRenderer
 }
@@ -205,8 +205,9 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			Accounts:    filterAccounts,
 			Commodities: filterCommodities,
 		}
-		reportBuilder = report.Builder{
-			Value:    valuation != nil,
+		reportBuilder = report.Report{
+			Context: ctx,
+			Value:   valuation != nil,
 			Mapping: collapse,
 		}
 		reportRenderer = report.Renderer{
@@ -223,7 +224,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		Filter:          filter,
 		ProcessingSteps: steps,
 		Balances:        &balances,
-		ReportBuilder:   reportBuilder,
+		Report:          reportBuilder,
 		ReportRenderer:  reportRenderer,
 		TextRenderer:    tableRenderer,
 	}, nil
@@ -240,9 +241,8 @@ func processPipeline(w io.Writer, ppl *pipeline) error {
 	if err = l.Process(ppl.ProcessingSteps); err != nil {
 		return err
 	}
-	var r *report.Report
-	if r, err = ppl.ReportBuilder.Build(*ppl.Balances); err != nil {
-		return err
+	for _, bal := range *ppl.Balances {
+		ppl.Report.Add(bal)
 	}
-	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(r), w)
+	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(&ppl.Report), w)
 }

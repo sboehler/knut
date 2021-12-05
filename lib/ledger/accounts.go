@@ -141,8 +141,8 @@ func (as *Accounts) PreOrder() <-chan *Account {
 	ch := make(chan *Account)
 	go func() {
 		defer close(ch)
-		for _, root := range as.accounts {
-			root.pre(ch)
+		for _, at := range AccountTypes {
+			as.accounts[at].pre(ch)
 		}
 	}()
 	return ch
@@ -205,6 +205,16 @@ func (a *Account) Split() []string {
 // Name returns the name of this account.
 func (a Account) Name() string {
 	return strings.Join(a.Split(), ":")
+}
+
+// Segment returns the name of this account.
+func (a Account) Segment() string {
+	return a.segment
+}
+
+// Level returns the name of this account.
+func (a Account) Level() int {
+	return a.level
 }
 
 // Type returns the account type.

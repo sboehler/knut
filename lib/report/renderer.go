@@ -17,7 +17,6 @@ package report
 import (
 	"github.com/sboehler/knut/lib/ledger"
 	"github.com/sboehler/knut/lib/table"
-	"github.com/sboehler/knut/lib/vector"
 )
 
 // Renderer renders a report.
@@ -26,101 +25,90 @@ type Renderer struct {
 	negate      bool
 	report      *Report
 	table       *table.Table
-	indent      int
 }
-
-const indent = 2
 
 // Render renders a report.
 func (rn *Renderer) Render(r *Report) *table.Table {
 
 	rn.table = table.New(1, len(r.Dates))
-	rn.indent = 0
 	rn.report = r
 
-	var render func(s *Segment)
+	var render = rn.render
 	if rn.Commodities {
-		render = rn.renderSegmentWithCommodities
-	} else {
-		render = rn.renderSegment
+		render = rn.renderByCommodity
 	}
 
-	// sep
 	rn.table.AddSeparatorRow()
 
-	// header
 	var header = rn.table.AddRow().AddText("Account", table.Center)
 	for _, d := range r.Dates {
 		header.AddText(d.Format("2006-01-02"), table.Center)
 	}
-	// sep
 	rn.table.AddSeparatorRow()
 
-	var g1, g2 []*Segment
-
-	for _, at := range ledger.AccountTypes {
-		s, ok := rn.report.Segments[at]
-		if !ok {
+	var (
+		subtree = rn.report.Subtree()
+		al, eie []*ledger.Account
+	)
+	for acc := range rn.report.Context.Accounts().PreOrder() {
+		if _, ok := subtree[acc]; !ok {
 			continue
 		}
-		if at == ledger.ASSETS || at == ledger.LIABILITIES {
-			g1 = append(g1, s)
+		if acc.Type() == ledger.ASSETS || acc.Type() == ledger.LIABILITIES {
+			al = append(al, acc)
 		} else {
-			g2 = append(g2, s)
+			eie = append(eie, acc)
 		}
 	}
 
-	// values
-	if len(g1) > 0 {
-		for _, s := range g1 {
-			render(s)
-			rn.table.AddEmptyRow()
+	alTotals := make(indexByCommodity)
+	if len(al) > 0 {
+		for i, acc := range al {
+			if i != 0 && acc.Level() == 1 {
+				rn.table.AddEmptyRow()
+			}
+			render(2*(acc.Level()-1), acc.Segment(), rn.report.Positions[acc])
+			alTotals.AddOther(rn.report.Positions[acc])
 		}
-
-		var totals = make(map[*ledger.Commodity]vector.Vector)
-		for _, s := range g1 {
-			s.sum(totals)
-		}
-		render(&Segment{Key: "Total", Positions: totals})
+		rn.table.AddEmptyRow()
+		render(0, "Total", alTotals)
 		rn.table.AddSeparatorRow()
-
 	}
-	if len(g2) > 0 {
+	eieTotals := make(indexByCommodity)
+	if len(eie) > 0 {
 		rn.negate = true
-		for _, s := range g2 {
-			render(s)
-			rn.table.AddEmptyRow()
+		for i, acc := range eie {
+			if i != 0 && acc.Level() == 1 {
+				rn.table.AddEmptyRow()
+			}
+			render(2*(acc.Level()-1), acc.Segment(), rn.report.Positions[acc])
+			eieTotals.AddOther(rn.report.Positions[acc])
 		}
-		var totals = make(map[*ledger.Commodity]vector.Vector)
-		for _, s := range g2 {
-			s.sum(totals)
-		}
-		render(&Segment{Key: "Total", Positions: totals})
-
-		rn.negate = false
+		rn.table.AddEmptyRow()
+		render(0, "Total", eieTotals)
 		rn.table.AddSeparatorRow()
+		rn.negate = false
 	}
 
-	// totals
-	render(&Segment{
-		Key:       "Delta",
-		Positions: r.Positions,
-	})
+	alTotals.AddOther(eieTotals)
+	render(0, "Delta", alTotals)
 	rn.table.AddSeparatorRow()
 	return rn.table
 }
 
-func (rn *Renderer) renderSegment(s *Segment) {
-	// compute total value
-	var total = vector.New(len(rn.report.Dates))
-	for _, amounts := range s.Positions {
-		total.Add(amounts)
+func (rn *Renderer) render(indent int, key string, pos indexByCommodity) {
+	total := make(indexByDate)
+	for _, amounts := range pos {
+		for d, val := range amounts {
+			total[d] = total[d].Add(val)
+		}
 	}
 
 	// fill header cells with total values
-	var header = rn.table.AddRow().AddIndented(s.Key, rn.indent)
-	for _, amount := range total.Values {
-		if amount.IsZero() {
+	var header = rn.table.AddRow().AddIndented(key, indent)
+	for _, date := range rn.report.Dates {
+		amount, ok := total[date]
+		if !ok || amount.IsZero() {
 			header.AddEmpty()
 		} else {
 			if rn.negate {
@@ -129,39 +117,26 @@ func (rn *Renderer) renderSegment(s *Segment) {
 			header.AddNumber(amount)
 		}
 	}
-
-	// render subsegments
-	rn.indent += indent
-	for _, ss := range s.Subsegments {
-		rn.renderSegment(ss)
-	}
-	rn.indent -= indent
 }
 
-func (rn *Renderer) renderSegmentWithCommodities(segment *Segment) {
-	rn.table.AddRow().AddIndented(segment.Key, rn.indent).FillEmpty()
-
-	// add one row per commodity in this position
-	rn.indent += indent
-	for _, commodity := range rn.report.Commodities {
-		if amounts, ok := segment.Positions[commodity]; ok {
-			var row = rn.table.AddRow().AddIndented(commodity.String(), rn.indent)
-			for _, amount := range amounts.Values {
-				if amount.IsZero() {
-					row.AddEmpty()
-				} else {
-					if rn.negate {
-						amount = amount.Neg()
-					}
-					row.AddNumber(amount)
+func (rn *Renderer) renderByCommodity(indent int, key string, pos indexByCommodity) {
+	rn.table.AddRow().AddIndented(key, indent).FillEmpty()
+	for commodity := range rn.report.Context.Commodities().Enumerate() {
+		amounts, ok := pos[commodity]
+		if !ok {
+			continue
+		}
+		var row = rn.table.AddRow().AddIndented(commodity.String(), indent+1)
+		for _, date := range rn.report.Dates {
+			amount, ok := amounts[date]
+			if !ok || amount.IsZero() {
+				row.AddEmpty()
+			} else {
+				if rn.negate {
+					amount = amount.Neg()
 				}
+				row.AddNumber(amount)
 			}
 		}
 	}
-
-	// render subsegments
-	for _, ss := range segment.Subsegments {
-		rn.renderSegmentWithCommodities(ss)
-	}
-	rn.indent -= indent
 }

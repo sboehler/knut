@@ -87,3 +87,13 @@ func (c Context) ValuationAccountFor(a *Account) (*Account, error) {
 	segments := append(c.ValuationAccount().Split(), suffix...)
 	return c.GetAccount(strings.Join(segments, ":"))
 }
+
+// Accounts returns the accounts.
+func (c Context) Accounts() *Accounts {
+	return c.accounts
+}
+
+// Commodities returns the commodities.
+func (c Context) Commodities() *Commodities {
+	return c.commodities
+}

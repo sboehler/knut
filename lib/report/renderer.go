@@ -21,122 +21,93 @@ import (
 
 // Renderer renders a report.
 type Renderer struct {
-	Commodities bool
-	negate      bool
-	report      *Report
-	table       *table.Table
+	ShowCommodities bool
+	Report          *Report
+	table           *table.Table
 }
 
 // Render renders a report.
-func (rn *Renderer) Render(r *Report) *table.Table {
-
-	rn.table = table.New(1, len(r.Dates))
-	rn.report = r
-
-	var render = rn.render
-	if rn.Commodities {
-		render = rn.renderByCommodity
-	}
-
+func (rn *Renderer) Render() *table.Table {
+	rn.table = table.New(1, len(rn.Report.Dates))
 	rn.table.AddSeparatorRow()
 
-	var header = rn.table.AddRow().AddText("Account", table.Center)
-	for _, d := range r.Dates {
+	header := rn.table.AddRow().AddText("Account", table.Center)
+	for _, d := range rn.Report.Dates {
 		header.AddText(d.Format("2006-01-02"), table.Center)
 	}
 	rn.table.AddSeparatorRow()
 
 	var (
-		subtree = rn.report.Subtree()
+		subtree = rn.Report.Subtree()
 		al, eie []*ledger.Account
 	)
-	for acc := range rn.report.Context.Accounts().PreOrder() {
+	for acc := range rn.Report.Context.Accounts().PreOrder() {
 		if _, ok := subtree[acc]; !ok {
 			continue
 		}
-		if acc.Type() == ledger.ASSETS || acc.Type() == ledger.LIABILITIES {
+		if acc.IsAL() {
 			al = append(al, acc)
 		} else {
 			eie = append(eie, acc)
 		}
 	}
 
-	alTotals := make(indexByCommodity)
-	if len(al) > 0 {
-		for i, acc := range al {
-			if i != 0 && acc.Level() == 1 {
-				rn.table.AddEmptyRow()
-			}
-			render(2*(acc.Level()-1), acc.Segment(), rn.report.Positions[acc])
-			alTotals.AddOther(rn.report.Positions[acc])
-		}
-		rn.table.AddEmptyRow()
-		render(0, "Total", alTotals)
-		rn.table.AddSeparatorRow()
-	}
-	eieTotals := make(indexByCommodity)
-	if len(eie) > 0 {
-		rn.negate = true
-		for i, acc := range eie {
-			if i != 0 && acc.Level() == 1 {
-				rn.table.AddEmptyRow()
-			}
-			render(2*(acc.Level()-1), acc.Segment(), rn.report.Positions[acc])
-			eieTotals.AddOther(rn.report.Positions[acc])
-		}
-		rn.table.AddEmptyRow()
-		render(0, "Total", eieTotals)
-		rn.table.AddSeparatorRow()
-		rn.negate = false
-	}
-
-	alTotals.AddOther(eieTotals)
-	render(0, "Delta", alTotals)
+	alTotals := rn.renderSection(al)
+	eieTotals := rn.renderSection(eie)
+	alTotals.AddFrom(eieTotals)
+	alTotals.Normalize()
+	rn.render(0, "Delta", false, alTotals)
 	rn.table.AddSeparatorRow()
 	return rn.table
 }
 
-func (rn *Renderer) render(indent int, key string, pos indexByCommodity) {
-	total := make(indexByDate)
-	for _, amounts := range pos {
-		for d, val := range amounts {
-			total[d] = total[d].Add(val)
-		}
+func (rn *Renderer) renderSection(al []*ledger.Account) indexByCommodity {
+	res := make(indexByCommodity)
+	if len(al) == 0 {
+		return res
 	}
+	for i, acc := range al {
+		if i != 0 && acc.Level() == 1 {
+			rn.table.AddEmptyRow()
+		}
+		rn.render(2*(acc.Level()-1), acc.Segment(), !acc.IsAL(), rn.Report.Positions[acc])
+		res.AddFrom(rn.Report.Positions[acc])
+	}
+	res.Normalize()
+	rn.table.AddEmptyRow()
+	rn.render(0, "Total", false, res)
+	rn.table.AddSeparatorRow()
+	return res
+}
 
-	// fill header cells with total values
-	var header = rn.table.AddRow().AddIndented(key, indent)
-	for _, date := range rn.report.Dates {
-		amount, ok := total[date]
-		if !ok || amount.IsZero() {
-			header.AddEmpty()
-		} else {
-			if rn.negate {
-				amount = amount.Neg()
-			}
-			header.AddNumber(amount)
+func (rn *Renderer) render(indent int, key string, negate bool, byCommodity indexByCommodity) {
+	if rn.ShowCommodities {
+		rn.renderByCommodity(indent, key, negate, byCommodity)
+	} else {
+		rn.renderAmounts(indent, key, negate, byCommodity.Sum())
+	}
+}
+
+func (rn *Renderer) renderByCommodity(indent int, key string, negate bool, pos indexByCommodity) {
+	rn.table.AddRow().AddIndented(key, indent).FillEmpty()
+	for commodity := range rn.Report.Context.Commodities().Enumerate() {
+		if amounts, ok := pos[commodity]; ok {
+			rn.renderAmounts(indent+2, commodity.String(), negate, amounts)
 		}
 	}
 }
 
-func (rn *Renderer) renderByCommodity(indent int, key string, pos indexByCommodity) {
-	rn.table.AddRow().AddIndented(key, indent).FillEmpty()
-	for commodity := range rn.report.Context.Commodities().Enumerate() {
-		amounts, ok := pos[commodity]
-		if !ok {
+func (rn Renderer) renderAmounts(indent int, key string, negate bool, pos indexByDate) {
+	row := rn.table.AddRow().AddIndented(key, indent)
+	for _, date := range rn.Report.Dates {
+		amount, ok := pos[date]
+		if !ok || amount.IsZero() {
+			row.AddEmpty()
 			continue
 		}
-		var row = rn.table.AddRow().AddIndented(commodity.String(), indent+1)
-		for _, date := range rn.report.Dates {
-			amount, ok := amounts[date]
-			if !ok || amount.IsZero() {
-				row.AddEmpty()
-			} else {
-				if rn.negate {
-					amount = amount.Neg()
-				}
-				row.AddNumber(amount)
-			}
+		if negate {
+			amount = amount.Neg()
 		}
+		row.AddNumber(amount)
 	}
 }

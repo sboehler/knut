@@ -42,11 +42,12 @@ func (rep *Report) Add(b *balance.Balance) {
 		bp = b.Values
 	}
 	for pos, val := range bp {
-		acc := pos.Account.Map(rep.Mapping)
-		if acc == nil {
+		if val.IsZero() {
 			continue
 		}
-		rep.Positions.Add(acc, pos.Commodity, b.Date, val)
+		if acc := pos.Account.Map(rep.Mapping); acc != nil {
+			rep.Positions.Add(acc, pos.Commodity, b.Date, val)
+		}
 	}
 }
 
@@ -65,40 +66,75 @@ func (rep Report) Subtree() map[*ledger.Account]struct{} {
 type indexByAccount map[*ledger.Account]indexByCommodity
 
 func (iba indexByAccount) Add(acc *ledger.Account, com *ledger.Commodity, date time.Time, val decimal.Decimal) {
-	ibc, ok := iba[acc]
-	if !ok {
-		ibc = make(indexByCommodity)
-		iba[acc] = ibc
+	if val.IsZero() {
+		return
 	}
-	ibc.Add(com, date, val)
+	byCommodity, ok := iba[acc]
+	if !ok {
+		byCommodity = make(indexByCommodity)
+		iba[acc] = byCommodity
+	}
+	byCommodity.Add(com, date, val)
 }
 
 type indexByCommodity map[*ledger.Commodity]indexByDate
 
-func (ibc indexByCommodity) AddOther(obc indexByCommodity) {
-	for c, obd := range obc {
-		for d, v := range obd {
-			ibd, ok := ibc[c]
-			if !ok {
-				ibd = make(indexByDate)
-				ibc[c] = ibd
-			}
-			ibd[d] = ibd[d].Add(v)
+func (ibc indexByCommodity) AddFrom(otherByCommodity indexByCommodity) {
+	for c, otherByDate := range otherByCommodity {
+		for d, v := range otherByDate {
+			ibc.Add(c, d, v)
 		}
 	}
 }
 
-func (ibc indexByCommodity) Add(com *ledger.Commodity, date time.Time, val decimal.Decimal) {
-	ibd, ok := ibc[com]
-	if !ok {
-		ibd = make(indexByDate)
-		ibc[com] = ibd
+func (ibc indexByCommodity) Normalize() {
+	for com, byDate := range ibc {
+		if byDate.IsZero() {
+			delete(ibc, com)
+		}
 	}
-	ibd.Add(date, val)
+}
+
+func (ibc indexByCommodity) Sum() map[time.Time]decimal.Decimal {
+	res := make(indexByDate)
+	for _, byDate := range ibc {
+		res.AddFrom(byDate)
+	}
+	return res
+}
+
+func (ibc indexByCommodity) Add(com *ledger.Commodity, date time.Time, val decimal.Decimal) {
+	if val.IsZero() {
+		return
+	}
+	byDate, ok := ibc[com]
+	if !ok {
+		byDate = make(indexByDate)
+		ibc[com] = byDate
+	}
+	byDate.Add(date, val)
 }
 
 type indexByDate map[time.Time]decimal.Decimal
 
 func (ibd indexByDate) Add(date time.Time, val decimal.Decimal) {
+	if val.IsZero() {
+		return
+	}
 	ibd[date] = ibd[date].Add(val)
+}
+
+func (ibd indexByDate) AddFrom(obd indexByDate) {
+	for d, val := range obd {
+		ibd.Add(d, val)
+	}
+}
+
+func (ibd indexByDate) IsZero() bool {
+	for _, val := range ibd {
+		if !val.IsZero() {
+			return false
+		}
+	}
+	return true
 }

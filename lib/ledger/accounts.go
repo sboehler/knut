@@ -222,6 +222,11 @@ func (a Account) Type() AccountType {
 	return a.accountType
 }
 
+// IsAL returns whether this account is an asset or liability account.
+func (a Account) IsAL() bool {
+	return a.accountType == ASSETS || a.accountType == LIABILITIES
+}
+
 // Parent returns the parent of this account.
 func (a Account) Parent() *Account {
 	return a.parent

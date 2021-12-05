@@ -15,7 +15,6 @@
 package report
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/sboehler/knut/lib/balance"
@@ -44,7 +43,6 @@ func (rep *Report) Add(b *balance.Balance) {
 	}
 	for pos, val := range bp {
 		acc := pos.Account.Map(rep.Mapping)
-		fmt.Println(acc)
 		if acc == nil {
 			continue
 		}

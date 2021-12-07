@@ -53,8 +53,8 @@ func (rn *Renderer) Render() *table.Table {
 		}
 	}
 
-	alTotals := rn.renderSection(al)
-	eieTotals := rn.renderSection(eie)
+	alTotals := rn.renderSection(al, false)
+	eieTotals := rn.renderSection(eie, true)
 	alTotals.AddFrom(eieTotals)
 	alTotals.Normalize()
 	rn.render(0, "Delta", false, alTotals)
@@ -62,7 +62,7 @@ func (rn *Renderer) Render() *table.Table {
 	return rn.table
 }
 
-func (rn *Renderer) renderSection(al []*ledger.Account) indexByCommodity {
+func (rn *Renderer) renderSection(al []*ledger.Account, negate bool) indexByCommodity {
 	res := make(indexByCommodity)
 	if len(al) == 0 {
 		return res
@@ -76,7 +76,7 @@ func (rn *Renderer) renderSection(al []*ledger.Account) indexByCommodity {
 	}
 	res.Normalize()
 	rn.table.AddEmptyRow()
-	rn.render(0, "Total", false, res)
+	rn.render(0, "Total", negate, res)
 	rn.table.AddSeparatorRow()
 	return res
 }

@@ -42,6 +42,8 @@ func CreateCmd() *cobra.Command {
 
 		Args: cobra.ExactValidArgs(1),
 
+		Hidden: true,
+
 		Run: run,
 	}
 	c.Flags().String("from", "", "from date")

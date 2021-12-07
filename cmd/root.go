@@ -16,7 +16,9 @@
 package cmd
 
 import (
+	"github.com/sboehler/knut/cmd/asyncbalance"
 	"github.com/sboehler/knut/cmd/balance"
+
 	"github.com/sboehler/knut/cmd/benchmark"
 	"github.com/sboehler/knut/cmd/completion"
 	"github.com/sboehler/knut/cmd/format"
@@ -38,6 +40,7 @@ func CreateCmd(version string) *cobra.Command {
 		Long:    `knut is a plain text accounting tool for tracking personal finances and investments.`,
 		Version: version,
 	}
+	c.AddCommand(asyncbalance.CreateCmd())
 	c.AddCommand(balance.CreateCmd())
 	c.AddCommand(portfolio.CreateCmd())
 	c.AddCommand(importer.CreateCmd())

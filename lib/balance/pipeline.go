@@ -24,26 +24,26 @@ import (
 )
 
 // SetDate sets the date on the balance.
-func SetDate(ctx context.Context, bsCh chan *Balance, dayCh chan *ledger.Day) <-chan *Balance {
-	resCh := make(chan *Balance)
+func SetDate(ctx context.Context, l ledger.Ledger, bsCh chan *Balance) <-chan *Balance {
+	nextCh := make(chan *Balance)
 	go func() {
-		defer close(resCh)
-		for day := range dayCh {
-			bal := <-bsCh
-			bal.Date = day.Date
+		defer close(nextCh)
+		var index int
+		for bal := range bsCh {
+			bal.Date = l.Days[index].Date
+			index++
 			select {
-			case resCh <- bal:
+			case nextCh <- bal:
 			case <-ctx.Done():
 				return
 			}
 		}
 	}()
-	return resCh
+	return nextCh
 }
 
 // SnapshotConfig configures balance snapshotting.
 type SnapshotConfig struct {
-	Ledger   *ledger.Ledger
 	From, To *time.Time
 	Last     int
 	Diff     bool
@@ -51,8 +51,8 @@ type SnapshotConfig struct {
 }
 
 // Snapshot snapshots the balance.
-func Snapshot(ctx context.Context, cfg SnapshotConfig, bs <-chan *Balance, dayCh <-chan *ledger.Day) (<-chan *Balance, <-chan *Balance) {
-	dates := cfg.Ledger.Dates(cfg.From, cfg.To, cfg.Period)
+func Snapshot(ctx context.Context, cfg SnapshotConfig, l ledger.Ledger, bs <-chan *Balance) <-chan *Balance {
+	dates := l.Dates(cfg.From, cfg.To, cfg.Period)
 	offset := 0
 	if cfg.Diff {
 		offset = 1
@@ -64,54 +64,53 @@ func Snapshot(ctx context.Context, cfg SnapshotConfig, bs <-chan *Balance, dayCh
 		snapshotDates []time.Time
 		i             int
 	)
-	for _, day := range cfg.Ledger.Days {
+	for _, day := range l.Days {
 		for ; i < len(dates) && day.Date.After(dates[i]); i++ {
 			snapshotDates = append(snapshotDates, day.Date)
 		}
 	}
-	maxDate, ok := cfg.Ledger.MaxDate()
+	maxDate, ok := l.MaxDate()
 	if ok {
 		for ; i < len(dates); i++ {
 			snapshotDates = append(snapshotDates, maxDate)
 		}
 	}
-	nextCh := make(chan *Balance)
 	snapshotCh := make(chan *Balance)
 
 	go func() {
-		defer close(nextCh)
+		defer close(snapshotCh)
 		var (
 			previous *Balance
 			index    int
 		)
-		for day := range dayCh {
-			bal := <-bs
-			for ; index < len(snapshotDates) && snapshotDates[index] == day.Date; index++ {
+		for bal := range bs {
+			for ; index < len(snapshotDates) && snapshotDates[index] == bal.Date; index++ {
 				snapshot := bal.Snapshot()
 				snapshot.Date = dates[index]
 				if cfg.Diff {
 					if previous != nil {
 						diff := snapshot.Snapshot()
 						diff.Minus(previous)
-						snapshotCh <- diff
+						select {
+						case snapshotCh <- diff:
+						case <-ctx.Done():
+						}
 					}
 					previous = snapshot
 				} else {
-					snapshotCh <- snapshot
+					select {
+					case snapshotCh <- snapshot:
+					case <-ctx.Done():
+					}
 				}
-			}
-			select {
-			case nextCh <- bal:
-			case <-ctx.Done():
-				return
 			}
 		}
 	}()
-	return nextCh, snapshotCh
+	return snapshotCh
 }
 
 // UpdatePrices updates the prices.
-func UpdatePrices(ctx context.Context, val *ledger.Commodity, bs <-chan *Balance, dayCh <-chan *ledger.Day) <-chan *Balance {
+func UpdatePrices(ctx context.Context, l ledger.Ledger, val *ledger.Commodity, bs <-chan *Balance) <-chan *Balance {
 	ps := make(prices.Prices)
 	if val == nil {
 		return bs
@@ -119,7 +118,7 @@ func UpdatePrices(ctx context.Context, val *ledger.Commodity, bs <-chan *Balance
 	buf := make(chan prices.NormalizedPrices, 50)
 	go func() {
 		defer close(buf)
-		for day := range dayCh {
+		for _, day := range l.Days {
 			for _, p := range day.Prices {
 				ps.Insert(p)
 			}

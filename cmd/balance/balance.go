@@ -102,7 +102,7 @@ type pipeline struct {
 	Parser          parser.RecursiveParser
 	Filter          ledger.Filter
 	ProcessingSteps []ledger.Processor
-	Balances        *[]*balance.Balance
+	Balances        chan *balance.Balance
 	Report          *report.Report
 	ReportRenderer  report.Renderer
 	TextRenderer    table.TextRenderer
@@ -180,10 +180,9 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			File:    args[0],
 			Context: ctx,
 		}
-		bal      = balance.New(ctx, valuation)
-		balances []*balance.Balance
-		steps    = []ledger.Processor{
-			balance.DateUpdater{Balance: bal},
+		bal        = balance.New(ctx, valuation)
+		balancesCh = make(chan *balance.Balance)
+		steps      = []ledger.Processor{
 			&balance.Snapshotter{
 				Balance: bal,
 				From:    from,
@@ -191,7 +190,8 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 				Period:  period,
 				Last:    last,
 				Diff:    diff,
-				Result:  &balances},
+				Result:  balancesCh},
+			balance.DateUpdater{Balance: bal},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
 			balance.ValueBooker{Balance: bal},
@@ -224,7 +224,7 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		Parser:          parser,
 		Filter:          filter,
 		ProcessingSteps: steps,
-		Balances:        &balances,
+		Balances:        balancesCh,
 		Report:          rep,
 		ReportRenderer:  reportRenderer,
 		TextRenderer:    tableRenderer,
@@ -239,11 +239,26 @@ func processPipeline(w io.Writer, ppl *pipeline) error {
 	if l, err = ppl.Parser.BuildLedger(ppl.Filter); err != nil {
 		return err
 	}
-	if err = l.Process(ppl.ProcessingSteps); err != nil {
-		return err
-	}
-	for _, bal := range *ppl.Balances {
-		ppl.Report.Add(bal)
+
+	chErr := l.ProcessAsync(ppl.ProcessingSteps)
+	ch := ppl.Balances
+	for {
+		select {
+		case err, ok := <-chErr:
+			if !ok {
+				chErr = nil
+			}
+			return err
+		case bal, ok := <-ch:
+			if !ok {
+				ch = nil
+			} else {
+				ppl.Report.Add(bal)
+			}
+		}
+		if ch == nil && chErr == nil {
+			break
+		}
 	}
 	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(), w)
 }

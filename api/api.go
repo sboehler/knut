@@ -66,7 +66,7 @@ type pipeline struct {
 	Parser          parser.RecursiveParser
 	Filter          ledger.Filter
 	ProcessingSteps []ledger.Processor
-	Balances        *[]*balance.Balance
+	Balances        chan *balance.Balance
 }
 
 func buildPipeline(file string, query url.Values) (*pipeline, error) {
@@ -106,9 +106,9 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 	}
 
 	var (
-		bal    = balance.New(ctx, valuation)
-		result []*balance.Balance
-		steps  = []ledger.Processor{
+		bal        = balance.New(ctx, valuation)
+		balancesCh chan *balance.Balance
+		steps      = []ledger.Processor{
 			balance.DateUpdater{Balance: bal},
 			&balance.Snapshotter{
 				Balance: bal,
@@ -117,7 +117,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 				Period:  period,
 				Last:    last,
 				Diff:    diff,
-				Result:  &result},
+				Result:  balancesCh},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
 			balance.ValueBooker{Balance: bal},
@@ -138,7 +138,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 			Accounts:    accountsFilter,
 			Commodities: commoditiesFilter,
 		},
-		Balances:        &result,
+		Balances:        balancesCh,
 		ProcessingSteps: steps,
 	}, nil
 }
@@ -152,7 +152,7 @@ func (ppl *pipeline) process(w io.Writer) error {
 		return err
 	}
 	var (
-		j = balanceToJSON(*ppl.Balances)
+		j = balanceToJSON(ppl.Balances)
 		e = json.NewEncoder(w)
 	)
 	return e.Encode(j)
@@ -284,7 +284,11 @@ type jsonBalance struct {
 	Amounts, Values map[string]map[string][]decimal.Decimal
 }
 
-func balanceToJSON(bs []*balance.Balance) *jsonBalance {
+func balanceToJSON(bsCh chan *balance.Balance) *jsonBalance {
+	var bs []*balance.Balance
+	for b := range bsCh {
+		bs = append(bs, b)
+	}
 	var res = jsonBalance{
 		Valuation: bs[0].Valuation,
 		Amounts:   make(map[string]map[string][]decimal.Decimal),

@@ -44,9 +44,10 @@ type Snapshotter struct {
 	Last     int
 	Diff     bool
 	Period   date.Period
-	Result   *[]*Balance
+	Result   chan *Balance
 	dates    []time.Time
 	index    int
+	ch       chan *Balance
 }
 
 var (
@@ -65,8 +66,26 @@ func (a *Snapshotter) Initialize(l ledger.Ledger) error {
 	if a.Last > 0 && a.Last < len(a.dates)-offset {
 		a.dates = a.dates[len(a.dates)-a.Last-offset:]
 	}
-	*a.Result = make([]*Balance, len(a.dates))
+	a.ch = make(chan *Balance)
+	go a.processBalances()
 	return nil
+}
+
+func (a *Snapshotter) processBalances() {
+	defer close(a.Result)
+	var previous *Balance
+	for current := range a.ch {
+		if a.Diff {
+			if previous != nil {
+				diff := current.Snapshot()
+				diff.Minus(previous)
+				a.Result <- diff
+			}
+			previous = current
+		} else {
+			a.Result <- current
+		}
+	}
 }
 
 // Process implements Processor.
@@ -77,7 +96,7 @@ func (a *Snapshotter) Process(d *ledger.Day) error {
 	for ; a.index < len(a.dates) && d.Date.After(a.dates[a.index]); a.index++ {
 		snapshot := a.Balance.Snapshot()
 		snapshot.Date = a.dates[a.index]
-		(*a.Result)[a.index] = snapshot
+		a.ch <- snapshot
 	}
 	return nil
 }
@@ -87,11 +106,9 @@ func (a *Snapshotter) Finalize() error {
 	for ; a.index < len(a.dates); a.index++ {
 		snapshot := a.Balance.Snapshot()
 		snapshot.Date = a.dates[a.index]
-		(*a.Result)[a.index] = snapshot
+		a.ch <- snapshot
 	}
-	if a.Diff {
-		*a.Result = Diffs(*a.Result)
-	}
+	close(a.ch)
 	return nil
 }
 

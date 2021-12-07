@@ -56,8 +56,8 @@ func (l Ledger) Process(steps []Processor) error {
 }
 
 // ProcessAsync processes the ledger asynchronously.
-func (l Ledger) ProcessAsync(steps []Processor) chan<- error {
-	var ch chan error
+func (l Ledger) ProcessAsync(steps []Processor) <-chan error {
+	ch := make(chan error)
 	go func(steps []Processor) {
 		defer close(ch)
 		if err := l.Process(steps); err != nil {

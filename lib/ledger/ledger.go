@@ -15,6 +15,7 @@
 package ledger
 
 import (
+	"sort"
 	"time"
 
 	"github.com/sboehler/knut/lib/date"
@@ -74,4 +75,22 @@ func (l Ledger) Dates(from, to *time.Time, period date.Period) []time.Time {
 		t1, _ = l.MaxDate()
 	}
 	return date.Series(t0, t1, period)
+}
+
+// ActualDates returns a series like Dates, but containing the latest available,
+// actual dates from the days in the ledger. That is, an element of the result
+// array is either the zero date (if it is before the first date in the ledger),
+// or the latest date in the ledger which is smaller or equal than the corresponding
+// element in the input array.
+func (l Ledger) ActualDates(ds []time.Time) []time.Time {
+	var actuals = make([]time.Time, 0, len(ds))
+	for _, date := range ds {
+		index := sort.Search(len(l.Days), func(i int) bool { return !l.Days[i].Date.Before(date) })
+		var d time.Time
+		if index > 0 {
+			d = l.Days[index-1].Date
+		}
+		actuals = append(actuals, d)
+	}
+	return actuals
 }

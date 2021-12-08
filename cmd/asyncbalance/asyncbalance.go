@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
+	"sync"
 	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
@@ -200,26 +201,64 @@ func process(cmd *cobra.Command, args []string, w io.Writer) error {
 	)
 	defer cancel()
 
-	b1 := balance.SetDate(cotx, l, balCh)
+	b1, err1Ch := balance.PreStage(cotx, l, balCh)
 	b2 := balance.UpdatePrices(cotx, l, valuation, b1)
-	b3, snapshots := balance.Snapshot(cotx, balance.SnapshotConfig{
+	b3, err2Ch := balance.PostStage(cotx, l, b2)
+	b4, snapshots := balance.Snapshot(cotx, balance.SnapshotConfig{
 		Last:   last,
 		From:   from,
 		Diff:   diff,
 		Period: period,
 		To:     to,
-	}, l, b2)
+	}, l, b3)
+
+	var errcList = []<-chan error{err1Ch, err2Ch}
 
 	go func() {
 		defer close(balCh)
 		for range l.Days {
 			balCh <- bal
-			<-b3
+			<-b4
 		}
 	}()
+	go func() {
+		for {
+			for bal := range snapshots {
+				rep.Add(bal)
+			}
 
-	for bal := range snapshots {
-		rep.Add(bal)
+		}
+	}()
+	for err := range merge(errcList...) {
+		if err != nil {
+			return err
+		}
 	}
 	return tableRenderer.Render(reportRenderer.Render(), w)
+}
+
+func merge(cs ...<-chan error) <-chan error {
+	var wg sync.WaitGroup
+	out := make(chan error)
+
+	// Start an output goroutine for each input channel in cs.  output
+	// copies values from c to out until c is closed, then calls wg.Done.
+	output := func(c <-chan error) {
+		for n := range c {
+			out <- n
+		}
+		wg.Done()
+	}
+	wg.Add(len(cs))
+	for _, c := range cs {
+		go output(c)
+	}
+
+	// Start a goroutine to close out once all the output goroutines are
+	// done.  This must start after the wg.Add call.
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
 }

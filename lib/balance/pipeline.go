@@ -23,14 +23,30 @@ import (
 	"github.com/sboehler/knut/lib/prices"
 )
 
-// SetDate sets the date on the balance.
-func SetDate(ctx context.Context, l ledger.Ledger, bsCh chan *Balance) <-chan *Balance {
+// PreStage sets the date on the balance.
+func PreStage(ctx context.Context, l ledger.Ledger, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
 	nextCh := make(chan *Balance)
+	errCh := make(chan error)
 	go func() {
 		defer close(nextCh)
+		defer close(errCh)
 		var index int
 		for bal := range bsCh {
-			bal.Date = l.Days[index].Date
+			day := l.Days[index]
+			bal.Date = day.Date
+
+			ps := []ledger.Processor{
+				AccountOpener{Balance: bal},
+				TransactionBooker{Balance: bal},
+				ValueBooker{Balance: bal},
+				Asserter{Balance: bal},
+			}
+			for _, p := range ps {
+				if err := p.Process(day); err != nil {
+					errCh <- err
+					return
+				}
+			}
 			index++
 			select {
 			case nextCh <- bal:
@@ -39,7 +55,7 @@ func SetDate(ctx context.Context, l ledger.Ledger, bsCh chan *Balance) <-chan *B
 			}
 		}
 	}()
-	return nextCh
+	return nextCh, errCh
 }
 
 // UpdatePrices updates the prices.
@@ -75,6 +91,40 @@ func UpdatePrices(ctx context.Context, l ledger.Ledger, val *ledger.Commodity, b
 		}
 	}()
 	return nextCh
+}
+
+// PostStage sets the date on the balance.
+func PostStage(ctx context.Context, l ledger.Ledger, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
+	nextCh := make(chan *Balance)
+	errCh := make(chan error)
+	go func() {
+		defer close(nextCh)
+		defer close(errCh)
+		var index int
+		for bal := range bsCh {
+			day := l.Days[index]
+			bal.Date = day.Date
+
+			ps := []ledger.Processor{
+				TransactionValuator{Balance: bal},
+				ValuationTransactionComputer{Balance: bal},
+				AccountCloser{Balance: bal},
+			}
+			for _, p := range ps {
+				if err := p.Process(day); err != nil {
+					errCh <- err
+					return
+				}
+			}
+			index++
+			select {
+			case nextCh <- bal:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return nextCh, errCh
 }
 
 // SnapshotConfig configures balance snapshotting.

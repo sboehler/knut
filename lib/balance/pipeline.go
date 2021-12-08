@@ -42,73 +42,6 @@ func SetDate(ctx context.Context, l ledger.Ledger, bsCh chan *Balance) <-chan *B
 	return nextCh
 }
 
-// SnapshotConfig configures balance snapshotting.
-type SnapshotConfig struct {
-	From, To *time.Time
-	Last     int
-	Diff     bool
-	Period   date.Period
-}
-
-// Snapshot snapshots the balance.
-func Snapshot(ctx context.Context, cfg SnapshotConfig, l ledger.Ledger, bs <-chan *Balance) <-chan *Balance {
-	dates := l.Dates(cfg.From, cfg.To, cfg.Period)
-	offset := 0
-	if cfg.Diff {
-		offset = 1
-	}
-	if cfg.Last > 0 && cfg.Last < len(dates)-offset {
-		dates = dates[len(dates)-cfg.Last-offset:]
-	}
-	var (
-		snapshotDates []time.Time
-		i             int
-	)
-	for _, day := range l.Days {
-		for ; i < len(dates) && day.Date.After(dates[i]); i++ {
-			snapshotDates = append(snapshotDates, day.Date)
-		}
-	}
-	maxDate, ok := l.MaxDate()
-	if ok {
-		for ; i < len(dates); i++ {
-			snapshotDates = append(snapshotDates, maxDate)
-		}
-	}
-	snapshotCh := make(chan *Balance)
-
-	go func() {
-		defer close(snapshotCh)
-		var (
-			previous *Balance
-			index    int
-		)
-		for bal := range bs {
-			for ; index < len(snapshotDates) && snapshotDates[index] == bal.Date; index++ {
-				snapshot := bal.Snapshot()
-				snapshot.Date = dates[index]
-				if cfg.Diff {
-					if previous != nil {
-						diff := snapshot.Snapshot()
-						diff.Minus(previous)
-						select {
-						case snapshotCh <- diff:
-						case <-ctx.Done():
-						}
-					}
-					previous = snapshot
-				} else {
-					select {
-					case snapshotCh <- snapshot:
-					case <-ctx.Done():
-					}
-				}
-			}
-		}
-	}()
-	return snapshotCh
-}
-
 // UpdatePrices updates the prices.
 func UpdatePrices(ctx context.Context, l ledger.Ledger, val *ledger.Commodity, bs <-chan *Balance) <-chan *Balance {
 	ps := make(prices.Prices)
@@ -142,4 +75,80 @@ func UpdatePrices(ctx context.Context, l ledger.Ledger, val *ledger.Commodity, b
 		}
 	}()
 	return nextCh
+}
+
+// SnapshotConfig configures balance snapshotting.
+type SnapshotConfig struct {
+	From, To *time.Time
+	Last     int
+	Diff     bool
+	Period   date.Period
+}
+
+// Snapshot snapshots the balance.
+func Snapshot(ctx context.Context, cfg SnapshotConfig, l ledger.Ledger, bs <-chan *Balance) (<-chan *Balance, <-chan *Balance) {
+	dates := l.Dates(cfg.From, cfg.To, cfg.Period)
+	if cfg.Last > 0 {
+		last := cfg.Last
+		if cfg.Diff {
+			last++
+		}
+		if len(dates) > cfg.Last {
+			dates = dates[len(dates)-last:]
+		}
+	}
+	var (
+		snapshotDates = l.ActualDates(dates)
+		snapshotCh    = make(chan *Balance)
+		nextCh        = make(chan *Balance)
+	)
+	go func() {
+		defer close(snapshotCh)
+		defer close(nextCh)
+		var (
+			previous *Balance
+			index    int
+		)
+		// Produce empty balances for dates before the ledger.
+		for ; index < len(snapshotDates) && snapshotDates[index].IsZero(); index++ {
+			bal := New(l.Context, nil)
+			bal.Date = dates[index]
+			select {
+			case snapshotCh <- New(l.Context, nil):
+			case <-ctx.Done():
+				return
+			}
+		}
+		// Produce snapshots for dates during the ledger.
+		for bal := range bs {
+			for ; index < len(snapshotDates) && snapshotDates[index] == bal.Date; index++ {
+				snapshot := bal.Snapshot()
+				snapshot.Date = dates[index]
+				if cfg.Diff {
+					if previous != nil {
+						diff := snapshot.Snapshot()
+						diff.Minus(previous)
+						select {
+						case snapshotCh <- diff:
+						case <-ctx.Done():
+							return
+						}
+					}
+					previous = snapshot
+				} else {
+					select {
+					case snapshotCh <- snapshot:
+					case <-ctx.Done():
+						return
+					}
+				}
+			}
+			select {
+			case nextCh <- bal:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return nextCh, snapshotCh
 }

@@ -202,7 +202,7 @@ func process(cmd *cobra.Command, args []string, w io.Writer) error {
 
 	b1 := balance.SetDate(cotx, l, balCh)
 	b2 := balance.UpdatePrices(cotx, l, valuation, b1)
-	snapshots := balance.Snapshot(cotx, balance.SnapshotConfig{
+	b3, snapshots := balance.Snapshot(cotx, balance.SnapshotConfig{
 		Last:   last,
 		From:   from,
 		Diff:   diff,
@@ -214,12 +214,10 @@ func process(cmd *cobra.Command, args []string, w io.Writer) error {
 		defer close(balCh)
 		for range l.Days {
 			balCh <- bal
+			<-b3
 		}
 	}()
 
-	// if err = l.Process(steps); err != nil {
-	// 	return err
-	// }
 	for bal := range snapshots {
 		rep.Add(bal)
 	}

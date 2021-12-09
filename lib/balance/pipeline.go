@@ -25,17 +25,20 @@ import (
 
 // PreStage sets the date on the balance.
 func PreStage(ctx context.Context, l ledger.Ledger, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
-	nextCh := make(chan *Balance)
+	nextCh := make(chan *Balance, 50)
 	errCh := make(chan error)
 	go func() {
 		defer close(nextCh)
 		defer close(errCh)
 		var index int
 		for bal := range bsCh {
+			if index >= len(l.Days) {
+				return
+			}
 			day := l.Days[index]
-			bal.Date = day.Date
 
 			ps := []ledger.Processor{
+				DateUpdater{Balance: bal},
 				AccountOpener{Balance: bal},
 				TransactionBooker{Balance: bal},
 				ValueBooker{Balance: bal},
@@ -49,7 +52,7 @@ func PreStage(ctx context.Context, l ledger.Ledger, bsCh <-chan *Balance) (<-cha
 			}
 			index++
 			select {
-			case nextCh <- bal:
+			case nextCh <- bal.Snapshot():
 			case <-ctx.Done():
 				return
 			}
@@ -78,7 +81,7 @@ func UpdatePrices(ctx context.Context, l ledger.Ledger, val *ledger.Commodity, b
 			}
 		}
 	}()
-	nextCh := make(chan *Balance)
+	nextCh := make(chan *Balance, 50)
 	go func() {
 		defer close(nextCh)
 		for bal := range bs {
@@ -95,7 +98,7 @@ func UpdatePrices(ctx context.Context, l ledger.Ledger, val *ledger.Commodity, b
 
 // PostStage sets the date on the balance.
 func PostStage(ctx context.Context, l ledger.Ledger, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
-	nextCh := make(chan *Balance)
+	nextCh := make(chan *Balance, 50)
 	errCh := make(chan error)
 	go func() {
 		defer close(nextCh)
@@ -103,8 +106,6 @@ func PostStage(ctx context.Context, l ledger.Ledger, bsCh <-chan *Balance) (<-ch
 		var index int
 		for bal := range bsCh {
 			day := l.Days[index]
-			bal.Date = day.Date
-
 			ps := []ledger.Processor{
 				TransactionValuator{Balance: bal},
 				ValuationTransactionComputer{Balance: bal},
@@ -118,7 +119,7 @@ func PostStage(ctx context.Context, l ledger.Ledger, bsCh <-chan *Balance) (<-ch
 			}
 			index++
 			select {
-			case nextCh <- bal:
+			case nextCh <- bal.Snapshot():
 			case <-ctx.Done():
 				return
 			}
@@ -136,7 +137,7 @@ type SnapshotConfig struct {
 }
 
 // Snapshot snapshots the balance.
-func Snapshot(ctx context.Context, cfg SnapshotConfig, l ledger.Ledger, bs <-chan *Balance) (<-chan *Balance, <-chan *Balance) {
+func Snapshot(ctx context.Context, cfg SnapshotConfig, l ledger.Ledger, bs <-chan *Balance) (<-chan *Balance, <-chan *Balance, <-chan error) {
 	dates := l.Dates(cfg.From, cfg.To, cfg.Period)
 	if cfg.Last > 0 {
 		last := cfg.Last
@@ -149,12 +150,14 @@ func Snapshot(ctx context.Context, cfg SnapshotConfig, l ledger.Ledger, bs <-cha
 	}
 	var (
 		snapshotDates = l.ActualDates(dates)
-		snapshotCh    = make(chan *Balance)
-		nextCh        = make(chan *Balance)
+		snapshotCh    = make(chan *Balance, 50)
+		nextCh        = make(chan *Balance, 50)
+		errCh         = make(chan error)
 	)
 	go func() {
 		defer close(snapshotCh)
 		defer close(nextCh)
+		defer close(errCh)
 		var (
 			previous *Balance
 			index    int
@@ -194,11 +197,11 @@ func Snapshot(ctx context.Context, cfg SnapshotConfig, l ledger.Ledger, bs <-cha
 				}
 			}
 			select {
-			case nextCh <- bal:
+			case nextCh <- bal.Snapshot():
 			case <-ctx.Done():
 				return
 			}
 		}
 	}()
-	return nextCh, snapshotCh
+	return snapshotCh, nextCh, errCh
 }

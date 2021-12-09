@@ -203,8 +203,8 @@ func process(cmd *cobra.Command, args []string, w io.Writer) error {
 
 	b1, err1Ch := balance.PreStage(cotx, l, balCh)
 	b2 := balance.UpdatePrices(cotx, l, valuation, b1)
-	b3, err2Ch := balance.PostStage(cotx, l, b2)
-	b4, snapshots := balance.Snapshot(cotx, balance.SnapshotConfig{
+	b3, err3Ch := balance.PostStage(cotx, l, b2)
+	snapshots, b4, err4Ch := balance.Snapshot(cotx, balance.SnapshotConfig{
 		Last:   last,
 		From:   from,
 		Diff:   diff,
@@ -212,29 +212,40 @@ func process(cmd *cobra.Command, args []string, w io.Writer) error {
 		To:     to,
 	}, l, b3)
 
-	var errcList = []<-chan error{err1Ch, err2Ch}
+	var errcList = []<-chan error{err1Ch, err3Ch, err4Ch}
 
 	go func() {
 		defer close(balCh)
-		for range l.Days {
-			balCh <- bal
-			<-b4
+		balCh <- bal
+		for b := range b4 {
+			balCh <- b
 		}
 	}()
-	go func() {
-		for {
-			for bal := range snapshots {
+
+	errs := merge(errcList...)
+
+	for {
+		select {
+		case bal, ok := <-snapshots:
+			if !ok {
+				snapshots = nil
+			} else {
 				rep.Add(bal)
 			}
+		case err, ok := <-errs:
+			if !ok {
+				errs = nil
+			} else {
+				if err != nil {
+					return err
+				}
+			}
+		}
+		if snapshots == nil && errs == nil {
+			return tableRenderer.Render(reportRenderer.Render(), w)
+		}
 
-		}
-	}()
-	for err := range merge(errcList...) {
-		if err != nil {
-			return err
-		}
 	}
-	return tableRenderer.Render(reportRenderer.Render(), w)
 }
 
 func merge(cs ...<-chan error) <-chan error {

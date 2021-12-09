@@ -347,14 +347,7 @@ func (vtc ValuationTransactionComputer) computeValuationTransactions(b *Balance)
 		})
 	}
 	sort.Slice(result, func(i, j int) bool {
-		var p, q = result[i].Postings[0], result[j].Postings[0]
-		if p.Credit != q.Credit {
-			return p.Credit.String() < q.Credit.String()
-		}
-		if p.Debit != q.Debit {
-			return p.Debit.String() < q.Debit.String()
-		}
-		return p.Commodity.String() < q.Commodity.String()
+		return result[i].Description < result[j].Description
 	})
 	return result, nil
 }

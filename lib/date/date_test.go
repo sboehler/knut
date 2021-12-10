@@ -149,6 +149,12 @@ func TestSeries(t *testing.T) {
 			result: []time.Time{Date(2019, 12, 29), Date(2020, 1, 5), Date(2020, 1, 12), Date(2020, 1, 19), Date(2020, 1, 26), Date(2020, 2, 2)},
 		},
 		{
+			t0:     Date(2019, 12, 31),
+			t1:     Date(2020, 1, 31),
+			period: Monthly,
+			result: []time.Time{Date(2019, 11, 30), Date(2019, 12, 31), Date(2020, 1, 31)},
+		},
+		{
 			t0:     Date(2020, 1, 1),
 			t1:     Date(2020, 1, 31),
 			period: Monthly,

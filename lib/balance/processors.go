@@ -39,58 +39,61 @@ func (a DateUpdater) Process(d *ledger.Day) error {
 
 // Snapshotter keeps track of open accounts.
 type Snapshotter struct {
-	Balance  *Balance
-	From, To *time.Time
-	Last     int
-	Diff     bool
-	Period   date.Period
-	Result   *[]*Balance
-	dates    []time.Time
-	index    int
+	Balance, previous    *Balance
+	From, To             *time.Time
+	Last                 int
+	Diff                 bool
+	Period               date.Period
+	Result               *[]*Balance
+	dates, snapshotDates []time.Time
+	index                int
 }
 
 var (
 	_ ledger.Initializer = (*Snapshotter)(nil)
 	_ ledger.Processor   = (*Snapshotter)(nil)
-	_ ledger.Finalizer   = (*Snapshotter)(nil)
 )
 
 // Initialize implements Initializer.
 func (a *Snapshotter) Initialize(l ledger.Ledger) error {
 	a.dates = l.Dates(a.From, a.To, a.Period)
-	var offset = 0
-	if a.Diff {
-		offset = 1
+	if a.Last > 0 {
+		last := a.Last
+		if len(a.dates) < last {
+			last = len(a.dates)
+		}
+		if a.Diff {
+			last++
+		}
+		if len(a.dates) > a.Last {
+			a.dates = a.dates[len(a.dates)-last:]
+		}
 	}
-	if a.Last > 0 && a.Last < len(a.dates)-offset {
-		a.dates = a.dates[len(a.dates)-a.Last-offset:]
+	a.snapshotDates = l.ActualDates(a.dates)
+	for ; a.index < len(a.snapshotDates) && a.snapshotDates[a.index].IsZero(); a.index++ {
+		bal := New(l.Context, nil)
+		bal.Date = a.dates[a.index]
+		*a.Result = append(*a.Result, bal)
 	}
-	*a.Result = make([]*Balance, len(a.dates))
 	return nil
 }
 
 // Process implements Processor.
 func (a *Snapshotter) Process(d *ledger.Day) error {
-	if len(a.dates) == 0 || a.index >= len(a.dates) {
-		return nil
-	}
-	for ; a.index < len(a.dates) && d.Date.After(a.dates[a.index]); a.index++ {
+	for ; a.index < len(a.snapshotDates) && a.snapshotDates[a.index] == d.Date; a.index++ {
 		snapshot := a.Balance.Snapshot()
 		snapshot.Date = a.dates[a.index]
-		(*a.Result)[a.index] = snapshot
-	}
-	return nil
-}
+		if a.Diff {
+			if a.previous != nil {
+				diff := snapshot.Snapshot()
+				diff.Minus(a.previous)
+				(*a.Result) = append(*a.Result, diff)
 
-// Finalize implements Finalizer.
-func (a *Snapshotter) Finalize() error {
-	for ; a.index < len(a.dates); a.index++ {
-		snapshot := a.Balance.Snapshot()
-		snapshot.Date = a.dates[a.index]
-		(*a.Result)[a.index] = snapshot
-	}
-	if a.Diff {
-		*a.Result = Diffs(*a.Result)
+			}
+			a.previous = snapshot
+		} else {
+			(*a.Result) = append(*a.Result, snapshot)
+		}
 	}
 	return nil
 }

@@ -85,12 +85,18 @@ func (l Ledger) Dates(from, to *time.Time, period date.Period) []time.Time {
 func (l Ledger) ActualDates(ds []time.Time) []time.Time {
 	var actuals = make([]time.Time, 0, len(ds))
 	for _, date := range ds {
-		index := sort.Search(len(l.Days), func(i int) bool { return !l.Days[i].Date.Before(date) })
-		var d time.Time
-		if index > 0 {
-			d = l.Days[index-1].Date
+		if len(l.Days) == 0 || date.Before(l.Days[0].Date) {
+			// no days in the ledger, or date before all ledger days
+			actuals = append(actuals, time.Time{})
+			continue
 		}
-		actuals = append(actuals, d)
+		index := sort.Search(len(l.Days), func(i int) bool { return !l.Days[i].Date.Before(date) })
+		if index == len(l.Days) {
+			// all days are after the date, use the latest one
+			actuals = append(actuals, l.Days[len(l.Days)-1].Date)
+			continue
+		}
+		actuals = append(actuals, l.Days[index].Date)
 	}
 	return actuals
 }

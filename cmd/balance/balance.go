@@ -184,14 +184,6 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 		balances []*balance.Balance
 		steps    = []ledger.Processor{
 			balance.DateUpdater{Balance: bal},
-			&balance.Snapshotter{
-				Balance: bal,
-				From:    from,
-				To:      to,
-				Period:  period,
-				Last:    last,
-				Diff:    diff,
-				Result:  &balances},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
 			balance.ValueBooker{Balance: bal},
@@ -200,6 +192,14 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			balance.TransactionValuator{Balance: bal},
 			balance.ValuationTransactionComputer{Balance: bal},
 			balance.AccountCloser{Balance: bal},
+			&balance.Snapshotter{
+				Balance: bal,
+				From:    from,
+				To:      to,
+				Period:  period,
+				Last:    last,
+				Diff:    diff,
+				Result:  &balances},
 		}
 		filter = ledger.Filter{
 			Accounts:    filterAccounts,

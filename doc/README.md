@@ -82,7 +82,7 @@ Use `--diff` to look into period differences. Use `--account` to filter for tran
 
 #### Collapse accounts
 
-Use `-c` to collapse accounts matching a certain regex. This can be used to completely hide an account (`-c0` - its positions will show up in the delta):
+Use `-m` to map accounts matching a certain regex to a reduced number of segments. This can be used to completely hide an account (`-m0` - its positions will show up in the delta):
 
 ```text
 {{ .Commands.Collapse}}

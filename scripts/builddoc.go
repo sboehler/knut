@@ -81,11 +81,11 @@ func createConfig() (*config, error) {
 	})
 	c.Commands["Collapse"] = run([]string{"balance",
 		"-v", "CHF", "--months", "--from",
-		"2020-01-01", "--to", "2020-04-01", "--diff", "-c0,(Income|Expenses)", "doc/example.knut",
+		"2020-01-01", "--to", "2020-04-01", "--diff", "-m0,(Income|Expenses)", "doc/example.knut",
 	})
 	c.Commands["Collapse1"] = run([]string{"balance",
 		"-v", "CHF", "--months", "--from",
-		"2020-01-01", "--to", "2020-04-01", "--diff", "-c1,(Income|Expenses|Equity)", "doc/example.knut",
+		"2020-01-01", "--to", "2020-04-01", "--diff", "-m1,(Income|Expenses|Equity)", "doc/example.knut",
 	})
 	c.Commands["BalanceMonthlyCHF"] = run([]string{"balance",
 		"-v", "CHF", "--months", "--to", "2020-04-01", "doc/example.knut",

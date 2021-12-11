@@ -40,7 +40,7 @@ func (a DateUpdater) Process(d *ledger.Day) error {
 // Snapshotter keeps track of open accounts.
 type Snapshotter struct {
 	Balance, previous    *Balance
-	From, To             *time.Time
+	From, To             time.Time
 	Last                 int
 	Diff                 bool
 	Period               date.Period

@@ -130,7 +130,7 @@ func PostStage(ctx context.Context, l ledger.Ledger, bsCh <-chan *Balance) (<-ch
 
 // SnapshotConfig configures balance snapshotting.
 type SnapshotConfig struct {
-	From, To *time.Time
+	From, To time.Time
 	Last     int
 	Diff     bool
 	Period   date.Period

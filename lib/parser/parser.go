@@ -57,7 +57,8 @@ func New(ctx ledger.Context, path string, r io.RuneReader) (*Parser, error) {
 	}
 	return &Parser{
 		context: ctx,
-		scanner: s}, nil
+		scanner: s,
+	}, nil
 }
 
 // FromPath creates a new parser for the given file.

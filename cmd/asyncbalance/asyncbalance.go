@@ -100,7 +100,7 @@ func execute(cmd *cobra.Command, args []string) error {
 func process(cmd *cobra.Command, args []string, w io.Writer) error {
 	var (
 		ctx      = ledger.NewContext()
-		from, to *time.Time
+		from, to time.Time
 		err      error
 	)
 	if cmd.Flags().Changed("from") {
@@ -114,8 +114,7 @@ func process(cmd *cobra.Command, args []string, w io.Writer) error {
 		}
 	} else {
 		now := time.Now()
-		d := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-		to = &d
+		to = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	}
 	last, err := cmd.Flags().GetInt("last")
 	if err != nil {

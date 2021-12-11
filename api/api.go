@@ -74,7 +74,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 		ctx                               = ledger.NewContext()
 		period                            date.Period
 		commoditiesFilter, accountsFilter *regexp.Regexp
-		from, to                          *time.Time
+		from, to                          time.Time
 		last                              int
 		valuation                         *ledger.Commodity
 		diff                              bool
@@ -203,24 +203,18 @@ func parseRegex(query url.Values, key string) (*regexp.Regexp, error) {
 	return result, nil
 }
 
-func parseDate(query url.Values, key string) (*time.Time, error) {
+func parseDate(query url.Values, key string) (time.Time, error) {
 	var (
-		s      string
-		ok     bool
-		err    error
-		result *time.Time
+		s   string
+		ok  bool
+		err error
+		t   time.Time
 	)
-	if s, ok, err = getOne(query, key); err != nil {
-		return nil, err
+	if s, ok, err = getOne(query, key); err != nil || !ok {
+		return t, err
 	}
-	if ok {
-		var t time.Time
-		if t, err = time.Parse("2006-01-02", s); err != nil {
-			return nil, err
-		}
-		result = &t
-	}
-	return result, nil
+
+	return time.Parse("2006-01-02", s)
 }
 
 func parseInt(query url.Values, key string) (int, error) {

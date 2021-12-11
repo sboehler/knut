@@ -294,8 +294,20 @@ type Rule struct {
 	Regex *regexp.Regexp
 }
 
+func (r Rule) String() string {
+	return fmt.Sprintf("%d,%v", r.Level, r.Regex)
+}
+
 // Mapping is a set of mapping rules.
 type Mapping []Rule
+
+func (m Mapping) String() string {
+	var s []string
+	for _, r := range m {
+		s = append(s, r.String())
+	}
+	return strings.Join(s, ", ")
+}
 
 // level returns the level to which an account should be shortened.
 func (m Mapping) level(a *Account) int {

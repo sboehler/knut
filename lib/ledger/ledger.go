@@ -59,18 +59,18 @@ func (l Ledger) MaxDate() (time.Time, bool) {
 
 // Dates returns a series of dates which covers the first
 // and last date in the ledger.
-func (l Ledger) Dates(from, to *time.Time, period date.Period) []time.Time {
+func (l Ledger) Dates(from, to time.Time, period date.Period) []time.Time {
 	if len(l.Days) == 0 {
 		return nil
 	}
 	var t0, t1 time.Time
-	if from != nil {
-		t0 = *from
+	if !from.IsZero() {
+		t0 = from
 	} else {
 		t0, _ = l.MinDate()
 	}
-	if to != nil {
-		t1 = *to
+	if !to.IsZero() {
+		t1 = to
 	} else {
 		t1, _ = l.MaxDate()
 	}

@@ -17,7 +17,6 @@ package balance
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -47,9 +46,7 @@ func CreateCmd() *cobra.Command {
 		Args:  cobra.ExactValidArgs(1),
 		Run:   r.run,
 	}
-
-	r.configureFlags(c)
-
+	r.setupFlags(c)
 	return c
 }
 
@@ -66,13 +63,21 @@ type runner struct {
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) {
+	if r.cpuprofile != "" {
+		f, err := os.Create(r.cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 	if err := r.execute(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		os.Exit(1)
 	}
 }
 
-func (r *runner) configureFlags(c *cobra.Command) {
+func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
 	c.Flags().Var(&r.from, "from", "from date")
 	c.Flags().Var(&r.to, "to", "to date")
@@ -90,53 +95,23 @@ func (r *runner) configureFlags(c *cobra.Command) {
 }
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
-	if r.cpuprofile != "" {
-		f, err := os.Create(r.cpuprofile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
-
-	pipeline, err := r.configurePipeline(cmd, args)
-	if err != nil {
-		return err
-	}
-	var out = bufio.NewWriter(cmd.OutOrStdout())
-	defer out.Flush()
-	return processPipeline(out, pipeline)
-}
-
-type pipeline struct {
-	Accounts        *ledger.Accounts
-	Parser          parser.RecursiveParser
-	Filter          ledger.Filter
-	ProcessingSteps []ledger.Processor
-	Balances        *[]*balance.Balance
-	Report          *report.Report
-	ReportRenderer  report.Renderer
-	TextRenderer    table.TextRenderer
-}
-
-func (r runner) configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 	var (
 		ctx = ledger.NewContext()
+
+		valuation *ledger.Commodity
+		period    date.Period
+
 		err error
 	)
 	if time.Time(r.to).IsZero() {
 		now := time.Now()
 		r.to = flags.DateFlag(time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC))
 	}
-	var (
-		valuation *ledger.Commodity
-		period    date.Period
-	)
 	if valuation, err = r.valuation.Value(ctx); err != nil {
-		return nil, err
+		return err
 	}
 	if period, err = r.period.Value(); err != nil {
-		return nil, err
+		return err
 	}
 
 	var (
@@ -183,31 +158,18 @@ func (r runner) configurePipeline(cmd *cobra.Command, args []string) (*pipeline,
 			Thousands: r.thousands,
 			Round:     r.digits,
 		}
+		l ledger.Ledger
 	)
-	return &pipeline{
-		Parser:          parser,
-		Filter:          filter,
-		ProcessingSteps: steps,
-		Balances:        &balances,
-		Report:          rep,
-		ReportRenderer:  reportRenderer,
-		TextRenderer:    tableRenderer,
-	}, nil
-}
-
-func processPipeline(w io.Writer, ppl *pipeline) error {
-	var (
-		l   ledger.Ledger
-		err error
-	)
-	if l, err = ppl.Parser.BuildLedger(ppl.Filter); err != nil {
+	if l, err = parser.BuildLedger(filter); err != nil {
 		return err
 	}
-	if err = l.Process(ppl.ProcessingSteps); err != nil {
+	if err = l.Process(steps); err != nil {
 		return err
 	}
-	for _, bal := range *ppl.Balances {
-		ppl.Report.Add(bal)
+	for _, bal := range balances {
+		rep.Add(bal)
 	}
-	return ppl.TextRenderer.Render(ppl.ReportRenderer.Render(), w)
+	var out = bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	return tableRenderer.Render(reportRenderer.Render(), out)
 }

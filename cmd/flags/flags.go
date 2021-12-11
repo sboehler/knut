@@ -23,111 +23,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"go.uber.org/multierr"
 
 	"github.com/sboehler/knut/lib/date"
 	"github.com/sboehler/knut/lib/ledger"
 )
-
-// GetAccountFlag is a helper to get an account passed as a flag to the command.
-func GetAccountFlag(cmd *cobra.Command, as ledger.Context, flag string) (*ledger.Account, error) {
-	name, err := cmd.Flags().GetString(flag)
-	if err != nil {
-		return nil, err
-	}
-	return as.GetAccount(name)
-}
-
-// GetDateFlag is a helper to get a date passed as a flag to the command.
-func GetDateFlag(cmd *cobra.Command, flag string) (time.Time, error) {
-	s, err := cmd.Flags().GetString(flag)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return time.Parse("2006-01-02", s)
-}
-
-// GetRegexFlag is a helper to get a regex passed as a flag to the command.
-func GetRegexFlag(cmd *cobra.Command, flag string) (*regexp.Regexp, error) {
-	s, err := cmd.Flags().GetString(flag)
-	if err != nil {
-		return nil, err
-	}
-	return regexp.Compile(s)
-}
-
-// GetCommodityFlag is a helper to get a commodity passed as a flag to the command.
-func GetCommodityFlag(cmd *cobra.Command, ctx ledger.Context, name string) (*ledger.Commodity, error) {
-	s, err := cmd.Flags().GetString(name)
-	if err != nil {
-		return nil, err
-	}
-	return ctx.GetCommodity(s)
-}
-
-// GetPeriodFlag parses a period from a set of flags.
-func GetPeriodFlag(cmd *cobra.Command) (date.Period, error) {
-	var (
-		periods = []struct {
-			name   string
-			period date.Period
-		}{
-			{"days", date.Daily},
-			{"weeks", date.Weekly},
-			{"months", date.Monthly},
-			{"quarters", date.Quarterly},
-			{"years", date.Yearly},
-		}
-
-		errors  error
-		results []date.Period
-	)
-	for _, tuple := range periods {
-		v, err := cmd.Flags().GetBool(tuple.name)
-		if err != nil {
-			errors = multierr.Append(errors, err)
-			continue
-		}
-		if v {
-			results = append(results, tuple.period)
-		}
-	}
-	if errors != nil {
-		return date.Once, errors
-	}
-	if len(results) > 1 {
-		return date.Once, fmt.Errorf("received multiple conflicting periods: %v", results)
-	} else if len(results) == 0 {
-		return date.Once, nil
-	}
-	return results[0], nil
-}
-
-// GetCollapseFlag parses a flag of type -c1,<regex>.
-func GetCollapseFlag(cmd *cobra.Command, name string) (ledger.Mapping, error) {
-	collapse, err := cmd.Flags().GetStringArray(name)
-	if err != nil {
-		return nil, err
-	}
-	var res = make(ledger.Mapping, 0, len(collapse))
-	for _, c := range collapse {
-		var s = strings.SplitN(c, ",", 2)
-		l, err := strconv.Atoi(s[0])
-		if err != nil {
-			return nil, fmt.Errorf("expected integer level, got %q (error: %v)", s[0], err)
-		}
-		var regex *regexp.Regexp
-		if len(s) == 2 {
-			if regex, err = regexp.Compile(s[1]); err != nil {
-				return nil, err
-			}
-		}
-		res = append(res, ledger.Rule{Level: l, Regex: regex})
-	}
-	return res, nil
-}
 
 // DateFlag manages a flag to determine a date.
 type DateFlag time.Time

@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"io/ioutil"
-	"os"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -32,51 +31,56 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-	var cmd = cobra.Command{
+	var r runner
+	var cmd = &cobra.Command{
 		Use:   "ch.viac",
 		Short: "Import VIAC values from JSON files",
 		Long:  `Open app.viac.ch, choose a portfolio, and select "From start" in the overview dash. In the Chrome dev tools, save the response from the "performance" XHR call, and pass the resulting file to this importer.`,
 
 		Args: cobra.ExactValidArgs(1),
 
-		RunE: run,
+		RunE: r.run,
 	}
-	cmd.Flags().StringP("from", "f", "0001-01-01", "YYYY-MM-DD - ignore entries before this date")
-	cmd.Flags().StringP("account", "a", "", "account name")
-	return &cmd
+	r.setupFlags(cmd)
+	return cmd
 }
 
 func init() {
 	importer.Register(CreateCmd)
 }
 
-func run(cmd *cobra.Command, args []string) error {
-	var ctx = ledger.NewContext()
-	dateString, err := cmd.Flags().GetString("from")
-	if err != nil {
-		return err
-	}
-	fromDate, err := time.Parse("2006-01-02", dateString)
-	if err != nil {
-		return err
-	}
-	account, err := flags.GetAccountFlag(cmd, ctx, "account")
-	if err != nil {
-		return err
-	}
-	f, err := os.Open(args[0])
-	if err != nil {
-		return err
-	}
-	b, err := ioutil.ReadAll(f)
-	if err != nil {
+func (r *runner) setupFlags(cmd *cobra.Command) {
+	cmd.Flags().VarP(&r.from, "from", "f", "YYYY-MM-DD - ignore entries before this date")
+	cmd.Flags().VarP(&r.account, "account", "a", "account name")
+}
+
+type runner struct {
+	from    flags.DateFlag
+	account flags.AccountFlag
+}
+
+func (r *runner) run(cmd *cobra.Command, args []string) error {
+	var (
+		ctx     = ledger.NewContext()
+		f       *bufio.Reader
+		account *ledger.Account
+		err     error
+	)
+
+	if account, err = r.account.Value(ctx); err != nil {
 		return err
 	}
 	commodity, err := ctx.GetCommodity("CHF")
 	if err != nil {
 		return err
 	}
-
+	if f, err = flags.OpenFile(args[0]); err != nil {
+		return err
+	}
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		return err
+	}
 	var resp response
 	json.Unmarshal(b, &resp)
 
@@ -86,7 +90,7 @@ func run(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		if d.Before(fromDate) {
+		if d.Before(r.from.Value()) {
 			continue
 		}
 		a, err := decimal.NewFromString(dv.Value.String())
@@ -101,9 +105,9 @@ func run(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	w := bufio.NewWriter(cmd.OutOrStdout())
-	defer w.Flush()
-	_, err = printer.New().PrintLedger(w, builder.Build())
+	out := bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	_, err = printer.New().PrintLedger(out, builder.Build())
 	return err
 }
 

@@ -34,40 +34,48 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-	var cmd = cobra.Command{
+	var r runner
+	var cmd = &cobra.Command{
 		Use:   "infer",
 		Short: "Auto-assign accounts in a journal",
 		Long: `Build a Bayes model using the supplied training file and apply it to replace
 		the indicated account in the target file. Training file and target file may be the same.`,
 		Args: cobra.ExactValidArgs(1),
-		Run:  run,
+		Run:  r.run,
 	}
-	cmd.Flags().StringP("account", "a", "Expenses:TBD", "account name")
-	cmd.Flags().StringP("training-file", "t", "", "the journal file with existing data")
-	return &cmd
+	r.setupFlags(cmd)
+	return cmd
 }
 
-func run(cmd *cobra.Command, args []string) {
-	if err := execute(cmd, args); err != nil {
+type runner struct {
+	account      flags.AccountFlag
+	trainingFile string
+}
+
+func (r *runner) setupFlags(cmd *cobra.Command) {
+	cmd.Flags().VarP(&r.account, "account", "a", "account name")
+	cmd.Flags().StringVarP(&r.trainingFile, "training-file", "t", "", "the journal file with existing data")
+	cmd.MarkFlagRequired("training-file")
+}
+
+func (r *runner) run(cmd *cobra.Command, args []string) {
+	if err := r.execute(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		os.Exit(1)
 	}
 }
 
-func execute(cmd *cobra.Command, args []string) (errors error) {
+func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
-		ctx          = ledger.NewContext()
-		trainingFile string
-		account      *ledger.Account
-		err          error
+		ctx     = ledger.NewContext()
+		account *ledger.Account
+		err     error
 	)
-	if account, err = flags.GetAccountFlag(cmd, ctx, "account"); err != nil {
+	tbd, _ := ctx.GetAccount("Expenses:TBD")
+	if account, err = r.account.ValueWithDefault(ctx, tbd); err != nil {
 		return err
 	}
-	if trainingFile, err = cmd.Flags().GetString("training-file"); err != nil {
-		return err
-	}
-	return infer(ctx, trainingFile, args[0], account)
+	return infer(ctx, r.trainingFile, args[0], account)
 }
 
 func infer(ctx ledger.Context, trainingFile string, targetFile string, account *ledger.Account) error {
@@ -75,7 +83,7 @@ func infer(ctx ledger.Context, trainingFile string, targetFile string, account *
 	if err != nil {
 		return err
 	}
-	p, cls, err := parser.FromPath(ledger.NewContext(), targetFile)
+	p, cls, err := parser.FromPath(ctx, targetFile)
 	if err != nil {
 		return err
 	}

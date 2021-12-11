@@ -15,9 +15,7 @@
 package portfolio
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -34,6 +32,7 @@ import (
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
 
+	var r runner
 	// Cmd is the balance command.
 	var c = &cobra.Command{
 		Use:   "portfolio",
@@ -44,89 +43,60 @@ func CreateCmd() *cobra.Command {
 
 		Hidden: true,
 
-		Run: run,
+		Run: r.run,
 	}
-	c.Flags().String("from", "", "from date")
-	c.Flags().String("cpuprofile", "", "file to write profile")
-	c.Flags().String("to", "", "to date")
-	c.Flags().IntP("last", "l", 0, "last n periods")
-	c.Flags().BoolP("diff", "d", false, "diff")
-	c.Flags().BoolP("show-commodities", "s", false, "Show commodities on their own rows")
-	c.Flags().Bool("days", false, "days")
-	c.Flags().Bool("weeks", false, "weeks")
-	c.Flags().Bool("months", false, "months")
-	c.Flags().Bool("quarters", false, "quarters")
-	c.Flags().Bool("years", false, "years")
-	c.Flags().StringP("val", "v", "", "valuate in the given commodity")
-	c.Flags().String("account", "", "filter accounts with a regex")
-	c.Flags().String("commodity", "", "filter commodities with a regex")
+	r.setupFlags(c)
 	return c
 }
 
-func run(cmd *cobra.Command, args []string) {
-	if err := execute(cmd, args); err != nil {
-		fmt.Fprintln(cmd.ErrOrStderr(), err)
-		os.Exit(1)
-	}
+type runner struct {
+	cpuprofile            string
+	valuation             flags.CommodityFlag
+	accounts, commodities flags.RegexFlag
 }
 
-func execute(cmd *cobra.Command, args []string) error {
-	prof, err := cmd.Flags().GetString("cpuprofile")
-	if err != nil {
-		return err
-	}
-	if prof != "" {
-		f, err := os.Create(prof)
+func (r *runner) setupFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
+	cmd.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
+	cmd.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
+	cmd.Flags().Var(&r.commodities, "commodity", "filter commodities with a regex")
+}
+
+func (r *runner) run(cmd *cobra.Command, args []string) {
+	if r.cpuprofile != "" {
+		f, err := os.Create(r.cpuprofile)
 		if err != nil {
 			log.Fatal(err)
 		}
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
+	if err := r.execute(cmd, args); err != nil {
+		fmt.Fprintln(cmd.ErrOrStderr(), err)
+		os.Exit(1)
+	}
+}
 
-	pipeline, err := configurePipeline(cmd, args)
-	if err != nil {
+func (r *runner) execute(cmd *cobra.Command, args []string) error {
+	var (
+		ctx       = ledger.NewContext()
+		valuation *ledger.Commodity
+		err       error
+	)
+	if valuation, err = r.valuation.Value(ctx); err != nil {
 		return err
 	}
-	var out = bufio.NewWriter(cmd.OutOrStdout())
-	defer out.Flush()
-	return processPipeline(out, pipeline)
-}
 
-type pipeline struct {
-	Parser          parser.RecursiveParser
-	Filter          ledger.Filter
-	ProcessingSteps []ledger.Processor
-	PerfCalc        performance.Calculator
-}
-
-func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
-	var (
-		ctx = ledger.NewContext()
-		err error
-	)
-	valuation, err := flags.GetCommodityFlag(cmd, ctx, "val")
-	if err != nil {
-		return nil, err
-	}
-	filterAccounts, err := flags.GetRegexFlag(cmd, "account")
-	if err != nil {
-		return nil, err
-	}
-	filterCommodities, err := flags.GetRegexFlag(cmd, "commodity")
-	if err != nil {
-		return nil, err
-	}
 	var (
 		p = parser.RecursiveParser{
 			File:    args[0],
 			Context: ctx,
 		}
+		bal    = balance.New(ctx, valuation)
 		filter = ledger.Filter{
-			Commodities: filterCommodities,
-			Accounts:    filterAccounts,
+			Commodities: r.commodities.Value(),
+			Accounts:    r.accounts.Value(),
 		}
-		bal   = balance.New(ctx, valuation)
 		res   = new(performance.DailyPerfValues)
 		steps = []ledger.Processor{
 			balance.DateUpdater{Balance: bal},
@@ -142,30 +112,19 @@ func configurePipeline(cmd *cobra.Command, args []string) (*pipeline, error) {
 			&performance.FlowComputer{Filter: filter, Result: res},
 			//TODO: compute performance here
 		}
-	)
-	return &pipeline{
-		Parser:          p,
-		Filter:          filter,
-		ProcessingSteps: steps,
-		PerfCalc: performance.Calculator{
+		perfCalc = performance.Calculator{
 			Filter:    filter,
 			Valuation: valuation,
-		},
-	}, nil
-}
-
-func processPipeline(w io.Writer, ppl *pipeline) error {
-	var (
-		l   ledger.Ledger
-		err error
+		}
+		l ledger.Ledger
 	)
-	if l, err = ppl.Parser.BuildLedger(ledger.Filter{}); err != nil {
+	if l, err = p.BuildLedger(ledger.Filter{}); err != nil {
 		return err
 	}
-	if err = l.Process(ppl.ProcessingSteps); err != nil {
+	if err = l.Process(steps); err != nil {
 		return err
 	}
-	for range ppl.PerfCalc.Perf(l) {
+	for range perfCalc.Perf(l) {
 	}
 	return nil
 }

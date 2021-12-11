@@ -19,7 +19,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"os"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -35,42 +34,51 @@ import (
 // CreateCmd creates the cobra command.
 func CreateCmd() *cobra.Command {
 
-	var cmd = cobra.Command{
+	var r runner
+
+	var cmd = &cobra.Command{
 		Use:   "ch.postfinance",
 		Short: "Import Postfinance CSV account statements",
 
 		Args: cobra.ExactValidArgs(1),
 
-		RunE: run,
+		RunE: r.run,
 	}
-	cmd.Flags().StringP("account", "a", "", "account name")
-	return &cmd
+	r.setupFlags(cmd)
+	return cmd
 }
 
-func run(cmd *cobra.Command, args []string) error {
+type runner struct {
+	accountFlag flags.AccountFlag
+}
+
+func (r *runner) setupFlags(cmd *cobra.Command) {
+	cmd.Flags().VarP(&r.accountFlag, "account", "a", "account name")
+	cmd.MarkFlagRequired("account")
+}
+
+func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		file    *os.File
-		account *ledger.Account
-		ctx     = ledger.NewContext()
-		err     error
+		reader *bufio.Reader
+		ctx    = ledger.NewContext()
+		err    error
 	)
-	if account, err = flags.GetAccountFlag(cmd, ctx, "account"); err != nil {
-		return err
-	}
-	if file, err = os.Open(args[0]); err != nil {
+	if reader, err = flags.OpenFile(args[0]); err != nil {
 		return err
 	}
 	var p = Parser{
-		reader:  csv.NewReader(bufio.NewReader(charmap.ISO8859_1.NewDecoder().Reader(file))),
-		account: account,
+		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(reader)),
 		builder: ledger.NewBuilder(ctx, ledger.Filter{}),
+	}
+	if p.account, err = r.accountFlag.Value(ctx); err != nil {
+		return err
 	}
 	if err = p.parse(); err != nil {
 		return err
 	}
-	var w = bufio.NewWriter(cmd.OutOrStdout())
-	defer w.Flush()
-	_, err = printer.New().PrintLedger(w, p.builder.Build())
+	out := bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	_, err = printer.New().PrintLedger(out, p.builder.Build())
 	return err
 }
 

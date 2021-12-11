@@ -19,7 +19,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -35,77 +34,84 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-	var cmd = cobra.Command{
+	var r runner
+	var cmd = &cobra.Command{
 		Use:   "ch.swissquote",
 		Short: "Import Swissquote account reports",
 		Long:  `Parses CSV files from Swissquote's transactions overview.`,
 
 		Args: cobra.ExactValidArgs(1),
-		RunE: run,
+		RunE: r.run,
 	}
-	cmd.Flags().StringP("account", "a", "", "account name")
-	cmd.Flags().StringP("interest", "i", "Expenses:TBD", "account name of the interest expense account")
-	cmd.Flags().StringP("dividend", "d", "Expenses:TBD", "account name of the dividend account")
-	cmd.Flags().StringP("tax", "t", "Expenses:TBD", "account name of the withholding tax account")
-	cmd.Flags().StringP("fee", "f", "Expenses:TBD", "account name of the fee account")
-	return &cmd
+	r.setupFlags(cmd)
+	return cmd
 }
 
 func init() {
 	importer.Register(CreateCmd)
 }
 
-type options struct {
-	account, dividend, tax, fee, interest *ledger.Account
+type runner struct {
+	account, dividend, tax, fee, interest flags.AccountFlag
 }
 
-func run(cmd *cobra.Command, args []string) error {
+func (r *runner) setupFlags(cmd *cobra.Command) {
+	cmd.Flags().VarP(&r.account, "account", "a", "account name")
+	cmd.Flags().VarP(&r.interest, "interest", "i", "account name of the interest expense account")
+	cmd.Flags().VarP(&r.dividend, "dividend", "d", "account name of the dividend account")
+	cmd.Flags().VarP(&r.tax, "tax", "t", "account name of the withholding tax account")
+	cmd.Flags().VarP(&r.fee, "fee", "f", "account name of the fee account")
+	cmd.MarkFlagRequired("account")
+	cmd.MarkFlagRequired("interest")
+	cmd.MarkFlagRequired("dividend")
+	cmd.MarkFlagRequired("tax")
+	cmd.MarkFlagRequired("fee")
+}
+
+func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
 		ctx = ledger.NewContext()
-		o   options
+		f   *bufio.Reader
 		err error
 	)
-	if o.account, err = flags.GetAccountFlag(cmd, ctx, "account"); err != nil {
+	if f, err = flags.OpenFile(args[0]); err != nil {
 		return err
 	}
-	if o.dividend, err = flags.GetAccountFlag(cmd, ctx, "dividend"); err != nil {
+	var p = parser{
+		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)),
+		builder: ledger.NewBuilder(ctx, ledger.Filter{}),
+	}
+	if p.account, err = r.account.Value(ctx); err != nil {
 		return err
 	}
-	if o.interest, err = flags.GetAccountFlag(cmd, ctx, "interest"); err != nil {
+	if p.dividend, err = r.dividend.Value(ctx); err != nil {
 		return err
 	}
-	if o.tax, err = flags.GetAccountFlag(cmd, ctx, "tax"); err != nil {
+	if p.interest, err = r.interest.Value(ctx); err != nil {
 		return err
 	}
-	if o.fee, err = flags.GetAccountFlag(cmd, ctx, "fee"); err != nil {
+	if p.tax, err = r.tax.Value(ctx); err != nil {
 		return err
 	}
-	f, err := os.Open(args[0])
-	if err != nil {
+	if p.fee, err = r.fee.Value(ctx); err != nil {
 		return err
 	}
-	var (
-		reader = csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f))
-		p      = parser{
-			reader:  reader,
-			options: o,
-			builder: ledger.NewBuilder(ctx, ledger.Filter{}),
-		}
-	)
 	if err = p.parse(); err != nil {
 		return err
 	}
-	w := bufio.NewWriter(cmd.OutOrStdout())
-	defer w.Flush()
-	_, err = printer.New().PrintLedger(w, p.builder.Build())
+	out := bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	_, err = printer.New().PrintLedger(out, p.builder.Build())
 	return err
 }
 
 type parser struct {
 	reader  *csv.Reader
-	options options
+	options runner
 	builder *ledger.Builder
 	last    *record
+
+	account, dividend, tax, fee, interest *ledger.Account
 }
 
 func (p *parser) parse() error {
@@ -252,9 +258,9 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 		Date:        r.date,
 		Description: desc,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.EquityAccount(), p.options.account, r.symbol, qty),
-			ledger.NewPosting(p.builder.Context.EquityAccount(), p.options.account, r.currency, proceeds),
-			ledger.NewPosting(p.options.fee, p.options.account, r.currency, fee),
+			ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, r.symbol, qty),
+			ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, r.currency, proceeds),
+			ledger.NewPosting(p.fee, p.account, r.currency, fee),
 		},
 	})
 	return true, nil
@@ -282,8 +288,8 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		Date:        r.date,
 		Description: desc,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.EquityAccount(), p.options.account, p.last.currency, p.last.netAmount),
-			ledger.NewPosting(p.builder.Context.EquityAccount(), p.options.account, r.currency, r.netAmount),
+			ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, p.last.currency, p.last.netAmount),
+			ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, r.currency, r.netAmount),
 		},
 	})
 	p.last = nil
@@ -300,10 +306,10 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 		return false, nil
 	}
 	var postings = []ledger.Posting{
-		ledger.NewPosting(p.options.dividend, p.options.account, r.currency, r.price),
+		ledger.NewPosting(p.dividend, p.account, r.currency, r.price),
 	}
 	if !r.fee.IsZero() {
-		postings = append(postings, ledger.NewPosting(p.options.account, p.options.tax, r.currency, r.fee))
+		postings = append(postings, ledger.NewPosting(p.account, p.tax, r.currency, r.fee))
 	}
 	p.builder.AddTransaction(ledger.Transaction{
 		Date:        r.date,
@@ -321,7 +327,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(p.options.fee, p.options.account, r.currency, r.netAmount),
+			ledger.NewPosting(p.fee, p.account, r.currency, r.netAmount),
 		},
 	})
 	return true, nil
@@ -341,7 +347,7 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.TBDAccount(), p.options.account, r.currency, r.netAmount),
+			ledger.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
 		},
 	})
 	return true, nil
@@ -355,7 +361,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(p.options.interest, p.options.account, r.currency, r.netAmount),
+			ledger.NewPosting(p.interest, p.account, r.currency, r.netAmount),
 		},
 	})
 	return true, nil
@@ -366,7 +372,7 @@ func (p *parser) parseCatchall(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.TBDAccount(), p.options.account, r.currency, r.netAmount),
+			ledger.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
 		},
 	})
 	return true, nil

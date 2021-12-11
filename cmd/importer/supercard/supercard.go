@@ -19,7 +19,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -36,47 +35,56 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-	var cmd = cobra.Command{
+	var r runner
+	var cmd = &cobra.Command{
 		Use:   "ch.supercard",
 		Short: "Import Supercard credit card statements",
 		Long:  `Download the CSV file from their account management tool.`,
 
 		Args: cobra.ExactValidArgs(1),
 
-		RunE: run,
+		RunE: r.run,
 	}
-	cmd.Flags().StringP("account", "a", "", "account name")
-	return &cmd
+	r.setupFlags(cmd)
+	return cmd
 }
 
 func init() {
 	importer.Register(CreateCmd)
 }
 
-func run(cmd *cobra.Command, args []string) error {
-	var ctx = ledger.NewContext()
-	account, err := flags.GetAccountFlag(cmd, ctx, "account")
-	if err != nil {
-		return err
-	}
-	f, err := os.Open(args[0])
-	if err != nil {
-		return err
-	}
+type runner struct {
+	account flags.AccountFlag
+}
+
+func (r *runner) setupFlags(cmd *cobra.Command) {
+	cmd.Flags().VarP(&r.account, "account", "a", "account name")
+}
+
+func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		reader = csv.NewReader(bufio.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)))
-		p      = parser{
-			reader:  reader,
-			account: account,
-			builder: ledger.NewBuilder(ctx, ledger.Filter{}),
-		}
+		ctx = ledger.NewContext()
+		f   *bufio.Reader
+		err error
 	)
+
+	if f, err = flags.OpenFile(args[0]); err != nil {
+		return err
+	}
+	var p = parser{
+		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)),
+		builder: ledger.NewBuilder(ctx, ledger.Filter{}),
+	}
+
+	if p.account, err = r.account.Value(ctx); err != nil {
+		return err
+	}
 	if err = p.parse(); err != nil {
 		return err
 	}
-	w := bufio.NewWriter(cmd.OutOrStdout())
-	defer w.Flush()
-	_, err = printer.New().PrintLedger(w, p.builder.Build())
+	out := bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	_, err = printer.New().PrintLedger(out, p.builder.Build())
 	return err
 }
 

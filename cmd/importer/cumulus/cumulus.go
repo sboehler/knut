@@ -19,7 +19,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -35,7 +34,8 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
-	var cmd = cobra.Command{
+	var r runner
+	var cmd = &cobra.Command{
 		Use:   "ch.cumulus",
 		Short: "Import Cumulus credit card statements",
 		Long: `Download a PDF account statement and run it through tabula (https://tabula.technology/),
@@ -43,10 +43,10 @@ using the default options and saving it to CSV. This importer will parse the una
 
 		Args: cobra.ExactValidArgs(1),
 
-		RunE: run,
+		RunE: r.run,
 	}
-	cmd.Flags().StringP("account", "a", "", "account name")
-	return &cmd
+	r.setupFlags(cmd)
+	return cmd
 
 }
 
@@ -54,54 +54,68 @@ func init() {
 	importer.Register(CreateCmd)
 }
 
-func run(cmd *cobra.Command, args []string) error {
-	var ctx = ledger.NewContext()
-	account, err := flags.GetAccountFlag(cmd, ctx, "account")
-	if err != nil {
+type runner struct {
+	account flags.AccountFlag
+}
+
+func (r *runner) setupFlags(c *cobra.Command) {
+	c.Flags().Var(&r.account, "account", "the target account")
+}
+
+func (r *runner) run(cmd *cobra.Command, args []string) error {
+	var (
+		ctx     = ledger.NewContext()
+		account *ledger.Account
+		reader  *bufio.Reader
+		err     error
+	)
+	if account, err = r.account.Value(ctx); err != nil {
 		return err
 	}
-	f, err := os.Open(args[0])
-	if err != nil {
+	if reader, err = flags.OpenFile(args[0]); err != nil {
 		return err
 	}
-	reader := csv.NewReader(bufio.NewReader(f))
 	p := parser{
 		context: ctx,
-		reader:  reader,
 		account: account,
 	}
-	if err = p.parse(); err != nil {
+	var trx []ledger.Transaction
+	if trx, err = p.parse(reader); err != nil {
 		return err
 	}
-	var builder = ledger.NewBuilder(ctx, ledger.Filter{})
-	for _, trx := range p.transactions {
+	builder := ledger.NewBuilder(ctx, ledger.Filter{})
+	for _, trx := range trx {
 		builder.AddTransaction(trx)
 	}
-	w := bufio.NewWriter(cmd.OutOrStdout())
-	defer w.Flush()
-	_, err = printer.New().PrintLedger(w, builder.Build())
+	out := bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	_, err = printer.New().PrintLedger(out, builder.Build())
 	return err
 }
 
 type parser struct {
+	context ledger.Context
+	account *ledger.Account
+
+	// internal variables
 	reader       *csv.Reader
-	account      *ledger.Account
-	context      ledger.Context
 	transactions []ledger.Transaction
 }
 
-func (p *parser) parse() error {
+func (p *parser) parse(r io.Reader) ([]ledger.Transaction, error) {
+	p.reader = csv.NewReader(r)
 	p.reader.FieldsPerRecord = -1
 	p.reader.LazyQuotes = true
 	for {
 		err := p.readLine()
 		if err == io.EOF {
-			return nil
+			break
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
+	return p.transactions, nil
 }
 
 func (p *parser) readLine() error {

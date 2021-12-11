@@ -15,7 +15,9 @@
 package flags
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -286,4 +288,55 @@ func (cf CommodityFlag) Value(ctx ledger.Context) (*ledger.Commodity, error) {
 		return ctx.GetCommodity(cf.val)
 	}
 	return nil, nil
+}
+
+// AccountFlag manages a flag to parse a commodity.
+type AccountFlag struct {
+	val string
+}
+
+// Set implements pflag.Value.
+func (cf *AccountFlag) Set(v string) error {
+	cf.val = v
+	return nil
+}
+
+// Type implements pflag.Value.
+func (cf AccountFlag) Type() string {
+	return "<account>"
+}
+
+// Value returns the flag value.
+func (cf AccountFlag) String() string {
+	return cf.val
+}
+
+// Value returns the account.
+func (cf AccountFlag) Value(ctx ledger.Context) (*ledger.Account, error) {
+	if cf.val != "" {
+		return ctx.GetAccount(cf.val)
+	}
+	return nil, nil
+}
+
+// ValueWithDefault returns the account. If no account has been specified, the default is returned.
+func (cf AccountFlag) ValueWithDefault(ctx ledger.Context, def *ledger.Account) (*ledger.Account, error) {
+	res, err := cf.Value(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if res == nil {
+		return def, nil
+	}
+	return res, nil
+}
+
+// OpenFile opens the file at the given path as a buffered reader.
+func OpenFile(p string) (*bufio.Reader, error) {
+	f, err := os.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	return bufio.NewReader(f), nil
+
 }

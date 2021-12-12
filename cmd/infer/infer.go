@@ -17,6 +17,7 @@ package infer
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -50,10 +51,12 @@ func CreateCmd() *cobra.Command {
 type runner struct {
 	account      flags.AccountFlag
 	trainingFile string
+	inplace      bool
 }
 
 func (r *runner) setupFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(&r.account, "account", "a", "account name")
+	cmd.Flags().BoolVarP(&r.inplace, "inplace", "i", false, "infer the accounts inplace")
 	cmd.Flags().StringVarP(&r.trainingFile, "training-file", "t", "", "the journal file with existing data")
 	cmd.MarkFlagRequired("training-file")
 }
@@ -67,56 +70,33 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 
 func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
-		ctx     = ledger.NewContext()
-		account *ledger.Account
-		err     error
+		ctx        = ledger.NewContext()
+		targetFile = args[0]
+		account    *ledger.Account
+		err        error
 	)
 	tbd, _ := ctx.GetAccount("Expenses:TBD")
 	if account, err = r.account.ValueWithDefault(ctx, tbd); err != nil {
 		return err
 	}
-	return infer(ctx, r.trainingFile, args[0], account)
-}
-
-func infer(ctx ledger.Context, trainingFile string, targetFile string, account *ledger.Account) error {
-	bayesModel, err := train(ctx, trainingFile, account)
+	model, err := train(ctx, r.trainingFile, account)
 	if err != nil {
 		return err
 	}
-	p, cls, err := parser.FromPath(ctx, targetFile)
+	directives, err := r.parseAndInfer(ctx, model, targetFile, account)
 	if err != nil {
 		return err
 	}
-	var directives []ledger.Directive
-	for i := range p.ParseAll() {
-		switch d := i.(type) {
-		case ledger.Transaction:
-			bayesModel.Infer(d, account)
-			directives = append(directives, d)
-		case ledger.Directive:
-			directives = append(directives, d)
-		default:
-			return multierr.Append(cls(), fmt.Errorf("unknown directive: %s", d))
+	if r.inplace {
+		tmpFile, err := r.writeToTmp(directives, targetFile)
+		if err != nil {
+			return err
 		}
+		return atomic.ReplaceFile(tmpFile, targetFile)
 	}
-	if err := cls(); err != nil {
-		return err
-	}
-	srcFile, err := os.Open(targetFile)
-	if err != nil {
-		return err
-	}
-	tmpfile, err := ioutil.TempFile(path.Dir(targetFile), "infer-")
-	if err != nil {
-		return multierr.Append(err, srcFile.Close())
-	}
-	var dest = bufio.NewWriter(tmpfile)
-	err = format.Format(directives, bufio.NewReader(srcFile), dest)
-	err = multierr.Combine(err, srcFile.Close(), dest.Flush(), tmpfile.Close())
-	if err != nil {
-		return multierr.Append(err, os.Remove(tmpfile.Name()))
-	}
-	return multierr.Append(err, atomic.ReplaceFile(tmpfile.Name(), targetFile))
+	out := bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	return r.writeTo(directives, targetFile, out)
 }
 
 func train(ctx ledger.Context, file string, exclude *ledger.Account) (*bayes.Model, error) {
@@ -133,4 +113,47 @@ func train(ctx ledger.Context, file string, exclude *ledger.Account) (*bayes.Mod
 		}
 	}
 	return m, nil
+}
+
+func (r *runner) parseAndInfer(ctx ledger.Context, model *bayes.Model, targetFile string, account *ledger.Account) ([]ledger.Directive, error) {
+	p, cls, err := parser.FromPath(ctx, targetFile)
+	if err != nil {
+		return nil, err
+	}
+	defer cls()
+	var directives []ledger.Directive
+	for i := range p.ParseAll() {
+		switch d := i.(type) {
+		case ledger.Transaction:
+			model.Infer(d, account)
+			directives = append(directives, d)
+		case ledger.Directive:
+			directives = append(directives, d)
+		default:
+			return nil, multierr.Append(cls(), fmt.Errorf("unknown directive: %s", d))
+		}
+	}
+	return directives, nil
+}
+
+func (r *runner) writeToTmp(directives []ledger.Directive, targetFile string) (string, error) {
+	tmpfile, err := ioutil.TempFile(path.Dir(targetFile), "infer-")
+	if err != nil {
+		return "", err
+	}
+	defer tmpfile.Close()
+
+	var dest = bufio.NewWriter(tmpfile)
+	defer dest.Flush()
+
+	return tmpfile.Name(), r.writeTo(directives, targetFile, dest)
+}
+
+func (r *runner) writeTo(directives []ledger.Directive, targetFile string, out io.Writer) error {
+	srcFile, err := os.Open(targetFile)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+	return format.Format(directives, bufio.NewReader(srcFile), out)
 }

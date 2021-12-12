@@ -231,7 +231,7 @@ func (as Asserter) Process(d *ledger.Day) error {
 	return nil
 }
 
-func (as Asserter) processBalanceAssertion(b *Balance, a ledger.Assertion) error {
+func (as Asserter) processBalanceAssertion(b *Balance, a *ledger.Assertion) error {
 	if !b.Accounts.IsOpen(a.Account) {
 		return Error{a, "account is not open"}
 	}

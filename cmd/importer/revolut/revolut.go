@@ -170,7 +170,7 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		p.builder.AddAssertion(ledger.Assertion{
+		p.builder.AddAssertion(&ledger.Assertion{
 			Date:      date,
 			Account:   p.account,
 			Amount:    balance,

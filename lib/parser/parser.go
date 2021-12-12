@@ -439,32 +439,32 @@ func (p *Parser) parsePrice(d time.Time) (*ledger.Price, error) {
 	}, nil
 }
 
-func (p *Parser) parseBalanceAssertion(d time.Time) (ledger.Assertion, error) {
+func (p *Parser) parseBalanceAssertion(d time.Time) (*ledger.Assertion, error) {
 	if err := p.scanner.ParseString("balance"); err != nil {
-		return ledger.Assertion{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Assertion{}, err
+		return nil, err
 	}
 	account, err := p.parseAccount()
 	if err != nil {
-		return ledger.Assertion{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Assertion{}, err
+		return nil, err
 	}
 	amount, err := p.parseDecimal()
 	if err != nil {
-		return ledger.Assertion{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Assertion{}, err
+		return nil, err
 	}
 	commodity, err := p.parseCommodity()
 	if err != nil {
-		return ledger.Assertion{}, err
+		return nil, err
 	}
-	return ledger.Assertion{
+	return &ledger.Assertion{
 		Range:     p.getRange(),
 		Date:      d,
 		Account:   account,

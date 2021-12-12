@@ -586,7 +586,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 	if amt, err = decimal.NewFromString(r[opfQuantity]); err != nil {
 		return false, err
 	}
-	p.builder.AddAssertion(ledger.Assertion{
+	p.builder.AddAssertion(&ledger.Assertion{
 		Date:      p.dateTo,
 		Account:   p.account,
 		Commodity: symbol,
@@ -632,7 +632,7 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 	if amount, err = parseRoundedDecimal(r[fbfQuantity]); err != nil {
 		return false, err
 	}
-	p.builder.AddAssertion(ledger.Assertion{
+	p.builder.AddAssertion(&ledger.Assertion{
 		Date:      p.dateTo,
 		Account:   p.account,
 		Commodity: symbol,

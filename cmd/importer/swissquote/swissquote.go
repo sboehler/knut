@@ -254,7 +254,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	if proceeds.IsPositive() {
 		qty = qty.Neg()
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: desc,
 		Postings: []ledger.Posting{
@@ -284,7 +284,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		return true, nil
 	}
 	var desc = fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency, r.trxType, r.netAmount, r.currency)
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: desc,
 		Postings: []ledger.Posting{
@@ -311,7 +311,7 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 	if !r.fee.IsZero() {
 		postings = append(postings, ledger.NewPosting(p.account, p.tax, r.currency, r.fee))
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol, r.name, r.isin),
 		Postings:    postings,
@@ -323,7 +323,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 	if r.trxType != "Depotgebühren" {
 		return false, nil
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ledger.Posting{
@@ -343,7 +343,7 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 	if _, ok := w[r.trxType]; !ok {
 		return false, nil
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ledger.Posting{
@@ -357,7 +357,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 	if r.trxType != "Zins" {
 		return false, nil
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ledger.Posting{
@@ -368,7 +368,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 }
 
 func (p *parser) parseCatchall(r *record) (bool, error) {
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ledger.Posting{

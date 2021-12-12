@@ -68,7 +68,7 @@ func Transcode(w io.Writer, l ledger.Ledger, c *ledger.Commodity) error {
 	return nil
 }
 
-func writeTrx(w io.Writer, t ledger.Transaction, c *ledger.Commodity) error {
+func writeTrx(w io.Writer, t *ledger.Transaction, c *ledger.Commodity) error {
 	if _, err := fmt.Fprintf(w, `%s * "%s"`, t.Date.Format("2006-01-02"), t.Description); err != nil {
 		return err
 	}

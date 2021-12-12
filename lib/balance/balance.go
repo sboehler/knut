@@ -72,7 +72,7 @@ func (b *Balance) Minus(bo *Balance) {
 	}
 }
 
-func (b *Balance) bookAmount(t ledger.Transaction) error {
+func (b *Balance) bookAmount(t *ledger.Transaction) error {
 	for _, posting := range t.Postings {
 		if !b.Accounts.IsOpen(posting.Credit) {
 			return Error{t, fmt.Sprintf("credit account %s is not open", posting.Credit)}
@@ -90,7 +90,7 @@ func (b *Balance) bookAmount(t ledger.Transaction) error {
 	return nil
 }
 
-func (b *Balance) bookValue(t ledger.Transaction) error {
+func (b *Balance) bookValue(t *ledger.Transaction) error {
 	for _, posting := range t.Postings {
 		var (
 			crPos = CommodityAccount{posting.Credit, posting.Commodity}

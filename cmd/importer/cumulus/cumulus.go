@@ -79,7 +79,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		context: ctx,
 		account: account,
 	}
-	var trx []ledger.Transaction
+	var trx []*ledger.Transaction
 	if trx, err = p.parse(reader); err != nil {
 		return err
 	}
@@ -99,10 +99,10 @@ type parser struct {
 
 	// internal variables
 	reader       *csv.Reader
-	transactions []ledger.Transaction
+	transactions []*ledger.Transaction
 }
 
-func (p *parser) parse(r io.Reader) ([]ledger.Transaction, error) {
+func (p *parser) parse(r io.Reader) ([]*ledger.Transaction, error) {
 	p.reader = csv.NewReader(r)
 	p.reader.FieldsPerRecord = -1
 	p.reader.LazyQuotes = true
@@ -171,7 +171,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.transactions = append(p.transactions, ledger.Transaction{
+	p.transactions = append(p.transactions, &ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []ledger.Posting{
@@ -219,7 +219,7 @@ func (p *parser) parseFXComment(r []string) (bool, error) {
 	if len(p.transactions) == 0 {
 		return false, fmt.Errorf("fx comment but no previous transaction")
 	}
-	var t = &p.transactions[len(p.transactions)-1]
+	var t = p.transactions[len(p.transactions)-1]
 	t.Description = fmt.Sprintf("%s %s", t.Description, r[bfBeschreibung])
 	return true, nil
 }
@@ -256,7 +256,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.transactions = append(p.transactions, ledger.Transaction{
+	p.transactions = append(p.transactions, &ledger.Transaction{
 		Date:        date,
 		Description: r[rfBeschreibung],
 		Postings: []ledger.Posting{

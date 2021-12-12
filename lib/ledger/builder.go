@@ -32,7 +32,7 @@ func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (Led
 			b.AddOpening(t)
 		case Price:
 			b.AddPrice(t)
-		case Transaction:
+		case *Transaction:
 			b.AddTransaction(t)
 		case Assertion:
 			b.AddAssertion(t)
@@ -87,7 +87,7 @@ func (b *Builder) getOrCreate(d time.Time) *Day {
 }
 
 // AddTransaction adds a transaction directive.
-func (b *Builder) AddTransaction(t Transaction) {
+func (b *Builder) AddTransaction(t *Transaction) {
 	var filtered []Posting
 	for _, p := range t.Postings {
 		if b.filter.MatchPosting(p) {

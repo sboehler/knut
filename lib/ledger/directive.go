@@ -142,11 +142,11 @@ type Accrual struct {
 	Period      date.Period
 	T0, T1      time.Time
 	Account     *Account
-	Transaction Transaction
+	Transaction *Transaction
 }
 
 // Expand expands an accrual transaction.
-func (a Accrual) Expand() []Transaction {
+func (a Accrual) Expand() []*Transaction {
 	var (
 		t                                                                = a.Transaction
 		posting                                                          = t.Postings[0]
@@ -170,7 +170,7 @@ func (a Accrual) Expand() []Transaction {
 		dates       = date.Series(a.T0, a.T1, a.Period)[1:]
 		amount, rem = posting.Amount.QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
 
-		result []Transaction
+		result []*Transaction
 	)
 	if crAccountMulti != drAccountMulti {
 		for i, date := range dates {
@@ -178,7 +178,7 @@ func (a Accrual) Expand() []Transaction {
 			if i == 0 {
 				a = a.Add(rem)
 			}
-			result = append(result, Transaction{
+			result = append(result, &Transaction{
 				Range:       t.Range,
 				Date:        date,
 				Tags:        t.Tags,
@@ -190,7 +190,7 @@ func (a Accrual) Expand() []Transaction {
 		}
 	}
 	if crAccountSingle != drAccountSingle {
-		result = append(result, Transaction{
+		result = append(result, &Transaction{
 			Range:       t.Range,
 			Date:        t.Date,
 			Tags:        t.Tags,

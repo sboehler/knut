@@ -183,28 +183,28 @@ func (p *Parser) parseDirective() (ledger.Directive, error) {
 	return result, nil
 }
 
-func (p *Parser) parseTransaction(d time.Time) (ledger.Transaction, error) {
+func (p *Parser) parseTransaction(d time.Time) (*ledger.Transaction, error) {
 	desc, err := p.parseQuotedString()
 	if err != nil {
-		return ledger.Transaction{}, err
+		return nil, err
 	}
 
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Transaction{}, err
+		return nil, err
 	}
 
 	tags, err := p.parseTags()
 	if err != nil {
-		return ledger.Transaction{}, err
+		return nil, err
 	}
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
-		return ledger.Transaction{}, err
+		return nil, err
 	}
 	postings, err := p.parsePostings()
 	if err != nil {
-		return ledger.Transaction{}, err
+		return nil, err
 	}
-	return ledger.Transaction{
+	return &ledger.Transaction{
 		Range:       p.getRange(),
 		Date:        d,
 		Description: desc,

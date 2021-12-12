@@ -28,7 +28,7 @@ type Day struct {
 	Assertions   []Assertion
 	Values       []Value
 	Openings     []Open
-	Transactions []Transaction
+	Transactions []*Transaction
 	Closings     []Close
 }
 

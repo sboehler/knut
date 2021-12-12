@@ -203,7 +203,7 @@ func (p *parser) parseBooking(r []string) error {
 		return err
 	}
 	amount = amount.Mul(sign)
-	var t = ledger.Transaction{
+	var t = &ledger.Transaction{
 		Date:        date,
 		Description: desc,
 	}

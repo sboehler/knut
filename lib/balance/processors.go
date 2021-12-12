@@ -180,7 +180,7 @@ var _ ledger.Processor = (*ValueBooker)(nil)
 func (tb ValueBooker) Process(d *ledger.Day) error {
 	for _, v := range d.Values {
 		var (
-			t   ledger.Transaction
+			t   *ledger.Transaction
 			err error
 		)
 		if t, err = tb.processValue(v); err != nil {
@@ -195,16 +195,16 @@ func (tb ValueBooker) Process(d *ledger.Day) error {
 	return nil
 }
 
-func (tb ValueBooker) processValue(v ledger.Value) (ledger.Transaction, error) {
+func (tb ValueBooker) processValue(v ledger.Value) (*ledger.Transaction, error) {
 	if !tb.Balance.Accounts.IsOpen(v.Account) {
-		return ledger.Transaction{}, Error{v, "account is not open"}
+		return nil, Error{v, "account is not open"}
 	}
 	valAcc, err := tb.Balance.Context.ValuationAccountFor(v.Account)
 	if err != nil {
-		return ledger.Transaction{}, err
+		return nil, err
 	}
 	var pos = CommodityAccount{v.Account, v.Commodity}
-	return ledger.Transaction{
+	return &ledger.Transaction{
 		Date:        v.Date,
 		Description: fmt.Sprintf("Valuation adjustment for %v", pos),
 		Tags:        nil,
@@ -263,7 +263,7 @@ func (as TransactionValuator) Process(d *ledger.Day) error {
 	return nil
 }
 
-func (as TransactionValuator) valuateTransaction(b *Balance, t ledger.Transaction) error {
+func (as TransactionValuator) valuateTransaction(b *Balance, t *ledger.Transaction) error {
 	if b.Valuation == nil {
 		return nil
 	}
@@ -310,11 +310,11 @@ var descCache = make(map[CommodityAccount]string)
 // corresponds to the amounts. If not, the difference is due to a valuation
 // change of the previous amount, and a transaction is created to adjust the
 // valuation.
-func (vtc ValuationTransactionComputer) computeValuationTransactions(b *Balance) ([]ledger.Transaction, error) {
+func (vtc ValuationTransactionComputer) computeValuationTransactions(b *Balance) ([]*ledger.Transaction, error) {
 	if b.Valuation == nil {
 		return nil, nil
 	}
-	var result []ledger.Transaction
+	var result []*ledger.Transaction
 	for pos, va := range b.Amounts {
 		if pos.Commodity == b.Valuation {
 			continue
@@ -343,7 +343,7 @@ func (vtc ValuationTransactionComputer) computeValuationTransactions(b *Balance)
 			panic(fmt.Sprintf("could not obtain valuation account for account %s", pos.Account))
 		}
 		// create a transaction to adjust the valuation
-		result = append(result, ledger.Transaction{
+		result = append(result, &ledger.Transaction{
 			Date:        b.Date,
 			Description: desc,
 			Postings: []ledger.Posting{
@@ -384,14 +384,14 @@ func (as PeriodCloser) Process(d *ledger.Day) error {
 	return nil
 }
 
-func (as PeriodCloser) computeClosingTransactions() []ledger.Transaction {
-	var result []ledger.Transaction
+func (as PeriodCloser) computeClosingTransactions() []*ledger.Transaction {
+	var result []*ledger.Transaction
 	for pos, va := range as.Balance.Amounts {
 		var at = pos.Account.Type()
 		if at != ledger.INCOME && at != ledger.EXPENSES {
 			continue
 		}
-		result = append(result, ledger.Transaction{
+		result = append(result, &ledger.Transaction{
 			Date:        as.Balance.Date,
 			Description: fmt.Sprintf("Closing %v to retained earnings", pos),
 			Tags:        nil,

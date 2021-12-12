@@ -108,7 +108,7 @@ func train(ctx ledger.Context, file string, exclude *ledger.Account) (*bayes.Mod
 		switch t := r.(type) {
 		case error:
 			return nil, t
-		case ledger.Transaction:
+		case *ledger.Transaction:
 			m.Update(t)
 		}
 	}
@@ -124,7 +124,7 @@ func (r *runner) parseAndInfer(ctx ledger.Context, model *bayes.Model, targetFil
 	var directives []ledger.Directive
 	for i := range p.ParseAll() {
 		switch d := i.(type) {
-		case ledger.Transaction:
+		case *ledger.Transaction:
 			model.Infer(d, account)
 			directives = append(directives, d)
 		case ledger.Directive:

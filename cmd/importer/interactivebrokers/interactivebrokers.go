@@ -283,7 +283,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []ledger.Posting{
@@ -345,7 +345,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	if !fee.IsZero() {
 		postings = append(postings, ledger.NewPosting(p.fee, p.account, p.baseCurrency, fee))
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings:    postings,
@@ -392,7 +392,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Withdraw %s %s", amount, currency)
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []ledger.Posting{
@@ -443,7 +443,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if security, err = p.builder.Context.GetCommodity(symbol); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []ledger.Posting{
@@ -505,7 +505,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if security, err = p.builder.Context.GetCommodity(symbol); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []ledger.Posting{
@@ -537,7 +537,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	if amount, err = parseDecimal(r[dfAmount]); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(ledger.Transaction{
+	p.builder.AddTransaction(&ledger.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings: []ledger.Posting{

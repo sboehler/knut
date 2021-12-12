@@ -117,7 +117,9 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 				Period:  period,
 				Last:    last,
 				Diff:    diff,
-				Result:  &result},
+				//TODO: implement result with a channel
+				//Result:  &result
+			},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
 			balance.ValueBooker{Balance: bal},

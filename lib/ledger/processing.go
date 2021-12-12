@@ -14,6 +14,8 @@
 
 package ledger
 
+import "go.uber.org/multierr"
+
 // Initializer gets called before processing.
 type Initializer interface {
 	Initialize(l Ledger) error
@@ -30,7 +32,7 @@ type Finalizer interface {
 }
 
 // Process processes a ledger.
-func (l Ledger) Process(steps []Processor) error {
+func (l Ledger) Process(steps []Processor) (resErr error) {
 	for _, pr := range steps {
 		if f, ok := pr.(Initializer); ok {
 			if err := f.Initialize(l); err != nil {
@@ -38,16 +40,18 @@ func (l Ledger) Process(steps []Processor) error {
 			}
 		}
 	}
+	defer func() {
+		for _, pr := range steps {
+			if f, ok := pr.(Finalizer); ok {
+				if err := f.Finalize(); err != nil {
+					resErr = multierr.Append(resErr, err)
+				}
+			}
+		}
+	}()
 	for _, day := range l.Days {
 		for _, pr := range steps {
 			if err := pr.Process(day); err != nil {
-				return err
-			}
-		}
-	}
-	for _, pr := range steps {
-		if f, ok := pr.(Finalizer); ok {
-			if err := f.Finalize(); err != nil {
 				return err
 			}
 		}
@@ -56,14 +60,14 @@ func (l Ledger) Process(steps []Processor) error {
 }
 
 // ProcessAsync processes the ledger asynchronously.
-func (l Ledger) ProcessAsync(steps []Processor) chan<- error {
-	var ch chan error
+func (l Ledger) ProcessAsync(steps []Processor) <-chan error {
+	errCh := make(chan error)
 	go func(steps []Processor) {
-		defer close(ch)
+		defer close(errCh)
 		if err := l.Process(steps); err != nil {
-			ch <- err
+			errCh <- err
 			return
 		}
 	}(steps)
-	return nil
+	return errCh
 }

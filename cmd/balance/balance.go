@@ -118,9 +118,9 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			File:    args[0],
 			Context: ctx,
 		}
-		bal      = balance.New(ctx, valuation)
-		balances []*balance.Balance
-		steps    = []ledger.Processor{
+		bal   = balance.New(ctx, valuation)
+		balCh = make(chan *balance.Balance)
+		steps = []ledger.Processor{
 			balance.DateUpdater{Balance: bal},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
@@ -131,13 +131,14 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			balance.ValuationTransactionComputer{Balance: bal},
 			balance.AccountCloser{Balance: bal},
 			&balance.Snapshotter{
-				Balance: bal,
-				From:    r.from.Value(),
-				To:      r.to.Value(),
-				Period:  period,
-				Last:    r.last,
-				Diff:    r.diff,
-				Result:  &balances},
+				Balance:    bal,
+				From:       r.from.Value(),
+				To:         r.to.Value(),
+				Period:     period,
+				Last:       r.last,
+				Diff:       r.diff,
+				SnapshotCh: balCh,
+			},
 		}
 		filter = ledger.Filter{
 			Accounts:    r.accounts.Value(),
@@ -162,11 +163,23 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if l, err = parser.BuildLedger(filter); err != nil {
 		return err
 	}
-	if err = l.Process(steps); err != nil {
-		return err
-	}
-	for _, bal := range balances {
-		rep.Add(bal)
+	errCh := l.ProcessAsync(steps)
+	for errCh != nil && balCh != nil {
+		select {
+		case err, ok := <-errCh:
+			if !ok {
+				errCh = nil
+			}
+			if err != nil {
+				return err
+			}
+		case bal, ok := <-balCh:
+			if !ok {
+				balCh = nil
+			} else {
+				rep.Add(bal)
+			}
+		}
 	}
 	var out = bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()

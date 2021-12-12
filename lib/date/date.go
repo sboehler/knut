@@ -116,3 +116,9 @@ func Series(t0, t1 time.Time, p Period) []time.Time {
 	}
 	return res
 }
+
+// Today returns today's date.
+func Today() time.Time {
+	now := time.Now()
+	return Date(now.Year(), now.Month(), now.Day())
+}

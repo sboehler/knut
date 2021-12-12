@@ -104,8 +104,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		err error
 	)
 	if time.Time(r.to).IsZero() {
-		now := time.Now()
-		r.to = flags.DateFlag(time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC))
+		r.to = flags.DateFlag(date.Today())
 	}
 	if valuation, err = r.valuation.Value(ctx); err != nil {
 		return err

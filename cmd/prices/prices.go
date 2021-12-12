@@ -119,18 +119,18 @@ func readConfig(path string) ([]config, error) {
 	return t, nil
 }
 
-func readFile(ctx ledger.Context, filepath string) (res map[time.Time]ledger.Price, err error) {
+func readFile(ctx ledger.Context, filepath string) (res map[time.Time]*ledger.Price, err error) {
 	p, cls, err := parser.FromPath(ctx, filepath)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { err = multierr.Append(err, cls()) }()
-	var prices = make(map[time.Time]ledger.Price)
+	var prices = make(map[time.Time]*ledger.Price)
 	for i := range p.ParseAll() {
 		switch d := i.(type) {
 		case error:
 			return nil, err
-		case ledger.Price:
+		case *ledger.Price:
 			prices[d.Date] = d
 		default:
 			return nil, fmt.Errorf("unexpected directive in prices file: %v", d)
@@ -139,7 +139,7 @@ func readFile(ctx ledger.Context, filepath string) (res map[time.Time]ledger.Pri
 	return prices, nil
 }
 
-func fetchPrices(ctx ledger.Context, cfg config, t0, t1 time.Time, results map[time.Time]ledger.Price) error {
+func fetchPrices(ctx ledger.Context, cfg config, t0, t1 time.Time, results map[time.Time]*ledger.Price) error {
 	var (
 		c                 = yahoo.New()
 		quotes            []yahoo.Quote
@@ -156,7 +156,7 @@ func fetchPrices(ctx ledger.Context, cfg config, t0, t1 time.Time, results map[t
 		return err
 	}
 	for _, i := range quotes {
-		results[i.Date] = ledger.Price{
+		results[i.Date] = &ledger.Price{
 			Date:      i.Date,
 			Commodity: commodity,
 			Target:    target,
@@ -166,7 +166,7 @@ func fetchPrices(ctx ledger.Context, cfg config, t0, t1 time.Time, results map[t
 	return nil
 }
 
-func writeFile(ctx ledger.Context, prices map[time.Time]ledger.Price, filepath string) error {
+func writeFile(ctx ledger.Context, prices map[time.Time]*ledger.Price, filepath string) error {
 	var b = ledger.NewBuilder(ctx, ledger.Filter{})
 	for _, price := range prices {
 		b.AddPrice(price)

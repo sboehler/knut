@@ -404,33 +404,33 @@ func (p *Parser) parseClose(d time.Time) (ledger.Close, error) {
 	}, nil
 }
 
-func (p *Parser) parsePrice(d time.Time) (ledger.Price, error) {
+func (p *Parser) parsePrice(d time.Time) (*ledger.Price, error) {
 	if err := p.scanner.ParseString("price"); err != nil {
-		return ledger.Price{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Price{}, err
+		return nil, err
 	}
 	commodity, err := p.parseCommodity()
 	if err != nil {
-		return ledger.Price{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Price{}, err
+		return nil, err
 	}
 
 	price, err := p.parseDecimal()
 	if err != nil {
-		return ledger.Price{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Price{}, err
+		return nil, err
 	}
 	target, err := p.parseCommodity()
 	if err != nil {
-		return ledger.Price{}, err
+		return nil, err
 	}
-	return ledger.Price{
+	return &ledger.Price{
 		Range:     p.getRange(),
 		Date:      d,
 		Commodity: commodity,

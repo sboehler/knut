@@ -30,7 +30,7 @@ func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (Led
 			return Ledger{}, t
 		case Open:
 			b.AddOpening(t)
-		case Price:
+		case *Price:
 			b.AddPrice(t)
 		case *Transaction:
 			b.AddTransaction(t)
@@ -123,7 +123,7 @@ func (b *Builder) AddClosing(close Close) {
 }
 
 // AddPrice adds a price directive.
-func (b *Builder) AddPrice(p Price) {
+func (b *Builder) AddPrice(p *Price) {
 	var s = b.getOrCreate(p.Date)
 	s.Prices = append(s.Prices, p)
 }

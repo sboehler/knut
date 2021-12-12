@@ -24,7 +24,7 @@ import (
 // Day groups all commands for a given date.
 type Day struct {
 	Date         time.Time
-	Prices       []Price
+	Prices       []*Price
 	Assertions   []Assertion
 	Values       []Value
 	Openings     []Open

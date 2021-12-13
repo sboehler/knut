@@ -25,8 +25,9 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 )
 
 // CreateCmd creates the command.
@@ -61,9 +62,9 @@ type runner struct {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx     = ledger.NewContext()
+		ctx     = journal.NewContext()
 		f       *bufio.Reader
-		account *ledger.Account
+		account *journal.Account
 		err     error
 	)
 
@@ -84,7 +85,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var resp response
 	json.Unmarshal(b, &resp)
 
-	var builder = ledger.NewBuilder(ctx, ledger.Filter{})
+	var builder = ast.NewBuilder(ctx, journal.Filter{})
 	for _, dv := range resp.DailyValues {
 		d, err := time.Parse("2006-01-02", dv.Date)
 		if err != nil {
@@ -97,7 +98,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		builder.AddValue(&ledger.Value{
+		builder.AddValue(&ast.Value{
 			Date:      d,
 			Account:   account,
 			Amount:    a.Round(2),

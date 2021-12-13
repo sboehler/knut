@@ -24,10 +24,11 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/balance"
-	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/parser"
-	"github.com/sboehler/knut/lib/report"
+	"github.com/sboehler/knut/lib/balance/report"
+	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/table"
 
 	"github.com/spf13/cobra"
@@ -96,9 +97,9 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = ledger.NewContext()
+		ctx = journal.NewContext()
 
-		valuation *ledger.Commodity
+		valuation *journal.Commodity
 		period    date.Period
 
 		err error
@@ -120,7 +121,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		}
 		bal   = balance.New(ctx, valuation)
 		balCh = make(chan *balance.Balance)
-		steps = []ledger.Processor{
+		steps = []ast.Processor{
 			balance.DateUpdater{Balance: bal},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
@@ -140,7 +141,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				SnapshotCh: balCh,
 			},
 		}
-		filter = ledger.Filter{
+		filter = journal.Filter{
 			Accounts:    r.accounts.Value(),
 			Commodities: r.commodities.Value(),
 		}
@@ -158,7 +159,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Thousands: r.thousands,
 			Round:     r.digits,
 		}
-		l *ledger.Ledger
+		l *ast.AST
 	)
 	if l, err = parser.BuildLedger(filter); err != nil {
 		return err

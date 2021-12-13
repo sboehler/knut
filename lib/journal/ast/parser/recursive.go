@@ -19,15 +19,15 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
 	"go.uber.org/multierr"
-
-	"github.com/sboehler/knut/lib/ledger"
 )
 
 // RecursiveParser parses a file hierarchy recursively.
 type RecursiveParser struct {
 	File    string
-	Context ledger.Context
+	Context journal.Context
 }
 
 // Parse parses the journal at the path, and branches out for include files
@@ -65,7 +65,7 @@ func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interfa
 		case error:
 			return t
 
-		case *ledger.Include:
+		case *ast.Include:
 			wg.Add(1)
 			go func() {
 				if err := j.parseRecursively(wg, ch, path.Join(filepath.Dir(file), t.Path)); err != nil {
@@ -80,7 +80,7 @@ func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interfa
 	return nil
 }
 
-// BuildLedger builds a ledger.
-func (j *RecursiveParser) BuildLedger(f ledger.Filter) (*ledger.Ledger, error) {
-	return ledger.FromDirectives(j.Context, f, j.Parse())
+// BuildLedger builds a ast.
+func (j *RecursiveParser) BuildLedger(f journal.Filter) (*ast.AST, error) {
+	return ast.FromDirectives(j.Context, f, j.Parse())
 }

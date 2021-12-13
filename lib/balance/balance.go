@@ -19,9 +19,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/prices"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/balance/prices"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 
 	"github.com/shopspring/decimal"
 )
@@ -31,13 +32,13 @@ type Balance struct {
 	Date             time.Time
 	Amounts, Values  map[CommodityAccount]decimal.Decimal
 	Accounts         Accounts
-	Context          ledger.Context
-	Valuation        *ledger.Commodity
+	Context          journal.Context
+	Valuation        *journal.Commodity
 	NormalizedPrices prices.NormalizedPrices
 }
 
 // New creates a new balance.
-func New(ctx ledger.Context, valuation *ledger.Commodity) *Balance {
+func New(ctx journal.Context, valuation *journal.Commodity) *Balance {
 	return &Balance{
 		Context:   ctx,
 		Amounts:   make(map[CommodityAccount]decimal.Decimal),
@@ -72,7 +73,7 @@ func (b *Balance) Minus(bo *Balance) {
 	}
 }
 
-func (b *Balance) bookAmount(t *ledger.Transaction) error {
+func (b *Balance) bookAmount(t *ast.Transaction) error {
 	for _, posting := range t.Postings {
 		if !b.Accounts.IsOpen(posting.Credit) {
 			return Error{t, fmt.Sprintf("credit account %s is not open", posting.Credit)}
@@ -90,7 +91,7 @@ func (b *Balance) bookAmount(t *ledger.Transaction) error {
 	return nil
 }
 
-func (b *Balance) bookValue(t *ledger.Transaction) error {
+func (b *Balance) bookValue(t *ast.Transaction) error {
 	for _, posting := range t.Postings {
 		var (
 			crPos = CommodityAccount{posting.Credit, posting.Commodity}
@@ -114,7 +115,7 @@ func Diffs(bals []*Balance) []*Balance {
 
 // Error is an error.
 type Error struct {
-	directive ledger.Directive
+	directive ast.Directive
 	msg       string
 }
 
@@ -131,8 +132,8 @@ func (be Error) Error() string {
 
 // CommodityAccount represents a position.
 type CommodityAccount struct {
-	Account   *ledger.Account
-	Commodity *ledger.Commodity
+	Account   *journal.Account
+	Commodity *journal.Commodity
 }
 
 // Less establishes a partial ordering of commodity accounts.

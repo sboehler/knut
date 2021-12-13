@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/shopspring/decimal"
 )
 
 func TestFlowComputer(t *testing.T) {
 	var (
-		ctx          = ledger.NewContext()
+		ctx          = journal.NewContext()
 		chf, _       = ctx.GetCommodity("CHF")
 		usd, _       = ctx.GetCommodity("USD")
 		gbp, _       = ctx.GetCommodity("GBP")
@@ -31,13 +32,13 @@ func TestFlowComputer(t *testing.T) {
 	var (
 		tests = []struct {
 			desc string
-			trx  *ledger.Transaction
+			trx  *ast.Transaction
 			want *DailyPerfValues
 		}{
 			{
 				desc: "outflow",
-				trx: &ledger.Transaction{
-					Postings: []ledger.Posting{
+				trx: &ast.Transaction{
+					Postings: []ast.Posting{
 						{Credit: portfolio, Debit: acc2, Amount: decimal.NewFromInt(2), Value: decimal.NewFromInt(1), Commodity: usd},
 					},
 				},
@@ -45,8 +46,8 @@ func TestFlowComputer(t *testing.T) {
 			},
 			{
 				desc: "inflow",
-				trx: &ledger.Transaction{
-					Postings: []ledger.Posting{
+				trx: &ast.Transaction{
+					Postings: []ast.Posting{
 						{Credit: acc1, Debit: portfolio, Amount: decimal.NewFromInt(2), Value: decimal.NewFromInt(1), Commodity: usd},
 					},
 				},
@@ -54,8 +55,8 @@ func TestFlowComputer(t *testing.T) {
 			},
 			{
 				desc: "dividend",
-				trx: &ledger.Transaction{
-					Postings: []ledger.Posting{
+				trx: &ast.Transaction{
+					Postings: []ast.Posting{
 						{Credit: dividend, Debit: portfolio, Amount: decimal.NewFromInt(2), Value: decimal.NewFromInt(1), Commodity: usd, TargetCommodity: aapl},
 					},
 				},
@@ -66,8 +67,8 @@ func TestFlowComputer(t *testing.T) {
 			},
 			{
 				desc: "expense",
-				trx: &ledger.Transaction{
-					Postings: []ledger.Posting{
+				trx: &ast.Transaction{
+					Postings: []ast.Posting{
 						{Credit: portfolio, Debit: expense, Amount: decimal.NewFromInt(2), Value: decimal.NewFromInt(1), Commodity: usd, TargetCommodity: aapl},
 					},
 				},
@@ -78,8 +79,8 @@ func TestFlowComputer(t *testing.T) {
 			},
 			{
 				desc: "stock purchase",
-				trx: &ledger.Transaction{
-					Postings: []ledger.Posting{
+				trx: &ast.Transaction{
+					Postings: []ast.Posting{
 						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1100), Value: decimal.NewFromInt(1010), Commodity: usd},
 						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1), Value: decimal.NewFromInt(1000), Commodity: aapl},
 					},
@@ -91,8 +92,8 @@ func TestFlowComputer(t *testing.T) {
 			},
 			{
 				desc: "stock purchase with fee",
-				trx: &ledger.Transaction{
-					Postings: []ledger.Posting{
+				trx: &ast.Transaction{
+					Postings: []ast.Posting{
 						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1100), Value: decimal.NewFromInt(1010), Commodity: usd},
 						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1), Value: decimal.NewFromInt(1000), Commodity: aapl},
 						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(10), Value: decimal.NewFromInt(10), Commodity: usd},
@@ -105,8 +106,8 @@ func TestFlowComputer(t *testing.T) {
 			},
 			{
 				desc: "stock sale",
-				trx: &ledger.Transaction{
-					Postings: []ledger.Posting{
+				trx: &ast.Transaction{
+					Postings: []ast.Posting{
 						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1), Value: decimal.NewFromInt(1000), Commodity: aapl},
 						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1100), Value: decimal.NewFromInt(990), Commodity: usd},
 					},
@@ -119,8 +120,8 @@ func TestFlowComputer(t *testing.T) {
 
 			{
 				desc: "forex without fee",
-				trx: &ledger.Transaction{
-					Postings: []ledger.Posting{
+				trx: &ast.Transaction{
+					Postings: []ast.Posting{
 						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1000), Value: decimal.NewFromInt(1400), Commodity: gbp},
 						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1500), Value: decimal.NewFromInt(1350), Commodity: usd},
 					},
@@ -132,8 +133,8 @@ func TestFlowComputer(t *testing.T) {
 			},
 			{
 				desc: "forex with fee",
-				trx: &ledger.Transaction{
-					Postings: []ledger.Posting{
+				trx: &ast.Transaction{
+					Postings: []ast.Posting{
 						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1000), Value: decimal.NewFromInt(1400), Commodity: gbp},
 						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1500), Value: decimal.NewFromInt(1350), Commodity: usd},
 						{Credit: portfolio, Debit: expense, Amount: decimal.NewFromInt(10), Value: decimal.NewFromInt(10), Commodity: chf},
@@ -146,8 +147,8 @@ func TestFlowComputer(t *testing.T) {
 			},
 			{
 				desc: "forex with native fee",
-				trx: &ledger.Transaction{
-					Postings: []ledger.Posting{
+				trx: &ast.Transaction{
+					Postings: []ast.Posting{
 						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1000), Value: decimal.NewFromInt(1400), Commodity: gbp},
 						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1500), Value: decimal.NewFromInt(1350), Commodity: usd},
 						{Credit: portfolio, Debit: expense, Amount: decimal.NewFromInt(10), Value: decimal.NewFromInt(10), Commodity: usd},
@@ -163,14 +164,14 @@ func TestFlowComputer(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			var (
-				d = &ledger.Day{
+				d = &ast.Day{
 					Date:         time.Date(2021, 11, 15, 0, 0, 0, 0, time.UTC),
-					Transactions: []*ledger.Transaction{test.trx},
+					Transactions: []*ast.Transaction{test.trx},
 				}
 
 				fc = FlowComputer{
 					Result:    new(DailyPerfValues),
-					Filter:    ledger.Filter{Accounts: regexp.MustCompile("Assets:Portfolio")},
+					Filter:    journal.Filter{Accounts: regexp.MustCompile("Assets:Portfolio")},
 					Valuation: chf,
 				}
 			)

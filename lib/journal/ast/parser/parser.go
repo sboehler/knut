@@ -24,15 +24,16 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/scanner"
+	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/scanner"
 	"github.com/shopspring/decimal"
 )
 
 // Parser parses a journal
 type Parser struct {
-	context  ledger.Context
+	context  journal.Context
 	scanner  *scanner.Scanner
 	startPos scanner.Location
 }
@@ -41,8 +42,8 @@ func (p *Parser) markStart() {
 	p.startPos = p.scanner.Location
 }
 
-func (p *Parser) getRange() ledger.Range {
-	return ledger.Range{
+func (p *Parser) getRange() ast.Range {
+	return ast.Range{
 		Start: p.startPos,
 		End:   p.scanner.Location,
 		Path:  p.scanner.Path,
@@ -50,7 +51,7 @@ func (p *Parser) getRange() ledger.Range {
 }
 
 // New creates a new parser
-func New(ctx ledger.Context, path string, r io.RuneReader) (*Parser, error) {
+func New(ctx journal.Context, path string, r io.RuneReader) (*Parser, error) {
 	s, err := scanner.New(r, path)
 	if err != nil {
 		return nil, err
@@ -62,7 +63,7 @@ func New(ctx ledger.Context, path string, r io.RuneReader) (*Parser, error) {
 }
 
 // FromPath creates a new parser for the given file.
-func FromPath(ctx ledger.Context, path string) (*Parser, func() error, error) {
+func FromPath(ctx journal.Context, path string) (*Parser, func() error, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, nil, err
@@ -80,7 +81,7 @@ func (p *Parser) current() rune {
 }
 
 // Next returns the next directive
-func (p *Parser) Next() (ledger.Directive, error) {
+func (p *Parser) Next() (ast.Directive, error) {
 	for p.current() != scanner.EOF {
 		if err := p.scanner.ConsumeWhile(isWhitespaceOrNewline); err != nil {
 			return nil, p.scanner.ParseError(err)
@@ -151,7 +152,7 @@ func (p *Parser) consumeComment() error {
 	return nil
 }
 
-func (p *Parser) parseDirective() (ledger.Directive, error) {
+func (p *Parser) parseDirective() (ast.Directive, error) {
 	p.markStart()
 	d, err := p.parseDate()
 	if err != nil {
@@ -160,7 +161,7 @@ func (p *Parser) parseDirective() (ledger.Directive, error) {
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	var result ledger.Directive
+	var result ast.Directive
 	switch p.current() {
 	case '"':
 		result, err = p.parseTransaction(d)
@@ -183,7 +184,7 @@ func (p *Parser) parseDirective() (ledger.Directive, error) {
 	return result, nil
 }
 
-func (p *Parser) parseTransaction(d time.Time) (*ledger.Transaction, error) {
+func (p *Parser) parseTransaction(d time.Time) (*ast.Transaction, error) {
 	desc, err := p.parseQuotedString()
 	if err != nil {
 		return nil, err
@@ -204,7 +205,7 @@ func (p *Parser) parseTransaction(d time.Time) (*ledger.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ledger.Transaction{
+	return &ast.Transaction{
 		Range:       p.getRange(),
 		Date:        d,
 		Description: desc,
@@ -214,20 +215,20 @@ func (p *Parser) parseTransaction(d time.Time) (*ledger.Transaction, error) {
 
 }
 
-func (p *Parser) parseAccrual() (ledger.Accrual, error) {
+func (p *Parser) parseAccrual() (*ast.Accrual, error) {
 	p.markStart()
 	if err := p.scanner.ConsumeRune('@'); err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	if err := p.scanner.ParseString("accrue"); err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	periodStr, err := p.scanner.ReadWhile(unicode.IsLetter)
 	if err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	var period date.Period
 	switch periodStr {
@@ -244,47 +245,47 @@ func (p *Parser) parseAccrual() (ledger.Accrual, error) {
 	case "yearly":
 		period = date.Yearly
 	default:
-		return ledger.Accrual{}, fmt.Errorf("expected \"once\", \"daily\", \"weekly\", \"monthly\", \"quarterly\" or \"yearly\", got %q", periodStr)
+		return nil, fmt.Errorf("expected \"once\", \"daily\", \"weekly\", \"monthly\", \"quarterly\" or \"yearly\", got %q", periodStr)
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	dateFrom, err := p.parseDate()
 	if err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	dateTo, err := p.parseDate()
 	if err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	account, err := p.parseAccount()
 	if err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	d, err := p.parseDate()
 	if err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	t, err := p.parseTransaction(d)
 	if err != nil {
-		return ledger.Accrual{}, err
+		return nil, err
 	}
 	if len(t.Postings) != 1 {
-		return ledger.Accrual{}, fmt.Errorf("accrual transaction must have exactly one posting: %v", t)
+		return nil, fmt.Errorf("accrual transaction must have exactly one posting: %v", t)
 	}
-	return ledger.Accrual{
+	return &ast.Accrual{
 		Range:       p.getRange(),
 		T0:          dateFrom,
 		T1:          dateTo,
@@ -294,14 +295,14 @@ func (p *Parser) parseAccrual() (ledger.Accrual, error) {
 	}, nil
 }
 
-func (p *Parser) parsePostings() ([]ledger.Posting, error) {
-	var postings []ledger.Posting
+func (p *Parser) parsePostings() ([]ast.Posting, error) {
+	var postings []ast.Posting
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		var (
-			credit, debit  *ledger.Account
+			credit, debit  *journal.Account
 			amount         decimal.Decimal
-			commodity, tgt *ledger.Commodity
-			lot            *ledger.Lot
+			commodity, tgt *journal.Commodity
+			lot            *ast.Lot
 
 			err error
 		)
@@ -353,7 +354,7 @@ func (p *Parser) parsePostings() ([]ledger.Posting, error) {
 				}
 			}
 		}
-		postings = append(postings, ledger.Posting{
+		postings = append(postings, ast.Posting{
 			Credit:          credit,
 			Debit:           debit,
 			Amount:          amount,
@@ -368,7 +369,7 @@ func (p *Parser) parsePostings() ([]ledger.Posting, error) {
 	return postings, nil
 }
 
-func (p *Parser) parseOpen(d time.Time) (*ledger.Open, error) {
+func (p *Parser) parseOpen(d time.Time) (*ast.Open, error) {
 	if err := p.scanner.ParseString("open"); err != nil {
 		return nil, err
 	}
@@ -379,14 +380,14 @@ func (p *Parser) parseOpen(d time.Time) (*ledger.Open, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ledger.Open{
+	return &ast.Open{
 		Range:   p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
 }
 
-func (p *Parser) parseClose(d time.Time) (*ledger.Close, error) {
+func (p *Parser) parseClose(d time.Time) (*ast.Close, error) {
 	if err := p.scanner.ParseString("close"); err != nil {
 		return nil, err
 	}
@@ -397,14 +398,14 @@ func (p *Parser) parseClose(d time.Time) (*ledger.Close, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ledger.Close{
+	return &ast.Close{
 		Range:   p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
 }
 
-func (p *Parser) parsePrice(d time.Time) (*ledger.Price, error) {
+func (p *Parser) parsePrice(d time.Time) (*ast.Price, error) {
 	if err := p.scanner.ParseString("price"); err != nil {
 		return nil, err
 	}
@@ -430,7 +431,7 @@ func (p *Parser) parsePrice(d time.Time) (*ledger.Price, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ledger.Price{
+	return &ast.Price{
 		Range:     p.getRange(),
 		Date:      d,
 		Commodity: commodity,
@@ -439,7 +440,7 @@ func (p *Parser) parsePrice(d time.Time) (*ledger.Price, error) {
 	}, nil
 }
 
-func (p *Parser) parseBalanceAssertion(d time.Time) (*ledger.Assertion, error) {
+func (p *Parser) parseBalanceAssertion(d time.Time) (*ast.Assertion, error) {
 	if err := p.scanner.ParseString("balance"); err != nil {
 		return nil, err
 	}
@@ -464,7 +465,7 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*ledger.Assertion, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ledger.Assertion{
+	return &ast.Assertion{
 		Range:     p.getRange(),
 		Date:      d,
 		Account:   account,
@@ -473,7 +474,7 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*ledger.Assertion, error) {
 	}, nil
 }
 
-func (p *Parser) parseValue(d time.Time) (*ledger.Value, error) {
+func (p *Parser) parseValue(d time.Time) (*ast.Value, error) {
 	if err := p.scanner.ParseString("value"); err != nil {
 		return nil, err
 	}
@@ -498,7 +499,7 @@ func (p *Parser) parseValue(d time.Time) (*ledger.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ledger.Value{
+	return &ast.Value{
 		Range:     p.getRange(),
 		Date:      d,
 		Account:   account,
@@ -507,7 +508,7 @@ func (p *Parser) parseValue(d time.Time) (*ledger.Value, error) {
 	}, nil
 }
 
-func (p *Parser) parseInclude() (*ledger.Include, error) {
+func (p *Parser) parseInclude() (*ast.Include, error) {
 	p.markStart()
 	if err := p.scanner.ParseString("include"); err != nil {
 		return nil, err
@@ -519,7 +520,7 @@ func (p *Parser) parseInclude() (*ledger.Include, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := &ledger.Include{
+	result := &ast.Include{
 		Range: p.getRange(),
 		Path:  i,
 	}
@@ -529,24 +530,24 @@ func (p *Parser) parseInclude() (*ledger.Include, error) {
 	return result, nil
 }
 
-func (p *Parser) parseCurrency() (ledger.Currency, error) {
+func (p *Parser) parseCurrency() (ast.Currency, error) {
 	p.markStart()
 	if err := p.scanner.ParseString("currency"); err != nil {
-		return ledger.Currency{}, err
+		return ast.Currency{}, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Currency{}, err
+		return ast.Currency{}, err
 	}
 	i, err := p.parseCommodity()
 	if err != nil {
-		return ledger.Currency{}, err
+		return ast.Currency{}, err
 	}
-	result := ledger.Currency{
+	result := ast.Currency{
 		Range:     p.getRange(),
 		Commodity: i,
 	}
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
-		return ledger.Currency{}, err
+		return ast.Currency{}, err
 	}
 	return result, nil
 }
@@ -558,7 +559,7 @@ func (p *Parser) consumeNewline() error {
 	return nil
 }
 
-func (p *Parser) parseAccount() (*ledger.Account, error) {
+func (p *Parser) parseAccount() (*journal.Account, error) {
 	s, err := p.scanner.ReadWhile(func(r rune) bool {
 		return r == ':' || unicode.IsLetter(r) || unicode.IsDigit(r)
 	})
@@ -582,7 +583,7 @@ func (p *Parser) consumeRestOfWhitespaceLine() error {
 	return p.consumeNewline()
 }
 
-func (p *Parser) parseLot() (*ledger.Lot, error) {
+func (p *Parser) parseLot() (*ast.Lot, error) {
 	err := p.scanner.ConsumeRune('{')
 	if err != nil {
 		return nil, err
@@ -638,7 +639,7 @@ func (p *Parser) parseLot() (*ledger.Lot, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ledger.Lot{
+	return &ast.Lot{
 		Date:      d,
 		Label:     label,
 		Price:     price,
@@ -646,9 +647,9 @@ func (p *Parser) parseLot() (*ledger.Lot, error) {
 	}, nil
 }
 
-func (p *Parser) parseTargetCommodity() (*ledger.Commodity, error) {
+func (p *Parser) parseTargetCommodity() (*journal.Commodity, error) {
 	var (
-		commodity *ledger.Commodity
+		commodity *journal.Commodity
 		err       error
 	)
 	if err = p.scanner.ConsumeRune('('); err != nil {
@@ -669,8 +670,8 @@ func (p *Parser) parseTargetCommodity() (*ledger.Commodity, error) {
 	return commodity, nil
 }
 
-func (p *Parser) parseTags() ([]ledger.Tag, error) {
-	var tags []ledger.Tag
+func (p *Parser) parseTags() ([]ast.Tag, error) {
+	var tags []ast.Tag
 	for p.current() == '#' {
 		tag, err := p.parseTag()
 		if err != nil {
@@ -684,7 +685,7 @@ func (p *Parser) parseTags() ([]ledger.Tag, error) {
 	return tags, nil
 }
 
-func (p *Parser) parseTag() (ledger.Tag, error) {
+func (p *Parser) parseTag() (ast.Tag, error) {
 	if p.current() != '#' {
 		return "", fmt.Errorf("expected tag, got %c", p.current())
 	}
@@ -698,7 +699,7 @@ func (p *Parser) parseTag() (ledger.Tag, error) {
 		return "", err
 	}
 	b.WriteString(i)
-	return ledger.Tag(b.String()), nil
+	return ast.Tag(b.String()), nil
 }
 
 // parseQuotedString parses a quoted string
@@ -767,7 +768,7 @@ func (p *Parser) parseFloat() (float64, error) {
 }
 
 // parseCommodity parses a commodity
-func (p *Parser) parseCommodity() (*ledger.Commodity, error) {
+func (p *Parser) parseCommodity() (*journal.Commodity, error) {
 	i, err := p.parseIdentifier()
 	if err != nil {
 		return nil, err

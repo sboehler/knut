@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ledger
+package ast
 
 import "go.uber.org/multierr"
 
 // Initializer gets called before processing.
 type Initializer interface {
-	Initialize(l Ledger) error
+	Initialize(l AST) error
 }
 
 // Processor processes the balance and the ledger day.
@@ -31,8 +31,8 @@ type Finalizer interface {
 	Finalize() error
 }
 
-// Process processes a ledger.
-func (l Ledger) Process(steps []Processor) (resErr error) {
+// Process processes an AST.
+func (l AST) Process(steps []Processor) (resErr error) {
 	for _, pr := range steps {
 		if f, ok := pr.(Initializer); ok {
 			if err := f.Initialize(l); err != nil {
@@ -59,8 +59,8 @@ func (l Ledger) Process(steps []Processor) (resErr error) {
 	return nil
 }
 
-// ProcessAsync processes the ledger asynchronously.
-func (l Ledger) ProcessAsync(steps []Processor) <-chan error {
+// ProcessAsync processes the AST asynchronously.
+func (l AST) ProcessAsync(steps []Processor) <-chan error {
 	errCh := make(chan error)
 	go func(steps []Processor) {
 		defer close(errCh)

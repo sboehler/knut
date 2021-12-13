@@ -28,8 +28,9 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 )
 
 // CreateCmd creates the command.
@@ -64,7 +65,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = ledger.NewContext()
+		ctx = journal.NewContext()
 		f   *bufio.Reader
 		err error
 	)
@@ -73,7 +74,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = parser{
 		reader:  csv.NewReader(f),
-		builder: ledger.NewBuilder(ctx, ledger.Filter{}),
+		builder: ast.NewBuilder(ctx, journal.Filter{}),
 	}
 	if p.account, err = r.account.Value(ctx); err != nil {
 		return err
@@ -89,8 +90,8 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 type parser struct {
 	reader  *csv.Reader
-	account *ledger.Account
-	builder *ledger.Builder
+	account *journal.Account
+	builder *ast.Builder
 }
 
 func (p *parser) parse() error {
@@ -138,7 +139,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	var (
 		err  error
 		desc = strings.Join(words, " ")
-		chf  *ledger.Commodity
+		chf  *journal.Commodity
 		amt  decimal.Decimal
 		d    time.Time
 	)
@@ -151,11 +152,11 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if chf, err = p.builder.Context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        d,
 		Description: desc,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.account, p.builder.Context.TBDAccount(), chf, amt),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.account, p.builder.Context.TBDAccount(), chf, amt),
 		},
 	})
 	return true, nil

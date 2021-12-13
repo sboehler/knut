@@ -1,11 +1,12 @@
-package ledger
+package ast
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/scanner"
+	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast/scanner"
 	"github.com/shopspring/decimal"
 )
 
@@ -40,27 +41,27 @@ var (
 type Open struct {
 	Range
 	Date    time.Time
-	Account *Account
+	Account *journal.Account
 }
 
 // Close represents a close command.
 type Close struct {
 	Range
 	Date    time.Time
-	Account *Account
+	Account *journal.Account
 }
 
 // Posting represents a posting.
 type Posting struct {
 	Amount, Value              decimal.Decimal
-	Credit, Debit              *Account
-	Commodity, TargetCommodity *Commodity
+	Credit, Debit              *journal.Account
+	Commodity, TargetCommodity *journal.Commodity
 	Lot                        *Lot
 }
 
 // NewPosting creates a new posting from the given parameters. If amount is negative, it
 // will be inverted and the accounts reversed.
-func NewPosting(crAccount, drAccount *Account, commodity *Commodity, amt decimal.Decimal) Posting {
+func NewPosting(crAccount, drAccount *journal.Account, commodity *journal.Commodity, amt decimal.Decimal) Posting {
 	if amt.IsNegative() {
 		crAccount, drAccount = drAccount, crAccount
 		amt = amt.Neg()
@@ -73,12 +74,17 @@ func NewPosting(crAccount, drAccount *Account, commodity *Commodity, amt decimal
 	}
 }
 
+// Matches returns whether this filter matches the given Posting.
+func (p Posting) Matches(b journal.Filter) bool {
+	return (b.MatchAccount(p.Credit) || b.MatchAccount(p.Debit)) && b.MatchCommodity(p.Commodity)
+}
+
 // Lot represents a lot.
 type Lot struct {
 	Date      time.Time
 	Label     string
 	Price     float64
-	Commodity *Commodity
+	Commodity *journal.Commodity
 }
 
 // Tag represents a tag for a transaction or booking.
@@ -94,8 +100,8 @@ type Transaction struct {
 }
 
 // Commodities returns the commodities in this transaction.
-func (t Transaction) Commodities() map[*Commodity]bool {
-	var res = make(map[*Commodity]bool)
+func (t Transaction) Commodities() map[*journal.Commodity]bool {
+	var res = make(map[*journal.Commodity]bool)
 	for _, pst := range t.Postings {
 		res[pst.Commodity] = true
 	}
@@ -106,8 +112,8 @@ func (t Transaction) Commodities() map[*Commodity]bool {
 type Price struct {
 	Range
 	Date      time.Time
-	Commodity *Commodity
-	Target    *Commodity
+	Commodity *journal.Commodity
+	Target    *journal.Commodity
 	Price     decimal.Decimal
 }
 
@@ -122,18 +128,18 @@ type Include struct {
 type Assertion struct {
 	Range
 	Date      time.Time
-	Account   *Account
+	Account   *journal.Account
 	Amount    decimal.Decimal
-	Commodity *Commodity
+	Commodity *journal.Commodity
 }
 
 // Value represents a value directive.
 type Value struct {
 	Range
 	Date      time.Time
-	Account   *Account
+	Account   *journal.Account
 	Amount    decimal.Decimal
-	Commodity *Commodity
+	Commodity *journal.Commodity
 }
 
 // Accrual represents an accrual.
@@ -141,7 +147,7 @@ type Accrual struct {
 	Range
 	Period      date.Period
 	T0, T1      time.Time
-	Account     *Account
+	Account     *journal.Account
 	Transaction *Transaction
 }
 
@@ -204,16 +210,16 @@ func (a Accrual) Expand() []*Transaction {
 	return result
 }
 
-func isAL(a *Account) bool {
-	return a.Type() == ASSETS || a.Type() == LIABILITIES
+func isAL(a *journal.Account) bool {
+	return a.Type() == journal.ASSETS || a.Type() == journal.LIABILITIES
 }
 
-func isIE(a *Account) bool {
-	return a.Type() == INCOME || a.Type() == EXPENSES
+func isIE(a *journal.Account) bool {
+	return a.Type() == journal.INCOME || a.Type() == journal.EXPENSES
 }
 
 // Currency declares that a commodity is a currency.
 type Currency struct {
 	Range
-	*Commodity
+	*journal.Commodity
 }

@@ -21,9 +21,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/parser"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
 	"github.com/shopspring/decimal"
 	"go.uber.org/multierr"
@@ -57,7 +58,7 @@ func run(cmd *cobra.Command, args []string) {
 const concurrency = 5
 
 func execute(cmd *cobra.Command, args []string) (errors error) {
-	var ctx = ledger.NewContext()
+	var ctx = journal.NewContext()
 	configs, err := readConfig(args[0])
 	if err != nil {
 		return err
@@ -89,7 +90,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	return errors
 }
 
-func fetch(ctx ledger.Context, f string, cfg config) error {
+func fetch(ctx journal.Context, f string, cfg config) error {
 	var absPath = filepath.Join(filepath.Dir(f), cfg.File)
 	l, err := readFile(ctx, absPath)
 	if err != nil {
@@ -119,18 +120,18 @@ func readConfig(path string) ([]config, error) {
 	return t, nil
 }
 
-func readFile(ctx ledger.Context, filepath string) (res map[time.Time]*ledger.Price, err error) {
+func readFile(ctx journal.Context, filepath string) (res map[time.Time]*ast.Price, err error) {
 	p, cls, err := parser.FromPath(ctx, filepath)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { err = multierr.Append(err, cls()) }()
-	var prices = make(map[time.Time]*ledger.Price)
+	var prices = make(map[time.Time]*ast.Price)
 	for i := range p.ParseAll() {
 		switch d := i.(type) {
 		case error:
 			return nil, err
-		case *ledger.Price:
+		case *ast.Price:
 			prices[d.Date] = d
 		default:
 			return nil, fmt.Errorf("unexpected directive in prices file: %v", d)
@@ -139,11 +140,11 @@ func readFile(ctx ledger.Context, filepath string) (res map[time.Time]*ledger.Pr
 	return prices, nil
 }
 
-func fetchPrices(ctx ledger.Context, cfg config, t0, t1 time.Time, results map[time.Time]*ledger.Price) error {
+func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[time.Time]*ast.Price) error {
 	var (
 		c                 = yahoo.New()
 		quotes            []yahoo.Quote
-		commodity, target *ledger.Commodity
+		commodity, target *journal.Commodity
 		err               error
 	)
 	if quotes, err = c.Fetch(cfg.Symbol, t0, t1); err != nil {
@@ -156,7 +157,7 @@ func fetchPrices(ctx ledger.Context, cfg config, t0, t1 time.Time, results map[t
 		return err
 	}
 	for _, i := range quotes {
-		results[i.Date] = &ledger.Price{
+		results[i.Date] = &ast.Price{
 			Date:      i.Date,
 			Commodity: commodity,
 			Target:    target,
@@ -166,8 +167,8 @@ func fetchPrices(ctx ledger.Context, cfg config, t0, t1 time.Time, results map[t
 	return nil
 }
 
-func writeFile(ctx ledger.Context, prices map[time.Time]*ledger.Price, filepath string) error {
-	var b = ledger.NewBuilder(ctx, ledger.Filter{})
+func writeFile(ctx journal.Context, prices map[time.Time]*ast.Price, filepath string) error {
+	var b = ast.NewBuilder(ctx, journal.Filter{})
 	for _, price := range prices {
 		b.AddPrice(price)
 	}

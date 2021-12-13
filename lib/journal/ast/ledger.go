@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ledger
+package ast
 
 import (
 	"sort"
 	"time"
 
-	"github.com/sboehler/knut/lib/date"
+	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/journal"
 )
 
 // Day groups all commands for a given date.
@@ -32,15 +33,15 @@ type Day struct {
 	Closings     []*Close
 }
 
-// Ledger is a
-type Ledger struct {
+// AST is a
+type AST struct {
 	Days    []*Day
-	Context Context
+	Context journal.Context
 }
 
 // MinDate returns the minimum date for this ledger, as the first
 // date on which an account is opened (ignoring prices, for example).
-func (l Ledger) MinDate() (time.Time, bool) {
+func (l AST) MinDate() (time.Time, bool) {
 	for _, s := range l.Days {
 		if len(s.Openings) > 0 {
 			return s.Date, true
@@ -50,7 +51,7 @@ func (l Ledger) MinDate() (time.Time, bool) {
 }
 
 // MaxDate returns the maximum date for the given
-func (l Ledger) MaxDate() (time.Time, bool) {
+func (l AST) MaxDate() (time.Time, bool) {
 	if len(l.Days) == 0 {
 		return time.Time{}, false
 	}
@@ -58,8 +59,8 @@ func (l Ledger) MaxDate() (time.Time, bool) {
 }
 
 // Dates returns a series of dates which covers the first
-// and last date in the ledger.
-func (l Ledger) Dates(from, to time.Time, period date.Period) []time.Time {
+// and last date in the ast.
+func (l AST) Dates(from, to time.Time, period date.Period) []time.Time {
 	if len(l.Days) == 0 {
 		return nil
 	}
@@ -78,11 +79,11 @@ func (l Ledger) Dates(from, to time.Time, period date.Period) []time.Time {
 }
 
 // ActualDates returns a series like Dates, but containing the latest available,
-// actual dates from the days in the ledger. That is, an element of the result
+// actual dates from the days in the ast. That is, an element of the result
 // array is either the zero date (if it is before the first date in the ledger),
 // or the latest date in the ledger which is smaller or equal than the corresponding
 // element in the input array.
-func (l Ledger) ActualDates(ds []time.Time) []time.Time {
+func (l AST) ActualDates(ds []time.Time) []time.Time {
 	var actuals = make([]time.Time, 0, len(ds))
 	for _, date := range ds {
 		if len(l.Days) == 0 || date.Before(l.Days[0].Date) {

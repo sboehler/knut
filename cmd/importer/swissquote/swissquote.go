@@ -28,8 +28,9 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 )
 
 // CreateCmd creates the command.
@@ -70,7 +71,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = ledger.NewContext()
+		ctx = journal.NewContext()
 		f   *bufio.Reader
 		err error
 	)
@@ -79,7 +80,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = parser{
 		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)),
-		builder: ledger.NewBuilder(ctx, ledger.Filter{}),
+		builder: ast.NewBuilder(ctx, journal.Filter{}),
 	}
 	if p.account, err = r.account.Value(ctx); err != nil {
 		return err
@@ -108,10 +109,10 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 type parser struct {
 	reader  *csv.Reader
 	options runner
-	builder *ledger.Builder
+	builder *ast.Builder
 	last    *record
 
-	account, dividend, tax, fee, interest *ledger.Account
+	account, dividend, tax, fee, interest *journal.Account
 }
 
 func (p *parser) parse() error {
@@ -238,7 +239,7 @@ type record struct {
 	date                                               time.Time
 	orderNo, trxType, name, isin                       string
 	quantity, price, fee, interest, netAmount, balance decimal.Decimal
-	currency, symbol                                   *ledger.Commodity
+	currency, symbol                                   *journal.Commodity
 }
 
 func (p *parser) parseTrade(r *record) (bool, error) {
@@ -254,13 +255,13 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	if proceeds.IsPositive() {
 		qty = qty.Neg()
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        r.date,
 		Description: desc,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, r.symbol, qty),
-			ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, r.currency, proceeds),
-			ledger.NewPosting(p.fee, p.account, r.currency, fee),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, r.symbol, qty),
+			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, r.currency, proceeds),
+			ast.NewPosting(p.fee, p.account, r.currency, fee),
 		},
 	})
 	return true, nil
@@ -284,12 +285,12 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		return true, nil
 	}
 	var desc = fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency, r.trxType, r.netAmount, r.currency)
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        r.date,
 		Description: desc,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, p.last.currency, p.last.netAmount),
-			ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, r.currency, r.netAmount),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, p.last.currency, p.last.netAmount),
+			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, r.currency, r.netAmount),
 		},
 	})
 	p.last = nil
@@ -305,13 +306,13 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 	if _, ok := w[r.trxType]; !ok {
 		return false, nil
 	}
-	var postings = []ledger.Posting{
-		ledger.NewPosting(p.dividend, p.account, r.currency, r.price),
+	var postings = []ast.Posting{
+		ast.NewPosting(p.dividend, p.account, r.currency, r.price),
 	}
 	if !r.fee.IsZero() {
-		postings = append(postings, ledger.NewPosting(p.account, p.tax, r.currency, r.fee))
+		postings = append(postings, ast.NewPosting(p.account, p.tax, r.currency, r.fee))
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        r.date,
 		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol, r.name, r.isin),
 		Postings:    postings,
@@ -323,11 +324,11 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 	if r.trxType != "Depotgebühren" {
 		return false, nil
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.fee, p.account, r.currency, r.netAmount),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.fee, p.account, r.currency, r.netAmount),
 		},
 	})
 	return true, nil
@@ -343,11 +344,11 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 	if _, ok := w[r.trxType]; !ok {
 		return false, nil
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
 		},
 	})
 	return true, nil
@@ -357,22 +358,22 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 	if r.trxType != "Zins" {
 		return false, nil
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.interest, p.account, r.currency, r.netAmount),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.interest, p.account, r.currency, r.netAmount),
 		},
 	})
 	return true, nil
 }
 
 func (p *parser) parseCatchall(r *record) (bool, error) {
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
 		},
 	})
 	return true, nil

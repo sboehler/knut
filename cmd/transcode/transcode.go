@@ -20,9 +20,10 @@ import (
 	"os"
 
 	"github.com/sboehler/knut/lib/balance"
-	"github.com/sboehler/knut/lib/beancount"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/parser"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/beancount"
+	"github.com/sboehler/knut/lib/journal/ast/parser"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
@@ -61,20 +62,20 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 		return fmt.Errorf("missing --commodity flag, please provide a valuation commodity")
 	}
 	var (
-		ctx       = ledger.NewContext()
-		commodity *ledger.Commodity
+		ctx       = journal.NewContext()
+		commodity *journal.Commodity
 		j         = parser.RecursiveParser{Context: ctx, File: args[0]}
-		l         *ledger.Ledger
+		l         *ast.AST
 	)
 	if commodity, err = ctx.GetCommodity(c); err != nil {
 		return err
 	}
-	if l, err = ledger.FromDirectives(ctx, ledger.Filter{}, j.Parse()); err != nil {
+	if l, err = ast.FromDirectives(ctx, journal.Filter{}, j.Parse()); err != nil {
 		return err
 	}
 	var (
 		bal   = balance.New(ctx, commodity)
-		steps = []ledger.Processor{
+		steps = []ast.Processor{
 			balance.DateUpdater{Balance: bal},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},

@@ -28,8 +28,9 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 )
 
 // CreateCmd creates the command.
@@ -64,8 +65,8 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx     = ledger.NewContext()
-		account *ledger.Account
+		ctx     = journal.NewContext()
+		account *journal.Account
 		reader  *bufio.Reader
 		err     error
 	)
@@ -79,11 +80,11 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		context: ctx,
 		account: account,
 	}
-	var trx []*ledger.Transaction
+	var trx []*ast.Transaction
 	if trx, err = p.parse(reader); err != nil {
 		return err
 	}
-	builder := ledger.NewBuilder(ctx, ledger.Filter{})
+	builder := ast.NewBuilder(ctx, journal.Filter{})
 	for _, trx := range trx {
 		builder.AddTransaction(trx)
 	}
@@ -94,15 +95,15 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 }
 
 type parser struct {
-	context ledger.Context
-	account *ledger.Account
+	context journal.Context
+	account *journal.Account
 
 	// internal variables
 	reader       *csv.Reader
-	transactions []*ledger.Transaction
+	transactions []*ast.Transaction
 }
 
-func (p *parser) parse(r io.Reader) ([]*ledger.Transaction, error) {
+func (p *parser) parse(r io.Reader) ([]*ast.Transaction, error) {
 	p.reader = csv.NewReader(r)
 	p.reader.FieldsPerRecord = -1
 	p.reader.LazyQuotes = true
@@ -159,7 +160,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		err    error
 		desc   = r[bfBeschreibung]
 		amount decimal.Decimal
-		chf    *ledger.Commodity
+		chf    *journal.Commodity
 		date   time.Time
 	)
 	if date, err = time.Parse("02.01.2006", r[bfEinkaufsDatum]); err != nil {
@@ -171,11 +172,11 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.transactions = append(p.transactions, &ledger.Transaction{
+	p.transactions = append(p.transactions, &ast.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.context.TBDAccount(), p.account, chf, amount),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.context.TBDAccount(), p.account, chf, amount),
 		},
 	})
 	return true, nil
@@ -245,7 +246,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 		err    error
 		amount decimal.Decimal
 		date   time.Time
-		chf    *ledger.Commodity
+		chf    *journal.Commodity
 	)
 	if date, err = time.Parse("02.01.2006", r[rfEinkaufsDatum]); err != nil {
 		return false, err
@@ -256,11 +257,11 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.transactions = append(p.transactions, &ledger.Transaction{
+	p.transactions = append(p.transactions, &ast.Transaction{
 		Date:        date,
 		Description: r[rfBeschreibung],
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.context.TBDAccount(), p.account, chf, amount),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.context.TBDAccount(), p.account, chf, amount),
 		},
 	})
 	return true, nil

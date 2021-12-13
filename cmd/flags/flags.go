@@ -25,8 +25,8 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/journal"
 )
 
 // DateFlag manages a flag to determine a date.
@@ -125,7 +125,7 @@ func (pf PeriodFlags) Value() (date.Period, error) {
 
 // MappingFlag manages a flag of type -c1,<regex>.
 type MappingFlag struct {
-	m ledger.Mapping
+	m journal.Mapping
 }
 
 var _ pflag.Value = (*MappingFlag)(nil)
@@ -152,12 +152,12 @@ func (cf *MappingFlag) Set(v string) error {
 			return err
 		}
 	}
-	cf.m = append(cf.m, ledger.Rule{Level: l, Regex: regex})
+	cf.m = append(cf.m, journal.Rule{Level: l, Regex: regex})
 	return nil
 }
 
 // Value returns the value of this flag.
-func (cf *MappingFlag) Value() ledger.Mapping {
+func (cf *MappingFlag) Value() journal.Mapping {
 	return cf.m
 }
 
@@ -183,7 +183,7 @@ func (cf CommodityFlag) String() string {
 }
 
 // Value returns the commodity.
-func (cf CommodityFlag) Value(ctx ledger.Context) (*ledger.Commodity, error) {
+func (cf CommodityFlag) Value(ctx journal.Context) (*journal.Commodity, error) {
 	if cf.val != "" {
 		return ctx.GetCommodity(cf.val)
 	}
@@ -212,7 +212,7 @@ func (cf AccountFlag) String() string {
 }
 
 // Value returns the account.
-func (cf AccountFlag) Value(ctx ledger.Context) (*ledger.Account, error) {
+func (cf AccountFlag) Value(ctx journal.Context) (*journal.Account, error) {
 	if cf.val != "" {
 		return ctx.GetAccount(cf.val)
 	}
@@ -220,7 +220,7 @@ func (cf AccountFlag) Value(ctx ledger.Context) (*ledger.Account, error) {
 }
 
 // ValueWithDefault returns the account. If no account has been specified, the default is returned.
-func (cf AccountFlag) ValueWithDefault(ctx ledger.Context, def *ledger.Account) (*ledger.Account, error) {
+func (cf AccountFlag) ValueWithDefault(ctx journal.Context, def *journal.Account) (*journal.Account, error) {
 	res, err := cf.Value(ctx)
 	if err != nil {
 		return nil, err

@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/balance"
-	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
 
@@ -26,7 +26,7 @@ import (
 type Report struct {
 	Dates     []time.Time
 	Value     bool
-	Mapping   ledger.Mapping
+	Mapping   journal.Mapping
 	Positions indexByAccount
 }
 
@@ -52,8 +52,8 @@ func (rep *Report) Add(b *balance.Balance) {
 
 // Subtree returns the accounts of the minimal dense subtree which
 // covers the accounts in this report.
-func (rep Report) Subtree() map[*ledger.Account]struct{} {
-	m := make(map[*ledger.Account]struct{})
+func (rep Report) Subtree() map[*journal.Account]struct{} {
+	m := make(map[*journal.Account]struct{})
 	for acc := range rep.Positions {
 		for p := acc; p != nil; p = p.Parent() {
 			m[p] = struct{}{}
@@ -62,9 +62,9 @@ func (rep Report) Subtree() map[*ledger.Account]struct{} {
 	return m
 }
 
-type indexByAccount map[*ledger.Account]indexByCommodity
+type indexByAccount map[*journal.Account]indexByCommodity
 
-func (iba indexByAccount) Add(acc *ledger.Account, com *ledger.Commodity, date time.Time, val decimal.Decimal) {
+func (iba indexByAccount) Add(acc *journal.Account, com *journal.Commodity, date time.Time, val decimal.Decimal) {
 	if val.IsZero() {
 		return
 	}
@@ -76,7 +76,7 @@ func (iba indexByAccount) Add(acc *ledger.Account, com *ledger.Commodity, date t
 	byCommodity.Add(com, date, val)
 }
 
-type indexByCommodity map[*ledger.Commodity]indexByDate
+type indexByCommodity map[*journal.Commodity]indexByDate
 
 func (ibc indexByCommodity) AddFrom(otherByCommodity indexByCommodity) {
 	for c, otherByDate := range otherByCommodity {
@@ -102,7 +102,7 @@ func (ibc indexByCommodity) Sum() map[time.Time]decimal.Decimal {
 	return res
 }
 
-func (ibc indexByCommodity) Add(com *ledger.Commodity, date time.Time, val decimal.Decimal) {
+func (ibc indexByCommodity) Add(com *journal.Commodity, date time.Time, val decimal.Decimal) {
 	if val.IsZero() {
 		return
 	}

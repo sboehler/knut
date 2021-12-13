@@ -17,14 +17,14 @@ package balance
 import (
 	"fmt"
 
-	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/journal"
 )
 
 // Accounts keeps track of open accounts.
-type Accounts map[*ledger.Account]bool
+type Accounts map[*journal.Account]bool
 
 // Open opens an account.
-func (oa Accounts) Open(a *ledger.Account) error {
+func (oa Accounts) Open(a *journal.Account) error {
 	if oa[a] {
 		return fmt.Errorf("account %v is already open", a)
 	}
@@ -33,7 +33,7 @@ func (oa Accounts) Open(a *ledger.Account) error {
 }
 
 // Close closes an account.
-func (oa Accounts) Close(a *ledger.Account) error {
+func (oa Accounts) Close(a *journal.Account) error {
 	if !oa[a] {
 		return fmt.Errorf("account %v is already closed", a)
 	}
@@ -42,16 +42,16 @@ func (oa Accounts) Close(a *ledger.Account) error {
 }
 
 // IsOpen returns whether an account is open.
-func (oa Accounts) IsOpen(a *ledger.Account) bool {
+func (oa Accounts) IsOpen(a *journal.Account) bool {
 	if oa[a] {
 		return true
 	}
-	return a.Type() == ledger.EQUITY
+	return a.Type() == journal.EQUITY
 }
 
 // Copy copies accounts.
 func (oa Accounts) Copy() Accounts {
-	var res = make(map[*ledger.Account]bool, len(oa))
+	var res = make(map[*journal.Account]bool, len(oa))
 	for a := range oa {
 		res[a] = true
 	}

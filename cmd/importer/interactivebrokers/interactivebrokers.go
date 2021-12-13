@@ -28,8 +28,9 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 )
 
 // CreateCmd creates the command.
@@ -71,7 +72,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = ledger.NewContext()
+		ctx = journal.NewContext()
 		err error
 	)
 	f, err := flags.OpenFile(args[0])
@@ -80,7 +81,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = parser{
 		reader:  csv.NewReader(f),
-		builder: ledger.NewBuilder(ctx, ledger.Filter{}),
+		builder: ast.NewBuilder(ctx, journal.Filter{}),
 	}
 	if p.account, err = r.accountFlag.Value(ctx); err != nil {
 		return err
@@ -108,11 +109,11 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 type parser struct {
 	reader           *csv.Reader
-	builder          *ledger.Builder
-	baseCurrency     *ledger.Commodity
+	builder          *ast.Builder
+	baseCurrency     *journal.Commodity
 	dateFrom, dateTo time.Time
 
-	account, dividend, tax, fee, interest *ledger.Account
+	account, dividend, tax, fee, interest *journal.Account
 }
 
 func (p *parser) parse() error {
@@ -250,7 +251,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency, stock           *ledger.Commodity
+		currency, stock           *journal.Commodity
 		date                      time.Time
 		desc                      string
 		qty, price, proceeds, fee decimal.Decimal
@@ -283,13 +284,13 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, stock, qty),
-			ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, currency, proceeds),
-			ledger.NewPosting(p.fee, p.account, currency, fee),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, stock, qty),
+			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, currency, proceeds),
+			ast.NewPosting(p.fee, p.account, currency, fee),
 		},
 	})
 	return true, nil
@@ -306,7 +307,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		return false, fmt.Errorf("base currency is not defined")
 	}
 	var (
-		currency, stock           *ledger.Commodity
+		currency, stock           *journal.Commodity
 		date                      time.Time
 		desc                      string
 		qty, price, proceeds, fee decimal.Decimal
@@ -338,14 +339,14 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
-	var postings = []ledger.Posting{
-		ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, stock, qty),
-		ledger.NewPosting(p.builder.Context.EquityAccount(), p.account, currency, proceeds),
+	var postings = []ast.Posting{
+		ast.NewPosting(p.builder.Context.EquityAccount(), p.account, stock, qty),
+		ast.NewPosting(p.builder.Context.EquityAccount(), p.account, currency, proceeds),
 	}
 	if !fee.IsZero() {
-		postings = append(postings, ledger.NewPosting(p.fee, p.account, p.baseCurrency, fee))
+		postings = append(postings, ast.NewPosting(p.fee, p.account, p.baseCurrency, fee))
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        date,
 		Description: desc,
 		Postings:    postings,
@@ -372,7 +373,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency *ledger.Commodity
+		currency *journal.Commodity
 		date     time.Time
 		desc     string
 		amount   decimal.Decimal
@@ -392,11 +393,11 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Withdraw %s %s", amount, currency)
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.TBDAccount(), p.account, currency, amount),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, currency, amount),
 		},
 	})
 	return true, nil
@@ -421,7 +422,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency, security *ledger.Commodity
+		currency, security *journal.Commodity
 		date               time.Time
 		desc               = r[dfDescription]
 		amount             decimal.Decimal
@@ -443,12 +444,12 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if security, err = p.builder.Context.GetCommodity(symbol); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.dividend, p.account, currency, amount),
-			ledger.NewPosting(p.dividend, p.dividend, security, decimal.Zero),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.dividend, p.account, currency, amount),
+			ast.NewPosting(p.dividend, p.dividend, security, decimal.Zero),
 		},
 	})
 	return true, nil
@@ -484,7 +485,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	}
 	var (
 		desc               = r[wtfDescription]
-		currency, security *ledger.Commodity
+		currency, security *journal.Commodity
 		date               time.Time
 		amount             decimal.Decimal
 		symbol             string
@@ -505,12 +506,12 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if security, err = p.builder.Context.GetCommodity(symbol); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.tax, p.account, currency, amount),
-			ledger.NewPosting(p.tax, p.tax, security, decimal.Zero),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.tax, p.account, currency, amount),
+			ast.NewPosting(p.tax, p.tax, security, decimal.Zero),
 		},
 	})
 	return true, nil
@@ -522,7 +523,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency *ledger.Commodity
+		currency *journal.Commodity
 		date     time.Time
 		amount   decimal.Decimal
 		desc     = r[dfDescription]
@@ -537,11 +538,11 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	if amount, err = parseDecimal(r[dfAmount]); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        date,
 		Description: desc,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.interest, p.account, currency, amount)},
+		Postings: []ast.Posting{
+			ast.NewPosting(p.interest, p.account, currency, amount)},
 	})
 	return true, nil
 }
@@ -576,7 +577,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
 	var (
-		symbol *ledger.Commodity
+		symbol *journal.Commodity
 		amt    decimal.Decimal
 		err    error
 	)
@@ -586,7 +587,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 	if amt, err = decimal.NewFromString(r[opfQuantity]); err != nil {
 		return false, err
 	}
-	p.builder.AddAssertion(&ledger.Assertion{
+	p.builder.AddAssertion(&ast.Assertion{
 		Date:      p.dateTo,
 		Account:   p.account,
 		Commodity: symbol,
@@ -622,7 +623,7 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
 	var (
-		symbol *ledger.Commodity
+		symbol *journal.Commodity
 		amount decimal.Decimal
 		err    error
 	)
@@ -632,7 +633,7 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 	if amount, err = parseRoundedDecimal(r[fbfQuantity]); err != nil {
 		return false, err
 	}
-	p.builder.AddAssertion(&ledger.Assertion{
+	p.builder.AddAssertion(&ast.Assertion{
 		Date:      p.dateTo,
 		Account:   p.account,
 		Commodity: symbol,

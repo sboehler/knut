@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ledger
+package journal
 
 import (
 	"regexp"
@@ -31,9 +31,4 @@ func (b Filter) MatchAccount(a *Account) bool {
 // MatchCommodity returns whether this filter matches the given Commodity.
 func (b Filter) MatchCommodity(c *Commodity) bool {
 	return b.Commodities == nil || b.Commodities.MatchString(c.String())
-}
-
-// MatchPosting returns whether this filter matches the given Posting.
-func (b Filter) MatchPosting(p Posting) bool {
-	return (b.MatchAccount(p.Credit) || b.MatchAccount(p.Debit)) && b.MatchCommodity(p.Commodity)
 }

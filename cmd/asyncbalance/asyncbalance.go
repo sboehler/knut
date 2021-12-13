@@ -26,10 +26,11 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/balance"
-	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/parser"
-	"github.com/sboehler/knut/lib/report"
+	"github.com/sboehler/knut/lib/balance/report"
+	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/table"
 
 	"github.com/spf13/cobra"
@@ -102,9 +103,9 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = ledger.NewContext()
+		ctx = journal.NewContext()
 
-		valuation *ledger.Commodity
+		valuation *journal.Commodity
 		period    date.Period
 
 		err error
@@ -125,7 +126,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context: ctx,
 		}
 		bal    = balance.New(ctx, valuation)
-		filter = ledger.Filter{
+		filter = journal.Filter{
 			Accounts:    r.accounts.Value(),
 			Commodities: r.commodities.Value(),
 		}
@@ -145,7 +146,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		}
 	)
 
-	var l *ledger.Ledger
+	var l *ast.AST
 	if l, err = parser.BuildLedger(filter); err != nil {
 		return err
 	}

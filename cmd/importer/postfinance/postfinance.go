@@ -27,8 +27,9 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 )
 
 // CreateCmd creates the cobra command.
@@ -60,7 +61,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
 		reader *bufio.Reader
-		ctx    = ledger.NewContext()
+		ctx    = journal.NewContext()
 		err    error
 	)
 	if reader, err = flags.OpenFile(args[0]); err != nil {
@@ -68,7 +69,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = Parser{
 		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(reader)),
-		builder: ledger.NewBuilder(ctx, ledger.Filter{}),
+		builder: ast.NewBuilder(ctx, journal.Filter{}),
 	}
 	if p.account, err = r.accountFlag.Value(ctx); err != nil {
 		return err
@@ -89,10 +90,10 @@ func init() {
 // Parser is a parser for account statements
 type Parser struct {
 	reader  *csv.Reader
-	account *ledger.Account
-	builder *ledger.Builder
+	account *journal.Account
+	builder *ast.Builder
 
-	currency *ledger.Commodity
+	currency *journal.Commodity
 }
 
 func (p *Parser) parse() error {
@@ -176,11 +177,11 @@ func (p *Parser) readBookingLine(l []string) error {
 	if amount, err = parseAmount(l); err != nil {
 		return err
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        date,
 		Description: l[bfAvisierungstext],
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.TBDAccount(), p.account, p.currency, amount),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, p.currency, amount),
 		},
 	})
 	return nil

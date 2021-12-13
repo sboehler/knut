@@ -22,8 +22,9 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/balance"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/parser"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/performance"
 
 	"github.com/spf13/cobra"
@@ -79,8 +80,8 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 
 func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	var (
-		ctx       = ledger.NewContext()
-		valuation *ledger.Commodity
+		ctx       = journal.NewContext()
+		valuation *journal.Commodity
 		err       error
 	)
 	if valuation, err = r.valuation.Value(ctx); err != nil {
@@ -93,12 +94,12 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 			Context: ctx,
 		}
 		bal    = balance.New(ctx, valuation)
-		filter = ledger.Filter{
+		filter = journal.Filter{
 			Commodities: r.commodities.Value(),
 			Accounts:    r.accounts.Value(),
 		}
 		res   = new(performance.DailyPerfValues)
-		steps = []ledger.Processor{
+		steps = []ast.Processor{
 			balance.DateUpdater{Balance: bal},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
@@ -116,9 +117,9 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 			Filter:    filter,
 			Valuation: valuation,
 		}
-		l *ledger.Ledger
+		l *ast.AST
 	)
-	if l, err = p.BuildLedger(ledger.Filter{}); err != nil {
+	if l, err = p.BuildLedger(journal.Filter{}); err != nil {
 		return err
 	}
 	if err = l.Process(steps); err != nil {

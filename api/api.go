@@ -27,9 +27,11 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/balance"
-	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/parser"
+	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/parser"
+
 	"github.com/shopspring/decimal"
 )
 
@@ -62,21 +64,21 @@ func (s handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type pipeline struct {
-	Accounts        *ledger.Accounts
+	Accounts        *journal.Accounts
 	Parser          parser.RecursiveParser
-	Filter          ledger.Filter
-	ProcessingSteps []ledger.Processor
+	Filter          journal.Filter
+	ProcessingSteps []ast.Processor
 	Balances        *[]*balance.Balance
 }
 
 func buildPipeline(file string, query url.Values) (*pipeline, error) {
 	var (
-		ctx                               = ledger.NewContext()
+		ctx                               = journal.NewContext()
 		period                            date.Period
 		commoditiesFilter, accountsFilter *regexp.Regexp
 		from, to                          time.Time
 		last                              int
-		valuation                         *ledger.Commodity
+		valuation                         *journal.Commodity
 		diff                              bool
 		err                               error
 	)
@@ -108,7 +110,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 	var (
 		bal    = balance.New(ctx, valuation)
 		result []*balance.Balance
-		steps  = []ledger.Processor{
+		steps  = []ast.Processor{
 			balance.DateUpdater{Balance: bal},
 			&balance.Snapshotter{
 				Balance: bal,
@@ -136,7 +138,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 			Context: ctx,
 			File:    file,
 		},
-		Filter: ledger.Filter{
+		Filter: journal.Filter{
 			Accounts:    accountsFilter,
 			Commodities: commoditiesFilter,
 		},
@@ -251,7 +253,7 @@ func parseBool(query url.Values, key string) (bool, error) {
 	return strconv.ParseBool(s)
 }
 
-func parseCommodity(query url.Values, ctx ledger.Context, key string) (*ledger.Commodity, error) {
+func parseCommodity(query url.Values, ctx journal.Context, key string) (*journal.Commodity, error) {
 	var (
 		s   string
 		ok  bool
@@ -275,7 +277,7 @@ func getOne(query url.Values, key string) (string, bool, error) {
 }
 
 type jsonBalance struct {
-	Valuation       *ledger.Commodity
+	Valuation       *journal.Commodity
 	Dates           []time.Time
 	Amounts, Values map[string]map[string][]decimal.Decimal
 }

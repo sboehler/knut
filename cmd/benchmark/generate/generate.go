@@ -25,9 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 )
@@ -60,7 +61,7 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 type config struct {
-	context                                       ledger.Context
+	context                                       journal.Context
 	accounts, transactions, includes, commodities int
 	seed                                          int64
 	from, to                                      time.Time
@@ -98,7 +99,7 @@ func execute(cmd *cobra.Command, args []string) error {
 			defer close()
 			defer include.Flush()
 			files = append(files, include)
-			if _, err := p.PrintDirective(journal, ledger.Include{Path: name}); err != nil {
+			if _, err := p.PrintDirective(journal, ast.Include{Path: name}); err != nil {
 				return err
 			}
 			io.WriteString(journal, "\n")
@@ -139,7 +140,7 @@ func readConfig(cmd *cobra.Command, args []string) (config, error) {
 		c   config
 		err error
 	)
-	c.context = ledger.NewContext()
+	c.context = journal.NewContext()
 	if c.accounts, err = cmd.Flags().GetInt("accounts"); err != nil {
 		return c, err
 	}
@@ -176,7 +177,7 @@ func parseDate(cmd *cobra.Command, name string) (time.Time, error) {
 	return time.Parse("2006-01-02", s)
 }
 
-func generate(c config) ([]ledger.Open, []ledger.Price, []ledger.Transaction) {
+func generate(c config) ([]ast.Open, []ast.Price, []ast.Transaction) {
 	rand.Seed(c.seed)
 	var (
 		accounts     = generateAccounts(c)
@@ -188,9 +189,9 @@ func generate(c config) ([]ledger.Open, []ledger.Price, []ledger.Transaction) {
 	return opens, prices, transactions
 }
 
-func generateAccounts(c config) []*ledger.Account {
+func generateAccounts(c config) []*journal.Account {
 	var (
-		as    []*ledger.Account
+		as    []*journal.Account
 		types = []string{"Assets", "Liabilities", "Income", "Expenses"}
 	)
 	for i := 0; i < c.accounts; i++ {
@@ -207,8 +208,8 @@ func generateAccounts(c config) []*ledger.Account {
 	return as
 }
 
-func generateCommodities(c config) []*ledger.Commodity {
-	var res []*ledger.Commodity
+func generateCommodities(c config) []*journal.Commodity {
+	var res []*journal.Commodity
 	for i := 0; i < c.commodities; i++ {
 		commodity, err := c.context.GetCommodity(fmt.Sprintf("COMMODITY%d", i))
 		if err != nil {
@@ -219,11 +220,11 @@ func generateCommodities(c config) []*ledger.Commodity {
 	return res
 }
 
-func generateOpenings(c config, as []*ledger.Account) []ledger.Open {
-	var res []ledger.Open
+func generateOpenings(c config, as []*journal.Account) []ast.Open {
+	var res []ast.Open
 
 	for _, a := range as {
-		res = append(res, ledger.Open{
+		res = append(res, ast.Open{
 			Date:    c.from,
 			Account: a,
 		})
@@ -231,16 +232,16 @@ func generateOpenings(c config, as []*ledger.Account) []ledger.Open {
 	return res
 }
 
-func generateTransactions(c config, cs []*ledger.Commodity, as []*ledger.Account) []ledger.Transaction {
-	var trx []ledger.Transaction
+func generateTransactions(c config, cs []*journal.Commodity, as []*journal.Account) []ast.Transaction {
+	var trx []ast.Transaction
 	var dates = date.Series(c.from.AddDate(0, 0, 1), c.to, date.Daily)
 	for i := 0; i < c.transactions; i++ {
 
-		trx = append(trx, ledger.Transaction{
+		trx = append(trx, ast.Transaction{
 			Date:        dates[rand.Intn(len(dates))],
 			Description: generateIdentifier(200),
-			Postings: []ledger.Posting{
-				ledger.NewPosting(as[rand.Intn(len(as))], as[rand.Intn(len(as))], cs[rand.Intn(len(cs))], decimal.NewFromFloat(rand.Float64()*1000).Round(4)),
+			Postings: []ast.Posting{
+				ast.NewPosting(as[rand.Intn(len(as))], as[rand.Intn(len(as))], cs[rand.Intn(len(cs))], decimal.NewFromFloat(rand.Float64()*1000).Round(4)),
 			},
 		})
 	}
@@ -249,13 +250,13 @@ func generateTransactions(c config, cs []*ledger.Commodity, as []*ledger.Account
 
 var stdev = 0.13 / math.Sqrt(365)
 
-func generatePrices(c config, cs []*ledger.Commodity) []ledger.Price {
-	var prices []ledger.Price
+func generatePrices(c config, cs []*journal.Commodity) []ast.Price {
+	var prices []ast.Price
 	for _, commodity := range cs[1:] {
 		var price = decimal.NewFromFloat(1.0 + 200*rand.Float64())
 		for _, d := range date.Series(c.from, c.to, date.Daily) {
 			price = price.Mul(decimal.NewFromFloat(1 + rand.NormFloat64()*stdev)).Truncate(4)
-			prices = append(prices, ledger.Price{
+			prices = append(prices, ast.Price{
 				Date:      d,
 				Commodity: commodity,
 				Target:    cs[0],

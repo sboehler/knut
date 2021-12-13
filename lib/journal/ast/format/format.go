@@ -18,8 +18,8 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 )
 
 type reader interface {
@@ -28,7 +28,7 @@ type reader interface {
 }
 
 // Format formats the directives returned by p.
-func Format(directives []ledger.Directive, src reader, dest io.Writer) error {
+func Format(directives []ast.Directive, src reader, dest io.Writer) error {
 	var (
 		p          = printer.New()
 		srcBytePos int

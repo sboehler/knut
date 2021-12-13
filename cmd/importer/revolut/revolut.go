@@ -28,8 +28,9 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 )
 
 // CreateCmd creates the command.
@@ -63,7 +64,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = ledger.NewContext()
+		ctx = journal.NewContext()
 		f   *bufio.Reader
 		err error
 	)
@@ -72,7 +73,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	p := parser{
 		reader:  csv.NewReader(f),
-		builder: ledger.NewBuilder(ctx, ledger.Filter{}),
+		builder: ast.NewBuilder(ctx, journal.Filter{}),
 	}
 	if p.account, err = r.account.Value(ctx); err != nil {
 		return err
@@ -88,9 +89,9 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 type parser struct {
 	reader   *csv.Reader
-	account  *ledger.Account
-	builder  *ledger.Builder
-	currency *ledger.Commodity
+	account  *journal.Account
+	builder  *ast.Builder
+	currency *journal.Commodity
 	date     time.Time
 }
 
@@ -170,7 +171,7 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		p.builder.AddAssertion(&ledger.Assertion{
+		p.builder.AddAssertion(&ast.Assertion{
 			Date:      date,
 			Account:   p.account,
 			Amount:    balance,
@@ -203,7 +204,7 @@ func (p *parser) parseBooking(r []string) error {
 		return err
 	}
 	amount = amount.Mul(sign)
-	var t = &ledger.Transaction{
+	var t = &ast.Transaction{
 		Date:        date,
 		Description: desc,
 	}
@@ -213,35 +214,35 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		t.Postings = []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.ValuationAccount(), p.account, p.currency, amount),
-			ledger.NewPosting(p.builder.Context.ValuationAccount(), p.account, otherCommodity, otherAmount),
+		t.Postings = []ast.Posting{
+			ast.NewPosting(p.builder.Context.ValuationAccount(), p.account, p.currency, amount),
+			ast.NewPosting(p.builder.Context.ValuationAccount(), p.account, otherCommodity, otherAmount),
 		}
 	case fxBuyRegex.MatchString(r[bfReference]):
 		otherCommodity, otherAmount, err := p.parseCombiField(r[bfExchangeIn])
 		if err != nil {
 			return err
 		}
-		t.Postings = []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.ValuationAccount(), p.account, p.currency, amount),
-			ledger.NewPosting(p.builder.Context.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg()),
+		t.Postings = []ast.Posting{
+			ast.NewPosting(p.builder.Context.ValuationAccount(), p.account, p.currency, amount),
+			ast.NewPosting(p.builder.Context.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg()),
 		}
 	default:
-		t.Postings = []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.TBDAccount(), p.account, p.currency, amount),
+		t.Postings = []ast.Posting{
+			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, p.currency, amount),
 		}
 	}
 	p.builder.AddTransaction(t)
 	return nil
 }
 
-func (p *parser) parseCombiField(f string) (*ledger.Commodity, decimal.Decimal, error) {
+func (p *parser) parseCombiField(f string) (*journal.Commodity, decimal.Decimal, error) {
 	var fs = strings.Fields(f)
 	if len(fs) != 2 {
 		return nil, decimal.Decimal{}, fmt.Errorf("expected currency and amount, got %s", f)
 	}
 	var (
-		otherCommodity *ledger.Commodity
+		otherCommodity *journal.Commodity
 		otherAmount    decimal.Decimal
 		err            error
 	)

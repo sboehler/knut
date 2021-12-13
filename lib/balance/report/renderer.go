@@ -15,13 +15,13 @@
 package report
 
 import (
-	"github.com/sboehler/knut/lib/ledger"
+	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/table"
 )
 
 // Renderer renders a report.
 type Renderer struct {
-	Context         ledger.Context
+	Context         journal.Context
 	ShowCommodities bool
 	Report          *Report
 	table           *table.Table
@@ -40,7 +40,7 @@ func (rn *Renderer) Render() *table.Table {
 
 	var (
 		subtree = rn.Report.Subtree()
-		al, eie []*ledger.Account
+		al, eie []*journal.Account
 	)
 	for acc := range rn.Context.Accounts().PreOrder() {
 		if _, ok := subtree[acc]; !ok {
@@ -62,7 +62,7 @@ func (rn *Renderer) Render() *table.Table {
 	return rn.table
 }
 
-func (rn *Renderer) renderSection(al []*ledger.Account, negate bool) indexByCommodity {
+func (rn *Renderer) renderSection(al []*journal.Account, negate bool) indexByCommodity {
 	res := make(indexByCommodity)
 	if len(al) == 0 {
 		return res

@@ -29,8 +29,9 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 )
 
 // CreateCmd creates the command.
@@ -63,7 +64,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = ledger.NewContext()
+		ctx = journal.NewContext()
 		f   *bufio.Reader
 		err error
 	)
@@ -73,7 +74,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = parser{
 		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)),
-		builder: ledger.NewBuilder(ctx, ledger.Filter{}),
+		builder: ast.NewBuilder(ctx, journal.Filter{}),
 	}
 
 	if p.account, err = r.account.Value(ctx); err != nil {
@@ -90,8 +91,8 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 type parser struct {
 	reader  *csv.Reader
-	account *ledger.Account
-	builder *ledger.Builder
+	account *journal.Account
+	builder *ast.Builder
 }
 
 func (p *parser) parse() error {
@@ -178,7 +179,7 @@ func (p *parser) parseBooking(r []string) error {
 	var (
 		words     = p.parseWords(r)
 		currency  = p.parseCurrency(r)
-		commodity *ledger.Commodity
+		commodity *journal.Commodity
 		date      time.Time
 		amount    decimal.Decimal
 		err       error
@@ -192,11 +193,11 @@ func (p *parser) parseBooking(r []string) error {
 	if commodity, err = p.builder.Context.GetCommodity(currency); err != nil {
 		return err
 	}
-	p.builder.AddTransaction(&ledger.Transaction{
+	p.builder.AddTransaction(&ast.Transaction{
 		Date:        date,
 		Description: words,
-		Postings: []ledger.Posting{
-			ledger.NewPosting(p.builder.Context.TBDAccount(), p.account, commodity, amount),
+		Postings: []ast.Posting{
+			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, commodity, amount),
 		},
 	})
 	return nil

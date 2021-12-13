@@ -26,9 +26,10 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
 
-	"github.com/sboehler/knut/lib/format"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/parser"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/format"
+	"github.com/sboehler/knut/lib/journal/ast/parser"
 )
 
 // CreateCmd creates the command.
@@ -76,7 +77,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 
 func formatFile(target string) error {
 	var (
-		directives           []ledger.Directive
+		directives           []ast.Directive
 		err                  error
 		srcFile, tmpDestFile *os.File
 	)
@@ -98,8 +99,8 @@ func formatFile(target string) error {
 	return multierr.Append(err, atomic.ReplaceFile(tmpDestFile.Name(), target))
 }
 
-func readDirectives(target string) (directives []ledger.Directive, err error) {
-	p, close, err := parser.FromPath(ledger.NewContext(), target)
+func readDirectives(target string) (directives []ast.Directive, err error) {
+	p, close, err := parser.FromPath(journal.NewContext(), target)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,7 @@ func readDirectives(target string) (directives []ledger.Directive, err error) {
 		switch t := d.(type) {
 		case error:
 			return nil, t
-		case ledger.Directive:
+		case ast.Directive:
 			directives = append(directives, t)
 		default:
 			return nil, fmt.Errorf("unknown directive: %s", d)

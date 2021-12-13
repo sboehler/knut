@@ -18,13 +18,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/sboehler/knut/lib/date"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/prices"
+	"github.com/sboehler/knut/lib/balance/prices"
+	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
 )
 
 // PreStage sets the date on the balance.
-func PreStage(ctx context.Context, l *ledger.Ledger, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
+func PreStage(ctx context.Context, l *ast.AST, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
 	nextCh := make(chan *Balance, 50)
 	errCh := make(chan error)
 	go func() {
@@ -37,7 +38,7 @@ func PreStage(ctx context.Context, l *ledger.Ledger, bsCh <-chan *Balance) (<-ch
 			}
 			day := l.Days[index]
 
-			ps := []ledger.Processor{
+			ps := []ast.Processor{
 				DateUpdater{Balance: bal},
 				AccountOpener{Balance: bal},
 				TransactionBooker{Balance: bal},
@@ -62,7 +63,7 @@ func PreStage(ctx context.Context, l *ledger.Ledger, bsCh <-chan *Balance) (<-ch
 }
 
 // UpdatePrices updates the prices.
-func UpdatePrices(ctx context.Context, l *ledger.Ledger, val *ledger.Commodity, bs <-chan *Balance) <-chan *Balance {
+func UpdatePrices(ctx context.Context, l *ast.AST, val *journal.Commodity, bs <-chan *Balance) <-chan *Balance {
 	ps := make(prices.Prices)
 	if val == nil {
 		return bs
@@ -97,7 +98,7 @@ func UpdatePrices(ctx context.Context, l *ledger.Ledger, val *ledger.Commodity, 
 }
 
 // PostStage sets the date on the balance.
-func PostStage(ctx context.Context, l *ledger.Ledger, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
+func PostStage(ctx context.Context, l *ast.AST, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
 	nextCh := make(chan *Balance, 50)
 	errCh := make(chan error)
 	go func() {
@@ -106,7 +107,7 @@ func PostStage(ctx context.Context, l *ledger.Ledger, bsCh <-chan *Balance) (<-c
 		var index int
 		for bal := range bsCh {
 			day := l.Days[index]
-			ps := []ledger.Processor{
+			ps := []ast.Processor{
 				TransactionValuator{Balance: bal},
 				ValuationTransactionComputer{Balance: bal},
 				AccountCloser{Balance: bal},
@@ -137,7 +138,7 @@ type SnapshotConfig struct {
 }
 
 // Snapshot snapshots the balance.
-func Snapshot(ctx context.Context, cfg SnapshotConfig, l *ledger.Ledger, bs <-chan *Balance) (<-chan *Balance, <-chan *Balance, <-chan error) {
+func Snapshot(ctx context.Context, cfg SnapshotConfig, l *ast.AST, bs <-chan *Balance) (<-chan *Balance, <-chan *Balance, <-chan error) {
 	dates := l.Dates(cfg.From, cfg.To, cfg.Period)
 	if cfg.Last > 0 {
 		last := cfg.Last
@@ -162,7 +163,7 @@ func Snapshot(ctx context.Context, cfg SnapshotConfig, l *ledger.Ledger, bs <-ch
 			previous *Balance
 			index    int
 		)
-		// Produce empty balances for dates before the ledger.
+		// Produce empty balances for dates before the ast.
 		for ; index < len(snapshotDates) && snapshotDates[index].IsZero(); index++ {
 			bal := New(l.Context, nil)
 			bal.Date = dates[index]
@@ -172,7 +173,7 @@ func Snapshot(ctx context.Context, cfg SnapshotConfig, l *ledger.Ledger, bs <-ch
 				return
 			}
 		}
-		// Produce snapshots for dates during the ledger.
+		// Produce snapshots for dates during the ast.
 		for bal := range bs {
 			for ; index < len(snapshotDates) && snapshotDates[index] == bal.Date; index++ {
 				snapshot := bal.Snapshot()

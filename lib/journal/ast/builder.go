@@ -12,17 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ledger
+package ast
 
 import (
 	"fmt"
 	"sort"
 	"time"
+
+	"github.com/sboehler/knut/lib/journal"
 )
 
 // FromDirectives reads directives from the given channel and
 // builds a Ledger if successful.
-func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (*Ledger, error) {
+func FromDirectives(ctx journal.Context, filter journal.Filter, results <-chan interface{}) (*AST, error) {
 	var b = NewBuilder(ctx, filter)
 	for res := range results {
 		switch t := res.(type) {
@@ -40,7 +42,7 @@ func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (*Le
 			b.AddValue(t)
 		case *Close:
 			b.AddClosing(t)
-		case Accrual:
+		case *Accrual:
 			b.AddAccrual(t)
 		default:
 			return nil, fmt.Errorf("unknown: %#v", t)
@@ -51,18 +53,18 @@ func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (*Le
 
 // Builder maps dates to days
 type Builder struct {
-	filter  Filter
+	filter  journal.Filter
 	days    map[time.Time]*Day
-	Context Context
+	Context journal.Context
 }
 
 // NewBuilder creates a new builder.
-func NewBuilder(ctx Context, f Filter) *Builder {
+func NewBuilder(ctx journal.Context, f journal.Filter) *Builder {
 	return &Builder{f, make(map[time.Time]*Day), ctx}
 }
 
 // Build creates a new
-func (b *Builder) Build() *Ledger {
+func (b *Builder) Build() *AST {
 	var result = make([]*Day, 0, len(b.days))
 	for _, s := range b.days {
 		result = append(result, s)
@@ -70,7 +72,7 @@ func (b *Builder) Build() *Ledger {
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Date.Before(result[j].Date)
 	})
-	return &Ledger{
+	return &AST{
 		Days:    result,
 		Context: b.Context,
 	}
@@ -90,7 +92,7 @@ func (b *Builder) getOrCreate(d time.Time) *Day {
 func (b *Builder) AddTransaction(t *Transaction) {
 	var filtered []Posting
 	for _, p := range t.Postings {
-		if b.filter.MatchPosting(p) {
+		if p.Matches(b.filter) {
 			filtered = append(filtered, p)
 		}
 	}
@@ -102,7 +104,7 @@ func (b *Builder) AddTransaction(t *Transaction) {
 }
 
 // AddAccrual adds an accrual directive.
-func (b *Builder) AddAccrual(t Accrual) {
+func (b *Builder) AddAccrual(t *Accrual) {
 	for _, t := range t.Expand() {
 		b.AddTransaction(t)
 	}

@@ -27,10 +27,11 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/bayes"
-	"github.com/sboehler/knut/lib/format"
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/parser"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/bayes"
+	"github.com/sboehler/knut/lib/journal/ast/format"
+	"github.com/sboehler/knut/lib/journal/ast/parser"
 )
 
 // CreateCmd creates the command.
@@ -70,9 +71,9 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 
 func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
-		ctx        = ledger.NewContext()
+		ctx        = journal.NewContext()
 		targetFile = args[0]
-		account    *ledger.Account
+		account    *journal.Account
 		err        error
 	)
 	tbd, _ := ctx.GetAccount("Expenses:TBD")
@@ -99,7 +100,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	return r.writeTo(directives, targetFile, out)
 }
 
-func train(ctx ledger.Context, file string, exclude *ledger.Account) (*bayes.Model, error) {
+func train(ctx journal.Context, file string, exclude *journal.Account) (*bayes.Model, error) {
 	var (
 		j = parser.RecursiveParser{Context: ctx, File: file}
 		m = bayes.NewModel()
@@ -108,26 +109,26 @@ func train(ctx ledger.Context, file string, exclude *ledger.Account) (*bayes.Mod
 		switch t := r.(type) {
 		case error:
 			return nil, t
-		case *ledger.Transaction:
+		case *ast.Transaction:
 			m.Update(t)
 		}
 	}
 	return m, nil
 }
 
-func (r *runner) parseAndInfer(ctx ledger.Context, model *bayes.Model, targetFile string, account *ledger.Account) ([]ledger.Directive, error) {
+func (r *runner) parseAndInfer(ctx journal.Context, model *bayes.Model, targetFile string, account *journal.Account) ([]ast.Directive, error) {
 	p, cls, err := parser.FromPath(ctx, targetFile)
 	if err != nil {
 		return nil, err
 	}
 	defer cls()
-	var directives []ledger.Directive
+	var directives []ast.Directive
 	for i := range p.ParseAll() {
 		switch d := i.(type) {
-		case *ledger.Transaction:
+		case *ast.Transaction:
 			model.Infer(d, account)
 			directives = append(directives, d)
-		case ledger.Directive:
+		case ast.Directive:
 			directives = append(directives, d)
 		default:
 			return nil, multierr.Append(cls(), fmt.Errorf("unknown directive: %s", d))
@@ -136,7 +137,7 @@ func (r *runner) parseAndInfer(ctx ledger.Context, model *bayes.Model, targetFil
 	return directives, nil
 }
 
-func (r *runner) writeToTmp(directives []ledger.Directive, targetFile string) (string, error) {
+func (r *runner) writeToTmp(directives []ast.Directive, targetFile string) (string, error) {
 	tmpfile, err := ioutil.TempFile(path.Dir(targetFile), "infer-")
 	if err != nil {
 		return "", err
@@ -149,7 +150,7 @@ func (r *runner) writeToTmp(directives []ledger.Directive, targetFile string) (s
 	return tmpfile.Name(), r.writeTo(directives, targetFile, dest)
 }
 
-func (r *runner) writeTo(directives []ledger.Directive, targetFile string, out io.Writer) error {
+func (r *runner) writeTo(directives []ast.Directive, targetFile string, out io.Writer) error {
 	srcFile, err := os.Open(targetFile)
 	if err != nil {
 		return err

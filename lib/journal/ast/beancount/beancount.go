@@ -19,12 +19,13 @@ import (
 	"io"
 	"regexp"
 
-	"github.com/sboehler/knut/lib/ledger"
-	"github.com/sboehler/knut/lib/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 )
 
 // Transcode transcodes the given ledger to beancount.
-func Transcode(w io.Writer, l *ledger.Ledger, c *ledger.Commodity) error {
+func Transcode(w io.Writer, l *ast.AST, c *journal.Commodity) error {
 	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c); err != nil {
 		return err
 	}
@@ -32,11 +33,11 @@ func Transcode(w io.Writer, l *ledger.Ledger, c *ledger.Commodity) error {
 		return err
 	}
 	l.Days[0].Openings = append(l.Days[0].Openings,
-		&ledger.Open{
+		&ast.Open{
 			Date:    l.Days[0].Date,
 			Account: l.Context.ValuationAccount(),
 		},
-		&ledger.Open{
+		&ast.Open{
 			Date:    l.Days[0].Date,
 			Account: l.Context.RetainedEarningsAccount(),
 		},
@@ -68,7 +69,7 @@ func Transcode(w io.Writer, l *ledger.Ledger, c *ledger.Commodity) error {
 	return nil
 }
 
-func writeTrx(w io.Writer, t *ledger.Transaction, c *ledger.Commodity) error {
+func writeTrx(w io.Writer, t *ast.Transaction, c *journal.Commodity) error {
 	if _, err := fmt.Fprintf(w, `%s * "%s"`, t.Date.Format("2006-01-02"), t.Description); err != nil {
 		return err
 	}
@@ -90,7 +91,7 @@ func writeTrx(w io.Writer, t *ledger.Transaction, c *ledger.Commodity) error {
 }
 
 // WriteTo pretty-prints a posting.
-func writePosting(w io.Writer, p ledger.Posting, c *ledger.Commodity) error {
+func writePosting(w io.Writer, p ast.Posting, c *journal.Commodity) error {
 	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit, p.Value.Neg(), stripNonAlphanum(c)); err != nil {
 		return err
 	}
@@ -109,6 +110,6 @@ func writePosting(w io.Writer, p ledger.Posting, c *ledger.Commodity) error {
 
 var regex = regexp.MustCompile("[^a-zA-Z]")
 
-func stripNonAlphanum(c *ledger.Commodity) string {
+func stripNonAlphanum(c *journal.Commodity) string {
 	return regex.ReplaceAllString(c.String(), "X")
 }

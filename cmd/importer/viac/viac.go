@@ -97,7 +97,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		builder.AddValue(ledger.Value{
+		builder.AddValue(&ledger.Value{
 			Date:      d,
 			Account:   account,
 			Amount:    a.Round(2),

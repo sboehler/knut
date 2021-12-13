@@ -50,7 +50,7 @@ func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err 
 		return p.printPrice(w, d)
 	case ledger.Accrual:
 		return p.printAccrual(w, d)
-	case ledger.Value:
+	case *ledger.Value:
 		return p.printValue(w, d)
 	}
 	return 0, fmt.Errorf("unknown directive: %v", directive)
@@ -170,7 +170,7 @@ func (p Printer) printAssertion(w io.Writer, a *ledger.Assertion) (int, error) {
 	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity)
 }
 
-func (p Printer) printValue(w io.Writer, v ledger.Value) (int, error) {
+func (p Printer) printValue(w io.Writer, v *ledger.Value) (int, error) {
 	return fmt.Fprintf(w, "%s value %s %s %s", v.Date.Format("2006-01-02"), v.Account, v.Amount, v.Commodity)
 }
 

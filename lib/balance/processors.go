@@ -195,7 +195,7 @@ func (tb ValueBooker) Process(d *ledger.Day) error {
 	return nil
 }
 
-func (tb ValueBooker) processValue(v ledger.Value) (*ledger.Transaction, error) {
+func (tb ValueBooker) processValue(v *ledger.Value) (*ledger.Transaction, error) {
 	if !tb.Balance.Accounts.IsOpen(v.Account) {
 		return nil, Error{v, "account is not open"}
 	}

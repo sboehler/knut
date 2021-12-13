@@ -36,7 +36,7 @@ func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (Led
 			b.AddTransaction(t)
 		case *Assertion:
 			b.AddAssertion(t)
-		case Value:
+		case *Value:
 			b.AddValue(t)
 		case Close:
 			b.AddClosing(t)
@@ -137,7 +137,7 @@ func (b *Builder) AddAssertion(a *Assertion) {
 }
 
 // AddValue adds an value directive.
-func (b *Builder) AddValue(a Value) {
+func (b *Builder) AddValue(a *Value) {
 	if b.filter.MatchAccount(a.Account) && b.filter.MatchCommodity(a.Commodity) {
 		var s = b.getOrCreate(a.Date)
 		s.Values = append(s.Values, a)

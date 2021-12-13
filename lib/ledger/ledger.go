@@ -29,7 +29,7 @@ type Day struct {
 	Values       []*Value
 	Openings     []Open
 	Transactions []*Transaction
-	Closings     []Close
+	Closings     []*Close
 }
 
 // Ledger is a

@@ -38,7 +38,7 @@ func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (Led
 			b.AddAssertion(t)
 		case *Value:
 			b.AddValue(t)
-		case Close:
+		case *Close:
 			b.AddClosing(t)
 		case Accrual:
 			b.AddAccrual(t)
@@ -115,7 +115,7 @@ func (b *Builder) AddOpening(o Open) {
 }
 
 // AddClosing adds a close directive.
-func (b *Builder) AddClosing(close Close) {
+func (b *Builder) AddClosing(close *Close) {
 	if b.filter.MatchAccount(close.Account) {
 		var s = b.getOrCreate(close.Date)
 		s.Closings = append(s.Closings, close)

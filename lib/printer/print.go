@@ -40,7 +40,7 @@ func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err 
 		return p.printTransaction(w, d)
 	case ledger.Open:
 		return p.printOpen(w, d)
-	case ledger.Close:
+	case *ledger.Close:
 		return p.printClose(w, d)
 	case *ledger.Assertion:
 		return p.printAssertion(w, d)
@@ -154,7 +154,7 @@ func (p Printer) printOpen(w io.Writer, o ledger.Open) (int, error) {
 	return fmt.Fprintf(w, "%s open %s", o.Date.Format("2006-01-02"), o.Account)
 }
 
-func (p Printer) printClose(w io.Writer, c ledger.Close) (int, error) {
+func (p Printer) printClose(w io.Writer, c *ledger.Close) (int, error) {
 	return fmt.Fprintf(w, "%s close %s", c.Date.Format("2006-01-02"), c.Account)
 }
 

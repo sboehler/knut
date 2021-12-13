@@ -386,18 +386,18 @@ func (p *Parser) parseOpen(d time.Time) (ledger.Open, error) {
 	}, nil
 }
 
-func (p *Parser) parseClose(d time.Time) (ledger.Close, error) {
+func (p *Parser) parseClose(d time.Time) (*ledger.Close, error) {
 	if err := p.scanner.ParseString("close"); err != nil {
-		return ledger.Close{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Close{}, err
+		return nil, err
 	}
 	account, err := p.parseAccount()
 	if err != nil {
-		return ledger.Close{}, err
+		return nil, err
 	}
-	return ledger.Close{
+	return &ledger.Close{
 		Range:   p.getRange(),
 		Date:    d,
 		Account: account,
@@ -473,32 +473,32 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*ledger.Assertion, error) {
 	}, nil
 }
 
-func (p *Parser) parseValue(d time.Time) (ledger.Value, error) {
+func (p *Parser) parseValue(d time.Time) (*ledger.Value, error) {
 	if err := p.scanner.ParseString("value"); err != nil {
-		return ledger.Value{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Value{}, err
+		return nil, err
 	}
 	account, err := p.parseAccount()
 	if err != nil {
-		return ledger.Value{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Value{}, err
+		return nil, err
 	}
 	amount, err := p.parseDecimal()
 	if err != nil {
-		return ledger.Value{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Value{}, err
+		return nil, err
 	}
 	commodity, err := p.parseCommodity()
 	if err != nil {
-		return ledger.Value{}, err
+		return nil, err
 	}
-	return ledger.Value{
+	return &ledger.Value{
 		Range:     p.getRange(),
 		Date:      d,
 		Account:   account,

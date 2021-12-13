@@ -81,6 +81,6 @@ func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interfa
 }
 
 // BuildLedger builds a ledger.
-func (j *RecursiveParser) BuildLedger(f ledger.Filter) (ledger.Ledger, error) {
+func (j *RecursiveParser) BuildLedger(f ledger.Filter) (*ledger.Ledger, error) {
 	return ledger.FromDirectives(j.Context, f, j.Parse())
 }

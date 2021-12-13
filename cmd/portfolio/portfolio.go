@@ -116,7 +116,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 			Filter:    filter,
 			Valuation: valuation,
 		}
-		l ledger.Ledger
+		l *ledger.Ledger
 	)
 	if l, err = p.BuildLedger(ledger.Filter{}); err != nil {
 		return err

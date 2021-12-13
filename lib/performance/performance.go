@@ -14,7 +14,7 @@ type Calculator struct {
 }
 
 // Perf computes portfolio performance.
-func (calc Calculator) Perf(l ledger.Ledger) <-chan DailyPerfValues {
+func (calc Calculator) Perf(l *ledger.Ledger) <-chan DailyPerfValues {
 	// var (
 	// 	bal               = balance.New(l.Context, b.Valuation)
 	// 	ps                = make(prices.Prices)

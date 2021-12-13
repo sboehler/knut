@@ -64,7 +64,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 		ctx       = ledger.NewContext()
 		commodity *ledger.Commodity
 		j         = parser.RecursiveParser{Context: ctx, File: args[0]}
-		l         ledger.Ledger
+		l         *ledger.Ledger
 	)
 	if commodity, err = ctx.GetCommodity(c); err != nil {
 		return err

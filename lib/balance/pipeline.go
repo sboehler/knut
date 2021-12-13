@@ -24,7 +24,7 @@ import (
 )
 
 // PreStage sets the date on the balance.
-func PreStage(ctx context.Context, l ledger.Ledger, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
+func PreStage(ctx context.Context, l *ledger.Ledger, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
 	nextCh := make(chan *Balance, 50)
 	errCh := make(chan error)
 	go func() {
@@ -62,7 +62,7 @@ func PreStage(ctx context.Context, l ledger.Ledger, bsCh <-chan *Balance) (<-cha
 }
 
 // UpdatePrices updates the prices.
-func UpdatePrices(ctx context.Context, l ledger.Ledger, val *ledger.Commodity, bs <-chan *Balance) <-chan *Balance {
+func UpdatePrices(ctx context.Context, l *ledger.Ledger, val *ledger.Commodity, bs <-chan *Balance) <-chan *Balance {
 	ps := make(prices.Prices)
 	if val == nil {
 		return bs
@@ -97,7 +97,7 @@ func UpdatePrices(ctx context.Context, l ledger.Ledger, val *ledger.Commodity, b
 }
 
 // PostStage sets the date on the balance.
-func PostStage(ctx context.Context, l ledger.Ledger, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
+func PostStage(ctx context.Context, l *ledger.Ledger, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
 	nextCh := make(chan *Balance, 50)
 	errCh := make(chan error)
 	go func() {
@@ -137,7 +137,7 @@ type SnapshotConfig struct {
 }
 
 // Snapshot snapshots the balance.
-func Snapshot(ctx context.Context, cfg SnapshotConfig, l ledger.Ledger, bs <-chan *Balance) (<-chan *Balance, <-chan *Balance, <-chan error) {
+func Snapshot(ctx context.Context, cfg SnapshotConfig, l *ledger.Ledger, bs <-chan *Balance) (<-chan *Balance, <-chan *Balance, <-chan error) {
 	dates := l.Dates(cfg.From, cfg.To, cfg.Period)
 	if cfg.Last > 0 {
 		last := cfg.Last

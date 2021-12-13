@@ -24,7 +24,7 @@ import (
 )
 
 // Transcode transcodes the given ledger to beancount.
-func Transcode(w io.Writer, l ledger.Ledger, c *ledger.Commodity) error {
+func Transcode(w io.Writer, l *ledger.Ledger, c *ledger.Commodity) error {
 	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c); err != nil {
 		return err
 	}

@@ -145,7 +145,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		}
 	)
 
-	var l ledger.Ledger
+	var l *ledger.Ledger
 	if l, err = parser.BuildLedger(filter); err != nil {
 		return err
 	}

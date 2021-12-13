@@ -22,12 +22,12 @@ import (
 
 // FromDirectives reads directives from the given channel and
 // builds a Ledger if successful.
-func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (Ledger, error) {
+func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (*Ledger, error) {
 	var b = NewBuilder(ctx, filter)
 	for res := range results {
 		switch t := res.(type) {
 		case error:
-			return Ledger{}, t
+			return nil, t
 		case *Open:
 			b.AddOpening(t)
 		case *Price:
@@ -43,7 +43,7 @@ func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (Led
 		case Accrual:
 			b.AddAccrual(t)
 		default:
-			return Ledger{}, fmt.Errorf("unknown: %#v", t)
+			return nil, fmt.Errorf("unknown: %#v", t)
 		}
 	}
 	return b.Build(), nil
@@ -62,7 +62,7 @@ func NewBuilder(ctx Context, f Filter) *Builder {
 }
 
 // Build creates a new
-func (b *Builder) Build() Ledger {
+func (b *Builder) Build() *Ledger {
 	var result = make([]*Day, 0, len(b.days))
 	for _, s := range b.days {
 		result = append(result, s)
@@ -70,7 +70,7 @@ func (b *Builder) Build() Ledger {
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Date.Before(result[j].Date)
 	})
-	return Ledger{
+	return &Ledger{
 		Days:    result,
 		Context: b.Context,
 	}

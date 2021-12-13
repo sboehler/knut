@@ -368,18 +368,18 @@ func (p *Parser) parsePostings() ([]ledger.Posting, error) {
 	return postings, nil
 }
 
-func (p *Parser) parseOpen(d time.Time) (ledger.Open, error) {
+func (p *Parser) parseOpen(d time.Time) (*ledger.Open, error) {
 	if err := p.scanner.ParseString("open"); err != nil {
-		return ledger.Open{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Open{}, err
+		return nil, err
 	}
 	account, err := p.parseAccount()
 	if err != nil {
-		return ledger.Open{}, err
+		return nil, err
 	}
-	return ledger.Open{
+	return &ledger.Open{
 		Range:   p.getRange(),
 		Date:    d,
 		Account: account,

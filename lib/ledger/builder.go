@@ -28,7 +28,7 @@ func FromDirectives(ctx Context, filter Filter, results <-chan interface{}) (Led
 		switch t := res.(type) {
 		case error:
 			return Ledger{}, t
-		case Open:
+		case *Open:
 			b.AddOpening(t)
 		case *Price:
 			b.AddPrice(t)
@@ -109,7 +109,7 @@ func (b *Builder) AddAccrual(t Accrual) {
 }
 
 // AddOpening adds an open directive.
-func (b *Builder) AddOpening(o Open) {
+func (b *Builder) AddOpening(o *Open) {
 	var s = b.getOrCreate(o.Date)
 	s.Openings = append(s.Openings, o)
 }

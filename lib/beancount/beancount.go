@@ -32,11 +32,11 @@ func Transcode(w io.Writer, l ledger.Ledger, c *ledger.Commodity) error {
 		return err
 	}
 	l.Days[0].Openings = append(l.Days[0].Openings,
-		ledger.Open{
+		&ledger.Open{
 			Date:    l.Days[0].Date,
 			Account: l.Context.ValuationAccount(),
 		},
-		ledger.Open{
+		&ledger.Open{
 			Date:    l.Days[0].Date,
 			Account: l.Context.RetainedEarningsAccount(),
 		},

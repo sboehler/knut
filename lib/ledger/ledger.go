@@ -27,7 +27,7 @@ type Day struct {
 	Prices       []*Price
 	Assertions   []*Assertion
 	Values       []*Value
-	Openings     []Open
+	Openings     []*Open
 	Transactions []*Transaction
 	Closings     []*Close
 }

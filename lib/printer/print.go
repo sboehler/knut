@@ -38,7 +38,7 @@ func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err 
 	switch d := directive.(type) {
 	case *ledger.Transaction:
 		return p.printTransaction(w, d)
-	case ledger.Open:
+	case *ledger.Open:
 		return p.printOpen(w, d)
 	case *ledger.Close:
 		return p.printClose(w, d)
@@ -150,7 +150,7 @@ func (p Printer) printLot(w io.Writer, l *ledger.Lot) (int, error) {
 	return n, nil
 }
 
-func (p Printer) printOpen(w io.Writer, o ledger.Open) (int, error) {
+func (p Printer) printOpen(w io.Writer, o *ledger.Open) (int, error) {
 	return fmt.Fprintf(w, "%s open %s", o.Date.Format("2006-01-02"), o.Account)
 }
 

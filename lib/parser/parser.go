@@ -507,24 +507,24 @@ func (p *Parser) parseValue(d time.Time) (*ledger.Value, error) {
 	}, nil
 }
 
-func (p *Parser) parseInclude() (ledger.Include, error) {
+func (p *Parser) parseInclude() (*ledger.Include, error) {
 	p.markStart()
 	if err := p.scanner.ParseString("include"); err != nil {
-		return ledger.Include{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ledger.Include{}, err
+		return nil, err
 	}
 	i, err := p.parseQuotedString()
 	if err != nil {
-		return ledger.Include{}, err
+		return nil, err
 	}
-	result := ledger.Include{
+	result := &ledger.Include{
 		Range: p.getRange(),
 		Path:  i,
 	}
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
-		return ledger.Include{}, err
+		return nil, err
 	}
 	return result, nil
 }

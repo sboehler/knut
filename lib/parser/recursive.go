@@ -65,7 +65,7 @@ func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interfa
 		case error:
 			return t
 
-		case ledger.Include:
+		case *ledger.Include:
 			wg.Add(1)
 			go func() {
 				if err := j.parseRecursively(wg, ch, path.Join(filepath.Dir(file), t.Path)); err != nil {

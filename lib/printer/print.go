@@ -44,7 +44,7 @@ func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err 
 		return p.printClose(w, d)
 	case *ledger.Assertion:
 		return p.printAssertion(w, d)
-	case ledger.Include:
+	case *ledger.Include:
 		return p.printInclude(w, d)
 	case *ledger.Price:
 		return p.printPrice(w, d)
@@ -162,7 +162,7 @@ func (p Printer) printPrice(w io.Writer, pr *ledger.Price) (int, error) {
 	return fmt.Fprintf(w, "%s price %s %s %s", pr.Date.Format("2006-01-02"), pr.Commodity, pr.Price, pr.Target)
 }
 
-func (p Printer) printInclude(w io.Writer, i ledger.Include) (int, error) {
+func (p Printer) printInclude(w io.Writer, i *ledger.Include) (int, error) {
 	return fmt.Fprintf(w, "include \"%s\"", i.Path)
 }
 

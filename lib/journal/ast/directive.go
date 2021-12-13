@@ -97,6 +97,7 @@ type Transaction struct {
 	Description string
 	Tags        []Tag
 	Postings    []Posting
+	AddOns      []interface{}
 }
 
 // Commodities returns the commodities in this transaction.
@@ -145,16 +146,14 @@ type Value struct {
 // Accrual represents an accrual.
 type Accrual struct {
 	Range
-	Period      date.Period
-	T0, T1      time.Time
-	Account     *journal.Account
-	Transaction *Transaction
+	Period  date.Period
+	T0, T1  time.Time
+	Account *journal.Account
 }
 
 // Expand expands an accrual transaction.
-func (a Accrual) Expand() []*Transaction {
+func (a Accrual) Expand(t *Transaction) []*Transaction {
 	var (
-		t                                                                = a.Transaction
 		posting                                                          = t.Postings[0]
 		crAccountSingle, drAccountSingle, crAccountMulti, drAccountMulti = a.Account, a.Account, a.Account, a.Account
 	)

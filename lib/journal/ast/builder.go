@@ -42,8 +42,6 @@ func FromDirectives(ctx journal.Context, filter journal.Filter, results <-chan i
 			b.AddValue(t)
 		case *Close:
 			b.AddClosing(t)
-		case *Accrual:
-			b.AddAccrual(t)
 		default:
 			return nil, fmt.Errorf("unknown: %#v", t)
 		}
@@ -90,6 +88,18 @@ func (b *Builder) getOrCreate(d time.Time) *Day {
 
 // AddTransaction adds a transaction directive.
 func (b *Builder) AddTransaction(t *Transaction) {
+	if len(t.AddOns) > 0 {
+		for _, addOn := range t.AddOns {
+			switch a := addOn.(type) {
+			case *Accrual:
+				for _, ts := range a.Expand(t) {
+					fmt.Println(ts)
+					b.AddTransaction(ts)
+				}
+			}
+		}
+		return
+	}
 	var filtered []Posting
 	for _, p := range t.Postings {
 		if p.Matches(b.filter) {
@@ -100,13 +110,6 @@ func (b *Builder) AddTransaction(t *Transaction) {
 		t.Postings = filtered
 		var s = b.getOrCreate(t.Date)
 		s.Transactions = append(s.Transactions, t)
-	}
-}
-
-// AddAccrual adds an accrual directive.
-func (b *Builder) AddAccrual(t *Accrual) {
-	for _, t := range t.Expand() {
-		b.AddTransaction(t)
 	}
 }
 

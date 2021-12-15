@@ -30,6 +30,7 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/past"
 )
 
 // CreateCmd creates the cobra command.
@@ -69,7 +70,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = Parser{
 		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(reader)),
-		builder: ast.NewBuilder(ctx, journal.Filter{}),
+		builder: past.NewBuilder(ctx, journal.Filter{}),
 	}
 	if p.account, err = r.accountFlag.Value(ctx); err != nil {
 		return err
@@ -91,7 +92,7 @@ func init() {
 type Parser struct {
 	reader  *csv.Reader
 	account *journal.Account
-	builder *ast.Builder
+	builder *past.Builder
 
 	currency *journal.Commodity
 }

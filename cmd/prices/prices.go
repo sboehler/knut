@@ -25,6 +25,7 @@ import (
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
 	"github.com/shopspring/decimal"
 	"go.uber.org/multierr"
@@ -168,7 +169,7 @@ func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[
 }
 
 func writeFile(ctx journal.Context, prices map[time.Time]*ast.Price, filepath string) error {
-	var b = ast.NewBuilder(ctx, journal.Filter{})
+	var b = past.NewBuilder(ctx, journal.Filter{})
 	for _, price := range prices {
 		b.AddPrice(price)
 	}

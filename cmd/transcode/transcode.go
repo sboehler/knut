@@ -24,6 +24,7 @@ import (
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/beancount"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/sboehler/knut/lib/journal/past/process"
 
 	"github.com/spf13/cobra"
@@ -71,7 +72,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	if commodity, err = ctx.GetCommodity(c); err != nil {
 		return err
 	}
-	if l, err = ast.FromDirectives(ctx, journal.Filter{}, j.Parse()); err != nil {
+	if l, err = past.FromDirectives(ctx, journal.Filter{}, j.Parse()); err != nil {
 		return err
 	}
 	var (

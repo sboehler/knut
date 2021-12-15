@@ -21,14 +21,14 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 )
 
-// AST1 maps dates to days
-type AST1 struct {
+// AST represents an unprocessed abstract syntax tree.
+type AST struct {
 	Days    map[time.Time]*Day
 	Context journal.Context
 }
 
 // Day returns the Day for the given date.
-func (b *AST1) Day(d time.Time) *Day {
+func (b *AST) Day(d time.Time) *Day {
 	s, ok := b.Days[d]
 	if !ok {
 		s = &Day{Date: d}
@@ -55,8 +55,8 @@ func (d *Day) Less(d2 *Day) bool {
 
 // FromDirectives2 reads directives from the given channel and
 // builds a Ledger if successful.
-func FromDirectives2(ctx journal.Context, results <-chan interface{}) (*AST1, error) {
-	var b = &AST1{
+func FromDirectives2(ctx journal.Context, results <-chan interface{}) (*AST, error) {
+	var b = &AST{
 		Context: ctx,
 		Days:    make(map[time.Time]*Day),
 	}

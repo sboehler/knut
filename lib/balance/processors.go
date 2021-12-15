@@ -57,7 +57,7 @@ var (
 )
 
 // Initialize implements Initializer.
-func (a *Snapshotter) Initialize(l ast.AST) error {
+func (a *Snapshotter) Initialize(l ast.PAST) error {
 	a.dates = l.Dates(a.From, a.To, a.Period)
 	if a.Last > 0 {
 		last := a.Last
@@ -118,7 +118,7 @@ var (
 )
 
 // Initialize implements Initializer.
-func (a *PriceUpdater) Initialize(_ ast.AST) error {
+func (a *PriceUpdater) Initialize(_ ast.PAST) error {
 	a.prices = make(prices.Prices)
 	return nil
 }

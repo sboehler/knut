@@ -18,7 +18,7 @@ import "go.uber.org/multierr"
 
 // Initializer gets called before processing.
 type Initializer interface {
-	Initialize(l AST) error
+	Initialize(l PAST) error
 }
 
 // Processor processes the balance and the ledger day.
@@ -32,7 +32,7 @@ type Finalizer interface {
 }
 
 // Process processes an AST.
-func (l AST) Process(steps []Processor) (resErr error) {
+func (l PAST) Process(steps []Processor) (resErr error) {
 	for _, pr := range steps {
 		if f, ok := pr.(Initializer); ok {
 			if err := f.Initialize(l); err != nil {
@@ -60,7 +60,7 @@ func (l AST) Process(steps []Processor) (resErr error) {
 }
 
 // ProcessAsync processes the AST asynchronously.
-func (l AST) ProcessAsync(steps []Processor) <-chan error {
+func (l PAST) ProcessAsync(steps []Processor) <-chan error {
 	errCh := make(chan error)
 	go func(steps []Processor) {
 		defer close(errCh)

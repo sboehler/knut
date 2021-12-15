@@ -177,7 +177,7 @@ func (p Printer) printValue(w io.Writer, v *ast.Value) (int, error) {
 }
 
 // PrintLedger prints a Ledger.
-func (p *Printer) PrintLedger(w io.Writer, l *ast.AST) (int, error) {
+func (p *Printer) PrintLedger(w io.Writer, l *ast.PAST) (int, error) {
 	for _, day := range l.Days {
 		for _, t := range day.Transactions {
 			p.updatePadding(t)

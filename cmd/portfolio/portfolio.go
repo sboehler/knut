@@ -117,7 +117,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 			Filter:    filter,
 			Valuation: valuation,
 		}
-		l *ast.AST
+		l *ast.PAST
 	)
 	if l, err = p.BuildLedger(journal.Filter{}); err != nil {
 		return err

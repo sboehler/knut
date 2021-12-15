@@ -65,7 +65,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 		ctx       = journal.NewContext()
 		commodity *journal.Commodity
 		j         = parser.RecursiveParser{Context: ctx, File: args[0]}
-		l         *ast.AST
+		l         *ast.PAST
 	)
 	if commodity, err = ctx.GetCommodity(c); err != nil {
 		return err

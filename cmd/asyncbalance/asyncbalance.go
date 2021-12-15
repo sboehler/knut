@@ -146,7 +146,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		}
 	)
 
-	var l *ast.AST
+	var l *ast.PAST
 	if l, err = parser.BuildLedger(filter); err != nil {
 		return err
 	}

@@ -22,16 +22,15 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 )
 
-
-// AST is a
-type AST struct {
+// PAST is a processed AST.
+type PAST struct {
 	Days    []*Day
 	Context journal.Context
 }
 
 // MinDate returns the minimum date for this ledger, as the first
 // date on which an account is opened (ignoring prices, for example).
-func (l AST) MinDate() (time.Time, bool) {
+func (l PAST) MinDate() (time.Time, bool) {
 	for _, s := range l.Days {
 		if len(s.Openings) > 0 {
 			return s.Date, true
@@ -41,7 +40,7 @@ func (l AST) MinDate() (time.Time, bool) {
 }
 
 // MaxDate returns the maximum date for the given
-func (l AST) MaxDate() (time.Time, bool) {
+func (l PAST) MaxDate() (time.Time, bool) {
 	if len(l.Days) == 0 {
 		return time.Time{}, false
 	}
@@ -50,7 +49,7 @@ func (l AST) MaxDate() (time.Time, bool) {
 
 // Dates returns a series of dates which covers the first
 // and last date in the ast.
-func (l AST) Dates(from, to time.Time, period date.Period) []time.Time {
+func (l PAST) Dates(from, to time.Time, period date.Period) []time.Time {
 	if len(l.Days) == 0 {
 		return nil
 	}
@@ -73,7 +72,7 @@ func (l AST) Dates(from, to time.Time, period date.Period) []time.Time {
 // array is either the zero date (if it is before the first date in the ledger),
 // or the latest date in the ledger which is smaller or equal than the corresponding
 // element in the input array.
-func (l AST) ActualDates(ds []time.Time) []time.Time {
+func (l PAST) ActualDates(ds []time.Time) []time.Time {
 	var actuals = make([]time.Time, 0, len(ds))
 	for _, date := range ds {
 		if len(l.Days) == 0 || date.Before(l.Days[0].Date) {

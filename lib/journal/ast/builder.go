@@ -93,7 +93,6 @@ func (b *Builder) AddTransaction(t *Transaction) {
 			switch a := addOn.(type) {
 			case *Accrual:
 				for _, ts := range a.Expand(t) {
-					fmt.Println(ts)
 					b.AddTransaction(ts)
 				}
 			}

@@ -12,18 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ast
+package process
 
-import "go.uber.org/multierr"
+import (
+	"github.com/sboehler/knut/lib/journal/ast"
+	"go.uber.org/multierr"
+)
 
 // Initializer gets called before processing.
 type Initializer interface {
-	Initialize(l PAST) error
+	Initialize(l *ast.PAST) error
 }
 
 // Processor processes the balance and the ledger day.
 type Processor interface {
-	Process(d *Day) error
+	Process(d *ast.Day) error
 }
 
 // Finalizer gets called after all days have been processed.
@@ -31,8 +34,8 @@ type Finalizer interface {
 	Finalize() error
 }
 
-// Process processes an AST.
-func (l PAST) Process(steps []Processor) (resErr error) {
+// Sync processes an AST.
+func Sync(l *ast.PAST, steps []Processor) (resErr error) {
 	for _, pr := range steps {
 		if f, ok := pr.(Initializer); ok {
 			if err := f.Initialize(l); err != nil {
@@ -59,12 +62,12 @@ func (l PAST) Process(steps []Processor) (resErr error) {
 	return nil
 }
 
-// ProcessAsync processes the AST asynchronously.
-func (l PAST) ProcessAsync(steps []Processor) <-chan error {
+// Async processes the AST asynchronously.
+func Async(l *ast.PAST, steps []Processor) <-chan error {
 	errCh := make(chan error)
 	go func(steps []Processor) {
 		defer close(errCh)
-		if err := l.Process(steps); err != nil {
+		if err := Sync(l, steps); err != nil {
 			errCh <- err
 			return
 		}

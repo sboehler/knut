@@ -23,6 +23,7 @@ import (
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/past/process"
 )
 
 // DateUpdater keeps track of open accounts.
@@ -30,7 +31,7 @@ type DateUpdater struct {
 	Balance *Balance
 }
 
-var _ ast.Processor = (*DateUpdater)(nil)
+var _ process.Processor = (*DateUpdater)(nil)
 
 // Process implements Processor.
 func (a DateUpdater) Process(d *ast.Day) error {
@@ -51,13 +52,13 @@ type Snapshotter struct {
 }
 
 var (
-	_ ast.Initializer = (*Snapshotter)(nil)
-	_ ast.Processor   = (*Snapshotter)(nil)
-	_ ast.Finalizer   = (*Snapshotter)(nil)
+	_ process.Initializer = (*Snapshotter)(nil)
+	_ process.Processor   = (*Snapshotter)(nil)
+	_ process.Finalizer   = (*Snapshotter)(nil)
 )
 
 // Initialize implements Initializer.
-func (a *Snapshotter) Initialize(l ast.PAST) error {
+func (a *Snapshotter) Initialize(l *ast.PAST) error {
 	a.dates = l.Dates(a.From, a.To, a.Period)
 	if a.Last > 0 {
 		last := a.Last
@@ -113,12 +114,12 @@ type PriceUpdater struct {
 }
 
 var (
-	_ ast.Initializer = (*PriceUpdater)(nil)
-	_ ast.Processor   = (*PriceUpdater)(nil)
+	_ process.Initializer = (*PriceUpdater)(nil)
+	_ process.Processor   = (*PriceUpdater)(nil)
 )
 
 // Initialize implements Initializer.
-func (a *PriceUpdater) Initialize(_ ast.PAST) error {
+func (a *PriceUpdater) Initialize(_ *ast.PAST) error {
 	a.prices = make(prices.Prices)
 	return nil
 }
@@ -140,7 +141,7 @@ type AccountOpener struct {
 	Balance *Balance
 }
 
-var _ ast.Processor = (*AccountOpener)(nil)
+var _ process.Processor = (*AccountOpener)(nil)
 
 // Process implements Processor.
 func (a AccountOpener) Process(d *ast.Day) error {
@@ -157,7 +158,7 @@ type TransactionBooker struct {
 	Balance *Balance
 }
 
-var _ ast.Processor = (*TransactionBooker)(nil)
+var _ process.Processor = (*TransactionBooker)(nil)
 
 // Process implements Processor.
 func (tb TransactionBooker) Process(d *ast.Day) error {
@@ -175,7 +176,7 @@ type ValueBooker struct {
 	Balance *Balance
 }
 
-var _ ast.Processor = (*ValueBooker)(nil)
+var _ process.Processor = (*ValueBooker)(nil)
 
 // Process implements Processor.
 func (tb ValueBooker) Process(d *ast.Day) error {
@@ -220,7 +221,7 @@ type Asserter struct {
 	Balance *Balance
 }
 
-var _ ast.Processor = (*Asserter)(nil)
+var _ process.Processor = (*Asserter)(nil)
 
 // Process implements Processor.
 func (as Asserter) Process(d *ast.Day) error {
@@ -249,7 +250,7 @@ type TransactionValuator struct {
 	Balance *Balance
 }
 
-var _ ast.Processor = (*TransactionValuator)(nil)
+var _ process.Processor = (*TransactionValuator)(nil)
 
 // Process implements Processor.
 func (as TransactionValuator) Process(d *ast.Day) error {
@@ -287,7 +288,7 @@ type ValuationTransactionComputer struct {
 	Balance *Balance
 }
 
-var _ ast.Processor = (*ValuationTransactionComputer)(nil)
+var _ process.Processor = (*ValuationTransactionComputer)(nil)
 
 // Process implements Processor.
 func (vtc ValuationTransactionComputer) Process(d *ast.Day) error {
@@ -368,7 +369,7 @@ type PeriodCloser struct {
 	Balance *Balance
 }
 
-var _ ast.Processor = (*PeriodCloser)(nil)
+var _ process.Processor = (*PeriodCloser)(nil)
 
 // Process implements Processor.
 func (as PeriodCloser) Process(d *ast.Day) error {
@@ -415,7 +416,7 @@ type AccountCloser struct {
 	Balance *Balance
 }
 
-var _ ast.Processor = (*AccountCloser)(nil)
+var _ process.Processor = (*AccountCloser)(nil)
 
 // Process implements Processor.
 func (vtc AccountCloser) Process(d *ast.Day) error {

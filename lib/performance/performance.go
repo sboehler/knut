@@ -6,6 +6,7 @@ import (
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/past/process"
 )
 
 // Calculator calculates portfolio performance
@@ -55,9 +56,9 @@ type Valuator struct {
 	Result  *DailyPerfValues
 }
 
-var _ ast.Processor = (*Valuator)(nil)
+var _ process.Processor = (*Valuator)(nil)
 
-// Process implements ast.Processor.
+// Process implements process.Processor.
 func (v *Valuator) Process(_ *ast.Day) error {
 	var res = make(pcv)
 	for ca, val := range v.Balance.Values {
@@ -83,12 +84,12 @@ type FlowComputer struct {
 	Valuation *journal.Commodity
 }
 
-var _ ast.Processor = (*FlowComputer)(nil)
+var _ process.Processor = (*FlowComputer)(nil)
 
 // pcv is a per-commodity value.
 type pcv map[*journal.Commodity]float64
 
-// Process implements ast.Processor.
+// Process implements process.Processor.
 func (calc *FlowComputer) Process(step *ast.Day) error {
 	var internalInflows, internalOutflows, inflows, outflows pcv
 	for _, trx := range step.Transactions {

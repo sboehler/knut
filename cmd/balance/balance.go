@@ -27,8 +27,8 @@ import (
 	"github.com/sboehler/knut/lib/balance/report"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/journal/past"
+	"github.com/sboehler/knut/lib/journal/past/process"
 	"github.com/sboehler/knut/lib/table"
 
 	"github.com/spf13/cobra"
@@ -115,10 +115,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 
 	var (
-		parser = parser.RecursiveParser{
-			File:    args[0],
-			Context: ctx,
-		}
 		bal   = balance.New(ctx, valuation)
 		balCh = make(chan *balance.Balance)
 		steps = []past.Processor{
@@ -159,9 +155,15 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Thousands: r.thousands,
 			Round:     r.digits,
 		}
-		l *past.PAST
+		proc = process.Processor{
+			Context: ctx,
+			Filter:  filter,
+			Expand:  true,
+		}
 	)
-	if l, err = parser.BuildLedger(filter); err != nil {
+
+	l, err := proc.PASTFromPath(args[0])
+	if err != nil {
 		return err
 	}
 	errCh := past.Async(l, steps)

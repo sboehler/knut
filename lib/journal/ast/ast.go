@@ -15,7 +15,6 @@
 package ast
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/sboehler/knut/lib/journal"
@@ -87,34 +86,4 @@ type Day struct {
 // Less establishes an ordering on Day.
 func (d *Day) Less(d2 *Day) bool {
 	return d.Date.Before(d2.Date)
-}
-
-// FromDirectives2 reads directives from the given channel and
-// builds a Ledger if successful.
-func FromDirectives2(ctx journal.Context, results <-chan interface{}) (*AST, error) {
-	var b = &AST{
-		Context: ctx,
-		Days:    make(map[time.Time]*Day),
-	}
-	for res := range results {
-		switch t := res.(type) {
-		case error:
-			return nil, t
-		case *Open:
-			b.AddOpen(t)
-		case *Price:
-			b.AddPrice(t)
-		case *Transaction:
-			b.AddTransaction(t)
-		case *Assertion:
-			b.AddAssertion(t)
-		case *Value:
-			b.AddValue(t)
-		case *Close:
-			b.AddClose(t)
-		default:
-			return nil, fmt.Errorf("unknown: %#v", t)
-		}
-	}
-	return b, nil
 }

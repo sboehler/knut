@@ -23,8 +23,8 @@ import (
 
 // AST represents an unprocessed abstract syntax tree.
 type AST struct {
-	Days    map[time.Time]*Day
 	Context journal.Context
+	Days    map[time.Time]*Day
 }
 
 // Day returns the Day for the given date.

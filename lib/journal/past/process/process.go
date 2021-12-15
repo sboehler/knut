@@ -4,6 +4,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/past"
@@ -11,15 +12,22 @@ import (
 
 // Processor processes ASTs.
 type Processor struct {
+
+	// Filter applies the given filter to postings of transactions
+	// and assertions.
 	Filter journal.Filter
+
+	// Expand controls whether Accrual add-ons are expanded.
 	Expand bool
 }
 
-// Process processes an AST to a PAST
-func (pr Processor) Process(a *ast.AST) *past.PAST {
+// Process processes an AST to a PAST. It check assertions
+// and the usage of open and closed accounts. It will also
+// resolve Value directives and convert them to transactions.
+func (pr Processor) Process(a *ast.AST) (*past.PAST, error) {
 	var astCp = &ast.AST{
-		Days:    make(map[time.Time]*ast.Day),
 		Context: a.Context,
+		Days:    make(map[time.Time]*ast.Day),
 	}
 	for d, day := range a.Days {
 		dayCp := astCp.Day(d)
@@ -45,17 +53,29 @@ func (pr Processor) Process(a *ast.AST) *past.PAST {
 	for _, day := range astCp.Days {
 		sorted = append(sorted, day)
 	}
-
 	sort.Slice(sorted, func(i, j int) bool {
 		return sorted[i].Less(sorted[j])
 	})
 
-	// TODO: process values
+	var (
+		pAST = &past.PAST{
+			Context: a.Context,
+			Days:    sorted,
+		}
+		bal   = balance.New(a.Context, nil)
+		steps = []past.Processor{
+			balance.AccountOpener{Balance: bal},
+			balance.TransactionBooker{Balance: bal},
+			balance.ValueBooker{Balance: bal},
+			balance.Asserter{Balance: bal},
+			balance.AccountCloser{Balance: bal},
+		}
+	)
 
-	return &past.PAST{
-		Context: a.Context,
-		Days:    sorted,
+	if err := past.Sync(pAST, steps); err != nil {
+		return nil, err
 	}
+	return pAST, nil
 
 }
 

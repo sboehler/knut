@@ -22,6 +22,7 @@ import (
 
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/past"
 )
 
 // Printer prints directives.
@@ -177,7 +178,7 @@ func (p Printer) printValue(w io.Writer, v *ast.Value) (int, error) {
 }
 
 // PrintLedger prints a Ledger.
-func (p *Printer) PrintLedger(w io.Writer, l *ast.PAST) (int, error) {
+func (p *Printer) PrintLedger(w io.Writer, l *past.PAST) (int, error) {
 	for _, day := range l.Days {
 		for _, t := range day.Transactions {
 			p.updatePadding(t)

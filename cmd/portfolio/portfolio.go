@@ -23,8 +23,8 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/sboehler/knut/lib/journal/past/process"
 	"github.com/sboehler/knut/lib/performance"
 
@@ -118,7 +118,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 			Filter:    filter,
 			Valuation: valuation,
 		}
-		l *ast.PAST
+		l *past.PAST
 	)
 	if l, err = p.BuildLedger(journal.Filter{}); err != nil {
 		return err

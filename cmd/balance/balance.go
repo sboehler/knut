@@ -27,8 +27,8 @@ import (
 	"github.com/sboehler/knut/lib/balance/report"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/sboehler/knut/lib/journal/past/process"
 	"github.com/sboehler/knut/lib/table"
 
@@ -160,7 +160,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Thousands: r.thousands,
 			Round:     r.digits,
 		}
-		l *ast.PAST
+		l *past.PAST
 	)
 	if l, err = parser.BuildLedger(filter); err != nil {
 		return err

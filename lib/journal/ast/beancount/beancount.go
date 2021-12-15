@@ -22,10 +22,11 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/past"
 )
 
 // Transcode transcodes the given ledger to beancount.
-func Transcode(w io.Writer, l *ast.PAST, c *journal.Commodity) error {
+func Transcode(w io.Writer, l *past.PAST, c *journal.Commodity) error {
 	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c); err != nil {
 		return err
 	}

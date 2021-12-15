@@ -82,6 +82,6 @@ func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interfa
 }
 
 // BuildLedger builds a ast.
-func (j *RecursiveParser) BuildLedger(f journal.Filter) (*ast.PAST, error) {
+func (j *RecursiveParser) BuildLedger(f journal.Filter) (*past.PAST, error) {
 	return past.FromDirectives(j.Context, f, j.Parse())
 }

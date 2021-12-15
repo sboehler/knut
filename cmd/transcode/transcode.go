@@ -21,7 +21,6 @@ import (
 
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/beancount"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/journal/past"
@@ -67,7 +66,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 		ctx       = journal.NewContext()
 		commodity *journal.Commodity
 		j         = parser.RecursiveParser{Context: ctx, File: args[0]}
-		l         *ast.PAST
+		l         *past.PAST
 	)
 	if commodity, err = ctx.GetCommodity(c); err != nil {
 		return err

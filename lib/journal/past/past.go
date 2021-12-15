@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ast
+package past
 
 import (
 	"sort"
@@ -20,11 +20,12 @@ import (
 
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
 )
 
 // PAST is a processed AST.
 type PAST struct {
-	Days    []*Day
+	Days    []*ast.Day
 	Context journal.Context
 }
 

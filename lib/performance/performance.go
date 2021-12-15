@@ -6,6 +6,7 @@ import (
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/sboehler/knut/lib/journal/past/process"
 )
 
@@ -16,7 +17,7 @@ type Calculator struct {
 }
 
 // Perf computes portfolio performance.
-func (calc Calculator) Perf(l *ast.PAST) <-chan DailyPerfValues {
+func (calc Calculator) Perf(l *past.PAST) <-chan DailyPerfValues {
 	// var (
 	// 	bal               = balance.New(l.Context, b.Valuation)
 	// 	ps                = make(prices.Prices)

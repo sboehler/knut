@@ -25,7 +25,7 @@ import (
 
 // FromDirectives reads directives from the given channel and
 // builds a Ledger if successful.
-func FromDirectives(ctx journal.Context, filter journal.Filter, results <-chan interface{}) (*ast.PAST, error) {
+func FromDirectives(ctx journal.Context, filter journal.Filter, results <-chan interface{}) (*PAST, error) {
 	var b = NewBuilder(ctx, filter)
 	for res := range results {
 		switch t := res.(type) {
@@ -63,7 +63,7 @@ func NewBuilder(ctx journal.Context, f journal.Filter) *Builder {
 }
 
 // Build creates a new
-func (b *Builder) Build() *ast.PAST {
+func (b *Builder) Build() *PAST {
 	var result = make([]*ast.Day, 0, len(b.days))
 	for _, s := range b.days {
 		result = append(result, s)
@@ -71,7 +71,7 @@ func (b *Builder) Build() *ast.PAST {
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Date.Before(result[j].Date)
 	})
-	return &ast.PAST{
+	return &PAST{
 		Days:    result,
 		Context: b.Context,
 	}

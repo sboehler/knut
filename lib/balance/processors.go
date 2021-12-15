@@ -23,6 +23,7 @@ import (
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/sboehler/knut/lib/journal/past/process"
 )
 
@@ -58,7 +59,7 @@ var (
 )
 
 // Initialize implements Initializer.
-func (a *Snapshotter) Initialize(l *ast.PAST) error {
+func (a *Snapshotter) Initialize(l *past.PAST) error {
 	a.dates = l.Dates(a.From, a.To, a.Period)
 	if a.Last > 0 {
 		last := a.Last
@@ -119,7 +120,7 @@ var (
 )
 
 // Initialize implements Initializer.
-func (a *PriceUpdater) Initialize(_ *ast.PAST) error {
+func (a *PriceUpdater) Initialize(_ *past.PAST) error {
 	a.prices = make(prices.Prices)
 	return nil
 }

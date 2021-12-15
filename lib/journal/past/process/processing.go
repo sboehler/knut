@@ -16,12 +16,13 @@ package process
 
 import (
 	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/past"
 	"go.uber.org/multierr"
 )
 
 // Initializer gets called before processing.
 type Initializer interface {
-	Initialize(l *ast.PAST) error
+	Initialize(l *past.PAST) error
 }
 
 // Processor processes the balance and the ledger day.
@@ -35,7 +36,7 @@ type Finalizer interface {
 }
 
 // Sync processes an AST.
-func Sync(l *ast.PAST, steps []Processor) (resErr error) {
+func Sync(l *past.PAST, steps []Processor) (resErr error) {
 	for _, pr := range steps {
 		if f, ok := pr.(Initializer); ok {
 			if err := f.Initialize(l); err != nil {
@@ -63,7 +64,7 @@ func Sync(l *ast.PAST, steps []Processor) (resErr error) {
 }
 
 // Async processes the AST asynchronously.
-func Async(l *ast.PAST, steps []Processor) <-chan error {
+func Async(l *past.PAST, steps []Processor) <-chan error {
 	errCh := make(chan error)
 	go func(steps []Processor) {
 		defer close(errCh)

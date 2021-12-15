@@ -21,12 +21,12 @@ import (
 	"github.com/sboehler/knut/lib/balance/prices"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/sboehler/knut/lib/journal/past/process"
 )
 
 // PreStage sets the date on the balance.
-func PreStage(ctx context.Context, l *ast.PAST, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
+func PreStage(ctx context.Context, l *past.PAST, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
 	nextCh := make(chan *Balance, 50)
 	errCh := make(chan error)
 	go func() {
@@ -64,7 +64,7 @@ func PreStage(ctx context.Context, l *ast.PAST, bsCh <-chan *Balance) (<-chan *B
 }
 
 // UpdatePrices updates the prices.
-func UpdatePrices(ctx context.Context, l *ast.PAST, val *journal.Commodity, bs <-chan *Balance) <-chan *Balance {
+func UpdatePrices(ctx context.Context, l *past.PAST, val *journal.Commodity, bs <-chan *Balance) <-chan *Balance {
 	ps := make(prices.Prices)
 	if val == nil {
 		return bs
@@ -99,7 +99,7 @@ func UpdatePrices(ctx context.Context, l *ast.PAST, val *journal.Commodity, bs <
 }
 
 // PostStage sets the date on the balance.
-func PostStage(ctx context.Context, l *ast.PAST, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
+func PostStage(ctx context.Context, l *past.PAST, bsCh <-chan *Balance) (<-chan *Balance, <-chan error) {
 	nextCh := make(chan *Balance, 50)
 	errCh := make(chan error)
 	go func() {
@@ -139,7 +139,7 @@ type SnapshotConfig struct {
 }
 
 // Snapshot snapshots the balance.
-func Snapshot(ctx context.Context, cfg SnapshotConfig, l *ast.PAST, bs <-chan *Balance) (<-chan *Balance, <-chan *Balance, <-chan error) {
+func Snapshot(ctx context.Context, cfg SnapshotConfig, l *past.PAST, bs <-chan *Balance) (<-chan *Balance, <-chan *Balance, <-chan error) {
 	dates := l.Dates(cfg.From, cfg.To, cfg.Period)
 	if cfg.Last > 0 {
 		last := cfg.Last

@@ -14,7 +14,7 @@ type Processor struct {
 }
 
 // Process processes an AST to a PAST
-func (Processor) Process(a *ast.AST) *ast.PAST {
+func (Processor) Process(a *ast.AST) *PAST {
 	var astp = &ast.AST{
 		Days:    make(map[time.Time]*ast.Day),
 		Context: a.Context,
@@ -44,7 +44,7 @@ func (Processor) Process(a *ast.AST) *ast.PAST {
 
 	// TODO: process values
 
-	return &ast.PAST{
+	return &PAST{
 		Context: a.Context,
 		Days:    sorted,
 	}

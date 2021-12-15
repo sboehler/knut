@@ -22,7 +22,6 @@ import (
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/past"
-	"github.com/sboehler/knut/lib/journal/past/process"
 )
 
 // PreStage sets the date on the balance.
@@ -39,7 +38,7 @@ func PreStage(ctx context.Context, l *past.PAST, bsCh <-chan *Balance) (<-chan *
 			}
 			day := l.Days[index]
 
-			ps := []process.Processor{
+			ps := []past.Processor{
 				DateUpdater{Balance: bal},
 				AccountOpener{Balance: bal},
 				TransactionBooker{Balance: bal},
@@ -108,7 +107,7 @@ func PostStage(ctx context.Context, l *past.PAST, bsCh <-chan *Balance) (<-chan 
 		var index int
 		for bal := range bsCh {
 			day := l.Days[index]
-			ps := []process.Processor{
+			ps := []past.Processor{
 				TransactionValuator{Balance: bal},
 				ValuationTransactionComputer{Balance: bal},
 				AccountCloser{Balance: bal},

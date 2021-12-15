@@ -24,7 +24,6 @@ import (
 	"github.com/sboehler/knut/lib/journal/ast/beancount"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/journal/past"
-	"github.com/sboehler/knut/lib/journal/past/process"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
@@ -76,7 +75,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	}
 	var (
 		bal   = balance.New(ctx, commodity)
-		steps = []process.Processor{
+		steps = []past.Processor{
 			balance.DateUpdater{Balance: bal},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
@@ -88,7 +87,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 			balance.AccountCloser{Balance: bal},
 		}
 	)
-	if err := process.Sync(l, steps); err != nil {
+	if err := past.Sync(l, steps); err != nil {
 		return err
 	}
 	var w = bufio.NewWriter(cmd.OutOrStdout())

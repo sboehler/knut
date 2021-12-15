@@ -7,7 +7,6 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/past"
-	"github.com/sboehler/knut/lib/journal/past/process"
 )
 
 // Calculator calculates portfolio performance
@@ -57,7 +56,7 @@ type Valuator struct {
 	Result  *DailyPerfValues
 }
 
-var _ process.Processor = (*Valuator)(nil)
+var _ past.Processor = (*Valuator)(nil)
 
 // Process implements process.Processor.
 func (v *Valuator) Process(_ *ast.Day) error {
@@ -85,7 +84,7 @@ type FlowComputer struct {
 	Valuation *journal.Commodity
 }
 
-var _ process.Processor = (*FlowComputer)(nil)
+var _ past.Processor = (*FlowComputer)(nil)
 
 // pcv is a per-commodity value.
 type pcv map[*journal.Commodity]float64

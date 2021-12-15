@@ -30,7 +30,7 @@ import (
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
-	"github.com/sboehler/knut/lib/journal/past/process"
+	"github.com/sboehler/knut/lib/journal/past"
 
 	"github.com/shopspring/decimal"
 )
@@ -67,7 +67,7 @@ type pipeline struct {
 	Accounts        *journal.Accounts
 	Parser          parser.RecursiveParser
 	Filter          journal.Filter
-	ProcessingSteps []process.Processor
+	ProcessingSteps []past.Processor
 	Balances        *[]*balance.Balance
 }
 
@@ -110,7 +110,7 @@ func buildPipeline(file string, query url.Values) (*pipeline, error) {
 	var (
 		bal    = balance.New(ctx, valuation)
 		result []*balance.Balance
-		steps  = []process.Processor{
+		steps  = []past.Processor{
 			balance.DateUpdater{Balance: bal},
 			&balance.Snapshotter{
 				Balance: bal,
@@ -152,7 +152,7 @@ func (ppl *pipeline) process(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if process.Sync(l, ppl.ProcessingSteps); err != nil {
+	if past.Sync(l, ppl.ProcessingSteps); err != nil {
 		return err
 	}
 	var (

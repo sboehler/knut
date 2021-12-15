@@ -25,7 +25,6 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/journal/past"
-	"github.com/sboehler/knut/lib/journal/past/process"
 	"github.com/sboehler/knut/lib/performance"
 
 	"github.com/spf13/cobra"
@@ -100,7 +99,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 			Accounts:    r.accounts.Value(),
 		}
 		res   = new(performance.DailyPerfValues)
-		steps = []process.Processor{
+		steps = []past.Processor{
 			balance.DateUpdater{Balance: bal},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
@@ -123,7 +122,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	if l, err = p.BuildLedger(journal.Filter{}); err != nil {
 		return err
 	}
-	if err = process.Sync(l, steps); err != nil {
+	if err = past.Sync(l, steps); err != nil {
 		return err
 	}
 	for range perfCalc.Perf(l) {

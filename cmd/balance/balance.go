@@ -29,7 +29,6 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/journal/past"
-	"github.com/sboehler/knut/lib/journal/past/process"
 	"github.com/sboehler/knut/lib/table"
 
 	"github.com/spf13/cobra"
@@ -122,7 +121,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		}
 		bal   = balance.New(ctx, valuation)
 		balCh = make(chan *balance.Balance)
-		steps = []process.Processor{
+		steps = []past.Processor{
 			balance.DateUpdater{Balance: bal},
 			balance.AccountOpener{Balance: bal},
 			balance.TransactionBooker{Balance: bal},
@@ -165,7 +164,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if l, err = parser.BuildLedger(filter); err != nil {
 		return err
 	}
-	errCh := process.Async(l, steps)
+	errCh := past.Async(l, steps)
 	for errCh != nil && balCh != nil {
 		select {
 		case err, ok := <-errCh:

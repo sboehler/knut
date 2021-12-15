@@ -1,4 +1,4 @@
-package past
+package process
 
 import (
 	"sort"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/past"
 )
 
 // Processor processes ASTs.
@@ -15,7 +16,7 @@ type Processor struct {
 }
 
 // Process processes an AST to a PAST
-func (pr Processor) Process(a *ast.AST) *PAST {
+func (pr Processor) Process(a *ast.AST) *past.PAST {
 	var astCp = &ast.AST{
 		Days:    make(map[time.Time]*ast.Day),
 		Context: a.Context,
@@ -51,7 +52,7 @@ func (pr Processor) Process(a *ast.AST) *PAST {
 
 	// TODO: process values
 
-	return &PAST{
+	return &past.PAST{
 		Context: a.Context,
 		Days:    sorted,
 	}

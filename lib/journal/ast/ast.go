@@ -28,13 +28,49 @@ type AST struct {
 }
 
 // Day returns the Day for the given date.
-func (b *AST) Day(d time.Time) *Day {
-	s, ok := b.Days[d]
+func (ast *AST) Day(d time.Time) *Day {
+	s, ok := ast.Days[d]
 	if !ok {
 		s = &Day{Date: d}
-		b.Days[d] = s
+		ast.Days[d] = s
 	}
 	return s
+}
+
+// AddOpen adds an Open directive.
+func (ast *AST) AddOpen(o *Open) {
+	var d = ast.Day(o.Date)
+	d.Openings = append(d.Openings, o)
+}
+
+// AddPrice adds an Price directive.
+func (ast *AST) AddPrice(p *Price) {
+	var d = ast.Day(p.Date)
+	d.Prices = append(d.Prices, p)
+}
+
+// AddTransaction adds an Transaction directive.
+func (ast *AST) AddTransaction(t *Transaction) {
+	var d = ast.Day(t.Date)
+	d.Transactions = append(d.Transactions, t)
+}
+
+// AddValue adds an Value directive.
+func (ast *AST) AddValue(v *Value) {
+	var d = ast.Day(v.Date)
+	d.Values = append(d.Values, v)
+}
+
+// AddAssertion adds an Assertion directive.
+func (ast *AST) AddAssertion(a *Assertion) {
+	var d = ast.Day(a.Date)
+	d.Assertions = append(d.Assertions, a)
+}
+
+// AddClose adds an Close directive.
+func (ast *AST) AddClose(c *Close) {
+	var d = ast.Day(c.Date)
+	d.Closings = append(d.Closings, c)
 }
 
 // Day groups all commands for a given date.
@@ -65,23 +101,17 @@ func FromDirectives2(ctx journal.Context, results <-chan interface{}) (*AST, err
 		case error:
 			return nil, t
 		case *Open:
-			var s = b.Day(t.Date)
-			s.Openings = append(s.Openings, t)
+			b.AddOpen(t)
 		case *Price:
-			var s = b.Day(t.Date)
-			s.Prices = append(s.Prices, t)
+			b.AddPrice(t)
 		case *Transaction:
-			var s = b.Day(t.Date)
-			s.Transactions = append(s.Transactions, t)
+			b.AddTransaction(t)
 		case *Assertion:
-			var s = b.Day(t.Date)
-			s.Assertions = append(s.Assertions, t)
+			b.AddAssertion(t)
 		case *Value:
-			var s = b.Day(t.Date)
-			s.Values = append(s.Values, t)
+			b.AddValue(t)
 		case *Close:
-			var s = b.Day(t.Date)
-			s.Closings = append(s.Closings, t)
+			b.AddClose(t)
 		default:
 			return nil, fmt.Errorf("unknown: %#v", t)
 		}

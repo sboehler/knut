@@ -11,30 +11,37 @@ import (
 // Processor processes ASTs.
 type Processor struct {
 	Filter journal.Filter
+	Expand bool
 }
 
 // Process processes an AST to a PAST
-func (Processor) Process(a *ast.AST) *PAST {
-	var astp = &ast.AST{
+func (pr Processor) Process(a *ast.AST) *PAST {
+	var astCp = &ast.AST{
 		Days:    make(map[time.Time]*ast.Day),
 		Context: a.Context,
 	}
 	for d, day := range a.Days {
-		dayp := astp.Day(d)
+		dayCp := astCp.Day(d)
 
-		// TODO: filter directives
-		dayp.Openings = day.Openings
-		dayp.Closings = day.Closings
-		dayp.Assertions = day.Assertions
-		dayp.Prices = day.Prices
+		dayCp.Openings = make([]*ast.Open, len(day.Openings))
+		copy(dayCp.Openings, day.Openings)
+
+		dayCp.Prices = make([]*ast.Price, len(day.Prices))
+		copy(dayCp.Prices, day.Prices)
 
 		for _, trx := range day.Transactions {
-			// TODO: process trx
-			dayp.Transactions = append(dayp.Transactions, trx)
+			pr.ProcessTransaction(astCp, trx)
 		}
+
+		for _, a := range day.Assertions {
+			pr.ProcessAssertion(astCp, a)
+		}
+
+		dayCp.Closings = make([]*ast.Close, len(day.Closings))
+		copy(dayCp.Closings, day.Closings)
 	}
 	var sorted []*ast.Day
-	for _, day := range astp.Days {
+	for _, day := range astCp.Days {
 		sorted = append(sorted, day)
 	}
 
@@ -49,4 +56,43 @@ func (Processor) Process(a *ast.AST) *PAST {
 		Days:    sorted,
 	}
 
+}
+
+// ProcessTransaction adds a transaction directive.
+func (pr *Processor) ProcessTransaction(a *ast.AST, t *ast.Transaction) {
+	if pr.Expand && len(t.AddOns) > 0 {
+		for _, addOn := range t.AddOns {
+			switch acc := addOn.(type) {
+			case *ast.Accrual:
+				for _, ts := range acc.Expand(t) {
+					pr.ProcessTransaction(a, ts)
+				}
+			}
+		}
+	} else {
+		var filtered []ast.Posting
+		for _, p := range t.Postings {
+			if p.Matches(pr.Filter) {
+				filtered = append(filtered, p)
+			}
+		}
+		if len(filtered) == len(t.Postings) {
+			a.AddTransaction(t)
+		} else if len(filtered) > 0 && len(filtered) < len(t.Postings) {
+			a.AddTransaction(&ast.Transaction{
+				Range:       t.Range,
+				Date:        t.Date,
+				Description: t.Description,
+				Postings:    filtered,
+				Tags:        t.Tags,
+			})
+		}
+	}
+}
+
+// ProcessAssertion adds an assertion directive.
+func (pr *Processor) ProcessAssertion(as *ast.AST, a *ast.Assertion) {
+	if pr.Filter.MatchAccount(a.Account) && pr.Filter.MatchCommodity(a.Commodity) {
+		as.AddAssertion(a)
+	}
 }

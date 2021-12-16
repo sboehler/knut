@@ -2,7 +2,6 @@ package process
 
 import (
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/sboehler/knut/lib/balance"
@@ -54,18 +53,10 @@ func (pr Processor) Process(a *ast.AST) (*past.PAST, error) {
 		dayCp.Closings = make([]*ast.Close, len(day.Closings))
 		copy(dayCp.Closings, day.Closings)
 	}
-	var sorted []*ast.Day
-	for _, day := range astCp.Days {
-		sorted = append(sorted, day)
-	}
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i].Less(sorted[j])
-	})
-
 	var (
 		pAST = &past.PAST{
 			Context: a.Context,
-			Days:    sorted,
+			Days:    astCp.SortedDays(),
 		}
 		bal   = balance.New(a.Context, nil)
 		steps = []past.Processor{

@@ -15,6 +15,7 @@
 package ast
 
 import (
+	"sort"
 	"time"
 
 	"github.com/sboehler/knut/lib/journal"
@@ -34,6 +35,18 @@ func (ast *AST) Day(d time.Time) *Day {
 		ast.Days[d] = s
 	}
 	return s
+}
+
+// SortedDays returns all days ordered by date.
+func (ast *AST) SortedDays() []*Day {
+	var sorted []*Day
+	for _, day := range ast.Days {
+		sorted = append(sorted, day)
+	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Less(sorted[j])
+	})
+	return sorted
 }
 
 // AddOpen adds an Open directive.

@@ -65,6 +65,7 @@ func (pr Processor) Process(a *ast.AST) (*past.PAST, error) {
 		acc = make(balance.Accounts)
 	)
 	for _, d := range pAST.Days {
+		bal.Date = d.Date
 		for _, o := range d.Openings {
 			if err := acc.Open(o.Account); err != nil {
 				return nil, err
@@ -120,11 +121,10 @@ func (pr Processor) Process(a *ast.AST) (*past.PAST, error) {
 				if pos.Account != c.Account {
 					continue
 				}
-				if !amount.IsZero() || !bal.Values[pos].IsZero() {
+				if !amount.IsZero() {
 					return nil, Error{c, "account has nonzero position"}
 				}
 				delete(bal.Amounts, pos)
-				delete(bal.Values, pos)
 			}
 			if err := acc.Close(c.Account); err != nil {
 				return nil, err

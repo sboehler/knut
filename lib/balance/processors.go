@@ -164,7 +164,7 @@ var _ past.Processor = (*TransactionBooker)(nil)
 func (tb TransactionBooker) Process(d *ast.Day) error {
 	// book journal transaction amounts
 	for _, t := range d.Transactions {
-		if err := tb.Balance.bookAmount(t); err != nil {
+		if err := tb.Balance.BookAmount(t); err != nil {
 			return err
 		}
 	}
@@ -188,7 +188,7 @@ func (tb ValueBooker) Process(d *ast.Day) error {
 		if t, err = tb.processValue(v); err != nil {
 			return err
 		}
-		if err = tb.Balance.bookAmount(t); err != nil {
+		if err = tb.Balance.BookAmount(t); err != nil {
 			return err
 		}
 		d.Transactions = append(d.Transactions, t)
@@ -376,7 +376,7 @@ func (as PeriodCloser) Process(d *ast.Day) error {
 	var closingTransactions = as.computeClosingTransactions()
 	d.Transactions = append(d.Transactions, closingTransactions...)
 	for _, t := range closingTransactions {
-		if err := as.Balance.bookAmount(t); err != nil {
+		if err := as.Balance.BookAmount(t); err != nil {
 			return err
 		}
 		if err := as.Balance.bookValue(t); err != nil {

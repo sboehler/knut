@@ -73,7 +73,8 @@ func (b *Balance) Minus(bo *Balance) {
 	}
 }
 
-func (b *Balance) bookAmount(t *ast.Transaction) error {
+// BookAmount books the given amount.
+func (b *Balance) BookAmount(t *ast.Transaction) error {
 	for _, posting := range t.Postings {
 		if !b.Accounts.IsOpen(posting.Credit) {
 			return Error{t, fmt.Sprintf("credit account %s is not open", posting.Credit)}
@@ -81,14 +82,24 @@ func (b *Balance) bookAmount(t *ast.Transaction) error {
 		if !b.Accounts.IsOpen(posting.Debit) {
 			return Error{t, fmt.Sprintf("debit account %s is not open", posting.Debit)}
 		}
-		var (
-			crPos = CommodityAccount{posting.Credit, posting.Commodity}
-			drPos = CommodityAccount{posting.Debit, posting.Commodity}
-		)
-		b.Amounts[crPos] = b.Amounts[crPos].Sub(posting.Amount)
-		b.Amounts[drPos] = b.Amounts[drPos].Add(posting.Amount)
+		b.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
 	}
 	return nil
+}
+
+// Amount returns the amount for the given account and commodity.
+func (b *Balance) Amount(a *journal.Account, c *journal.Commodity) decimal.Decimal {
+	return b.Amounts[CommodityAccount{Account: a, Commodity: c}]
+}
+
+// Book books the given amount.
+func (b *Balance) Book(cr, dr *journal.Account, a decimal.Decimal, c *journal.Commodity) {
+	var (
+		crPos = CommodityAccount{cr, c}
+		drPos = CommodityAccount{dr, c}
+	)
+	b.Amounts[crPos] = b.Amounts[crPos].Sub(a)
+	b.Amounts[drPos] = b.Amounts[drPos].Add(a)
 }
 
 func (b *Balance) bookValue(t *ast.Transaction) error {

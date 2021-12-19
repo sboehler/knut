@@ -2,12 +2,14 @@ package process
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"github.com/sboehler/knut/lib/journal/ast/printer"
 	"github.com/sboehler/knut/lib/journal/past"
 )
 
@@ -53,26 +55,83 @@ func (pr Processor) Process(a *ast.AST) (*past.PAST, error) {
 		dayCp.Closings = make([]*ast.Close, len(day.Closings))
 		copy(dayCp.Closings, day.Closings)
 	}
+
 	var (
 		pAST = &past.PAST{
 			Context: a.Context,
 			Days:    astCp.SortedDays(),
 		}
-		bal   = balance.New(a.Context, nil)
-		steps = []past.Processor{
-			balance.AccountOpener{Balance: bal},
-			balance.TransactionBooker{Balance: bal},
-			balance.ValueBooker{Balance: bal},
-			balance.Asserter{Balance: bal},
-			balance.AccountCloser{Balance: bal},
-		}
+		bal = balance.New(a.Context, nil)
+		acc = make(balance.Accounts)
 	)
-
-	if err := past.Sync(pAST, steps); err != nil {
-		return nil, err
+	for _, d := range pAST.Days {
+		for _, o := range d.Openings {
+			if err := acc.Open(o.Account); err != nil {
+				return nil, err
+			}
+		}
+		for _, t := range d.Transactions {
+			for _, p := range t.Postings {
+				if !acc.IsOpen(p.Credit) {
+					return nil, Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)}
+				}
+				if !acc.IsOpen(p.Debit) {
+					return nil, Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)}
+				}
+				bal.Book(p.Credit, p.Debit, p.Amount, p.Commodity)
+			}
+		}
+		if day, ok := a.Days[d.Date]; ok {
+			for _, v := range day.Values {
+				if !acc.IsOpen(v.Account) {
+					return nil, Error{v, "account is not open"}
+				}
+				var (
+					t   *ast.Transaction
+					err error
+				)
+				if t, err = pr.processValue(bal, v); err != nil {
+					return nil, err
+				}
+				for _, p := range t.Postings {
+					if !acc.IsOpen(p.Credit) {
+						return nil, Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)}
+					}
+					if !acc.IsOpen(p.Debit) {
+						return nil, Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)}
+					}
+					bal.Book(p.Credit, p.Debit, p.Amount, p.Commodity)
+				}
+				d.Transactions = append(d.Transactions, t)
+			}
+		}
+		for _, a := range d.Assertions {
+			if !acc.IsOpen(a.Account) {
+				return nil, Error{a, "account is not open"}
+			}
+			var pos = balance.CommodityAccount{Account: a.Account, Commodity: a.Commodity}
+			va, ok := bal.Amounts[pos]
+			if !ok || !va.Equal(a.Amount) {
+				return nil, Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va, pos.Commodity)}
+			}
+		}
+		for _, c := range d.Closings {
+			for pos, amount := range bal.Amounts {
+				if pos.Account != c.Account {
+					continue
+				}
+				if !amount.IsZero() || !bal.Values[pos].IsZero() {
+					return nil, Error{c, "account has nonzero position"}
+				}
+				delete(bal.Amounts, pos)
+				delete(bal.Values, pos)
+			}
+			if err := acc.Close(c.Account); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return pAST, nil
-
 }
 
 // ProcessTransaction adds a transaction directive.
@@ -112,6 +171,21 @@ func (pr *Processor) processAssertion(as *ast.AST, a *ast.Assertion) {
 	if pr.Filter.MatchAccount(a.Account) && pr.Filter.MatchCommodity(a.Commodity) {
 		as.AddAssertion(a)
 	}
+}
+
+func (pr *Processor) processValue(bal *balance.Balance, v *ast.Value) (*ast.Transaction, error) {
+	valAcc, err := bal.Context.ValuationAccountFor(v.Account)
+	if err != nil {
+		return nil, err
+	}
+	return &ast.Transaction{
+		Date:        v.Date,
+		Description: fmt.Sprintf("Valuation adjustment for %v in %v", v.Commodity, v.Account),
+		Tags:        nil,
+		Postings: []ast.Posting{
+			ast.NewPosting(valAcc, v.Account, v.Commodity, v.Amount.Sub(bal.Amount(v.Account, v.Commodity))),
+		},
+	}, nil
 }
 
 // ASTFromPath reads directives from the given channel and
@@ -156,4 +230,21 @@ func (pr *Processor) PASTFromPath(p string) (*past.PAST, error) {
 		return nil, err
 	}
 	return pr.Process(as)
+}
+
+// Error is an error.
+type Error struct {
+	directive ast.Directive
+	msg       string
+}
+
+func (be Error) Error() string {
+	var (
+		p printer.Printer
+		b strings.Builder
+	)
+	fmt.Fprintf(&b, "%s:\n", be.directive.Position().Start)
+	p.PrintDirective(&b, be.directive)
+	fmt.Fprintf(&b, "\n%s\n", be.msg)
+	return b.String()
 }

@@ -15,7 +15,6 @@
 package past
 
 import (
-	"github.com/sboehler/knut/lib/journal/ast"
 	"go.uber.org/multierr"
 )
 
@@ -26,7 +25,7 @@ type Initializer interface {
 
 // Processor processes the balance and the ledger day.
 type Processor interface {
-	Process(d *ast.Day) error
+	Process(d *Day) error
 }
 
 // Finalizer gets called after all days have been processed.

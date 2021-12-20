@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/shopspring/decimal"
 )
 
@@ -164,7 +165,7 @@ func TestFlowComputer(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			var (
-				d = &ast.Day{
+				d = &past.Day{
 					Date:         time.Date(2021, 11, 15, 0, 0, 0, 0, time.UTC),
 					Transactions: []*ast.Transaction{test.trx},
 				}

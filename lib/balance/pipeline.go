@@ -72,8 +72,10 @@ func UpdatePrices(ctx context.Context, l *past.PAST, val *journal.Commodity, bs 
 	go func() {
 		defer close(buf)
 		for _, day := range l.Days {
-			for _, p := range day.Prices {
-				ps.Insert(p)
+			if day.AST != nil {
+				for _, p := range day.AST.Prices {
+					ps.Insert(p)
+				}
 			}
 			select {
 			case buf <- ps.Normalize(val):

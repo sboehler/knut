@@ -34,7 +34,7 @@ type DateUpdater struct {
 var _ past.Processor = (*DateUpdater)(nil)
 
 // Process implements Processor.
-func (a DateUpdater) Process(d *ast.Day) error {
+func (a DateUpdater) Process(d *past.Day) error {
 	a.Balance.Date = d.Date
 	return nil
 }
@@ -88,7 +88,7 @@ func (a *Snapshotter) Finalize() error {
 }
 
 // Process implements Processor.
-func (a *Snapshotter) Process(d *ast.Day) error {
+func (a *Snapshotter) Process(d *past.Day) error {
 	for ; a.index < len(a.snapshotDates) && a.snapshotDates[a.index] == d.Date; a.index++ {
 		snapshot := a.Balance.Snapshot()
 		snapshot.Date = a.dates[a.index]
@@ -125,7 +125,7 @@ func (a *PriceUpdater) Initialize(_ *past.PAST) error {
 }
 
 // Process implements Processor.
-func (a *PriceUpdater) Process(d *ast.Day) error {
+func (a *PriceUpdater) Process(d *past.Day) error {
 	if a.Balance.Valuation == nil {
 		return nil
 	}
@@ -144,7 +144,7 @@ type AccountOpener struct {
 var _ past.Processor = (*AccountOpener)(nil)
 
 // Process implements Processor.
-func (a AccountOpener) Process(d *ast.Day) error {
+func (a AccountOpener) Process(d *past.Day) error {
 	for _, o := range d.Openings {
 		if err := a.Balance.Accounts.Open(o.Account); err != nil {
 			return err
@@ -161,7 +161,7 @@ type TransactionBooker struct {
 var _ past.Processor = (*TransactionBooker)(nil)
 
 // Process implements Processor.
-func (tb TransactionBooker) Process(d *ast.Day) error {
+func (tb TransactionBooker) Process(d *past.Day) error {
 	// book journal transaction amounts
 	for _, t := range d.Transactions {
 		if err := tb.Balance.BookAmount(t); err != nil {
@@ -179,7 +179,7 @@ type ValueBooker struct {
 var _ past.Processor = (*ValueBooker)(nil)
 
 // Process implements Processor.
-func (tb ValueBooker) Process(d *ast.Day) error {
+func (tb ValueBooker) Process(d *past.Day) error {
 	for _, v := range d.Values {
 		var (
 			t   *ast.Transaction
@@ -224,7 +224,7 @@ type Asserter struct {
 var _ past.Processor = (*Asserter)(nil)
 
 // Process implements Processor.
-func (as Asserter) Process(d *ast.Day) error {
+func (as Asserter) Process(d *past.Day) error {
 	for _, a := range d.Assertions {
 		if err := as.processBalanceAssertion(as.Balance, a); err != nil {
 			return err
@@ -253,7 +253,7 @@ type TransactionValuator struct {
 var _ past.Processor = (*TransactionValuator)(nil)
 
 // Process implements Processor.
-func (as TransactionValuator) Process(d *ast.Day) error {
+func (as TransactionValuator) Process(d *past.Day) error {
 	for _, t := range d.Transactions {
 		if err := as.valuateTransaction(as.Balance, t); err != nil {
 			return err
@@ -291,7 +291,7 @@ type ValuationTransactionComputer struct {
 var _ past.Processor = (*ValuationTransactionComputer)(nil)
 
 // Process implements Processor.
-func (vtc ValuationTransactionComputer) Process(d *ast.Day) error {
+func (vtc ValuationTransactionComputer) Process(d *past.Day) error {
 	valTrx, err := vtc.computeValuationTransactions(vtc.Balance)
 	if err != nil {
 		return err
@@ -372,7 +372,7 @@ type PeriodCloser struct {
 var _ past.Processor = (*PeriodCloser)(nil)
 
 // Process implements Processor.
-func (as PeriodCloser) Process(d *ast.Day) error {
+func (as PeriodCloser) Process(d *past.Day) error {
 	var closingTransactions = as.computeClosingTransactions()
 	d.Transactions = append(d.Transactions, closingTransactions...)
 	for _, t := range closingTransactions {
@@ -419,7 +419,7 @@ type AccountCloser struct {
 var _ past.Processor = (*AccountCloser)(nil)
 
 // Process implements Processor.
-func (vtc AccountCloser) Process(d *ast.Day) error {
+func (vtc AccountCloser) Process(d *past.Day) error {
 	for _, c := range d.Closings {
 		for pos, amount := range vtc.Balance.Amounts {
 			if pos.Account != c.Account {

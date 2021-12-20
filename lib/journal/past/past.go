@@ -15,17 +15,19 @@
 package past
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/shopspring/decimal"
 )
 
 // PAST is a processed AST.
 type PAST struct {
-	Days    []*ast.Day
+	Days    []*Day
 	Context journal.Context
 }
 
@@ -33,7 +35,7 @@ type PAST struct {
 // date on which an account is opened (ignoring prices, for example).
 func (l PAST) MinDate() (time.Time, bool) {
 	for _, s := range l.Days {
-		if len(s.Openings) > 0 {
+		if len(s.AST.Openings) > 0 {
 			return s.Date, true
 		}
 	}
@@ -90,4 +92,106 @@ func (l PAST) ActualDates(ds []time.Time) []time.Time {
 		actuals = append(actuals, l.Days[index].Date)
 	}
 	return actuals
+}
+
+// Day represents a day of activity in the processed AST.
+type Day struct {
+	AST          *ast.Day
+	Date         time.Time
+	Transactions []*ast.Transaction
+	Amounts      Amounts
+
+	// Legacy fields
+	Prices     []*ast.Price
+	Assertions []*ast.Assertion
+	Values     []*ast.Value
+	Openings   []*ast.Open
+	Closings   []*ast.Close
+}
+
+// Less establishes an ordering on Day.
+func (d *Day) Less(d2 *Day) bool {
+	return d.Date.Before(d2.Date)
+}
+
+// CommodityAccount represents a position.
+type CommodityAccount struct {
+	Account   *journal.Account
+	Commodity *journal.Commodity
+}
+
+// Less establishes a partial ordering of commodity accounts.
+func (p CommodityAccount) Less(p1 CommodityAccount) bool {
+	if p.Account.Type() != p1.Account.Type() {
+		return p.Account.Type() < p1.Account.Type()
+	}
+	if p.Account.String() != p1.Account.String() {
+		return p.Account.String() < p1.Account.String()
+	}
+	return p.Commodity.String() < p1.Commodity.String()
+}
+
+// Amounts keeps track of amounts by account and commodity.
+type Amounts map[CommodityAccount]decimal.Decimal
+
+// Amount returns the amount for the given account and commodity.
+func (am Amounts) Amount(a *journal.Account, c *journal.Commodity) decimal.Decimal {
+	return am[CommodityAccount{Account: a, Commodity: c}]
+}
+
+// Book books the given amount.
+func (am Amounts) Book(cr, dr *journal.Account, a decimal.Decimal, c *journal.Commodity) {
+	var (
+		crPos = CommodityAccount{cr, c}
+		drPos = CommodityAccount{dr, c}
+	)
+	am[crPos] = am[crPos].Sub(a)
+	am[drPos] = am[drPos].Add(a)
+}
+
+// Clone clones these amounts.
+func (am Amounts) Clone() Amounts {
+	clone := make(Amounts)
+	for ca, v := range am {
+		clone[ca] = v
+	}
+	return clone
+}
+
+// Accounts keeps track of open accounts.
+type Accounts map[*journal.Account]bool
+
+// Open opens an account.
+func (oa Accounts) Open(a *journal.Account) error {
+	if oa[a] {
+		return fmt.Errorf("account %v is already open", a)
+	}
+	oa[a] = true
+	return nil
+}
+
+// Close closes an account.
+func (oa Accounts) Close(a *journal.Account) error {
+	if !oa[a] {
+		return fmt.Errorf("account %v is already closed", a)
+	}
+	delete(oa, a)
+	return nil
+}
+
+// IsOpen returns whether an account is open.
+func (oa Accounts) IsOpen(a *journal.Account) bool {
+	if oa[a] {
+		return true
+	}
+	return a.Type() == journal.EQUITY
+}
+
+// Copy copies accounts.
+func (oa Accounts) Copy() Accounts {
+	var res = make(map[*journal.Account]bool, len(oa))
+	for a := range oa {
+		res[a] = true
+	}
+	return res
 }

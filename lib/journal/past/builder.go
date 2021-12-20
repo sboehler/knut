@@ -64,9 +64,18 @@ func NewBuilder(ctx journal.Context, f journal.Filter) *Builder {
 
 // Build creates a new
 func (b *Builder) Build() *PAST {
-	var result = make([]*ast.Day, 0, len(b.days))
+	var result = make([]*Day, 0, len(b.days))
 	for _, s := range b.days {
-		result = append(result, s)
+		result = append(result, &Day{
+			AST:          s,
+			Date:         s.Date,
+			Openings:     s.Openings,
+			Prices:       s.Prices,
+			Transactions: s.Transactions,
+			Assertions:   s.Assertions,
+			Values:       s.Values,
+			Closings:     s.Closings,
+		})
 	}
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Date.Before(result[j].Date)

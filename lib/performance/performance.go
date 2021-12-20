@@ -5,7 +5,6 @@ import (
 
 	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/past"
 )
 
@@ -59,7 +58,7 @@ type Valuator struct {
 var _ past.Processor = (*Valuator)(nil)
 
 // Process implements process.Processor.
-func (v *Valuator) Process(_ *ast.Day) error {
+func (v *Valuator) Process(_ *past.Day) error {
 	var res = make(pcv)
 	for ca, val := range v.Balance.Values {
 		var t = ca.Account.Type()
@@ -90,7 +89,7 @@ var _ past.Processor = (*FlowComputer)(nil)
 type pcv map[*journal.Commodity]float64
 
 // Process implements process.Processor.
-func (calc *FlowComputer) Process(step *ast.Day) error {
+func (calc *FlowComputer) Process(step *past.Day) error {
 	var internalInflows, internalOutflows, inflows, outflows pcv
 	for _, trx := range step.Transactions {
 		var cs = trx.Commodities()

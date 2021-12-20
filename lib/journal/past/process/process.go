@@ -240,8 +240,8 @@ func (pr Processor) ProcessAsync(ctx context.Context, a *ast.AST) (<-chan *past.
 			}
 			res.Days = append(res.Days, day)
 			for _, o := range d.Openings {
-				if err := acc.Open(o.Account); err != nil {
-					errCh <- err
+				if err := acc.Open(o.Account); err != nil && errOrExit(err) {
+					return
 				}
 			}
 			for _, t := range d.Transactions {

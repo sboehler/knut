@@ -6,11 +6,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sboehler/knut/lib/balance/prices"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
 	"github.com/sboehler/knut/lib/journal/past"
+	"github.com/sboehler/knut/lib/journal/val"
+	"github.com/shopspring/decimal"
 )
 
 // Processor processes ASTs.
@@ -25,6 +28,9 @@ type Processor struct {
 
 	// Expand controls whether Accrual add-ons are expanded.
 	Expand bool
+
+	// Valuation is the valuation commodity.
+	Valuation *journal.Commodity
 }
 
 // Process processes an AST to a PAST. It check assertions
@@ -174,7 +180,6 @@ func (pr Processor) Process2(a *ast.AST) (*past.PAST, error) {
 		}
 	}
 	return res, nil
-
 }
 
 // ProcessAsync processes an AST to a stream of past.Day. It check assertions
@@ -189,8 +194,8 @@ func (pr Processor) ProcessAsync(ctx context.Context, a *ast.AST) (<-chan *past.
 		dayCp := astCp.Day(d)
 
 		dayCp.Openings = day.Openings
-
 		dayCp.Prices = day.Prices
+		dayCp.Closings = day.Closings
 
 		for _, trx := range day.Transactions {
 			pr.processTransaction(astCp, trx)
@@ -200,7 +205,6 @@ func (pr Processor) ProcessAsync(ctx context.Context, a *ast.AST) (<-chan *past.
 			pr.processAssertion(astCp, a)
 		}
 
-		dayCp.Closings = day.Closings
 	}
 	var (
 		errCh = make(chan error)
@@ -223,9 +227,6 @@ func (pr Processor) ProcessAsync(ctx context.Context, a *ast.AST) (<-chan *past.
 			sorted  = astCp.SortedDays()
 			amounts past.Amounts
 			acc     = make(past.Accounts)
-			res     = &past.PAST{
-				Context: a.Context,
-			}
 		)
 		for _, d := range sorted {
 			day := &past.Day{
@@ -238,7 +239,6 @@ func (pr Processor) ProcessAsync(ctx context.Context, a *ast.AST) (<-chan *past.
 				Values:     d.Values,
 				Closings:   d.Closings,
 			}
-			res.Days = append(res.Days, day)
 			for _, o := range d.Openings {
 				if err := acc.Open(o.Account); err != nil && errOrExit(err) {
 					return
@@ -317,9 +317,9 @@ func (pr Processor) ProcessAsync(ctx context.Context, a *ast.AST) (<-chan *past.
 					return
 				}
 			}
-			amounts = day.Amounts
 			select {
 			case resCh <- day:
+				amounts = day.Amounts
 			case <-ctx.Done():
 				return
 			}
@@ -441,4 +441,185 @@ func (be Error) Error() string {
 	p.PrintDirective(&b, be.directive)
 	fmt.Fprintf(&b, "\n%s\n", be.msg)
 	return b.String()
+}
+
+// Valuate computes prices.
+func (pr Processor) Valuate(ctx context.Context, inCh chan *past.Day) chan *val.Day {
+	var (
+		resCh = make(chan *val.Day)
+		prc   = make(prices.Prices)
+	)
+	go func() {
+		defer close(resCh)
+
+		var previous *val.Day
+		for {
+			select {
+
+			case day, ok := <-inCh:
+				if !ok {
+					return
+				}
+				vday := &val.Day{
+					Date: day.Date,
+					Day:  day,
+				}
+				if pr.Valuation == nil {
+					break
+				}
+				if day.AST != nil && len(day.AST.Prices) > 0 {
+					for _, p := range day.AST.Prices {
+						prc.Insert(p)
+					}
+					vday.Prices = prc.Normalize(pr.Valuation)
+				} else if previous != nil {
+					vday.Prices = previous.Prices
+				}
+
+				select {
+				case resCh <- vday:
+				case <-ctx.Done():
+					return
+				}
+
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return resCh
+}
+
+// ValuateTransactions computes prices.
+func (pr Processor) ValuateTransactions(ctx context.Context, inCh chan *val.Day) (chan *val.Day, chan error) {
+
+	var (
+		errCh = make(chan error)
+		resCh = make(chan *val.Day)
+
+		errOrExit = func(err error) bool {
+			select {
+			case errCh <- err:
+				return false
+			case <-ctx.Done():
+				return true
+			}
+		}
+	)
+	go func() {
+		defer close(resCh)
+		defer close(errCh)
+
+		var values = make(past.Amounts)
+
+		for {
+			select {
+
+			case day, ok := <-inCh:
+				if !ok {
+					return
+				}
+				day.Values = values
+
+				for _, t := range day.Day.Transactions {
+					tv, err := pr.valuateAndBookTransaction(day, t)
+					if err != nil {
+						errOrExit(err)
+						return
+					}
+					day.Transactions = append(day.Transactions, tv)
+				}
+
+				pr.computeValuationTransactions(day)
+
+				values = values.Clone()
+				select {
+				case resCh <- day:
+				case <-ctx.Done():
+					return
+				}
+
+			case <-ctx.Done():
+				return
+
+			}
+		}
+
+	}()
+
+	return resCh, errCh
+}
+
+func (pr Processor) valuateAndBookTransaction(b *val.Day, t *ast.Transaction) (*val.Transaction, error) {
+	var postings []val.Posting
+	for i, posting := range t.Postings {
+		var (
+			value     decimal.Decimal
+			commodity *journal.Commodity
+			err       error
+		)
+		if pr.Valuation == nil || pr.Valuation == posting.Commodity {
+			commodity = posting.Commodity
+			value = posting.Amount
+		} else {
+			if value, err = b.Prices.Valuate(posting.Commodity, posting.Amount); err != nil {
+				return nil, Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
+			}
+		}
+		b.Values.Book(posting.Credit, posting.Debit, value, commodity)
+		postings = append(postings, val.Posting{
+			Source:    &t.Postings[i],
+			Credit:    posting.Credit,
+			Debit:     posting.Debit,
+			Value:     value,
+			Commodity: commodity,
+		})
+	}
+	return &val.Transaction{
+		Source:   t,
+		Postings: postings,
+	}, nil
+}
+
+// computeValuationTransactions checks whether the valuation for the positions
+// corresponds to the amounts. If not, the difference is due to a valuation
+// change of the previous amount, and a transaction is created to adjust the
+// valuation.
+func (pr Processor) computeValuationTransactions(b *val.Day) {
+	if pr.Valuation == nil {
+		return
+	}
+	for pos, va := range b.Day.Amounts {
+		if pos.Commodity == pr.Valuation {
+			continue
+		}
+		var at = pos.Account.Type()
+		if at != journal.ASSETS && at != journal.LIABILITIES {
+			continue
+		}
+		value, err := b.Prices.Valuate(pos.Commodity, va)
+		if err != nil {
+			panic(fmt.Sprintf("no valuation found for commodity %s", pos.Commodity))
+		}
+		var diff = value.Sub(b.Values[pos])
+		if diff.IsZero() {
+			continue
+		}
+		valAcc, err := pr.Context.ValuationAccountFor(pos.Account)
+		if err != nil {
+			panic(fmt.Sprintf("could not obtain valuation account for account %s", pos.Account))
+		}
+		// create a transaction to adjust the valuation
+		b.Transactions = append(b.Transactions, &val.Transaction{
+			Source: nil,
+			Postings: []val.Posting{
+				{
+					Value:     diff,
+					Credit:    valAcc,
+					Debit:     pos.Account,
+					Commodity: pos.Commodity,
+				},
+			},
+		})
+	}
 }

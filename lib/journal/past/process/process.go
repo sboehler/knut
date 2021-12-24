@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/balance/prices"
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
@@ -232,7 +233,7 @@ func (pr Processor) ProcessAsync(ctx context.Context, a *ast.AST) (<-chan *past.
 			day := &past.Day{
 				Date:       d.Date,
 				AST:        a.Days[d.Date], // possibly nil
-				Amounts:    amounts.Clone(),
+				Amounts:    amounts,
 				Openings:   d.Openings,
 				Prices:     d.Prices,
 				Assertions: d.Assertions,
@@ -311,15 +312,15 @@ func (pr Processor) ProcessAsync(ctx context.Context, a *ast.AST) (<-chan *past.
 					if !amount.IsZero() && errOrExit(Error{c, "account has nonzero position"}) {
 						return
 					}
-					delete(amounts, pos)
+					delete(day.Amounts, pos)
 				}
 				if err := acc.Close(c.Account); err != nil && errOrExit(err) {
 					return
 				}
 			}
+			amounts = day.Amounts.Clone()
 			select {
 			case resCh <- day:
-				amounts = day.Amounts
 			case <-ctx.Done():
 				return
 			}
@@ -444,7 +445,7 @@ func (be Error) Error() string {
 }
 
 // Valuate computes prices.
-func (pr Processor) Valuate(ctx context.Context, inCh chan *past.Day) chan *val.Day {
+func (pr Processor) Valuate(ctx context.Context, inCh <-chan *past.Day) <-chan *val.Day {
 	var (
 		resCh = make(chan *val.Day)
 		prc   = make(prices.Prices)
@@ -464,20 +465,21 @@ func (pr Processor) Valuate(ctx context.Context, inCh chan *past.Day) chan *val.
 					Date: day.Date,
 					Day:  day,
 				}
-				if pr.Valuation == nil {
-					break
-				}
-				if day.AST != nil && len(day.AST.Prices) > 0 {
-					for _, p := range day.AST.Prices {
-						prc.Insert(p)
+				if pr.Valuation != nil {
+					if day.AST != nil && len(day.AST.Prices) > 0 {
+						for _, p := range day.AST.Prices {
+							prc.Insert(p)
+						}
+						vday.Prices = prc.Normalize(pr.Valuation)
+					} else if previous == nil {
+						vday.Prices = prc.Normalize(pr.Valuation)
+					} else {
+						vday.Prices = previous.Prices
 					}
-					vday.Prices = prc.Normalize(pr.Valuation)
-				} else if previous != nil {
-					vday.Prices = previous.Prices
 				}
-
 				select {
 				case resCh <- vday:
+					previous = vday
 				case <-ctx.Done():
 					return
 				}
@@ -491,7 +493,7 @@ func (pr Processor) Valuate(ctx context.Context, inCh chan *past.Day) chan *val.
 }
 
 // ValuateTransactions computes prices.
-func (pr Processor) ValuateTransactions(ctx context.Context, inCh chan *val.Day) (chan *val.Day, chan error) {
+func (pr Processor) ValuateTransactions(ctx context.Context, inCh <-chan *val.Day) (chan *val.Day, chan error) {
 
 	var (
 		errCh = make(chan error)
@@ -554,25 +556,23 @@ func (pr Processor) valuateAndBookTransaction(b *val.Day, t *ast.Transaction) (*
 	var postings []val.Posting
 	for i, posting := range t.Postings {
 		var (
-			value     decimal.Decimal
-			commodity *journal.Commodity
-			err       error
+			value decimal.Decimal
+			err   error
 		)
 		if pr.Valuation == nil || pr.Valuation == posting.Commodity {
-			commodity = posting.Commodity
 			value = posting.Amount
 		} else {
 			if value, err = b.Prices.Valuate(posting.Commodity, posting.Amount); err != nil {
 				return nil, Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
 			}
 		}
-		b.Values.Book(posting.Credit, posting.Debit, value, commodity)
+		b.Values.Book(posting.Credit, posting.Debit, value, posting.Commodity)
 		postings = append(postings, val.Posting{
 			Source:    &t.Postings[i],
 			Credit:    posting.Credit,
 			Debit:     posting.Debit,
 			Value:     value,
-			Commodity: commodity,
+			Commodity: posting.Commodity,
 		})
 	}
 	return &val.Transaction{
@@ -609,17 +609,153 @@ func (pr Processor) computeValuationTransactions(b *val.Day) {
 		if err != nil {
 			panic(fmt.Sprintf("could not obtain valuation account for account %s", pos.Account))
 		}
-		// create a transaction to adjust the valuation
-		b.Transactions = append(b.Transactions, &val.Transaction{
-			Source: nil,
-			Postings: []val.Posting{
-				{
-					Value:     diff,
-					Credit:    valAcc,
-					Debit:     pos.Account,
-					Commodity: pos.Commodity,
+		if diff.IsPositive() {
+
+			// create a transaction to adjust the valuation
+			b.Transactions = append(b.Transactions, &val.Transaction{
+				Postings: []val.Posting{
+					{
+						Credit:    valAcc,
+						Debit:     pos.Account,
+						Value:     diff,
+						Commodity: pos.Commodity,
+					},
 				},
-			},
-		})
+			})
+			b.Values.Book(valAcc, pos.Account, diff, pos.Commodity)
+		} else {
+
+			// create a transaction to adjust the valuation
+			b.Transactions = append(b.Transactions, &val.Transaction{
+				Postings: []val.Posting{
+					{
+						Credit:    pos.Account,
+						Debit:     valAcc,
+						Value:     diff.Neg(),
+						Commodity: pos.Commodity,
+					},
+				},
+			})
+			b.Values.Book(pos.Account, valAcc, diff.Neg(), pos.Commodity)
+		}
 	}
+}
+
+type PeriodFilter struct {
+	From, To time.Time
+	Period   date.Period
+	Last     int
+	Diff     bool
+}
+
+func (pf PeriodFilter) Process(ctx context.Context, inCh <-chan *val.Day) <-chan *val.Day {
+	var (
+		resCh = make(chan *val.Day)
+		index int
+	)
+
+	go func() {
+		defer close(resCh)
+		if pf.To.IsZero() {
+			pf.To = date.Today()
+		}
+		var dates []time.Time
+		select {
+		case day, ok := <-inCh:
+			if !ok {
+				return
+			}
+			if pf.From.Before(day.Date) {
+				pf.From = day.Date
+			}
+			if !pf.From.Before(pf.To) {
+				return
+			}
+			dates = date.Series(pf.From, pf.To, pf.Period)
+
+			if pf.Last > 0 {
+				last := pf.Last
+				if len(dates) < last {
+					last = len(dates)
+				}
+				if pf.Diff {
+					last++
+				}
+				if len(dates) > pf.Last {
+					dates = dates[len(dates)-last:]
+				}
+			}
+			for index < len(dates) && dates[index].Before(day.Date) {
+				select {
+				case resCh <- &val.Day{Date: dates[index]}:
+					index++
+				case <-ctx.Done():
+					return
+				}
+			}
+			if index < len(dates) && dates[index].Equal(day.Date) {
+				select {
+				case resCh <- &val.Day{
+					Date:         dates[index],
+					Values:       day.Values,
+					Prices:       day.Prices,
+					Transactions: day.Transactions,
+				}:
+					index++
+				case <-ctx.Done():
+					return
+				}
+			}
+
+		case <-ctx.Done():
+			return
+		}
+
+		var (
+			day *val.Day
+			ok  bool
+		)
+		for inCh != nil {
+			select {
+			case day, ok = <-inCh:
+				if !ok {
+					inCh = nil
+					break
+				}
+				for index < len(dates) && !dates[index].After(day.Date) {
+					r := &val.Day{
+						Date:         dates[index],
+						Values:       day.Values,
+						Prices:       day.Prices,
+						Transactions: day.Transactions,
+					}
+					select {
+					case resCh <- r:
+						index++
+					case <-ctx.Done():
+						return
+					}
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+		for index < len(dates) {
+			r := &val.Day{
+				Date:         dates[index],
+				Values:       day.Values,
+				Prices:       day.Prices,
+				Transactions: day.Transactions,
+			}
+			select {
+			case resCh <- r:
+				index++
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	return resCh
+
 }

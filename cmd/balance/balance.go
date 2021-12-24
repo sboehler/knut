@@ -16,6 +16,7 @@ package balance
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -23,11 +24,9 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/balance/report"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/sboehler/knut/lib/journal/past/process"
 	"github.com/sboehler/knut/lib/table"
 
@@ -97,7 +96,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = journal.NewContext()
+		jctx = journal.NewContext()
 
 		valuation *journal.Commodity
 		period    date.Period
@@ -107,7 +106,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if time.Time(r.to).IsZero() {
 		r.to = flags.DateFlag(date.Today())
 	}
-	if valuation, err = r.valuation.Value(ctx); err != nil {
+	if valuation, err = r.valuation.Value(jctx); err != nil {
 		return err
 	}
 	if period, err = r.period.Value(); err != nil {
@@ -115,28 +114,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 
 	var (
-		bal   = balance.New(ctx, valuation)
-		balCh = make(chan *balance.Balance)
-		steps = []past.Processor{
-			balance.DateUpdater{Balance: bal},
-			balance.AccountOpener{Balance: bal},
-			balance.TransactionBooker{Balance: bal},
-			balance.ValueBooker{Balance: bal},
-			balance.Asserter{Balance: bal},
-			&balance.PriceUpdater{Balance: bal},
-			balance.TransactionValuator{Balance: bal},
-			balance.ValuationTransactionComputer{Balance: bal},
-			balance.AccountCloser{Balance: bal},
-			&balance.Snapshotter{
-				Balance:    bal,
-				From:       r.from.Value(),
-				To:         r.to.Value(),
-				Period:     period,
-				Last:       r.last,
-				Diff:       r.diff,
-				SnapshotCh: balCh,
-			},
-		}
 		filter = journal.Filter{
 			Accounts:    r.accounts.Value(),
 			Commodities: r.commodities.Value(),
@@ -146,7 +123,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Mapping: r.mapping.Value(),
 		}
 		reportRenderer = report.Renderer{
-			Context:         ctx,
+			Context:         jctx,
 			ShowCommodities: r.showCommodities || valuation == nil,
 			Report:          rep,
 		}
@@ -156,18 +133,32 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Round:     r.digits,
 		}
 		proc = process.Processor{
-			Context: ctx,
-			Filter:  filter,
-			Expand:  true,
+			Context:   jctx,
+			Filter:    filter,
+			Expand:    true,
+			Valuation: valuation,
+		}
+		pf = process.PeriodFilter{
+			From:   r.from.Value(),
+			To:     r.to.Value(),
+			Period: period,
+			Last:   r.last,
+			Diff:   r.diff,
 		}
 	)
-
-	l, err := proc.PASTFromPath(args[0])
+	ctx, cancel := context.WithCancel(cmd.Context())
+	defer cancel()
+	as, err := proc.ASTFromPath(args[0])
 	if err != nil {
 		return err
 	}
-	errCh := past.Async(l, steps)
-	for errCh != nil && balCh != nil {
+	ch1, errCh := proc.ProcessAsync(ctx, as)
+	ch2 := proc.Valuate(ctx, ch1)
+	ch3, err2Ch := proc.ValuateTransactions(ctx, ch2)
+
+	ch4 := pf.Process(ctx, ch3)
+
+	for errCh != nil || err2Ch != nil || ch4 != nil {
 		select {
 		case err, ok := <-errCh:
 			if !ok {
@@ -176,9 +167,16 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-		case bal, ok := <-balCh:
+		case err, ok := <-err2Ch:
 			if !ok {
-				balCh = nil
+				err2Ch = nil
+			}
+			if err != nil {
+				return err
+			}
+		case bal, ok := <-ch4:
+			if !ok {
+				ch4 = nil
 			} else {
 				rep.Add(bal)
 			}

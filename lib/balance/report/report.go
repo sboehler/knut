@@ -17,8 +17,8 @@ package report
 import (
 	"time"
 
-	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/val"
 	"github.com/shopspring/decimal"
 )
 
@@ -31,16 +31,12 @@ type Report struct {
 }
 
 // Add adds a balance to this report.
-func (rep *Report) Add(b *balance.Balance) {
+func (rep *Report) Add(b *val.Day) {
 	rep.Dates = append(rep.Dates, b.Date)
 	if rep.Positions == nil {
 		rep.Positions = make(indexByAccount)
 	}
-	var bp = b.Amounts
-	if rep.Value {
-		bp = b.Values
-	}
-	for pos, val := range bp {
+	for pos, val := range b.Values {
 		if val.IsZero() {
 			continue
 		}

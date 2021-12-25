@@ -34,126 +34,10 @@ type Processor struct {
 	Valuation *journal.Commodity
 }
 
-// Process processes an AST to a PAST. It check assertions
+// PASTFromAST processes an AST to a PAST. It check assertions
 // and the usage of open and closed accounts. It will also
 // resolve Value directives and convert them to transactions.
-func (pr Processor) Process(a *ast.AST) (*past.PAST, error) {
-	var astCp = &ast.AST{
-		Context: pr.Context,
-		Days:    make(map[time.Time]*ast.Day),
-	}
-	for d, day := range a.Days {
-		dayCp := astCp.Day(d)
-
-		dayCp.Openings = day.Openings
-
-		dayCp.Prices = day.Prices
-
-		for _, trx := range day.Transactions {
-			pr.processTransaction(astCp, trx)
-		}
-
-		for _, a := range day.Assertions {
-			pr.processAssertion(astCp, a)
-		}
-
-		dayCp.Closings = day.Closings
-	}
-
-	var (
-		sorted  = astCp.SortedDays()
-		amounts past.Amounts
-		acc     = make(past.Accounts)
-		res     = &past.PAST{
-			Context: a.Context,
-		}
-	)
-	for _, d := range sorted {
-		day := &past.Day{
-			Date:       d.Date,
-			AST:        a.Days[d.Date], // possibly nil
-			Amounts:    amounts.Clone(),
-			Openings:   d.Openings,
-			Prices:     d.Prices,
-			Assertions: d.Assertions,
-			Values:     d.Values,
-			Closings:   d.Closings,
-		}
-		res.Days = append(res.Days, day)
-		for _, o := range d.Openings {
-			if err := acc.Open(o.Account); err != nil {
-				return nil, err
-			}
-		}
-		for _, t := range d.Transactions {
-			for _, p := range t.Postings {
-				if !acc.IsOpen(p.Credit) {
-					return nil, Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)}
-				}
-				if !acc.IsOpen(p.Debit) {
-					return nil, Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)}
-				}
-				day.Amounts.Book(p.Credit, p.Debit, p.Amount, p.Commodity)
-			}
-			day.Transactions = append(day.Transactions, t)
-		}
-		if dayA, ok := a.Days[d.Date]; ok {
-			for _, v := range dayA.Values {
-				if !acc.IsOpen(v.Account) {
-					return nil, Error{v, "account is not open"}
-				}
-				var (
-					t   *ast.Transaction
-					err error
-				)
-				if t, err = pr.processValue(day.Amounts, v); err != nil {
-					return nil, err
-				}
-				for _, p := range t.Postings {
-					if !acc.IsOpen(p.Credit) {
-						return nil, Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)}
-					}
-					if !acc.IsOpen(p.Debit) {
-						return nil, Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)}
-					}
-					day.Amounts.Book(p.Credit, p.Debit, p.Amount, p.Commodity)
-				}
-				day.Transactions = append(day.Transactions, t)
-			}
-		}
-		for _, a := range d.Assertions {
-			if !acc.IsOpen(a.Account) {
-				return nil, Error{a, "account is not open"}
-			}
-			var pos = past.CommodityAccount{Account: a.Account, Commodity: a.Commodity}
-			va, ok := day.Amounts[pos]
-			if !ok || !va.Equal(a.Amount) {
-				return nil, Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va, pos.Commodity)}
-			}
-		}
-		for _, c := range d.Closings {
-			for pos, amount := range day.Amounts {
-				if pos.Account != c.Account {
-					continue
-				}
-				if !amount.IsZero() {
-					return nil, Error{c, "account has nonzero position"}
-				}
-				delete(amounts, pos)
-			}
-			if err := acc.Close(c.Account); err != nil {
-				return nil, err
-			}
-		}
-		amounts = day.Amounts
-	}
-	return res, nil
-}
-
-// Process2 processes an AST to a PAST. It check assertions
-// and the usage of open and closed accounts. It will also
-// resolve Value directives and convert them to transactions.
-func (pr Processor) Process2(a *ast.AST) (*past.PAST, error) {
+func (pr Processor) PASTFromAST(a *ast.AST) (*past.PAST, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	dayCh, errCh := pr.ProcessAsync(ctx, a)
@@ -424,24 +308,7 @@ func (pr *Processor) PASTFromPath(p string) (*past.PAST, error) {
 	if err != nil {
 		return nil, err
 	}
-	return pr.Process2(as)
-}
-
-// Error is an error.
-type Error struct {
-	directive ast.Directive
-	msg       string
-}
-
-func (be Error) Error() string {
-	var (
-		p printer.Printer
-		b strings.Builder
-	)
-	fmt.Fprintf(&b, "%s:\n", be.directive.Position().Start)
-	p.PrintDirective(&b, be.directive)
-	fmt.Fprintf(&b, "\n%s\n", be.msg)
-	return b.String()
+	return pr.PASTFromAST(as)
 }
 
 // Valuate computes prices.
@@ -641,6 +508,25 @@ func (pr Processor) computeValuationTransactions(b *val.Day) {
 	}
 }
 
+// Error is an error.
+type Error struct {
+	directive ast.Directive
+	msg       string
+}
+
+func (be Error) Error() string {
+	var (
+		p printer.Printer
+		b strings.Builder
+	)
+	fmt.Fprintf(&b, "%s:\n", be.directive.Position().Start)
+	p.PrintDirective(&b, be.directive)
+	fmt.Fprintf(&b, "\n%s\n", be.msg)
+	return b.String()
+}
+
+// PeriodFilter filters the incoming days according to the dates
+// specified.
 type PeriodFilter struct {
 	From, To time.Time
 	Period   date.Period
@@ -648,6 +534,7 @@ type PeriodFilter struct {
 	Diff     bool
 }
 
+// Process does the filtering.
 func (pf PeriodFilter) Process(ctx context.Context, inCh <-chan *val.Day) <-chan *val.Day {
 	var (
 		resCh = make(chan *val.Day)

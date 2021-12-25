@@ -10,6 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// Day is a day with valuated transactions and positions.
 type Day struct {
 	Day          *past.Day
 	Date         time.Time
@@ -18,11 +19,13 @@ type Day struct {
 	Values       past.Amounts
 }
 
+// Transaction represents a valuated transaction.
 type Transaction struct {
 	Source   *ast.Transaction
 	Postings []Posting
 }
 
+// Posting is a valuated posting.
 type Posting struct {
 	Source        *ast.Posting
 	Credit, Debit *journal.Account

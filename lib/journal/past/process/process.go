@@ -542,14 +542,16 @@ type PeriodFilter struct {
 }
 
 // ProcessStream does the filtering.
-func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) <-chan *val.Day {
+func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-chan *val.Day, <-chan error) {
 	var (
 		resCh = make(chan *val.Day)
+		errCh = make(chan error)
 		index int
 	)
 
 	go func() {
 		defer close(resCh)
+		defer close(errCh)
 		if pf.To.IsZero() {
 			pf.To = date.Today()
 		}
@@ -650,6 +652,6 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 		}
 	}()
 
-	return resCh
+	return resCh, errCh
 
 }

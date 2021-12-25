@@ -23,23 +23,24 @@ import (
 type Renderer struct {
 	Context         journal.Context
 	ShowCommodities bool
-	Report          *Report
+	report          *Report
 	table           *table.Table
 }
 
 // Render renders a report.
-func (rn *Renderer) Render() *table.Table {
-	rn.table = table.New(1, len(rn.Report.Dates))
+func (rn *Renderer) Render(r *Report) *table.Table {
+	rn.report = r
+	rn.table = table.New(1, len(rn.report.Dates))
 	rn.table.AddSeparatorRow()
 
 	header := rn.table.AddRow().AddText("Account", table.Center)
-	for _, d := range rn.Report.Dates {
+	for _, d := range rn.report.Dates {
 		header.AddText(d.Format("2006-01-02"), table.Center)
 	}
 	rn.table.AddSeparatorRow()
 
 	var (
-		subtree = rn.Report.Subtree()
+		subtree = rn.report.Subtree()
 		al, eie []*journal.Account
 	)
 	for acc := range rn.Context.Accounts().PreOrder() {
@@ -71,8 +72,8 @@ func (rn *Renderer) renderSection(al []*journal.Account, negate bool) indexByCom
 		if i != 0 && acc.Level() == 1 {
 			rn.table.AddEmptyRow()
 		}
-		rn.render(2*(acc.Level()-1), acc.Segment(), !acc.IsAL(), rn.Report.Positions[acc])
-		res.AddFrom(rn.Report.Positions[acc])
+		rn.render(2*(acc.Level()-1), acc.Segment(), !acc.IsAL(), rn.report.Positions[acc])
+		res.AddFrom(rn.report.Positions[acc])
 	}
 	res.Normalize()
 	rn.table.AddEmptyRow()
@@ -100,7 +101,7 @@ func (rn *Renderer) renderByCommodity(indent int, key string, negate bool, byCom
 
 func (rn Renderer) renderAmounts(indent int, key string, negate bool, byDate indexByDate) {
 	row := rn.table.AddRow().AddIndented(key, indent)
-	for _, date := range rn.Report.Dates {
+	for _, date := range rn.report.Dates {
 		amount, ok := byDate[date]
 		if !ok || amount.IsZero() {
 			row.AddEmpty()

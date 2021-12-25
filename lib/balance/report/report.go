@@ -15,6 +15,7 @@
 package report
 
 import (
+	"context"
 	"time"
 
 	"github.com/sboehler/knut/lib/journal"
@@ -25,25 +26,8 @@ import (
 // Report is a balance report for a range of dates.
 type Report struct {
 	Dates     []time.Time
-	Value     bool
 	Mapping   journal.Mapping
 	Positions indexByAccount
-}
-
-// Add adds a balance to this report.
-func (rep *Report) Add(b *val.Day) {
-	rep.Dates = append(rep.Dates, b.Date)
-	if rep.Positions == nil {
-		rep.Positions = make(indexByAccount)
-	}
-	for pos, val := range b.Values {
-		if val.IsZero() {
-			continue
-		}
-		if acc := pos.Account.Map(rep.Mapping); acc != nil {
-			rep.Positions.Add(acc, pos.Commodity, b.Date, val)
-		}
-	}
 }
 
 // Subtree returns the accounts of the minimal dense subtree which
@@ -56,6 +40,55 @@ func (rep Report) Subtree() map[*journal.Account]struct{} {
 		}
 	}
 	return m
+}
+
+// Builder builds a report.
+type Builder struct {
+	Mapping journal.Mapping
+}
+
+func (rb *Builder) add(rep *Report, b *val.Day) {
+	rep.Dates = append(rep.Dates, b.Date)
+	if rep.Positions == nil {
+		rep.Positions = make(indexByAccount)
+	}
+	for pos, val := range b.Values {
+		if val.IsZero() {
+			continue
+		}
+		if acc := pos.Account.Map(rb.Mapping); acc != nil {
+			rep.Positions.Add(acc, pos.Commodity, b.Date, val)
+		}
+	}
+}
+
+// FromStream consumes the stream and produces a report.
+func (rb *Builder) FromStream(ctx context.Context, ch <-chan *val.Day) (<-chan *Report, <-chan error) {
+	var (
+		resCh = make(chan *Report)
+		errCh = make(chan error)
+	)
+	go func() {
+		defer close(resCh)
+		defer close(errCh)
+		res := new(Report)
+		for ch != nil {
+			select {
+			case <-ctx.Done():
+				return
+			case d, ok := <-ch:
+				if !ok {
+					select {
+					case <-ctx.Done():
+					case resCh <- res:
+					}
+					return
+				}
+				rb.add(res, d)
+			}
+		}
+	}()
+	return resCh, errCh
 }
 
 type indexByAccount map[*journal.Account]indexByCommodity

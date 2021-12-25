@@ -119,20 +119,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Accounts:    r.accounts.Value(),
 			Commodities: r.commodities.Value(),
 		}
-		rep = &report.Report{
-			Value:   valuation != nil,
-			Mapping: r.mapping.Value(),
-		}
-		reportRenderer = report.Renderer{
-			Context:         jctx,
-			ShowCommodities: r.showCommodities || valuation == nil,
-			Report:          rep,
-		}
-		tableRenderer = table.TextRenderer{
-			Color:     r.color,
-			Thousands: r.thousands,
-			Round:     r.digits,
-		}
 		astBuilder = process.ASTBuilder{
 			Context: jctx,
 		}
@@ -156,6 +142,18 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Last:   r.last,
 			Diff:   r.diff,
 		}
+		reportBuilder = report.Builder{
+			Mapping: r.mapping.Value(),
+		}
+		reportRenderer = report.Renderer{
+			Context:         jctx,
+			ShowCommodities: r.showCommodities || valuation == nil,
+		}
+		tableRenderer = table.TextRenderer{
+			Color:     r.color,
+			Thousands: r.thousands,
+			Round:     r.digits,
+		}
 	)
 	ctx, cancel := context.WithCancel(cmd.Context())
 	defer cancel()
@@ -168,30 +166,30 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	ch1, errCh1 := pastBuilder.StreamFromAST(ctx, as)
 	ch2, errCh2 := priceUpdater.ProcessStream(ctx, ch1)
 	ch3, errCh3 := valuator.ProcessStream(ctx, ch2)
-	ch4 := periodFilter.ProcessStream(ctx, ch3)
+	ch4, errCh4 := periodFilter.ProcessStream(ctx, ch3)
+	ch5, errCh5 := reportBuilder.FromStream(ctx, ch4)
 
-	errCh := mergeErrors(errCh1, errCh2, errCh3)
+	errCh := mergeErrors(errCh1, errCh2, errCh3, errCh4, errCh5)
 
-	for errCh != nil || ch4 != nil {
+	for {
 		select {
+
+		case rep, ok := <-ch5:
+			if !ok {
+				return fmt.Errorf("no report was produced")
+			}
+			var out = bufio.NewWriter(cmd.OutOrStdout())
+			defer out.Flush()
+			return tableRenderer.Render(reportRenderer.Render(rep), out)
+
 		case err, ok := <-errCh:
 			if !ok {
 				errCh = nil
-			}
-			if err != nil {
+			} else if err != nil {
 				return err
-			}
-		case bal, ok := <-ch4:
-			if !ok {
-				ch4 = nil
-			} else {
-				rep.Add(bal)
 			}
 		}
 	}
-	var out = bufio.NewWriter(cmd.OutOrStdout())
-	defer out.Flush()
-	return tableRenderer.Render(reportRenderer.Render(), out)
 }
 
 func mergeErrors(inChs ...<-chan error) chan error {

@@ -18,7 +18,7 @@ type PriceUpdater struct {
 // ProcessStream computes prices.
 func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day) (<-chan *val.Day, <-chan error) {
 	var (
-		resCh = make(chan *val.Day)
+		resCh = make(chan *val.Day, 100)
 		errCh = make(chan error)
 		prc   = make(prices.Prices)
 	)

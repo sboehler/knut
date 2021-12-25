@@ -22,7 +22,7 @@ func (pr Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (cha
 
 	var (
 		errCh = make(chan error)
-		resCh = make(chan *val.Day)
+		resCh = make(chan *val.Day, 100)
 
 		errOrExit = func(err error) bool {
 			select {

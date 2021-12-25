@@ -83,7 +83,7 @@ func (pr *PASTBuilder) StreamFromAST(ctx context.Context, a *ast.AST) (<-chan *p
 	}
 	var (
 		errCh = make(chan error)
-		resCh = make(chan *past.Day)
+		resCh = make(chan *past.Day, 100)
 
 		errOrExit = func(err error) bool {
 			select {

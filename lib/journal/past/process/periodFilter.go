@@ -20,7 +20,7 @@ type PeriodFilter struct {
 // ProcessStream does the filtering.
 func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-chan *val.Day, <-chan error) {
 	var (
-		resCh = make(chan *val.Day)
+		resCh = make(chan *val.Day, 100)
 		errCh = make(chan error)
 		index int
 	)

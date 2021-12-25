@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
+	"sync"
 	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
@@ -136,10 +137,9 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context: jctx,
 		}
 		pastBuilder = process.PASTBuilder{
-			Context:   jctx,
-			Filter:    filter,
-			Expand:    true,
-			Valuation: valuation,
+			Context: jctx,
+			Filter:  filter,
+			Expand:  true,
 		}
 		priceUpdater = process.PriceUpdater{
 			Context:   jctx,
@@ -164,26 +164,19 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	ch1, errCh1 := pastBuilder.StreamFromAST(ctx, as)
-
-	ch2 := priceUpdater.ProcessStream(ctx, ch1)
-
+	ch2, errCh2 := priceUpdater.ProcessStream(ctx, ch1)
 	ch3, errCh3 := valuator.ProcessStream(ctx, ch2)
-
 	ch4 := periodFilter.ProcessStream(ctx, ch3)
 
-	for errCh1 != nil || errCh3 != nil || ch4 != nil {
+	errCh := mergeErrors(errCh1, errCh2, errCh3)
+
+	for errCh != nil || ch4 != nil {
 		select {
-		case err, ok := <-errCh1:
+		case err, ok := <-errCh:
 			if !ok {
-				errCh1 = nil
-			}
-			if err != nil {
-				return err
-			}
-		case err, ok := <-errCh3:
-			if !ok {
-				errCh3 = nil
+				errCh = nil
 			}
 			if err != nil {
 				return err
@@ -199,4 +192,25 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	var out = bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 	return tableRenderer.Render(reportRenderer.Render(), out)
+}
+
+func mergeErrors(inChs ...<-chan error) chan error {
+	var (
+		wg    sync.WaitGroup
+		errCh = make(chan error)
+	)
+	wg.Add(len(inChs))
+	for _, inCh := range inChs {
+		go func(ch <-chan error) {
+			defer wg.Done()
+			for err := range ch {
+				errCh <- err
+			}
+		}(inCh)
+	}
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+	return errCh
 }

@@ -69,9 +69,6 @@ type PASTBuilder struct {
 
 	// Expand controls whether Accrual add-ons are expanded.
 	Expand bool
-
-	// Valuation is the valuation commodity.
-	Valuation *journal.Commodity
 }
 
 // FromAST processes an AST to a PAST. It check assertions
@@ -314,13 +311,15 @@ type PriceUpdater struct {
 }
 
 // ProcessStream computes prices.
-func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day) <-chan *val.Day {
+func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day) (<-chan *val.Day, <-chan error) {
 	var (
 		resCh = make(chan *val.Day)
+		errCh = make(chan error)
 		prc   = make(prices.Prices)
 	)
 	go func() {
 		defer close(resCh)
+		defer close(errCh)
 
 		var previous *val.Day
 		for {
@@ -358,7 +357,7 @@ func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day)
 			}
 		}
 	}()
-	return resCh
+	return resCh, errCh
 }
 
 // Valuator produces valuated days.

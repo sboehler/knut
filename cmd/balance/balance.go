@@ -164,26 +164,26 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ch1, errCh := pastBuilder.StreamFromAST(ctx, as)
+	ch1, errCh1 := pastBuilder.StreamFromAST(ctx, as)
 
 	ch2 := priceUpdater.ProcessStream(ctx, ch1)
 
-	ch3, err2Ch := valuator.ProcessStream(ctx, ch2)
+	ch3, errCh3 := valuator.ProcessStream(ctx, ch2)
 
 	ch4 := periodFilter.ProcessStream(ctx, ch3)
 
-	for errCh != nil || err2Ch != nil || ch4 != nil {
+	for errCh1 != nil || errCh3 != nil || ch4 != nil {
 		select {
-		case err, ok := <-errCh:
+		case err, ok := <-errCh1:
 			if !ok {
-				errCh = nil
+				errCh1 = nil
 			}
 			if err != nil {
 				return err
 			}
-		case err, ok := <-err2Ch:
+		case err, ok := <-errCh3:
 			if !ok {
-				err2Ch = nil
+				errCh3 = nil
 			}
 			if err != nil {
 				return err

@@ -132,13 +132,24 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Thousands: r.thousands,
 			Round:     r.digits,
 		}
-		proc = process.Processor{
+		astBuilder = process.ASTBuilder{
+			Context: jctx,
+		}
+		pastBuilder = process.PASTBuilder{
 			Context:   jctx,
 			Filter:    filter,
 			Expand:    true,
 			Valuation: valuation,
 		}
-		pf = process.PeriodFilter{
+		priceUpdater = process.PriceUpdater{
+			Context:   jctx,
+			Valuation: valuation,
+		}
+		valuator = process.Valuator{
+			Context:   jctx,
+			Valuation: valuation,
+		}
+		periodFilter = process.PeriodFilter{
 			From:   r.from.Value(),
 			To:     r.to.Value(),
 			Period: period,
@@ -148,15 +159,18 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	)
 	ctx, cancel := context.WithCancel(cmd.Context())
 	defer cancel()
-	as, err := proc.ASTFromPath(args[0])
+
+	as, err := astBuilder.ASTFromPath(args[0])
 	if err != nil {
 		return err
 	}
-	ch1, errCh := proc.ProcessAsync(ctx, as)
-	ch2 := proc.Valuate(ctx, ch1)
-	ch3, err2Ch := proc.ValuateTransactions(ctx, ch2)
+	ch1, errCh := pastBuilder.StreamFromAST(ctx, as)
 
-	ch4 := pf.Process(ctx, ch3)
+	ch2 := priceUpdater.ProcessStream(ctx, ch1)
+
+	ch3, err2Ch := valuator.ProcessStream(ctx, ch2)
+
+	ch4 := periodFilter.ProcessStream(ctx, ch3)
 
 	for errCh != nil || err2Ch != nil || ch4 != nil {
 		select {

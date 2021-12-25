@@ -17,8 +17,48 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Processor processes ASTs.
-type Processor struct {
+// ASTBuilder builds an abstract syntax tree.
+type ASTBuilder struct {
+	Context journal.Context
+}
+
+// ASTFromPath reads directives from the given channel and
+// builds a Ledger if successful.
+func (pr *ASTBuilder) ASTFromPath(p string) (*ast.AST, error) {
+	par := parser.RecursiveParser{
+		File:    p,
+		Context: pr.Context,
+	}
+	results := par.Parse()
+	var b = &ast.AST{
+		Context: pr.Context,
+		Days:    make(map[time.Time]*ast.Day),
+	}
+	for res := range results {
+		switch t := res.(type) {
+		case error:
+			return nil, t
+		case *ast.Open:
+			b.AddOpen(t)
+		case *ast.Price:
+			b.AddPrice(t)
+		case *ast.Transaction:
+			b.AddTransaction(t)
+		case *ast.Assertion:
+			b.AddAssertion(t)
+		case *ast.Value:
+			b.AddValue(t)
+		case *ast.Close:
+			b.AddClose(t)
+		default:
+			return nil, fmt.Errorf("unknown: %#v", t)
+		}
+	}
+	return b, nil
+}
+
+// PASTBuilder processes ASTs.
+type PASTBuilder struct {
 
 	// The context of this journal.
 	Context journal.Context
@@ -34,13 +74,13 @@ type Processor struct {
 	Valuation *journal.Commodity
 }
 
-// PASTFromAST processes an AST to a PAST. It check assertions
+// FromAST processes an AST to a PAST. It check assertions
 // and the usage of open and closed accounts. It will also
 // resolve Value directives and convert them to transactions.
-func (pr Processor) PASTFromAST(a *ast.AST) (*past.PAST, error) {
+func (pr PASTBuilder) FromAST(a *ast.AST) (*past.PAST, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	dayCh, errCh := pr.ProcessAsync(ctx, a)
+	dayCh, errCh := pr.StreamFromAST(ctx, a)
 	res := &past.PAST{
 		Context: a.Context,
 	}
@@ -67,10 +107,10 @@ func (pr Processor) PASTFromAST(a *ast.AST) (*past.PAST, error) {
 	return res, nil
 }
 
-// ProcessAsync processes an AST to a stream of past.Day. It check assertions
+// StreamFromAST processes an AST to a stream of past.Day. It check assertions
 // and the usage of open and closed accounts. It will also
 // resolve Value directives and convert them to transactions.
-func (pr Processor) ProcessAsync(ctx context.Context, a *ast.AST) (<-chan *past.Day, <-chan error) {
+func (pr *PASTBuilder) StreamFromAST(ctx context.Context, a *ast.AST) (<-chan *past.Day, <-chan error) {
 	var astCp = &ast.AST{
 		Context: pr.Context,
 		Days:    make(map[time.Time]*ast.Day),
@@ -214,7 +254,7 @@ func (pr Processor) ProcessAsync(ctx context.Context, a *ast.AST) (<-chan *past.
 }
 
 // ProcessTransaction adds a transaction directive.
-func (pr *Processor) processTransaction(a *ast.AST, t *ast.Transaction) {
+func (pr *PASTBuilder) processTransaction(a *ast.AST, t *ast.Transaction) {
 	if pr.Expand && len(t.AddOns) > 0 {
 		for _, addOn := range t.AddOns {
 			switch acc := addOn.(type) {
@@ -246,13 +286,13 @@ func (pr *Processor) processTransaction(a *ast.AST, t *ast.Transaction) {
 }
 
 // ProcessAssertion adds an assertion directive.
-func (pr *Processor) processAssertion(as *ast.AST, a *ast.Assertion) {
+func (pr *PASTBuilder) processAssertion(as *ast.AST, a *ast.Assertion) {
 	if pr.Filter.MatchAccount(a.Account) && pr.Filter.MatchCommodity(a.Commodity) {
 		as.AddAssertion(a)
 	}
 }
 
-func (pr *Processor) processValue(bal past.Amounts, v *ast.Value) (*ast.Transaction, error) {
+func (pr *PASTBuilder) processValue(bal past.Amounts, v *ast.Value) (*ast.Transaction, error) {
 	valAcc, err := pr.Context.ValuationAccountFor(v.Account)
 	if err != nil {
 		return nil, err
@@ -267,52 +307,14 @@ func (pr *Processor) processValue(bal past.Amounts, v *ast.Value) (*ast.Transact
 	}, nil
 }
 
-// ASTFromPath reads directives from the given channel and
-// builds a Ledger if successful.
-func (pr *Processor) ASTFromPath(p string) (*ast.AST, error) {
-	par := parser.RecursiveParser{
-		File:    p,
-		Context: pr.Context,
-	}
-	results := par.Parse()
-	var b = &ast.AST{
-		Context: pr.Context,
-		Days:    make(map[time.Time]*ast.Day),
-	}
-	for res := range results {
-		switch t := res.(type) {
-		case error:
-			return nil, t
-		case *ast.Open:
-			b.AddOpen(t)
-		case *ast.Price:
-			b.AddPrice(t)
-		case *ast.Transaction:
-			b.AddTransaction(t)
-		case *ast.Assertion:
-			b.AddAssertion(t)
-		case *ast.Value:
-			b.AddValue(t)
-		case *ast.Close:
-			b.AddClose(t)
-		default:
-			return nil, fmt.Errorf("unknown: %#v", t)
-		}
-	}
-	return b, nil
+// PriceUpdater updates the prices in a stream of days.
+type PriceUpdater struct {
+	Context   journal.Context
+	Valuation *journal.Commodity
 }
 
-// PASTFromPath processes a journal and returns a processed AST.
-func (pr *Processor) PASTFromPath(p string) (*past.PAST, error) {
-	as, err := pr.ASTFromPath(p)
-	if err != nil {
-		return nil, err
-	}
-	return pr.PASTFromAST(as)
-}
-
-// Valuate computes prices.
-func (pr Processor) Valuate(ctx context.Context, inCh <-chan *past.Day) <-chan *val.Day {
+// ProcessStream computes prices.
+func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day) <-chan *val.Day {
 	var (
 		resCh = make(chan *val.Day)
 		prc   = make(prices.Prices)
@@ -359,8 +361,14 @@ func (pr Processor) Valuate(ctx context.Context, inCh <-chan *past.Day) <-chan *
 	return resCh
 }
 
-// ValuateTransactions computes prices.
-func (pr Processor) ValuateTransactions(ctx context.Context, inCh <-chan *val.Day) (chan *val.Day, chan error) {
+// Valuator produces valuated days.
+type Valuator struct {
+	Context   journal.Context
+	Valuation *journal.Commodity
+}
+
+// ProcessStream computes prices.
+func (pr Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (chan *val.Day, chan error) {
 
 	var (
 		errCh = make(chan error)
@@ -419,7 +427,7 @@ func (pr Processor) ValuateTransactions(ctx context.Context, inCh <-chan *val.Da
 	return resCh, errCh
 }
 
-func (pr Processor) valuateAndBookTransaction(b *val.Day, t *ast.Transaction) (*val.Transaction, error) {
+func (pr Valuator) valuateAndBookTransaction(b *val.Day, t *ast.Transaction) (*val.Transaction, error) {
 	var postings []val.Posting
 	for i, posting := range t.Postings {
 		var (
@@ -452,7 +460,7 @@ func (pr Processor) valuateAndBookTransaction(b *val.Day, t *ast.Transaction) (*
 // corresponds to the amounts. If not, the difference is due to a valuation
 // change of the previous amount, and a transaction is created to adjust the
 // valuation.
-func (pr Processor) computeValuationTransactions(b *val.Day) {
+func (pr Valuator) computeValuationTransactions(b *val.Day) {
 	if pr.Valuation == nil {
 		return
 	}
@@ -534,8 +542,8 @@ type PeriodFilter struct {
 	Diff     bool
 }
 
-// Process does the filtering.
-func (pf PeriodFilter) Process(ctx context.Context, inCh <-chan *val.Day) <-chan *val.Day {
+// ProcessStream does the filtering.
+func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) <-chan *val.Day {
 	var (
 		resCh = make(chan *val.Day)
 		index int

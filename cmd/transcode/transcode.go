@@ -107,7 +107,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	errCh := mergeErrors(errCh1, errCh2, errCh3)
 
 	var days []*val.Day
-	for ch3 != nil && errCh != nil {
+	for ch3 != nil || errCh != nil {
 		select {
 		case d, ok := <-ch3:
 			if !ok {

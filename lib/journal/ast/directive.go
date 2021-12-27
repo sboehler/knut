@@ -88,6 +88,7 @@ func (p Posting) Less(p2 Posting) bool {
 	return p.Commodity.String() < p2.Commodity.String()
 }
 
+// Equal determines a measure of equality.
 func (p Posting) Equal(p2 Posting) bool {
 	return p.Credit == p2.Credit &&
 		p.Debit == p2.Debit &&
@@ -164,11 +165,7 @@ func (t *Transaction) Less(t2 *Transaction) bool {
 			return t.Postings[i].Less(t2.Postings[i])
 		}
 	}
-	if len(t.Postings) < len(t2.Postings) {
-		return true
-	} else {
-		return false
-	}
+	return len(t.Postings) < len(t2.Postings)
 }
 
 // Price represents a price command.

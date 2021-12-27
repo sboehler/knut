@@ -131,7 +131,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	defer func() { err = multierr.Append(err, w.Flush()) }()
 
 	// transcode the ledger here
-	return beancount.Transcode(w, jctx, days, valuation)
+	return beancount.Transcode(w, days, valuation)
 }
 
 func mergeErrors(inChs ...<-chan error) chan error {

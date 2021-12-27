@@ -142,6 +142,9 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Last:   r.last,
 			Diff:   r.diff,
 		}
+		differ = process.Differ{
+			Diff: r.diff,
+		}
 		reportBuilder = report.Builder{
 			Mapping: r.mapping.Value(),
 		}
@@ -167,14 +170,15 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	ch2, errCh2 := priceUpdater.ProcessStream(ctx, ch1)
 	ch3, errCh3 := valuator.ProcessStream(ctx, ch2)
 	ch4, errCh4 := periodFilter.ProcessStream(ctx, ch3)
-	ch5, errCh5 := reportBuilder.FromStream(ctx, ch4)
+	ch5, errCh5 := differ.ProcessStream(ctx, ch4)
+	ch6, errCh6 := reportBuilder.FromStream(ctx, ch5)
 
-	errCh := mergeErrors(errCh1, errCh2, errCh3, errCh4, errCh5)
+	errCh := mergeErrors(errCh1, errCh2, errCh3, errCh4, errCh5, errCh6)
 
 	for {
 		select {
 
-		case rep, ok := <-ch5:
+		case rep, ok := <-ch6:
 			if !ok {
 				return fmt.Errorf("no report was produced")
 			}

@@ -158,6 +158,13 @@ func (am Amounts) Clone() Amounts {
 	return clone
 }
 
+// Minus mutably subtracts.
+func (am Amounts) Minus(a Amounts) {
+	for ca, v := range a {
+		am[ca] = am[ca].Sub(v)
+	}
+}
+
 // Accounts keeps track of open accounts.
 type Accounts map[*journal.Account]bool
 

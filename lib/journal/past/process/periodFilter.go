@@ -83,17 +83,15 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 			return
 		}
 
-		var (
-			day *val.Day
-			ok  bool
-		)
+		var day *val.Day
 		for inCh != nil {
 			select {
-			case day, ok = <-inCh:
+			case d, ok := <-inCh:
 				if !ok {
 					inCh = nil
 					break
 				}
+				day = d
 				for index < len(dates) && !dates[index].After(day.Date) {
 					r := &val.Day{
 						Date:         dates[index],
@@ -112,7 +110,7 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 				return
 			}
 		}
-		for index < len(dates) {
+		for day != nil && index < len(dates) {
 			r := &val.Day{
 				Date:         dates[index],
 				Values:       day.Values,

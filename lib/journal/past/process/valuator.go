@@ -120,16 +120,18 @@ func (pr Valuator) computeValuationTransactions(b *val.Day) {
 		if err != nil {
 			panic(fmt.Sprintf("could not obtain valuation account for account %s", pos.Account))
 		}
+		desc := fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account)
 		if diff.IsPositive() {
 
 			// create a transaction to adjust the valuation
 			b.Transactions = append(b.Transactions, &ast.Transaction{
-				Date: b.Date,
+				Date:        b.Date,
+				Description: desc,
 				Postings: []ast.Posting{
 					{
 						Credit:    valAcc,
 						Debit:     pos.Account,
-						Value:     diff,
+						Amount:    diff,
 						Commodity: pos.Commodity,
 					},
 				},
@@ -139,12 +141,13 @@ func (pr Valuator) computeValuationTransactions(b *val.Day) {
 
 			// create a transaction to adjust the valuation
 			b.Transactions = append(b.Transactions, &ast.Transaction{
-				Date: b.Date,
+				Date:        b.Date,
+				Description: desc,
 				Postings: []ast.Posting{
 					{
 						Credit:    pos.Account,
 						Debit:     valAcc,
-						Value:     diff.Neg(),
+						Amount:    diff.Neg(),
 						Commodity: pos.Commodity,
 					},
 				},

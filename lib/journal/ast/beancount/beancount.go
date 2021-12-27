@@ -18,39 +18,60 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"sort"
+	"strings"
 
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
-	"github.com/sboehler/knut/lib/journal/past"
+	"github.com/sboehler/knut/lib/journal/val"
 )
 
 // Transcode transcodes the given ledger to beancount.
-func Transcode(w io.Writer, l *past.PAST, c *journal.Commodity) error {
+func Transcode(w io.Writer, jctx journal.Context, l []*val.Day, c *journal.Commodity) error {
 	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n\n"); err != nil {
 		return err
 	}
-	l.Days[0].Openings = append(l.Days[0].Openings,
-		&ast.Open{
-			Date:    l.Days[0].Date,
-			Account: l.Context.ValuationAccount(),
-		},
-		&ast.Open{
-			Date:    l.Days[0].Date,
-			Account: l.Context.RetainedEarningsAccount(),
-		},
-	)
 	var p printer.Printer
-	for _, day := range l.Days {
-		for _, open := range day.Openings {
-			if _, err := p.PrintDirective(w, open); err != nil {
-				return err
+	var openValAccounts = make(map[*journal.Account]bool)
+	for _, day := range l {
+		if day.Day != nil && day.Day.AST != nil {
+			for _, open := range day.Day.AST.Openings {
+				if _, err := p.PrintDirective(w, open); err != nil {
+					return err
+				}
+				if _, err := io.WriteString(w, "\n\n"); err != nil {
+					return err
+				}
 			}
-			if _, err := io.WriteString(w, "\n\n"); err != nil {
-				return err
+		}
+		sort.Slice(day.Transactions, func(i, j int) bool {
+			return day.Transactions[i].Less(day.Transactions[j])
+		})
+
+		for _, trx := range day.Transactions {
+			for _, pst := range trx.Postings {
+				if strings.HasPrefix(pst.Credit.Name(), "Equity:Valuation:") && !openValAccounts[pst.Credit] {
+					openValAccounts[pst.Credit] = true
+					if _, err := p.PrintDirective(w, &ast.Open{Date: trx.Date, Account: pst.Credit}); err != nil {
+						return err
+					}
+					if _, err := io.WriteString(w, "\n\n"); err != nil {
+						return err
+					}
+				}
+				if strings.HasPrefix(pst.Debit.Name(), "Equity:Valuation:") && !openValAccounts[pst.Debit] {
+					openValAccounts[pst.Debit] = true
+					if _, err := p.PrintDirective(w, &ast.Open{Date: trx.Date, Account: pst.Debit}); err != nil {
+						return err
+					}
+					if _, err := io.WriteString(w, "\n\n"); err != nil {
+						return err
+					}
+				}
 			}
 		}
 		for _, trx := range day.Transactions {
@@ -58,12 +79,14 @@ func Transcode(w io.Writer, l *past.PAST, c *journal.Commodity) error {
 				return err
 			}
 		}
-		for _, close := range day.Closings {
-			if _, err := p.PrintDirective(w, close); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(w, "\n\n"); err != nil {
-				return err
+		if day.Day != nil && day.Day.AST != nil {
+			for _, close := range day.Day.AST.Closings {
+				if _, err := p.PrintDirective(w, close); err != nil {
+					return err
+				}
+				if _, err := io.WriteString(w, "\n\n"); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -93,14 +116,14 @@ func writeTrx(w io.Writer, t *ast.Transaction, c *journal.Commodity) error {
 
 // WriteTo pretty-prints a posting.
 func writePosting(w io.Writer, p ast.Posting, c *journal.Commodity) error {
-	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit, p.Value.Neg(), stripNonAlphanum(c)); err != nil {
+	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit, p.Amount.Neg(), stripNonAlphanum(c)); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n"); err != nil {
 		return err
 	}
 
-	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Debit, p.Value, stripNonAlphanum(c)); err != nil {
+	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Debit, p.Amount, stripNonAlphanum(c)); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n"); err != nil {

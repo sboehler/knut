@@ -16,14 +16,16 @@ package transcode
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
+	"sync"
 
-	"github.com/sboehler/knut/lib/balance"
+	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast/beancount"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
-	"github.com/sboehler/knut/lib/journal/past"
+	"github.com/sboehler/knut/lib/journal/past/process"
+	"github.com/sboehler/knut/lib/journal/val"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
@@ -31,6 +33,8 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
+	var r runner
+
 	// Cmd is the balance command.
 	var cmd = &cobra.Command{
 		Use:   "transcode",
@@ -40,59 +44,113 @@ func CreateCmd() *cobra.Command {
 
 		Args: cobra.ExactValidArgs(1),
 
-		Run: run,
+		Run: r.run,
 	}
-	cmd.Flags().StringP("commodity", "c", "", "valuate in the given commodity")
+	r.setupFlags(cmd)
 	return cmd
 }
 
-func run(cmd *cobra.Command, args []string) {
-	if err := execute(cmd, args); err != nil {
+type runner struct {
+	valuation flags.CommodityFlag
+}
+
+func (r *runner) setupFlags(c *cobra.Command) {
+	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
+}
+
+func (r *runner) run(cmd *cobra.Command, args []string) {
+	if err := r.execute(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		os.Exit(1)
 	}
 }
 
-func execute(cmd *cobra.Command, args []string) (errors error) {
-	c, err := cmd.Flags().GetString("commodity")
+func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
+	var (
+		jctx      = journal.NewContext()
+		valuation *journal.Commodity
+		err       error
+	)
+	if valuation, err = r.valuation.Value(jctx); err != nil {
+		return err
+	}
+	var (
+		astBuilder = process.ASTBuilder{
+			Context: jctx,
+		}
+		pastBuilder = process.PASTBuilder{
+			Context: jctx,
+			Expand:  true,
+		}
+		priceUpdater = process.PriceUpdater{
+			Context:   jctx,
+			Valuation: valuation,
+		}
+		valuator = process.Valuator{
+			Context:   jctx,
+			Valuation: valuation,
+		}
+	)
+
+	ctx, cancel := context.WithCancel(cmd.Context())
+	defer cancel()
+
+	as, err := astBuilder.ASTFromPath(args[0])
 	if err != nil {
 		return err
 	}
-	if c == "" {
-		return fmt.Errorf("missing --commodity flag, please provide a valuation commodity")
-	}
-	var (
-		ctx       = journal.NewContext()
-		commodity *journal.Commodity
-		j         = parser.RecursiveParser{Context: ctx, File: args[0]}
-		l         *past.PAST
-	)
-	if commodity, err = ctx.GetCommodity(c); err != nil {
-		return err
-	}
-	if l, err = past.FromDirectives(ctx, journal.Filter{}, j.Parse()); err != nil {
-		return err
-	}
-	var (
-		bal   = balance.New(ctx, commodity)
-		steps = []past.Processor{
-			balance.DateUpdater{Balance: bal},
-			balance.AccountOpener{Balance: bal},
-			balance.TransactionBooker{Balance: bal},
-			balance.ValueBooker{Balance: bal},
-			balance.Asserter{Balance: bal},
-			&balance.PriceUpdater{Balance: bal},
-			balance.TransactionValuator{Balance: bal},
-			balance.ValuationTransactionComputer{Balance: bal},
-			balance.AccountCloser{Balance: bal},
+
+	ch1, errCh1 := pastBuilder.StreamFromAST(ctx, as)
+	ch2, errCh2 := priceUpdater.ProcessStream(ctx, ch1)
+	ch3, errCh3 := valuator.ProcessStream(ctx, ch2)
+
+	errCh := mergeErrors(errCh1, errCh2, errCh3)
+
+	var days []*val.Day
+	for ch3 != nil && errCh != nil {
+		select {
+		case d, ok := <-ch3:
+			if !ok {
+				ch3 = nil
+				break
+			}
+			days = append(days, d)
+
+		case err, ok := <-errCh:
+			if !ok {
+				errCh = nil
+				break
+			}
+			if err != nil {
+				return err
+			}
 		}
-	)
-	if err := past.Sync(l, steps); err != nil {
-		return err
 	}
+
 	var w = bufio.NewWriter(cmd.OutOrStdout())
 	defer func() { err = multierr.Append(err, w.Flush()) }()
 
 	// transcode the ledger here
-	return beancount.Transcode(w, l, commodity)
+	return beancount.Transcode(w, jctx, days, valuation)
+}
+
+func mergeErrors(inChs ...<-chan error) chan error {
+	var (
+		wg    sync.WaitGroup
+		errCh = make(chan error)
+	)
+	wg.Add(len(inChs))
+	for _, inCh := range inChs {
+		go func(ch <-chan error) {
+			defer wg.Done()
+			for err := range ch {
+				errCh <- err
+			}
+		}(inCh)
+	}
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+	return errCh
 }

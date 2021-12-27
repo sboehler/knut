@@ -100,7 +100,7 @@ func (pr *PASTBuilder) StreamFromAST(ctx context.Context, a *ast.AST) (<-chan *p
 		defer close(errCh)
 		var (
 			sorted  = astCp.SortedDays()
-			amounts past.Amounts
+			amounts = make(past.Amounts)
 			acc     = make(past.Accounts)
 		)
 		for _, d := range sorted {

@@ -74,6 +74,27 @@ func NewPosting(crAccount, drAccount *journal.Account, commodity *journal.Commod
 	}
 }
 
+// Less determines an order on postings.
+func (p Posting) Less(p2 Posting) bool {
+	if p.Credit.Name() != p2.Credit.Name() {
+		return p.Credit.Name() < p2.Credit.Name()
+	}
+	if p.Debit.Name() != p2.Debit.Name() {
+		return p.Debit.Name() < p2.Debit.Name()
+	}
+	if !p.Amount.Equal(p2.Amount) {
+		return p.Amount.LessThan(p2.Amount)
+	}
+	return p.Commodity.String() < p2.Commodity.String()
+}
+
+func (p Posting) Equal(p2 Posting) bool {
+	return p.Credit == p2.Credit &&
+		p.Debit == p2.Debit &&
+		p.Amount.Equals(p2.Amount) &&
+		p.Commodity == p2.Commodity
+}
+
 // Matches returns whether this filter matches the given Posting.
 func (p Posting) Matches(b journal.Filter) bool {
 	return (b.MatchAccount(p.Credit) || b.MatchAccount(p.Debit)) && b.MatchCommodity(p.Commodity)
@@ -127,6 +148,27 @@ func (t Transaction) Commodities() map[*journal.Commodity]bool {
 		res[pst.Commodity] = true
 	}
 	return res
+}
+
+// Less defines an order on transactions.
+func (t *Transaction) Less(t2 *Transaction) bool {
+	if !t.Date.Equal(t2.Date) {
+		return t.Date.Before(t2.Date)
+	}
+	if t.Description != t2.Description {
+		return t.Description < t2.Description
+	}
+	var i int
+	for i < len(t.Postings) && i < len(t2.Postings) {
+		if !t.Postings[i].Equal(t2.Postings[i]) {
+			return t.Postings[i].Less(t2.Postings[i])
+		}
+	}
+	if len(t.Postings) < len(t2.Postings) {
+		return true
+	} else {
+		return false
+	}
 }
 
 // Price represents a price command.

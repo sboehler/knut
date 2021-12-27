@@ -24,7 +24,7 @@ import (
 
 func TestGolden(t *testing.T) {
 	var args = []string{
-		"--commodity",
+		"-v",
 		"CHF",
 		path.Join("testdata", "example.knut"),
 	}

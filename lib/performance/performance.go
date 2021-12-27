@@ -3,7 +3,6 @@ package performance
 import (
 	"fmt"
 
-	"github.com/sboehler/knut/lib/balance"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/past"
 )
@@ -50,9 +49,9 @@ func (calc Calculator) Perf(l *past.PAST) <-chan DailyPerfValues {
 
 // Valuator computes a daily value per commodity.
 type Valuator struct {
-	Balance *balance.Balance
-	Filter  journal.Filter
-	Result  *DailyPerfValues
+	Values past.Amounts
+	Filter journal.Filter
+	Result *DailyPerfValues
 }
 
 var _ past.Processor = (*Valuator)(nil)
@@ -60,7 +59,7 @@ var _ past.Processor = (*Valuator)(nil)
 // Process implements process.Processor.
 func (v *Valuator) Process(_ *past.Day) error {
 	var res = make(pcv)
-	for ca, val := range v.Balance.Values {
+	for ca, val := range v.Values {
 		var t = ca.Account.Type()
 		if t != journal.ASSETS && t != journal.LIABILITIES {
 			continue

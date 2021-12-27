@@ -21,11 +21,6 @@ import (
 	"runtime/pprof"
 
 	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/balance"
-	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
-	"github.com/sboehler/knut/lib/journal/past"
-	"github.com/sboehler/knut/lib/performance"
 
 	"github.com/spf13/cobra"
 )
@@ -79,53 +74,53 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 }
 
 func (r *runner) execute(cmd *cobra.Command, args []string) error {
-	var (
-		ctx       = journal.NewContext()
-		valuation *journal.Commodity
-		err       error
-	)
-	if valuation, err = r.valuation.Value(ctx); err != nil {
-		return err
-	}
+	// var (
+	// 	ctx       = journal.NewContext()
+	// 	valuation *journal.Commodity
+	// 	err       error
+	// )
+	// if valuation, err = r.valuation.Value(ctx); err != nil {
+	// 	return err
+	// }
 
-	var (
-		p = parser.RecursiveParser{
-			File:    args[0],
-			Context: ctx,
-		}
-		bal    = balance.New(ctx, valuation)
-		filter = journal.Filter{
-			Commodities: r.commodities.Value(),
-			Accounts:    r.accounts.Value(),
-		}
-		res   = new(performance.DailyPerfValues)
-		steps = []past.Processor{
-			balance.DateUpdater{Balance: bal},
-			balance.AccountOpener{Balance: bal},
-			balance.TransactionBooker{Balance: bal},
-			balance.ValueBooker{Balance: bal},
-			balance.Asserter{Balance: bal},
-			&balance.PriceUpdater{Balance: bal},
-			balance.TransactionValuator{Balance: bal},
-			balance.ValuationTransactionComputer{Balance: bal},
-			balance.AccountCloser{Balance: bal},
-			&performance.Valuator{Filter: filter, Result: res},
-			&performance.FlowComputer{Filter: filter, Result: res},
-			//TODO: compute performance here
-		}
-		perfCalc = performance.Calculator{
-			Filter:    filter,
-			Valuation: valuation,
-		}
-		l *past.PAST
-	)
-	if l, err = p.BuildLedger(journal.Filter{}); err != nil {
-		return err
-	}
-	if err = past.Sync(l, steps); err != nil {
-		return err
-	}
-	for range perfCalc.Perf(l) {
-	}
+	// var (
+	// 	p = parser.RecursiveParser{
+	// 		File:    args[0],
+	// 		Context: ctx,
+	// 	}
+	// 	bal    = balance.New(ctx, valuation)
+	// 	filter = journal.Filter{
+	// 		Commodities: r.commodities.Value(),
+	// 		Accounts:    r.accounts.Value(),
+	// 	}
+	// 	res   = new(performance.DailyPerfValues)
+	// 	steps = []past.Processor{
+	// 		balance.DateUpdater{Balance: bal},
+	// 		balance.AccountOpener{Balance: bal},
+	// 		balance.TransactionBooker{Balance: bal},
+	// 		balance.ValueBooker{Balance: bal},
+	// 		balance.Asserter{Balance: bal},
+	// 		&balance.PriceUpdater{Balance: bal},
+	// 		balance.TransactionValuator{Balance: bal},
+	// 		balance.ValuationTransactionComputer{Balance: bal},
+	// 		balance.AccountCloser{Balance: bal},
+	// 		&performance.Valuator{Filter: filter, Result: res},
+	// 		&performance.FlowComputer{Filter: filter, Result: res},
+	// 		//TODO: compute performance here
+	// 	}
+	// 	perfCalc = performance.Calculator{
+	// 		Filter:    filter,
+	// 		Valuation: valuation,
+	// 	}
+	// 	l *past.PAST
+	// )
+	// if l, err = p.BuildLedger(journal.Filter{}); err != nil {
+	// 	return err
+	// }
+	// if err = past.Sync(l, steps); err != nil {
+	// 	return err
+	// }
+	// for range perfCalc.Perf(l) {
+	// }
 	return nil
 }

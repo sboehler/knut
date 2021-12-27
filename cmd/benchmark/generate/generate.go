@@ -99,7 +99,7 @@ func execute(cmd *cobra.Command, args []string) error {
 			defer close()
 			defer include.Flush()
 			files = append(files, include)
-			if _, err := p.PrintDirective(journal, ast.Include{Path: name}); err != nil {
+			if _, err := p.PrintDirective(journal, &ast.Include{Path: name}); err != nil {
 				return err
 			}
 			io.WriteString(journal, "\n")
@@ -177,7 +177,7 @@ func parseDate(cmd *cobra.Command, name string) (time.Time, error) {
 	return time.Parse("2006-01-02", s)
 }
 
-func generate(c config) ([]ast.Open, []ast.Price, []ast.Transaction) {
+func generate(c config) ([]*ast.Open, []*ast.Price, []*ast.Transaction) {
 	rand.Seed(c.seed)
 	var (
 		accounts     = generateAccounts(c)
@@ -220,11 +220,11 @@ func generateCommodities(c config) []*journal.Commodity {
 	return res
 }
 
-func generateOpenings(c config, as []*journal.Account) []ast.Open {
-	var res []ast.Open
+func generateOpenings(c config, as []*journal.Account) []*ast.Open {
+	var res []*ast.Open
 
 	for _, a := range as {
-		res = append(res, ast.Open{
+		res = append(res, &ast.Open{
 			Date:    c.from,
 			Account: a,
 		})
@@ -232,12 +232,12 @@ func generateOpenings(c config, as []*journal.Account) []ast.Open {
 	return res
 }
 
-func generateTransactions(c config, cs []*journal.Commodity, as []*journal.Account) []ast.Transaction {
-	var trx []ast.Transaction
+func generateTransactions(c config, cs []*journal.Commodity, as []*journal.Account) []*ast.Transaction {
+	var trx []*ast.Transaction
 	var dates = date.Series(c.from.AddDate(0, 0, 1), c.to, date.Daily)
 	for i := 0; i < c.transactions; i++ {
 
-		trx = append(trx, ast.Transaction{
+		trx = append(trx, &ast.Transaction{
 			Date:        dates[rand.Intn(len(dates))],
 			Description: generateIdentifier(200),
 			Postings: []ast.Posting{
@@ -250,13 +250,13 @@ func generateTransactions(c config, cs []*journal.Commodity, as []*journal.Accou
 
 var stdev = 0.13 / math.Sqrt(365)
 
-func generatePrices(c config, cs []*journal.Commodity) []ast.Price {
-	var prices []ast.Price
+func generatePrices(c config, cs []*journal.Commodity) []*ast.Price {
+	var prices []*ast.Price
 	for _, commodity := range cs[1:] {
 		var price = decimal.NewFromFloat(1.0 + 200*rand.Float64())
 		for _, d := range date.Series(c.from, c.to, date.Daily) {
 			price = price.Mul(decimal.NewFromFloat(1 + rand.NormFloat64()*stdev)).Truncate(4)
-			prices = append(prices, ast.Price{
+			prices = append(prices, &ast.Price{
 				Date:      d,
 				Commodity: commodity,
 				Target:    cs[0],

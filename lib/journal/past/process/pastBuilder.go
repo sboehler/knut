@@ -224,13 +224,9 @@ func (pr *PASTBuilder) processTransaction(a *ast.AST, t *ast.Transaction) {
 		if len(filtered) == len(t.Postings) {
 			a.AddTransaction(t)
 		} else if len(filtered) > 0 && len(filtered) < len(t.Postings) {
-			a.AddTransaction(&ast.Transaction{
-				Range:       t.Range,
-				Date:        t.Date,
-				Description: t.Description,
-				Postings:    filtered,
-				Tags:        t.Tags,
-			})
+			tn := t.Clone()
+			tn.Postings = filtered
+			a.AddTransaction(tn)
 		}
 	}
 }

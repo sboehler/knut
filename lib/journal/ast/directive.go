@@ -100,6 +100,25 @@ type Transaction struct {
 	AddOns      []interface{}
 }
 
+// Clone clones a transaction.
+func (t Transaction) Clone() *Transaction {
+	var (
+		tags     = make([]Tag, len(t.Tags))
+		postings = make([]Posting, len(t.Postings))
+		addOns   = make([]interface{}, len(t.AddOns))
+	)
+	copy(tags, t.Tags)
+	copy(postings, t.Postings)
+	copy(addOns, t.AddOns)
+	return &Transaction{
+		Range:    t.Range,
+		Date:     t.Date,
+		Tags:     tags,
+		Postings: postings,
+		AddOns:   addOns,
+	}
+}
+
 // Commodities returns the commodities in this transaction.
 func (t Transaction) Commodities() map[*journal.Commodity]bool {
 	var res = make(map[*journal.Commodity]bool)

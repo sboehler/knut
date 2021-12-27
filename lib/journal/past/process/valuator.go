@@ -8,7 +8,6 @@ import (
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/sboehler/knut/lib/journal/val"
-	"github.com/shopspring/decimal"
 )
 
 // Valuator produces valuated days.
@@ -77,33 +76,20 @@ func (pr Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (cha
 	return resCh, errCh
 }
 
-func (pr Valuator) valuateAndBookTransaction(b *val.Day, t *ast.Transaction) (*val.Transaction, error) {
-	var postings []val.Posting
+func (pr Valuator) valuateAndBookTransaction(b *val.Day, t *ast.Transaction) (*ast.Transaction, error) {
+	var res = t.Clone()
 	for i, posting := range t.Postings {
-		var (
-			value decimal.Decimal
-			err   error
-		)
-		if pr.Valuation == nil || pr.Valuation == posting.Commodity {
-			value = posting.Amount
-		} else {
-			if value, err = b.Prices.Valuate(posting.Commodity, posting.Amount); err != nil {
+		if pr.Valuation != nil && pr.Valuation != posting.Commodity {
+			value, err := b.Prices.Valuate(posting.Commodity, posting.Amount)
+			if err != nil {
 				return nil, Error{t, fmt.Sprintf("no price found for commodity %s", posting.Commodity)}
 			}
+			posting.Amount = value
 		}
-		b.Values.Book(posting.Credit, posting.Debit, value, posting.Commodity)
-		postings = append(postings, val.Posting{
-			Source:    &t.Postings[i],
-			Credit:    posting.Credit,
-			Debit:     posting.Debit,
-			Value:     value,
-			Commodity: posting.Commodity,
-		})
+		b.Values.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
+		res.Postings[i] = posting
 	}
-	return &val.Transaction{
-		Source:   t,
-		Postings: postings,
-	}, nil
+	return res, nil
 }
 
 // computeValuationTransactions checks whether the valuation for the positions
@@ -137,8 +123,9 @@ func (pr Valuator) computeValuationTransactions(b *val.Day) {
 		if diff.IsPositive() {
 
 			// create a transaction to adjust the valuation
-			b.Transactions = append(b.Transactions, &val.Transaction{
-				Postings: []val.Posting{
+			b.Transactions = append(b.Transactions, &ast.Transaction{
+				Date: b.Date,
+				Postings: []ast.Posting{
 					{
 						Credit:    valAcc,
 						Debit:     pos.Account,
@@ -151,8 +138,9 @@ func (pr Valuator) computeValuationTransactions(b *val.Day) {
 		} else {
 
 			// create a transaction to adjust the valuation
-			b.Transactions = append(b.Transactions, &val.Transaction{
-				Postings: []val.Posting{
+			b.Transactions = append(b.Transactions, &ast.Transaction{
+				Date: b.Date,
+				Postings: []ast.Posting{
 					{
 						Credit:    pos.Account,
 						Debit:     valAcc,

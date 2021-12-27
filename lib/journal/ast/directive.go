@@ -111,11 +111,12 @@ func (t Transaction) Clone() *Transaction {
 	copy(postings, t.Postings)
 	copy(addOns, t.AddOns)
 	return &Transaction{
-		Range:    t.Range,
-		Date:     t.Date,
-		Tags:     tags,
-		Postings: postings,
-		AddOns:   addOns,
+		Range:       t.Range,
+		Date:        t.Date,
+		Description: t.Description,
+		Tags:        tags,
+		Postings:    postings,
+		AddOns:      addOns,
 	}
 }
 

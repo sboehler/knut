@@ -140,12 +140,3 @@ func (oa Accounts) IsOpen(a *journal.Account) bool {
 	}
 	return a.Type() == journal.EQUITY
 }
-
-// Copy copies accounts.
-func (oa Accounts) Copy() Accounts {
-	var res = make(map[*journal.Account]bool, len(oa))
-	for a := range oa {
-		res[a] = true
-	}
-	return res
-}

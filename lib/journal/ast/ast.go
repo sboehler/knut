@@ -27,6 +27,14 @@ type AST struct {
 	Days    map[time.Time]*Day
 }
 
+// New creates a new AST
+func New(ctx journal.Context) *AST {
+	return &AST{
+		Context: ctx,
+		Days:    make(map[time.Time]*Day),
+	}
+}
+
 // Day returns the Day for the given date.
 func (ast *AST) Day(d time.Time) *Day {
 	s, ok := ast.Days[d]

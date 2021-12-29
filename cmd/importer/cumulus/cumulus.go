@@ -31,7 +31,6 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
-	"github.com/sboehler/knut/lib/journal/past"
 )
 
 // CreateCmd creates the command.
@@ -85,13 +84,13 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if trx, err = p.parse(reader); err != nil {
 		return err
 	}
-	builder := past.NewBuilder(ctx, journal.Filter{})
+	builder := ast.New(ctx)
 	for _, trx := range trx {
 		builder.AddTransaction(trx)
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = printer.New().PrintLedger(out, builder.Build())
+	_, err = printer.New().PrintLedger(out, builder.SortedDays())
 	return err
 }
 

@@ -31,7 +31,6 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
-	"github.com/sboehler/knut/lib/journal/past"
 )
 
 // CreateCmd creates the command.
@@ -75,7 +74,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = parser{
 		reader:  csv.NewReader(f),
-		builder: past.NewBuilder(ctx, journal.Filter{}),
+		builder: ast.New(ctx),
 	}
 	if p.account, err = r.account.Value(ctx); err != nil {
 		return err
@@ -85,14 +84,14 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	_, err = printer.New().PrintLedger(w, p.builder.Build())
+	_, err = printer.New().PrintLedger(w, p.builder.SortedDays())
 	return err
 }
 
 type parser struct {
 	reader  *csv.Reader
 	account *journal.Account
-	builder *past.Builder
+	builder *ast.AST
 }
 
 func (p *parser) parse() error {

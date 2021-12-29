@@ -54,8 +54,6 @@ type Valuator struct {
 	Result *DailyPerfValues
 }
 
-var _ past.Processor = (*Valuator)(nil)
-
 // Process implements process.Processor.
 func (v *Valuator) Process(_ *past.Day) error {
 	var res = make(pcv)
@@ -81,8 +79,6 @@ type FlowComputer struct {
 	Result    *DailyPerfValues
 	Valuation *journal.Commodity
 }
-
-var _ past.Processor = (*FlowComputer)(nil)
 
 // pcv is a per-commodity value.
 type pcv map[*journal.Commodity]float64

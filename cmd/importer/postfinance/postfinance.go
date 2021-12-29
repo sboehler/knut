@@ -30,7 +30,6 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
-	"github.com/sboehler/knut/lib/journal/past"
 )
 
 // CreateCmd creates the cobra command.
@@ -69,8 +68,8 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	var p = Parser{
-		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(reader)),
-		builder: past.NewBuilder(ctx, journal.Filter{}),
+		reader: csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(reader)),
+		ast:    ast.New(ctx),
 	}
 	if p.account, err = r.accountFlag.Value(ctx); err != nil {
 		return err
@@ -80,7 +79,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = printer.New().PrintLedger(out, p.builder.Build())
+	_, err = printer.New().PrintLedger(out, p.ast.SortedDays())
 	return err
 }
 
@@ -92,7 +91,7 @@ func init() {
 type Parser struct {
 	reader  *csv.Reader
 	account *journal.Account
-	builder *past.Builder
+	ast     *ast.AST
 
 	currency *journal.Commodity
 }
@@ -145,7 +144,7 @@ func (p *Parser) readHeaderLine(l []string) error {
 	}
 	var err error
 	if currencyHeaders[l[hfHeader]] {
-		if p.currency, err = p.builder.Context.GetCommodity(l[hfData]); err != nil {
+		if p.currency, err = p.ast.Context.GetCommodity(l[hfData]); err != nil {
 			return err
 		}
 	}
@@ -178,11 +177,11 @@ func (p *Parser) readBookingLine(l []string) error {
 	if amount, err = parseAmount(l); err != nil {
 		return err
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.ast.AddTransaction(&ast.Transaction{
 		Date:        date,
 		Description: l[bfAvisierungstext],
 		Postings: []ast.Posting{
-			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, p.currency, amount),
+			ast.NewPosting(p.ast.Context.TBDAccount(), p.account, p.currency, amount),
 		},
 	})
 	return nil

@@ -108,11 +108,7 @@ func (pr *PASTBuilder) StreamFromAST(ctx context.Context, a *ast.AST) (<-chan *p
 				Date:       d.Date,
 				AST:        a.Days[d.Date], // possibly nil
 				Amounts:    amounts,
-				Openings:   d.Openings,
-				Prices:     d.Prices,
-				Assertions: d.Assertions,
-				Values:     d.Values,
-				Closings:   d.Closings,
+				
 			}
 			for _, o := range d.Openings {
 				if err := acc.Open(o.Account); err != nil && errOrExit(err) {

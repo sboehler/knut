@@ -21,7 +21,6 @@ import (
 
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/past"
 	"go.uber.org/multierr"
 )
 
@@ -79,9 +78,4 @@ func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interfa
 		}
 	}
 	return nil
-}
-
-// BuildLedger builds a ast.
-func (j *RecursiveParser) BuildLedger(f journal.Filter) (*past.PAST, error) {
-	return past.FromDirectives(j.Context, f, j.Parse())
 }

@@ -16,6 +16,7 @@ package format
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -62,7 +63,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 		sema <- true
 		go func() {
 			defer func() { <-sema }()
-			if err := formatFile(arg); err != nil {
+			if err := formatFile(cmd.Context(), arg); err != nil {
 				mu.Lock()
 				defer mu.Unlock()
 				errors = multierr.Append(errors, err)
@@ -75,13 +76,13 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	return errors
 }
 
-func formatFile(target string) error {
+func formatFile(ctx context.Context, target string) error {
 	var (
 		directives           []ast.Directive
 		err                  error
 		srcFile, tmpDestFile *os.File
 	)
-	if directives, err = readDirectives(target); err != nil {
+	if directives, err = readDirectives(ctx, target); err != nil {
 		return err
 	}
 	if srcFile, err = os.Open(target); err != nil {
@@ -99,7 +100,7 @@ func formatFile(target string) error {
 	return multierr.Append(err, atomic.ReplaceFile(tmpDestFile.Name(), target))
 }
 
-func readDirectives(target string) (directives []ast.Directive, err error) {
+func readDirectives(ctx context.Context, target string) (directives []ast.Directive, err error) {
 	p, close, err := parser.FromPath(journal.NewContext(), target)
 	if err != nil {
 		return nil, err
@@ -107,14 +108,23 @@ func readDirectives(target string) (directives []ast.Directive, err error) {
 	defer func() {
 		err = multierr.Append(err, close())
 	}()
-	for d := range p.ParseAll() {
-		switch t := d.(type) {
-		case error:
-			return nil, t
-		case ast.Directive:
-			directives = append(directives, t)
-		default:
-			return nil, fmt.Errorf("unknown directive: %#v", d)
+
+	ch, errCh := p.ParseAll(ctx)
+
+	for ch != nil && errCh != nil {
+		select {
+		case d, ok := <-ch:
+			if !ok {
+				ch = nil
+			} else {
+				directives = append(directives, d)
+			}
+		case err, ok := <-errCh:
+			if !ok {
+				errCh = nil
+			} else {
+				return nil, err
+			}
 		}
 	}
 	return directives, nil

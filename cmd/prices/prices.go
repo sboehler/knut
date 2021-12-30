@@ -15,6 +15,7 @@
 package prices
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -77,7 +78,7 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	for _, cfg := range configs {
 		sema <- true
 		go func(c config) {
-			if err := fetch(ctx, args[0], c); err != nil {
+			if err := fetch(cmd.Context(), ctx, args[0], c); err != nil {
 				errCh <- err
 			}
 			bar.Increment()
@@ -90,16 +91,16 @@ func execute(cmd *cobra.Command, args []string) (errors error) {
 	return errors
 }
 
-func fetch(ctx journal.Context, f string, cfg config) error {
+func fetch(ctx context.Context, jctx journal.Context, f string, cfg config) error {
 	var absPath = filepath.Join(filepath.Dir(f), cfg.File)
-	l, err := readFile(ctx, absPath)
+	l, err := readFile(ctx, jctx, absPath)
 	if err != nil {
 		return err
 	}
-	if err := fetchPrices(ctx, cfg, time.Now().AddDate(-1, 0, 0), time.Now(), l); err != nil {
+	if err := fetchPrices(jctx, cfg, time.Now().AddDate(-1, 0, 0), time.Now(), l); err != nil {
 		return err
 	}
-	if err := writeFile(ctx, l, absPath); err != nil {
+	if err := writeFile(jctx, l, absPath); err != nil {
 		return err
 	}
 	return nil
@@ -120,21 +121,33 @@ func readConfig(path string) ([]config, error) {
 	return t, nil
 }
 
-func readFile(ctx journal.Context, filepath string) (res map[time.Time]*ast.Price, err error) {
+func readFile(ctx2 context.Context, ctx journal.Context, filepath string) (res map[time.Time]*ast.Price, err error) {
 	p, cls, err := parser.FromPath(ctx, filepath)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { err = multierr.Append(err, cls()) }()
 	var prices = make(map[time.Time]*ast.Price)
-	for i := range p.ParseAll() {
-		switch d := i.(type) {
-		case error:
+	resCh, errCh := p.ParseAll(ctx2)
+	for resCh != nil || errCh != nil {
+		select {
+		case d, ok := <-resCh:
+			if !ok {
+				resCh = nil
+				break
+			}
+			if p, ok := d.(*ast.Price); ok {
+				prices[p.Date] = p
+			} else {
+				return nil, fmt.Errorf("unexpected directive in prices file: %v", d)
+			}
+
+		case err, ok := <-errCh:
+			if !ok {
+				errCh = nil
+				break
+			}
 			return nil, err
-		case *ast.Price:
-			prices[d.Date] = d
-		default:
-			return nil, fmt.Errorf("unexpected directive in prices file: %v", d)
 		}
 	}
 	return prices, nil

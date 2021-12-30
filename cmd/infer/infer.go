@@ -16,6 +16,7 @@ package infer
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,7 +25,6 @@ import (
 
 	"github.com/natefinch/atomic"
 	"github.com/spf13/cobra"
-	"go.uber.org/multierr"
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/journal"
@@ -71,20 +71,20 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 
 func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
-		ctx        = journal.NewContext()
+		jctx       = journal.NewContext()
 		targetFile = args[0]
 		account    *journal.Account
 		err        error
 	)
-	tbd, _ := ctx.GetAccount("Expenses:TBD")
-	if account, err = r.account.ValueWithDefault(ctx, tbd); err != nil {
+	tbd, _ := jctx.GetAccount("Expenses:TBD")
+	if account, err = r.account.ValueWithDefault(jctx, tbd); err != nil {
 		return err
 	}
-	model, err := train(ctx, r.trainingFile, account)
+	model, err := train(cmd.Context(), jctx, r.trainingFile, account)
 	if err != nil {
 		return err
 	}
-	directives, err := r.parseAndInfer(ctx, model, targetFile, account)
+	directives, err := r.parseAndInfer(cmd.Context(), jctx, model, targetFile, account)
 	if err != nil {
 		return err
 	}
@@ -100,38 +100,61 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	return r.writeTo(directives, targetFile, out)
 }
 
-func train(ctx journal.Context, file string, exclude *journal.Account) (*bayes.Model, error) {
+func train(ctx context.Context, jctx journal.Context, file string, exclude *journal.Account) (*bayes.Model, error) {
 	var (
-		j = parser.RecursiveParser{Context: ctx, File: file}
+		j = parser.RecursiveParser{Context: jctx, File: file}
 		m = bayes.NewModel()
 	)
-	for r := range j.Parse() {
-		switch t := r.(type) {
-		case error:
-			return nil, t
-		case *ast.Transaction:
-			m.Update(t)
+	resCh, errCh := j.Parse(ctx)
+
+	for resCh != nil || errCh != nil {
+		select {
+
+		case d, ok := <-resCh:
+			if !ok {
+				resCh = nil
+				break
+			}
+			if t, ok := d.(*ast.Transaction); ok {
+				m.Update(t)
+			}
+
+		case err, ok := <-errCh:
+			if !ok {
+				errCh = nil
+				break
+			}
+			return nil, err
 		}
 	}
 	return m, nil
 }
 
-func (r *runner) parseAndInfer(ctx journal.Context, model *bayes.Model, targetFile string, account *journal.Account) ([]ast.Directive, error) {
-	p, cls, err := parser.FromPath(ctx, targetFile)
+func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model *bayes.Model, targetFile string, account *journal.Account) ([]ast.Directive, error) {
+	p, cls, err := parser.FromPath(jctx, targetFile)
 	if err != nil {
 		return nil, err
 	}
 	defer cls()
 	var directives []ast.Directive
-	for i := range p.ParseAll() {
-		switch d := i.(type) {
-		case *ast.Transaction:
-			model.Infer(d, account)
+	resCh, errCh := p.ParseAll(ctx)
+	for resCh != nil || errCh != nil {
+		select {
+		case d, ok := <-resCh:
+			if !ok {
+				resCh = nil
+				break
+			}
+			if t, ok := d.(*ast.Transaction); ok {
+				model.Infer(t, account)
+			}
 			directives = append(directives, d)
-		case ast.Directive:
-			directives = append(directives, d)
-		default:
-			return nil, multierr.Append(cls(), fmt.Errorf("unknown directive: %s", d))
+		case err, ok := <-errCh:
+			if !ok {
+				errCh = nil
+				break
+			}
+			return nil, err
 		}
 	}
 	return directives, nil

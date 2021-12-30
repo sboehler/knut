@@ -27,14 +27,12 @@ type PASTBuilder struct {
 // FromAST processes an AST to a PAST. It check assertions
 // and the usage of open and closed accounts. It will also
 // resolve Value directives and convert them to transactions.
-func (pr PASTBuilder) FromAST(a *ast.AST) (*past.PAST, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	dayCh, errCh := pr.StreamFromAST(ctx, a)
+func (pr PASTBuilder) FromAST(ctx context.Context, a *ast.AST) (*past.PAST, error) {
 	res := &past.PAST{
 		Context: a.Context,
 	}
-	for {
+	dayCh, errCh := pr.StreamFromAST(ctx, a)
+	for dayCh != nil || errCh != nil {
 		select {
 		case day, ok := <-dayCh:
 			if !ok {
@@ -49,9 +47,6 @@ func (pr PASTBuilder) FromAST(a *ast.AST) (*past.PAST, error) {
 				break
 			}
 			return nil, err
-		}
-		if dayCh == nil && errCh == nil {
-			break
 		}
 	}
 	return res, nil
@@ -105,10 +100,9 @@ func (pr *PASTBuilder) StreamFromAST(ctx context.Context, a *ast.AST) (<-chan *p
 		)
 		for _, d := range sorted {
 			day := &past.Day{
-				Date:       d.Date,
-				AST:        a.Days[d.Date], // possibly nil
-				Amounts:    amounts,
-				
+				Date:    d.Date,
+				AST:     a.Days[d.Date], // possibly nil
+				Amounts: amounts,
 			}
 			for _, o := range d.Openings {
 				if err := acc.Open(o.Account); err != nil && errOrExit(err) {

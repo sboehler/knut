@@ -1,6 +1,7 @@
 package process
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -16,35 +17,50 @@ type ASTBuilder struct {
 
 // ASTFromPath reads directives from the given channel and
 // builds a Ledger if successful.
-func (pr *ASTBuilder) ASTFromPath(p string) (*ast.AST, error) {
+func (pr *ASTBuilder) ASTFromPath(ctx context.Context, p string) (*ast.AST, error) {
 	par := parser.RecursiveParser{
 		File:    p,
 		Context: pr.Context,
 	}
-	results := par.Parse()
-	var b = &ast.AST{
+	res := &ast.AST{
 		Context: pr.Context,
 		Days:    make(map[time.Time]*ast.Day),
 	}
-	for res := range results {
-		switch t := res.(type) {
-		case error:
-			return nil, t
-		case *ast.Open:
-			b.AddOpen(t)
-		case *ast.Price:
-			b.AddPrice(t)
-		case *ast.Transaction:
-			b.AddTransaction(t)
-		case *ast.Assertion:
-			b.AddAssertion(t)
-		case *ast.Value:
-			b.AddValue(t)
-		case *ast.Close:
-			b.AddClose(t)
-		default:
-			return nil, fmt.Errorf("unknown: %#v", t)
+	resCh, errCh := par.Parse(ctx)
+
+	for resCh != nil || errCh != nil {
+		select {
+		case err, ok := <-errCh:
+			if !ok {
+				errCh = nil
+				break
+			}
+			return nil, err
+
+		case d, ok := <-resCh:
+			if !ok {
+				resCh = nil
+				break
+			}
+			switch t := d.(type) {
+			case error:
+				return nil, t
+			case *ast.Open:
+				res.AddOpen(t)
+			case *ast.Price:
+				res.AddPrice(t)
+			case *ast.Transaction:
+				res.AddTransaction(t)
+			case *ast.Assertion:
+				res.AddAssertion(t)
+			case *ast.Value:
+				res.AddValue(t)
+			case *ast.Close:
+				res.AddClose(t)
+			default:
+				return nil, fmt.Errorf("unknown: %#v", t)
+			}
 		}
 	}
-	return b, nil
+	return res, nil
 }

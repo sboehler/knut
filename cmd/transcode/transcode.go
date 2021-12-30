@@ -95,7 +95,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	ctx, cancel := context.WithCancel(cmd.Context())
 	defer cancel()
 
-	as, err := astBuilder.ASTFromPath(args[0])
+	as, err := astBuilder.ASTFromPath(ctx, args[0])
 	if err != nil {
 		return err
 	}

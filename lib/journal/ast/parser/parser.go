@@ -16,6 +16,7 @@ package parser
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -123,23 +124,33 @@ func (p *Parser) Next() (ast.Directive, error) {
 }
 
 // ParseAll parses the entire stream asynchronously.
-func (p *Parser) ParseAll() <-chan interface{} {
-	var ch = make(chan interface{}, 10)
+func (p *Parser) ParseAll(ctx context.Context) (<-chan ast.Directive, <-chan error) {
+	resCh := make(chan ast.Directive, 10)
+	errCh := make(chan error)
 	go func() {
-		defer close(ch)
+		defer close(resCh)
+		defer close(errCh)
 		for {
 			d, err := p.Next()
 			if err == io.EOF {
-				break
+				return
 			}
 			if err != nil {
-				ch <- err
-				break
+				select {
+				case <-ctx.Done():
+					return
+				case errCh <- err:
+					return
+				}
 			}
-			ch <- d
+			select {
+			case resCh <- d:
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
-	return ch
+	return resCh, errCh
 }
 
 func (p *Parser) consumeComment() error {

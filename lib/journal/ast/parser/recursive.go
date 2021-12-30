@@ -15,6 +15,7 @@
 package parser
 
 import (
+	"context"
 	"path"
 	"path/filepath"
 	"sync"
@@ -27,52 +28,82 @@ import (
 type RecursiveParser struct {
 	File    string
 	Context journal.Context
+
+	errCh chan error
+	resCh chan ast.Directive
+
+	wg sync.WaitGroup
 }
 
 // Parse parses the journal at the path, and branches out for include files
-func (j *RecursiveParser) Parse() chan interface{} {
-	var (
-		ch = make(chan interface{}, 100)
-		wg sync.WaitGroup
-	)
+func (j *RecursiveParser) Parse(ctx context.Context) (<-chan ast.Directive, <-chan error) {
+	j.resCh = make(chan ast.Directive, 100)
+	j.errCh = make((chan error))
 
-	wg.Add(1)
-	go j.parseRecursively(&wg, ch, j.File)
+	j.wg.Add(1)
+	go j.parseRecursively(ctx, j.File)
 
 	// Parse and eventually close input channel
 	go func() {
-		defer close(ch)
-		wg.Wait()
+		defer close(j.resCh)
+		defer close(j.errCh)
+		j.wg.Wait()
 	}()
-	return ch
+	return j.resCh, j.errCh
 }
 
-func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, file string) {
-	defer wg.Done()
+func (j *RecursiveParser) parseRecursively(ctx context.Context, file string) {
+	defer j.wg.Done()
 	p, cls, err := FromPath(j.Context, file)
 	if err != nil {
-		ch <- err
+		select {
+		case j.errCh <- err:
+		case <-ctx.Done():
+		}
 		return
 	}
 	defer func() {
 		err = cls()
 		if err != nil {
-			ch <- err
+			select {
+			case j.errCh <- err:
+			case <-ctx.Done():
+			}
 		}
 	}()
-	for d := range p.ParseAll() {
-		switch t := d.(type) {
 
-		case error:
-			ch <- t
-			return
+	resCh, errCh := p.ParseAll(ctx)
 
-		case *ast.Include:
-			wg.Add(1)
-			go j.parseRecursively(wg, ch, path.Join(filepath.Dir(file), t.Path))
+	for resCh != nil || errCh != nil {
+		select {
+		case d, ok := <-resCh:
+			if !ok {
+				resCh = nil
+			} else {
+				switch t := d.(type) {
 
-		default:
-			ch <- d
+				case *ast.Include:
+					j.wg.Add(1)
+					go j.parseRecursively(ctx, path.Join(filepath.Dir(file), t.Path))
+
+				default:
+					select {
+					case j.resCh <- d:
+					case <-ctx.Done():
+						return
+					}
+				}
+			}
+		case err, ok := <-errCh:
+			if !ok {
+				errCh = nil
+			} else {
+				select {
+				case j.errCh <- err:
+				case <-ctx.Done():
+					return
+				}
+			}
 		}
 	}
 }

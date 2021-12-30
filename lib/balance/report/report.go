@@ -71,21 +71,14 @@ func (rb *Builder) FromStream(ctx context.Context, ch <-chan *val.Day) (<-chan *
 	go func() {
 		defer close(resCh)
 		defer close(errCh)
+
 		res := new(Report)
-		for ch != nil {
-			select {
-			case <-ctx.Done():
-				return
-			case d, ok := <-ch:
-				if !ok {
-					select {
-					case <-ctx.Done():
-					case resCh <- res:
-					}
-					return
-				}
-				rb.add(res, d)
-			}
+		for d := range ch {
+			rb.add(res, d)
+		}
+		select {
+		case <-ctx.Done():
+		case resCh <- res:
 		}
 	}()
 	return resCh, errCh

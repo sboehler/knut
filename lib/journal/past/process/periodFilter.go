@@ -32,82 +32,68 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 			pf.To = date.Today()
 		}
 		var dates []time.Time
-		select {
-		case day, ok := <-inCh:
-			if !ok {
-				return
-			}
-			if pf.From.Before(day.Date) {
-				pf.From = day.Date
-			}
-			if !pf.From.Before(pf.To) {
-				return
-			}
-			dates = date.Series(pf.From, pf.To, pf.Period)
 
-			if pf.Last > 0 {
-				last := pf.Last
-				if len(dates) < last {
-					last = len(dates)
-				}
-				if pf.Diff {
-					last++
-				}
-				if len(dates) > pf.Last {
-					dates = dates[len(dates)-last:]
-				}
+		day, ok := <-inCh
+		if !ok {
+			return
+		}
+		if pf.From.Before(day.Date) {
+			pf.From = day.Date
+		}
+		if !pf.From.Before(pf.To) {
+			return
+		}
+		dates = date.Series(pf.From, pf.To, pf.Period)
+
+		if pf.Last > 0 {
+			last := pf.Last
+			if len(dates) < last {
+				last = len(dates)
 			}
-			for index < len(dates) && dates[index].Before(day.Date) {
-				select {
-				case resCh <- &val.Day{Date: dates[index]}:
-					index++
-				case <-ctx.Done():
-					return
-				}
+			if pf.Diff {
+				last++
 			}
-			if index < len(dates) && dates[index].Equal(day.Date) {
-				select {
-				case resCh <- &val.Day{
+			if len(dates) > pf.Last {
+				dates = dates[len(dates)-last:]
+			}
+		}
+		for index < len(dates) && dates[index].Before(day.Date) {
+			select {
+			case resCh <- &val.Day{Date: dates[index]}:
+				index++
+			case <-ctx.Done():
+				return
+			}
+		}
+		if index < len(dates) && dates[index].Equal(day.Date) {
+			select {
+			case resCh <- &val.Day{
+				Date:         dates[index],
+				Values:       day.Values,
+				Prices:       day.Prices,
+				Transactions: day.Transactions,
+			}:
+				index++
+			case <-ctx.Done():
+				return
+			}
+		}
+
+		//var day *val.Day
+		for day = range inCh {
+			for index < len(dates) && !dates[index].After(day.Date) {
+				r := &val.Day{
 					Date:         dates[index],
 					Values:       day.Values,
 					Prices:       day.Prices,
 					Transactions: day.Transactions,
-				}:
+				}
+				select {
+				case resCh <- r:
 					index++
 				case <-ctx.Done():
 					return
 				}
-			}
-
-		case <-ctx.Done():
-			return
-		}
-
-		var day *val.Day
-		for inCh != nil {
-			select {
-			case d, ok := <-inCh:
-				if !ok {
-					inCh = nil
-					break
-				}
-				day = d
-				for index < len(dates) && !dates[index].After(day.Date) {
-					r := &val.Day{
-						Date:         dates[index],
-						Values:       day.Values,
-						Prices:       day.Prices,
-						Transactions: day.Transactions,
-					}
-					select {
-					case resCh <- r:
-						index++
-					case <-ctx.Done():
-						return
-					}
-				}
-			case <-ctx.Done():
-				return
 			}
 		}
 		for day != nil && index < len(dates) {

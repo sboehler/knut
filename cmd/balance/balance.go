@@ -189,9 +189,9 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		case err, ok := <-errCh:
 			if !ok {
 				errCh = nil
-			} else if err != nil {
-				return err
+				break
 			}
+			return err
 		}
 	}
 }

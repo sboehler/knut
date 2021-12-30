@@ -27,36 +27,26 @@ func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day)
 		defer close(errCh)
 
 		var previous *val.Day
-		for {
-			select {
-
-			case day, ok := <-inCh:
-				if !ok {
-					return
-				}
-				vday := &val.Day{
-					Date: day.Date,
-					Day:  day,
-				}
-				if pr.Valuation != nil {
-					if day.AST != nil && len(day.AST.Prices) > 0 {
-						for _, p := range day.AST.Prices {
-							prc.Insert(p)
-						}
-						vday.Prices = prc.Normalize(pr.Valuation)
-					} else if previous == nil {
-						vday.Prices = prc.Normalize(pr.Valuation)
-					} else {
-						vday.Prices = previous.Prices
+		for day := range inCh {
+			vday := &val.Day{
+				Date: day.Date,
+				Day:  day,
+			}
+			if pr.Valuation != nil {
+				if day.AST != nil && len(day.AST.Prices) > 0 {
+					for _, p := range day.AST.Prices {
+						prc.Insert(p)
 					}
+					vday.Prices = prc.Normalize(pr.Valuation)
+				} else if previous == nil {
+					vday.Prices = prc.Normalize(pr.Valuation)
+				} else {
+					vday.Prices = previous.Prices
 				}
-				select {
-				case resCh <- vday:
-					previous = vday
-				case <-ctx.Done():
-					return
-				}
-
+			}
+			select {
+			case resCh <- vday:
+				previous = vday
 			case <-ctx.Done():
 				return
 			}

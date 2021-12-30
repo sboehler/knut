@@ -38,39 +38,27 @@ func (pr Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (cha
 
 		var values = make(past.Amounts)
 
-		for {
+		for day := range inCh {
+			day.Values = values
+
+			for _, t := range day.Day.Transactions {
+				tv, err := pr.valuateAndBookTransaction(day, t)
+				if err != nil {
+					errOrExit(err)
+					return
+				}
+				day.Transactions = append(day.Transactions, tv)
+			}
+
+			pr.computeValuationTransactions(day)
+
+			values = values.Clone()
 			select {
-
-			case day, ok := <-inCh:
-				if !ok {
-					return
-				}
-				day.Values = values
-
-				for _, t := range day.Day.Transactions {
-					tv, err := pr.valuateAndBookTransaction(day, t)
-					if err != nil {
-						errOrExit(err)
-						return
-					}
-					day.Transactions = append(day.Transactions, tv)
-				}
-
-				pr.computeValuationTransactions(day)
-
-				values = values.Clone()
-				select {
-				case resCh <- day:
-				case <-ctx.Done():
-					return
-				}
-
+			case resCh <- day:
 			case <-ctx.Done():
 				return
-
 			}
 		}
-
 	}()
 
 	return resCh, errCh

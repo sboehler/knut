@@ -27,7 +27,6 @@ type Directive interface {
 }
 
 var (
-	_ Directive = (*Accrual)(nil)
 	_ Directive = (*Assertion)(nil)
 	_ Directive = (*Close)(nil)
 	_ Directive = (*Include)(nil)
@@ -35,6 +34,9 @@ var (
 	_ Directive = (*Price)(nil)
 	_ Directive = (*Transaction)(nil)
 	_ Directive = (*Value)(nil)
+
+	// Add-Ons
+	_ Directive = (*Accrual)(nil)
 )
 
 // Open represents an open command.

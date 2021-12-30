@@ -49,8 +49,6 @@ func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err 
 		return p.printInclude(w, d)
 	case *ast.Price:
 		return p.printPrice(w, d)
-	case ast.Accrual:
-		return p.printAccrual(w, d)
 	case *ast.Value:
 		return p.printValue(w, d)
 	}
@@ -59,10 +57,15 @@ func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err 
 
 func (p Printer) printTransaction(w io.Writer, t *ast.Transaction) (n int, err error) {
 	for _, addOn := range t.AddOns {
-		c, err := p.PrintDirective(w, addOn)
-		n += c
-		if err != nil {
-			return n, err
+		switch ao := addOn.(type) {
+		case *ast.Accrual:
+			c, err := p.printAccrual(w, ao)
+			n += c
+			if err != nil {
+				return n, err
+			}
+		default:
+			return n, fmt.Errorf("Unknown Add-On: %v", ao)
 		}
 	}
 	c, err := fmt.Fprintf(w, "%s \"%s\"", t.Date.Format("2006-01-02"), t.Description)
@@ -97,7 +100,7 @@ func (p Printer) printTransaction(w io.Writer, t *ast.Transaction) (n int, err e
 	return n, nil
 }
 
-func (p Printer) printAccrual(w io.Writer, a ast.Accrual) (n int, err error) {
+func (p Printer) printAccrual(w io.Writer, a *ast.Accrual) (n int, err error) {
 	return fmt.Fprintf(w, "@accrue %s %s %s %s\n", a.Period, a.T0.Format("2006-01-02"), a.T1.Format("2006-01-02"), a.Account)
 }
 

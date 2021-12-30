@@ -114,7 +114,7 @@ func readDirectives(target string) (directives []ast.Directive, err error) {
 		case ast.Directive:
 			directives = append(directives, t)
 		default:
-			return nil, fmt.Errorf("unknown directive: %s", d)
+			return nil, fmt.Errorf("unknown directive: %#v", d)
 		}
 	}
 	return directives, nil

@@ -137,7 +137,7 @@ func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model 
 	}
 	defer cls()
 	var directives []ast.Directive
-	resCh, errCh := p.ParseAll(ctx)
+	resCh, errCh := p.Parse(ctx)
 	for resCh != nil || errCh != nil {
 		select {
 		case d, ok := <-resCh:

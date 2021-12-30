@@ -109,7 +109,7 @@ func readDirectives(ctx context.Context, target string) (directives []ast.Direct
 		err = multierr.Append(err, close())
 	}()
 
-	ch, errCh := p.ParseAll(ctx)
+	ch, errCh := p.Parse(ctx)
 
 	for ch != nil && errCh != nil {
 		select {

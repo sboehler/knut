@@ -81,8 +81,8 @@ func (p *Parser) current() rune {
 	return p.scanner.Current()
 }
 
-// Next returns the next directive
-func (p *Parser) Next() (ast.Directive, error) {
+// next returns the next directive
+func (p *Parser) next() (ast.Directive, error) {
 	for p.current() != scanner.EOF {
 		if err := p.scanner.ConsumeWhile(isWhitespaceOrNewline); err != nil {
 			return nil, p.scanner.ParseError(err)
@@ -123,15 +123,15 @@ func (p *Parser) Next() (ast.Directive, error) {
 	return nil, io.EOF
 }
 
-// ParseAll parses the entire stream asynchronously.
-func (p *Parser) ParseAll(ctx context.Context) (<-chan ast.Directive, <-chan error) {
+// Parse parses the entire stream asynchronously.
+func (p *Parser) Parse(ctx context.Context) (<-chan ast.Directive, <-chan error) {
 	resCh := make(chan ast.Directive, 10)
 	errCh := make(chan error)
 	go func() {
 		defer close(resCh)
 		defer close(errCh)
 		for {
-			d, err := p.Next()
+			d, err := p.next()
 			if err == io.EOF {
 				return
 			}

@@ -72,7 +72,7 @@ func (j *RecursiveParser) parseRecursively(ctx context.Context, file string) {
 		}
 	}()
 
-	resCh, errCh := p.ParseAll(ctx)
+	resCh, errCh := p.Parse(ctx)
 
 	for resCh != nil || errCh != nil {
 		select {

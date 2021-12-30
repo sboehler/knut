@@ -21,7 +21,6 @@ import (
 
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"go.uber.org/multierr"
 )
 
 // RecursiveParser parses a file hierarchy recursively.
@@ -37,45 +36,43 @@ func (j *RecursiveParser) Parse() chan interface{} {
 		wg sync.WaitGroup
 	)
 
+	wg.Add(1)
+	go j.parseRecursively(&wg, ch, j.File)
+
 	// Parse and eventually close input channel
 	go func() {
 		defer close(ch)
-		wg.Add(1)
-		go func() {
-			if err := j.parseRecursively(&wg, ch, j.File); err != nil {
-				ch <- err
-			}
-			wg.Done()
-		}()
 		wg.Wait()
 	}()
 	return ch
 }
 
-func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, file string) (err error) {
+func (j *RecursiveParser) parseRecursively(wg *sync.WaitGroup, ch chan<- interface{}, file string) {
+	defer wg.Done()
 	p, cls, err := FromPath(j.Context, file)
 	if err != nil {
-		return err
+		ch <- err
+		return
 	}
 	defer func() {
-		err = multierr.Append(err, cls())
+		err = cls()
+		if err != nil {
+			ch <- err
+		}
 	}()
 	for d := range p.ParseAll() {
 		switch t := d.(type) {
+
 		case error:
-			return t
+			ch <- t
+			return
 
 		case *ast.Include:
 			wg.Add(1)
-			go func() {
-				if err := j.parseRecursively(wg, ch, path.Join(filepath.Dir(file), t.Path)); err != nil {
-					ch <- err
-				}
-				wg.Done()
-			}()
+			go j.parseRecursively(wg, ch, path.Join(filepath.Dir(file), t.Path))
+
 		default:
 			ch <- d
 		}
 	}
-	return nil
 }

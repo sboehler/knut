@@ -16,7 +16,6 @@ package balance
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -157,9 +156,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Thousands: r.thousands,
 			Round:     r.digits,
 		}
+		ctx = cmd.Context()
 	)
-	ctx, cancel := context.WithCancel(cmd.Context())
-	defer cancel()
 
 	as, err := astBuilder.ASTFromPath(ctx, args[0])
 	if err != nil {

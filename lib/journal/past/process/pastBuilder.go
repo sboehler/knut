@@ -28,10 +28,8 @@ type PASTBuilder struct {
 // and the usage of open and closed accounts. It will also
 // resolve Value directives and convert them to transactions.
 func (pr PASTBuilder) FromAST(ctx context.Context, a *ast.AST) (*past.PAST, error) {
-	res := &past.PAST{
-		Context: a.Context,
-	}
 	dayCh, errCh := pr.StreamFromAST(ctx, a)
+	var days []*past.Day
 	for dayCh != nil || errCh != nil {
 		select {
 		case day, ok := <-dayCh:
@@ -39,7 +37,7 @@ func (pr PASTBuilder) FromAST(ctx context.Context, a *ast.AST) (*past.PAST, erro
 				dayCh = nil
 				break
 			}
-			res.Days = append(res.Days, day)
+			days = append(days, day)
 
 		case err, ok := <-errCh:
 			if !ok {
@@ -49,7 +47,10 @@ func (pr PASTBuilder) FromAST(ctx context.Context, a *ast.AST) (*past.PAST, erro
 			return nil, err
 		}
 	}
-	return res, nil
+	return &past.PAST{
+		Context: a.Context,
+		Days:    days,
+	}, nil
 }
 
 // StreamFromAST processes an AST to a stream of past.Day. It check assertions

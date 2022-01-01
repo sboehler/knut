@@ -79,7 +79,6 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 			}
 		}
 
-		//var day *val.Day
 		for day = range inCh {
 			for index < len(dates) && !dates[index].After(day.Date) {
 				r := &val.Day{
@@ -96,7 +95,7 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 				}
 			}
 		}
-		for day != nil && index < len(dates) {
+		for index < len(dates) {
 			r := &val.Day{
 				Date:         dates[index],
 				Values:       day.Values,

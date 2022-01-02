@@ -3,9 +3,9 @@ package process
 import (
 	"context"
 
-	"github.com/sboehler/knut/lib/balance/prices"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/past"
+	"github.com/sboehler/knut/lib/journal/prices"
 	"github.com/sboehler/knut/lib/journal/val"
 )
 

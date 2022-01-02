@@ -129,7 +129,7 @@ func (pr *ASTExpander) expandTransaction(a *ast.AST, t *ast.Transaction) {
 	}
 	if len(filtered) > 0 {
 		if len(filtered) < len(t.Postings) {
-			t := t.Clone()
+			t = t.Clone()
 			t.Postings = filtered
 		}
 		a.AddTransaction(t)

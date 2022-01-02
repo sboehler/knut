@@ -24,11 +24,11 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/balance/report"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/process"
+	"github.com/sboehler/knut/lib/journal/val/report"
 
 	"github.com/spf13/cobra"
 )

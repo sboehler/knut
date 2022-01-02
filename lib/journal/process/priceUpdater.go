@@ -5,7 +5,6 @@ import (
 
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/past"
-	"github.com/sboehler/knut/lib/journal/prices"
 	"github.com/sboehler/knut/lib/journal/val"
 )
 
@@ -20,7 +19,7 @@ func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day)
 	var (
 		resCh = make(chan *val.Day, 100)
 		errCh = make(chan error)
-		prc   = make(prices.Prices)
+		prc   = make(journal.Prices)
 	)
 	go func() {
 		defer close(resCh)
@@ -28,11 +27,11 @@ func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day)
 
 		var previous *val.Day
 		for day := range inCh {
-			var npr prices.NormalizedPrices
+			var npr journal.NormalizedPrices
 			if pr.Valuation != nil {
 				if day.AST != nil && len(day.AST.Prices) > 0 {
 					for _, p := range day.AST.Prices {
-						prc.Insert(p)
+						prc.Insert(p.Commodity, p.Price, p.Target)
 					}
 					npr = prc.Normalize(pr.Valuation)
 				} else if previous == nil {

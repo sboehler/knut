@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package prices
+package journal
 
 import (
 	"fmt"
 
-	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/shopspring/decimal"
 )
 
@@ -26,33 +24,33 @@ import (
 // Outer map: target commodity
 // Inner map: commodity
 // value: price in (target commodity / commodity)
-type Prices map[*journal.Commodity]map[*journal.Commodity]decimal.Decimal
+type Prices map[*Commodity]map[*Commodity]decimal.Decimal
 
 var one = decimal.NewFromInt(1)
 
 // Insert inserts a new price.
-func (p Prices) Insert(pr *ast.Price) {
-	p.addPrice(pr.Target, pr.Commodity, pr.Price)
-	p.addPrice(pr.Commodity, pr.Target, one.Div(pr.Price).Truncate(8))
+func (p Prices) Insert(commodity *Commodity, price decimal.Decimal, target *Commodity) {
+	p.addPrice(target, commodity, price)
+	p.addPrice(commodity, target, one.Div(price).Truncate(8))
 }
 
-func (p Prices) addPrice(target, commodity *journal.Commodity, pr decimal.Decimal) {
+func (p Prices) addPrice(target, commodity *Commodity, pr decimal.Decimal) {
 	i, ok := p[target]
 	if !ok {
-		i = make(map[*journal.Commodity]decimal.Decimal)
+		i = make(map[*Commodity]decimal.Decimal)
 		p[target] = i
 	}
 	i[commodity] = pr
 }
 
 // Normalize creates a normalized price map for the given commodity.
-func (p Prices) Normalize(c *journal.Commodity) NormalizedPrices {
+func (p Prices) Normalize(c *Commodity) NormalizedPrices {
 	// prices in (target commodity / commodity)
 	var (
 		todo = NormalizedPrices{c: one}
 		done = make(NormalizedPrices)
 
-		currentC *journal.Commodity
+		currentC *Commodity
 		currentP decimal.Decimal
 	)
 	for len(todo) > 0 {
@@ -74,10 +72,10 @@ func (p Prices) Normalize(c *journal.Commodity) NormalizedPrices {
 
 // NormalizedPrices is a map representing the price of
 // commodities in some base commodity.
-type NormalizedPrices map[*journal.Commodity]decimal.Decimal
+type NormalizedPrices map[*Commodity]decimal.Decimal
 
 // Valuate valuates the given amount.
-func (n NormalizedPrices) Valuate(c *journal.Commodity, a decimal.Decimal) (decimal.Decimal, error) {
+func (n NormalizedPrices) Valuate(c *Commodity, a decimal.Decimal) (decimal.Decimal, error) {
 	price, ok := n[c]
 	if !ok {
 		return decimal.Zero, fmt.Errorf("no price found for %v in %v", c, n)

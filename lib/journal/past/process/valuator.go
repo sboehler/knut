@@ -21,21 +21,6 @@ type Valuator struct {
 	values past.Amounts
 }
 
-// errOrExit will pass the error to errCh if it is not nil. It will return
-// false if the error was successfully passed or if the error is nil. It
-// returns true if the error couldn't be passed because the context was canceled.
-func (pr *Valuator) errOrExit(ctx context.Context, err error) bool {
-	if err != nil {
-		select {
-		case <-ctx.Done():
-			return true
-		case pr.errCh <- err:
-			return false
-		}
-	}
-	return false
-}
-
 // ProcessStream computes prices.
 func (pr *Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (chan *val.Day, chan error) {
 	pr.errCh = make(chan error)
@@ -51,11 +36,9 @@ func (pr *Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (ch
 			day.Values = pr.values
 
 			for _, t := range day.Day.Transactions {
-				tv, err := pr.valuateAndBookTransaction(day, t)
-				if pr.errOrExit(ctx, err) {
+				if pr.valuateAndBookTransaction(ctx, day, t) {
 					return
 				}
-				day.Transactions = append(day.Transactions, tv)
 			}
 
 			pr.computeValuationTransactions(day)
@@ -72,31 +55,31 @@ func (pr *Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (ch
 	return pr.resCh, pr.errCh
 }
 
-func (pr Valuator) valuateAndBookTransaction(b *val.Day, t *ast.Transaction) (*ast.Transaction, error) {
-	var res = t.Clone()
+func (pr Valuator) valuateAndBookTransaction(ctx context.Context, day *val.Day, t *ast.Transaction) bool {
+	tx := t.Clone()
 	for i, posting := range t.Postings {
 		if pr.Valuation != nil && pr.Valuation != posting.Commodity {
-			value, err := b.Prices.Valuate(posting.Commodity, posting.Amount)
-			if err != nil {
-				return nil, Error{t, err.Error()}
+			var err error
+			if posting.Amount, err = day.Prices.Valuate(posting.Commodity, posting.Amount); pr.errOrExit(ctx, err) {
+				return true
 			}
-			posting.Amount = value
 		}
-		b.Values.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
-		res.Postings[i] = posting
+		day.Values.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
+		tx.Postings[i] = posting
 	}
-	return res, nil
+	day.Transactions = append(day.Transactions, tx)
+	return false
 }
 
 // computeValuationTransactions checks whether the valuation for the positions
 // corresponds to the amounts. If not, the difference is due to a valuation
 // change of the previous amount, and a transaction is created to adjust the
 // valuation.
-func (pr Valuator) computeValuationTransactions(b *val.Day) {
+func (pr Valuator) computeValuationTransactions(day *val.Day) {
 	if pr.Valuation == nil {
 		return
 	}
-	for pos, va := range b.Day.Amounts {
+	for pos, va := range day.Day.Amounts {
 		if pos.Commodity == pr.Valuation {
 			continue
 		}
@@ -104,11 +87,11 @@ func (pr Valuator) computeValuationTransactions(b *val.Day) {
 		if at != journal.ASSETS && at != journal.LIABILITIES {
 			continue
 		}
-		value, err := b.Prices.Valuate(pos.Commodity, va)
+		value, err := day.Prices.Valuate(pos.Commodity, va)
 		if err != nil {
 			panic(fmt.Sprintf("no valuation found for commodity %s", pos.Commodity))
 		}
-		var diff = value.Sub(b.Values[pos])
+		var diff = value.Sub(day.Values[pos])
 		if diff.IsZero() {
 			continue
 		}
@@ -118,14 +101,29 @@ func (pr Valuator) computeValuationTransactions(b *val.Day) {
 		}
 		desc := fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account)
 		if !diff.IsZero() {
-			b.Transactions = append(b.Transactions, &ast.Transaction{
-				Date:        b.Date,
+			day.Transactions = append(day.Transactions, &ast.Transaction{
+				Date:        day.Date,
 				Description: desc,
 				Postings: []ast.Posting{
 					ast.NewPosting(valAcc, pos.Account, pos.Commodity, diff),
 				},
 			})
-			b.Values.Book(valAcc, pos.Account, diff, pos.Commodity)
+			day.Values.Book(valAcc, pos.Account, diff, pos.Commodity)
 		}
 	}
+}
+
+// errOrExit will pass the error to errCh if it is not nil. It will return
+// false if the error was successfully passed or if the error is nil. It
+// returns true if the error couldn't be passed because the context was canceled.
+func (pr *Valuator) errOrExit(ctx context.Context, err error) bool {
+	if err != nil {
+		select {
+		case <-ctx.Done():
+			return true
+		case pr.errCh <- err:
+			return false
+		}
+	}
+	return false
 }

@@ -15,71 +15,49 @@ type PeriodFilter struct {
 	Period   date.Period
 	Last     int
 	Diff     bool
+
+	resCh chan *val.Day
+	errCh chan error
 }
 
 // ProcessStream does the filtering.
 func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-chan *val.Day, <-chan error) {
-	var (
-		resCh = make(chan *val.Day, 100)
-		errCh = make(chan error)
-		index int
-	)
+	pf.resCh = make(chan *val.Day, 100)
+	pf.errCh = make(chan error)
+
+	var index int
 
 	go func() {
-		defer close(resCh)
-		defer close(errCh)
+
+		defer close(pf.resCh)
+		defer close(pf.errCh)
+
 		if pf.To.IsZero() {
 			pf.To = date.Today()
 		}
-		var dates []time.Time
-
-		day, ok := <-inCh
-		if !ok {
-			return
-		}
-		if pf.From.Before(day.Date) {
-			pf.From = day.Date
-		}
-		if !pf.From.Before(pf.To) {
-			return
-		}
-		dates = date.Series(pf.From, pf.To, pf.Period)
-
-		if pf.Last > 0 {
-			last := pf.Last
-			if len(dates) < last {
-				last = len(dates)
-			}
-			if pf.Diff {
-				last++
-			}
-			if len(dates) > pf.Last {
-				dates = dates[len(dates)-last:]
-			}
-		}
-		for index < len(dates) && dates[index].Before(day.Date) {
-			select {
-			case resCh <- &val.Day{Date: dates[index]}:
-				index++
-			case <-ctx.Done():
-				return
-			}
-		}
-		if index < len(dates) && dates[index].Equal(day.Date) {
-			select {
-			case resCh <- &val.Day{
-				Date:         dates[index],
-				Values:       day.Values,
-				Prices:       day.Prices,
-				Transactions: day.Transactions,
-			}:
-				index++
-			case <-ctx.Done():
-				return
-			}
-		}
-
+		var (
+			dates []time.Time
+			init  bool
+			day   *val.Day
+		)
 		for day = range inCh {
+			if !init {
+				if len(day.Transactions) == 0 {
+					continue
+				}
+				dates = pf.computeDates(day)
+				for index < len(dates) && dates[index].Before(day.Date) {
+					r := &val.Day{
+						Date: dates[index],
+					}
+					if pf.sendOrExit(ctx, r) {
+						return
+					}
+					index++
+				}
+				init = true
+			}
+
 			for index < len(dates) && !dates[index].After(day.Date) {
 				r := &val.Day{
 					Date:         dates[index],
@@ -87,12 +65,10 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 					Prices:       day.Prices,
 					Transactions: day.Transactions,
 				}
-				select {
-				case resCh <- r:
-					index++
-				case <-ctx.Done():
+				if pf.sendOrExit(ctx, r) {
 					return
 				}
+				index++
 			}
 		}
 		for index < len(dates) {
@@ -102,15 +78,46 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 				Prices:       day.Prices,
 				Transactions: day.Transactions,
 			}
-			select {
-			case resCh <- r:
-				index++
-			case <-ctx.Done():
+			if pf.sendOrExit(ctx, r) {
 				return
 			}
+			index++
 		}
 	}()
+	return pf.resCh, pf.errCh
 
-	return resCh, errCh
+}
 
+func (pf *PeriodFilter) sendOrExit(ctx context.Context, day *val.Day) bool {
+	select {
+	case pf.resCh <- day:
+		return false
+	case <-ctx.Done():
+		return true
+	}
+}
+
+func (pf *PeriodFilter) computeDates(day *val.Day) []time.Time {
+	from := pf.From
+	if pf.From.Before(day.Date) {
+		from = day.Date
+	}
+	if !from.Before(pf.To) {
+		return nil
+	}
+	dates := date.Series(from, pf.To, pf.Period)
+
+	if pf.Last > 0 {
+		last := pf.Last
+		if len(dates) < last {
+			last = len(dates)
+		}
+		if pf.Diff {
+			last++
+		}
+		if len(dates) > pf.Last {
+			dates = dates[len(dates)-last:]
+		}
+	}
+	return dates
 }

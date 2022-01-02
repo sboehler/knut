@@ -73,16 +73,15 @@ Usage:
   knut [command]
 
 Available Commands:
-  balance      create a balance sheet
-  benchmark    various subcommands to benchmark knut
-  completion   output shell completion code [bash|zsh]
-  fetch        Fetch quotes from Yahoo! Finance
-  format       Format the given journal
-  help         Help about any command
-  import       Import financial account statements
-  infer        Auto-assign accounts in a journal
-  transcode    transcode to beancount
-  web          start the knut web frontend
+  balance     create a balance sheet
+  benchmark   various subcommands to benchmark knut
+  completion  output shell completion code [bash|zsh]
+  fetch       Fetch quotes from Yahoo! Finance
+  format      Format the given journal
+  help        Help about any command
+  import      Import financial account statements
+  infer       Auto-assign accounts in a journal
+  transcode   transcode to beancount
 
 Flags:
   -h, --help      help for knut
@@ -455,7 +454,7 @@ Assets:BankAccount      Assets:Portfolio              1000 CHF
 Equity:Equity           Assets:Portfolio              1001 USD
 Assets:Portfolio        Equity:Equity                  969 CHF
 
-2020-01-06 "Buy 3 AAPL shares"
+2020-01-06 "Buy 12 AAPL shares"
 Equity:Equity           Assets:Portfolio                12 AAPL
 Assets:Portfolio        Equity:Equity                  900 USD
 Assets:Portfolio        Expenses:Fees                    4 USD

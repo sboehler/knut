@@ -37,7 +37,7 @@ Assets:BankAccount      Assets:Portfolio              1000 CHF
 Equity:Equity           Assets:Portfolio              1001 USD
 Assets:Portfolio        Equity:Equity                  969 CHF
 
-2020-01-06 "Buy 3 AAPL shares"
+2020-01-06 "Buy 12 AAPL shares"
 Equity:Equity           Assets:Portfolio                12 AAPL
 Assets:Portfolio        Equity:Equity                  900 USD
 Assets:Portfolio        Expenses:Fees                    4 USD

@@ -121,6 +121,10 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		astBuilder = process.ASTBuilder{
 			Context: jctx,
 		}
+		astExpander = process.ASTExpander{
+			Expand: true,
+			Filter: filter,
+		}
 		pastBuilder = process.PASTBuilder{
 			Context: jctx,
 			Filter:  filter,
@@ -163,6 +167,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	as = astExpander.Process(as)
 
 	ch1, errCh1 := pastBuilder.StreamFromAST(ctx, as)
 	ch2, errCh2 := priceUpdater.ProcessStream(ctx, ch1)

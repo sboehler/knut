@@ -24,7 +24,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast/beancount"
-	"github.com/sboehler/knut/lib/journal/past/process"
+	"github.com/sboehler/knut/lib/journal/process"
 	"github.com/sboehler/knut/lib/journal/val"
 
 	"github.com/spf13/cobra"

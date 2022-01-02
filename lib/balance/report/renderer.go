@@ -15,8 +15,8 @@
 package report
 
 import (
+	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/table"
 )
 
 // Renderer renders a report.

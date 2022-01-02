@@ -3,7 +3,7 @@ package process
 import (
 	"context"
 
-	"github.com/sboehler/knut/lib/journal/past"
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/journal/val"
 )
 
@@ -30,7 +30,7 @@ func (pf Differ) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-cha
 		defer close(pf.errCh)
 
 		var (
-			v    past.Amounts
+			v    amounts.Amounts
 			init bool
 		)
 

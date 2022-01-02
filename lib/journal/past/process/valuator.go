@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/sboehler/knut/lib/journal/val"
 )
 
@@ -18,7 +18,7 @@ type Valuator struct {
 	errCh chan error
 	resCh chan *val.Day
 
-	values past.Amounts
+	values amounts.Amounts
 }
 
 // ProcessStream computes prices.
@@ -26,7 +26,7 @@ func (pr *Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (ch
 	pr.errCh = make(chan error)
 	pr.resCh = make(chan *val.Day, 100)
 
-	pr.values = make(past.Amounts)
+	pr.values = make(amounts.Amounts)
 
 	go func() {
 		defer close(pr.resCh)

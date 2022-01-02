@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/balance/prices"
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/past"
 )
@@ -14,5 +15,5 @@ type Day struct {
 	Date         time.Time
 	Prices       prices.NormalizedPrices
 	Transactions []*ast.Transaction
-	Values       past.Amounts
+	Values       amounts.Amounts
 }

@@ -3,6 +3,7 @@ package performance
 import (
 	"fmt"
 
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/past"
 )
@@ -49,7 +50,7 @@ func (calc Calculator) Perf(l *past.PAST) <-chan DailyPerfValues {
 
 // Valuator computes a daily value per commodity.
 type Valuator struct {
-	Values past.Amounts
+	Values amounts.Amounts
 	Filter journal.Filter
 	Result *DailyPerfValues
 }

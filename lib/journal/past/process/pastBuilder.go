@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/past"
@@ -26,7 +27,7 @@ type PASTBuilder struct {
 	errCh chan error
 	resCh chan *past.Day
 
-	amounts      past.Amounts
+	amounts      amounts.Amounts
 	accounts     past.Accounts
 	transactions []*ast.Transaction
 }
@@ -87,7 +88,7 @@ func (pr *PASTBuilder) StreamFromAST(ctx context.Context, a *ast.AST) (<-chan *p
 		defer close(pr.resCh)
 		defer close(pr.errCh)
 
-		pr.amounts = make(past.Amounts)
+		pr.amounts = make(amounts.Amounts)
 		pr.accounts = make(past.Accounts)
 
 		for _, d := range a.SortedDays() {
@@ -184,7 +185,7 @@ func (pr *PASTBuilder) processAssertions(ctx context.Context, d *ast.Day) bool {
 				return true
 			}
 		}
-		position := past.CommodityAccount{Account: a.Account, Commodity: a.Commodity}
+		position := amounts.CommodityAccount{Account: a.Account, Commodity: a.Commodity}
 		if va, ok := pr.amounts[position]; !ok || !va.Equal(a.Amount) {
 			if pr.errOrExit(ctx, Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va, position.Commodity)}) {
 				return true

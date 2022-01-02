@@ -28,7 +28,7 @@ type PASTBuilder struct {
 	resCh chan *past.Day
 
 	amounts      amounts.Amounts
-	accounts     past.Accounts
+	accounts     accounts
 	transactions []*ast.Transaction
 }
 
@@ -89,7 +89,7 @@ func (pr *PASTBuilder) StreamFromAST(ctx context.Context, a *ast.AST) (<-chan *p
 		defer close(pr.errCh)
 
 		pr.amounts = make(amounts.Amounts)
-		pr.accounts = make(past.Accounts)
+		pr.accounts = make(accounts)
 
 		for _, d := range a.SortedDays() {
 			if pr.processOpenings(ctx, d) {
@@ -212,4 +212,33 @@ func (pr *PASTBuilder) processClosings(ctx context.Context, d *ast.Day) bool {
 		}
 	}
 	return false
+}
+
+// accounts keeps track of open accounts.
+type accounts map[*journal.Account]bool
+
+// Open opens an account.
+func (oa accounts) Open(a *journal.Account) error {
+	if oa[a] {
+		return fmt.Errorf("account %v is already open", a)
+	}
+	oa[a] = true
+	return nil
+}
+
+// Close closes an account.
+func (oa accounts) Close(a *journal.Account) error {
+	if !oa[a] {
+		return fmt.Errorf("account %v is already closed", a)
+	}
+	delete(oa, a)
+	return nil
+}
+
+// IsOpen returns whether an account is open.
+func (oa accounts) IsOpen(a *journal.Account) bool {
+	if oa[a] {
+		return true
+	}
+	return a.Type() == journal.EQUITY
 }

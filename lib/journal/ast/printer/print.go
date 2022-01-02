@@ -35,7 +35,7 @@ func New() *Printer {
 }
 
 // PrintDirective prints a directive to the given Writer.
-func (p Printer) PrintDirective(w io.Writer, directive interface{}) (n int, err error) {
+func (p Printer) PrintDirective(w io.Writer, directive ast.Directive) (n int, err error) {
 	switch d := directive.(type) {
 	case *ast.Transaction:
 		return p.printTransaction(w, d)
@@ -244,7 +244,7 @@ func (p *Printer) updatePadding(t *ast.Transaction) {
 	}
 }
 
-func (p Printer) writeLn(w io.Writer, d interface{}, count *int) error {
+func (p Printer) writeLn(w io.Writer, d ast.Directive, count *int) error {
 	c, err := p.PrintDirective(w, d)
 	*count += c
 	if err != nil {

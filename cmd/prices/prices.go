@@ -90,7 +90,7 @@ func execute(cmd *cobra.Command, args []string) error {
 	}()
 	var errors error
 	for err = range errCh {
-		errors = multierr.Append(err, errors)
+		errors = multierr.Append(errors, err)
 	}
 	return errors
 }

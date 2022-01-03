@@ -58,35 +58,39 @@ func run(cmd *cobra.Command, args []string) {
 
 const concurrency = 5
 
-func execute(cmd *cobra.Command, args []string) (errors error) {
+func execute(cmd *cobra.Command, args []string) error {
 	var ctx = journal.NewContext()
 	configs, err := readConfig(args[0])
 	if err != nil {
 		return err
 	}
 	var errCh = make(chan error)
-	defer close(errCh)
 	go func() {
-		for err = range errCh {
-			errors = multierr.Append(err, errors)
+		defer close(errCh)
+
+		sema := make(chan bool, concurrency)
+		defer close(sema)
+
+		bar := pb.StartNew(len(configs))
+		defer bar.Finish()
+
+		for _, cfg := range configs {
+			sema <- true
+			go func(c config) {
+				if err := fetch(cmd.Context(), ctx, args[0], c); err != nil {
+					errCh <- err
+				}
+				bar.Increment()
+				<-sema
+			}(cfg)
+		}
+		for i := 0; i < concurrency; i++ {
+			sema <- true
 		}
 	}()
-	var sema = make(chan bool, concurrency)
-	defer close(sema)
-	var bar = pb.StartNew(len(configs))
-	defer bar.Finish()
-	for _, cfg := range configs {
-		sema <- true
-		go func(c config) {
-			if err := fetch(cmd.Context(), ctx, args[0], c); err != nil {
-				errCh <- err
-			}
-			bar.Increment()
-			<-sema
-		}(cfg)
-	}
-	for i := 0; i < concurrency; i++ {
-		sema <- true
+	var errors error
+	for err = range errCh {
+		errors = multierr.Append(err, errors)
 	}
 	return errors
 }

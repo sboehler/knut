@@ -13,9 +13,6 @@ import (
 // ASTBuilder builds an abstract syntax tree.
 type ASTBuilder struct {
 	Context journal.Context
-
-	Expand bool
-	Filter journal.Filter
 }
 
 // ASTFromPath reads directives from the given channel and

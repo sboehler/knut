@@ -7,44 +7,30 @@ import (
 
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
 )
 
 // ASTBuilder builds an abstract syntax tree.
 type ASTBuilder struct {
 	Context journal.Context
+
+	resCh chan *ast.AST
+	errCh chan error
 }
 
-// ASTFromPath reads directives from the given channel and
+// BuildAST reads directives from the given channel and
 // builds a Ledger if successful.
-func (pr *ASTBuilder) ASTFromPath(ctx context.Context, p string) (*ast.AST, error) {
-	par := parser.RecursiveParser{
-		File:    p,
-		Context: pr.Context,
-	}
-	res := &ast.AST{
-		Context: pr.Context,
-		Days:    make(map[time.Time]*ast.Day),
-	}
-	resCh, errCh := par.Parse(ctx)
-
-	for resCh != nil || errCh != nil {
-		select {
-		case err, ok := <-errCh:
-			if !ok {
-				errCh = nil
-				break
-			}
-			return nil, err
-
-		case d, ok := <-resCh:
-			if !ok {
-				resCh = nil
-				break
-			}
+func (pr *ASTBuilder) BuildAST(ctx context.Context, inCh <-chan ast.Directive) (<-chan *ast.AST, <-chan error) {
+	pr.resCh = make(chan *ast.AST)
+	pr.errCh = make(chan error)
+	go func() {
+		defer close(pr.resCh)
+		defer close(pr.errCh)
+		res := &ast.AST{
+			Context: pr.Context,
+			Days:    make(map[time.Time]*ast.Day),
+		}
+		for d := range inCh {
 			switch t := d.(type) {
-			case error:
-				return nil, t
 			case *ast.Open:
 				res.AddOpen(t)
 			case *ast.Price:
@@ -58,21 +44,52 @@ func (pr *ASTBuilder) ASTFromPath(ctx context.Context, p string) (*ast.AST, erro
 			case *ast.Close:
 				res.AddClose(t)
 			default:
-				return nil, fmt.Errorf("unknown: %#v", t)
+				select {
+				case pr.errCh <- fmt.Errorf("unknown: %#v", t):
+				case <-ctx.Done():
+					return
+				}
 			}
 		}
-	}
-	return res, nil
+		select {
+		case pr.resCh <- res:
+		case <-ctx.Done():
+		}
+	}()
+	return pr.resCh, pr.errCh
 }
 
 // ASTExpander expands and filters the given AST.
 type ASTExpander struct {
 	Expand bool
 	Filter journal.Filter
+
+	resCh chan *ast.AST
+	errCh chan error
 }
 
-// Process processes the AST and returns a new copy.
-func (pr *ASTExpander) Process(a *ast.AST) *ast.AST {
+// ExpandAndFilterAST processes the given AST.
+func (pr *ASTExpander) ExpandAndFilterAST(ctx context.Context, inCh <-chan *ast.AST) (<-chan *ast.AST, <-chan error) {
+	pr.resCh = make(chan *ast.AST)
+	pr.errCh = make(chan error)
+	go func() {
+		defer close(pr.resCh)
+		defer close(pr.errCh)
+
+		for d := range inCh {
+			r := pr.process(d)
+			select {
+			case <-ctx.Done():
+				return
+			case pr.resCh <- r:
+			}
+		}
+	}()
+	return pr.resCh, pr.errCh
+}
+
+// process processes the AST and returns a new copy.
+func (pr *ASTExpander) process(a *ast.AST) *ast.AST {
 	res := &ast.AST{
 		Context: a.Context,
 		Days:    make(map[time.Time]*ast.Day),

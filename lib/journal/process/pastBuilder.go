@@ -125,6 +125,58 @@ func (pr *PASTBuilder) StreamFromAST(ctx context.Context, a *ast.AST) (<-chan *p
 	return pr.resCh, pr.errCh
 }
 
+// ProcessAST processes an AST to a stream of past.Day. It check assertions
+// and the usage of open and closed accounts. It will also
+// resolve Value directives and convert them to transactions.
+func (pr *PASTBuilder) ProcessAST(ctx context.Context, inCh <-chan *ast.AST) (<-chan *past.Day, <-chan error) {
+
+	pr.errCh = make(chan error)
+	pr.resCh = make(chan *past.Day, 100)
+
+	go func() {
+		defer close(pr.resCh)
+		defer close(pr.errCh)
+
+		for a := range inCh {
+
+			pr.amounts = make(amounts.Amounts)
+			pr.accounts = make(accounts)
+
+			for _, d := range a.SortedDays() {
+				if pr.processOpenings(ctx, d) {
+					return
+				}
+				if pr.processTransactions(ctx, d) {
+					return
+				}
+				if pr.processValues(ctx, d) {
+					return
+				}
+				if pr.processAssertions(ctx, d) {
+					return
+				}
+				if pr.processClosings(ctx, d) {
+					return
+				}
+				res := &past.Day{
+					Date:         d.Date,
+					AST:          d,
+					Transactions: pr.transactions,
+					Amounts:      pr.amounts,
+				}
+				pr.amounts = pr.amounts.Clone()
+				pr.transactions = nil
+				select {
+				case pr.resCh <- res:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+	return pr.resCh, pr.errCh
+}
+
 func (pr *PASTBuilder) processOpenings(ctx context.Context, d *ast.Day) bool {
 	for _, o := range d.Openings {
 		if err := pr.accounts.Open(o.Account); pr.errOrExit(ctx, err) {

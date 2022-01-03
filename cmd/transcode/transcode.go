@@ -24,6 +24,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast/beancount"
+	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/journal/process"
 	"github.com/sboehler/knut/lib/journal/val"
 
@@ -75,6 +76,10 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 		return err
 	}
 	var (
+		par = parser.RecursiveParser{
+			Context: jctx,
+			File:    args[0],
+		}
 		astBuilder = process.ASTBuilder{
 			Context: jctx,
 		}
@@ -95,23 +100,20 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	ctx, cancel := context.WithCancel(cmd.Context())
 	defer cancel()
 
-	as, err := astBuilder.ASTFromPath(ctx, args[0])
-	if err != nil {
-		return err
-	}
+	ch0, errCh0 := par.Parse(ctx)
+	ch1, errCh1 := astBuilder.BuildAST(ctx, ch0)
+	ch2, errCh2 := pastBuilder.ProcessAST(ctx, ch1)
+	ch3, errCh3 := priceUpdater.ProcessStream(ctx, ch2)
+	resCh, errCh4 := valuator.ProcessStream(ctx, ch3)
 
-	ch1, errCh1 := pastBuilder.StreamFromAST(ctx, as)
-	ch2, errCh2 := priceUpdater.ProcessStream(ctx, ch1)
-	ch3, errCh3 := valuator.ProcessStream(ctx, ch2)
-
-	errCh := mergeErrors(errCh1, errCh2, errCh3)
+	errCh := mergeErrors(errCh0, errCh1, errCh2, errCh3, errCh4)
 
 	var days []*val.Day
-	for ch3 != nil || errCh != nil {
+	for resCh != nil || errCh != nil {
 		select {
-		case d, ok := <-ch3:
+		case d, ok := <-resCh:
 			if !ok {
-				ch3 = nil
+				resCh = nil
 				break
 			}
 			days = append(days, d)
@@ -121,9 +123,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 				errCh = nil
 				break
 			}
-			if err != nil {
-				return err
-			}
+			return err
 		}
 	}
 

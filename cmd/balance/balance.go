@@ -27,6 +27,7 @@ import (
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/journal/process"
 	"github.com/sboehler/knut/lib/journal/val/report"
 
@@ -118,6 +119,10 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Accounts:    r.accounts.Value(),
 			Commodities: r.commodities.Value(),
 		}
+		par = parser.RecursiveParser{
+			File:    args[0],
+			Context: jctx,
+		}
 		astBuilder = process.ASTBuilder{
 			Context: jctx,
 		}
@@ -163,25 +168,22 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		ctx = cmd.Context()
 	)
 
-	as, err := astBuilder.ASTFromPath(ctx, args[0])
-	if err != nil {
-		return err
-	}
-	as = astExpander.Process(as)
+	ch0, errCh0 := par.Parse(ctx)
+	ch1, errCh1 := astBuilder.BuildAST(ctx, ch0)
+	ch2, errCh2 := astExpander.ExpandAndFilterAST(ctx, ch1)
+	ch3, errCh3 := pastBuilder.ProcessAST(ctx, ch2)
+	ch4, errCh4 := priceUpdater.ProcessStream(ctx, ch3)
+	ch5, errCh5 := valuator.ProcessStream(ctx, ch4)
+	ch6, errCh6 := periodFilter.ProcessStream(ctx, ch5)
+	ch7, errCh7 := differ.ProcessStream(ctx, ch6)
+	resCh, errCh8 := reportBuilder.FromStream(ctx, ch7)
 
-	ch1, errCh1 := pastBuilder.StreamFromAST(ctx, as)
-	ch2, errCh2 := priceUpdater.ProcessStream(ctx, ch1)
-	ch3, errCh3 := valuator.ProcessStream(ctx, ch2)
-	ch4, errCh4 := periodFilter.ProcessStream(ctx, ch3)
-	ch5, errCh5 := differ.ProcessStream(ctx, ch4)
-	ch6, errCh6 := reportBuilder.FromStream(ctx, ch5)
-
-	errCh := mergeErrors(errCh1, errCh2, errCh3, errCh4, errCh5, errCh6)
+	errCh := mergeErrors(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5, errCh6, errCh7, errCh8)
 
 	for {
 		select {
 
-		case rep, ok := <-ch6:
+		case rep, ok := <-resCh:
 			if !ok {
 				return fmt.Errorf("no report was produced")
 			}

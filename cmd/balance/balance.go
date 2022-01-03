@@ -187,7 +187,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			if !ok {
 				return fmt.Errorf("no report was produced")
 			}
-			var out = bufio.NewWriter(cmd.OutOrStdout())
+			out := bufio.NewWriter(cmd.OutOrStdout())
 			defer out.Flush()
 			return tableRenderer.Render(reportRenderer.Render(rep), out)
 

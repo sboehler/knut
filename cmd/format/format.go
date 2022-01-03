@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"sync"
 
 	"github.com/natefinch/atomic"
 	"github.com/spf13/cobra"
@@ -53,25 +52,50 @@ func run(cmd *cobra.Command, args []string) {
 	}
 }
 
-func execute(cmd *cobra.Command, args []string) (errors error) {
+func execute(cmd *cobra.Command, args []string) error {
 	var (
-		mu   sync.Mutex
-		sema = make(chan bool, concurrency)
+		ctx   = cmd.Context()
+		errCh = make(chan error)
 	)
-	for _, arg := range args {
-		arg := arg
-		sema <- true
-		go func() {
-			defer func() { <-sema }()
-			if err := formatFile(cmd.Context(), arg); err != nil {
-				mu.Lock()
-				defer mu.Unlock()
-				errors = multierr.Append(errors, err)
+	go func() {
+		defer close(errCh)
+
+		sema := make(chan bool, concurrency)
+		defer close(sema)
+
+		for _, arg := range args {
+			select {
+			case sema <- true:
+			case <-ctx.Done():
+				return
 			}
-		}()
-	}
-	for i := 0; i < concurrency; i++ {
-		sema <- true
+			go func(arg string) {
+				if err := formatFile(ctx, arg); err != nil {
+					select {
+					case errCh <- err:
+					case <-ctx.Done():
+						return
+					}
+				}
+				select {
+				case <-sema:
+				case <-ctx.Done():
+					return
+				}
+			}(arg)
+		}
+		for i := 0; i < concurrency; i++ {
+			select {
+			case sema <- true:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	var errors error
+	for err := range errCh {
+		errors = multierr.Append(errors, err)
 	}
 	return errors
 }
@@ -109,22 +133,23 @@ func readDirectives(ctx context.Context, target string) (directives []ast.Direct
 		err = multierr.Append(err, close())
 	}()
 
-	ch, errCh := p.Parse(ctx)
+	resCh, errCh := p.Parse(ctx)
 
-	for ch != nil && errCh != nil {
+	for resCh != nil || errCh != nil {
 		select {
-		case d, ok := <-ch:
+		case d, ok := <-resCh:
 			if !ok {
-				ch = nil
-			} else {
-				directives = append(directives, d)
+				resCh = nil
+				break
 			}
+			directives = append(directives, d)
+
 		case err, ok := <-errCh:
 			if !ok {
 				errCh = nil
-			} else {
-				return nil, err
+				break
 			}
+			return nil, err
 		}
 	}
 	return directives, nil

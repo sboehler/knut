@@ -15,16 +15,19 @@
 package report
 
 import (
+	"math"
+
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 )
 
 // Renderer renders a report.
 type Renderer struct {
-	Context         journal.Context
-	ShowCommodities bool
-	report          *Report
-	table           *table.Table
+	Context            journal.Context
+	ShowCommodities    bool
+	SortAlphabetically bool
+	report             *Report
+	table              *table.Table
 }
 
 // Render renders a report.
@@ -39,11 +42,13 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	}
 	rn.table.AddSeparatorRow()
 
+	weights := rn.computeWeights()
+
 	var (
 		subtree = rn.report.Subtree()
 		al, eie []*journal.Account
 	)
-	for acc := range rn.Context.Accounts().PreOrder() {
+	for _, acc := range rn.Context.Accounts().SortedPreOrder(weights) {
 		if _, ok := subtree[acc]; !ok {
 			continue
 		}
@@ -61,6 +66,27 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	rn.render(0, "Delta", false, alTotals)
 	rn.table.AddSeparatorRow()
 	return rn.table
+}
+
+func (rn *Renderer) computeWeights() map[*journal.Account]float64 {
+	weights := make(map[*journal.Account]float64)
+	for _, acc := range rn.Context.Accounts().PostOrder() {
+		var w float64
+		if !rn.SortAlphabetically {
+
+			for _, ibd := range rn.report.Positions[acc] {
+				for _, v := range ibd {
+					f, _ := v.Float64()
+					w += math.Abs(f)
+				}
+			}
+			for _, chAcc := range acc.Children() {
+				w += weights[chAcc]
+			}
+		}
+		weights[acc] = w
+	}
+	return weights
 }
 
 func (rn *Renderer) renderSection(al []*journal.Account, negate bool) indexByCommodity {

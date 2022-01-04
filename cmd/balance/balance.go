@@ -56,6 +56,7 @@ type runner struct {
 	from, to                                flags.DateFlag
 	last                                    int
 	diff, showCommodities, thousands, color bool
+	sortAlphabetically                      bool
 	digits                                  int32
 	accounts, commodities                   flags.RegexFlag
 	period                                  flags.PeriodFlags
@@ -84,6 +85,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().Var(&r.to, "to", "to date")
 	c.Flags().IntVar(&r.last, "last", 0, "last n periods")
 	c.Flags().BoolVarP(&r.diff, "diff", "d", false, "diff")
+	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "s", false, "Show commodities on their own rows")
 	r.period.Setup(c.Flags())
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
@@ -157,8 +159,9 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Mapping: r.mapping.Value(),
 		}
 		reportRenderer = report.Renderer{
-			Context:         jctx,
-			ShowCommodities: r.showCommodities || valuation == nil,
+			Context:            jctx,
+			ShowCommodities:    r.showCommodities || valuation == nil,
+			SortAlphabetically: r.sortAlphabetically,
 		}
 		tableRenderer = table.TextRenderer{
 			Color:     r.color,

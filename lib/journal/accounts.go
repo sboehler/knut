@@ -135,31 +135,37 @@ func isValidSegment(s string) bool {
 }
 
 // PreOrder iterates over accounts in post-order.
-func (as *Accounts) PreOrder() <-chan *Account {
+func (as *Accounts) PreOrder() []*Account {
 	as.mutex.RLock()
 	defer as.mutex.RUnlock()
-	ch := make(chan *Account)
-	go func() {
-		defer close(ch)
-		for _, at := range AccountTypes {
-			as.accounts[at].pre(ch)
-		}
-	}()
-	return ch
+	var res []*Account
+	for _, at := range AccountTypes {
+		res = as.accounts[at].pre(res)
+	}
+	return res
 }
 
 // PostOrder iterates over accounts in post-order.
-func (as *Accounts) PostOrder() <-chan *Account {
+func (as *Accounts) PostOrder() []*Account {
 	as.mutex.RLock()
 	defer as.mutex.RUnlock()
-	ch := make(chan *Account)
-	go func() {
-		defer close(ch)
-		for _, root := range as.accounts {
-			root.post(ch)
-		}
-	}()
-	return ch
+	var res []*Account
+	for _, at := range AccountTypes {
+		res = as.accounts[at].post(res)
+	}
+	return res
+}
+
+// SortedPreOrder sorts every level according to the weights supplied. The
+// given weights must be dense.
+func (as *Accounts) SortedPreOrder(weights map[*Account]float64) []*Account {
+	as.mutex.RLock()
+	defer as.mutex.RUnlock()
+	var res []*Account
+	for _, at := range AccountTypes {
+		res = as.accounts[at].sorted(res, weights)
+	}
+	return res
 }
 
 // Account represents an account which can be used in bookings.
@@ -232,6 +238,13 @@ func (a Account) Parent() *Account {
 	return a.parent
 }
 
+// Children returns the children of this account.
+func (a Account) Children() []*Account {
+	var res = make([]*Account, len(a.children))
+	copy(res, a.children)
+	return res
+}
+
 // Descendents returns all the descendents of this account, not including
 // the account itself.
 func (a Account) Descendents() []*Account {
@@ -274,18 +287,37 @@ func (a *Account) nthParent(n int) *Account {
 	return a.parent.nthParent(n - 1)
 }
 
-func (a *Account) pre(ch chan<- *Account) {
-	ch <- a
+func (a *Account) pre(acc []*Account) []*Account {
+	acc = append(acc, a)
 	for _, c := range a.children {
-		c.pre(ch)
+		acc = c.pre(acc)
 	}
+	return acc
 }
 
-func (a *Account) post(ch chan<- *Account) {
+func (a *Account) post(acc []*Account) []*Account {
 	for _, c := range a.children {
-		c.post(ch)
+		acc = c.post(acc)
 	}
-	ch <- a
+	acc = append(acc, a)
+	return acc
+}
+
+func (a *Account) sorted(in []*Account, weights map[*Account]float64) []*Account {
+	var children []*Account
+	for _, ch := range a.Children() {
+		if _, ok := weights[ch]; ok {
+			children = append(children, ch)
+		}
+	}
+	sort.Slice(children, func(i int, j int) bool {
+		return weights[children[i]] > weights[children[j]]
+	})
+	in = append(in, a)
+	for _, ch := range children {
+		in = ch.sorted(in, weights)
+	}
+	return in
 }
 
 // Rule is a rule to shorten accounts which match the given regex.

@@ -35,18 +35,36 @@ func NewContext() Context {
 }
 
 // GetAccount returns an account.
-func (c Context) GetAccount(name string) (*Account, error) {
-	return c.accounts.Get(name)
+func (ctx Context) GetAccount(name string) (*Account, error) {
+	return ctx.accounts.Get(name)
+}
+
+// Account returns a commodity or panics.
+func (ctx Context) Account(name string) *Account {
+	c, err := ctx.GetAccount(name)
+	if err != nil {
+		panic(err)
+	}
+	return c
 }
 
 // GetCommodity returns a commodity.
-func (c Context) GetCommodity(name string) (*Commodity, error) {
-	return c.commodities.Get(name)
+func (ctx Context) GetCommodity(name string) (*Commodity, error) {
+	return ctx.commodities.Get(name)
+}
+
+// Commodity returns a commodity or panics.
+func (ctx Context) Commodity(name string) *Commodity {
+	c, err := ctx.GetCommodity(name)
+	if err != nil {
+		panic(err)
+	}
+	return c
 }
 
 // ValuationAccount returns the account for automatic valuation bookings.
-func (c Context) ValuationAccount() *Account {
-	res, err := c.accounts.Get("Equity:Valuation")
+func (ctx Context) ValuationAccount() *Account {
+	res, err := ctx.accounts.Get("Equity:Valuation")
 	if err != nil {
 		panic(fmt.Sprintf("could not create valuation account: %v", err))
 	}
@@ -54,8 +72,8 @@ func (c Context) ValuationAccount() *Account {
 }
 
 // EquityAccount is the equity account used for trades
-func (c Context) EquityAccount() *Account {
-	res, err := c.accounts.Get("Equity:Equity")
+func (ctx Context) EquityAccount() *Account {
+	res, err := ctx.accounts.Get("Equity:Equity")
 	if err != nil {
 		panic(fmt.Sprintf("could not create equityAccount: %v", err))
 	}
@@ -63,8 +81,8 @@ func (c Context) EquityAccount() *Account {
 }
 
 // RetainedEarningsAccount returns the account for automatic valuation bookings.
-func (c Context) RetainedEarningsAccount() *Account {
-	res, err := c.accounts.Get("Equity:RetainedEarnings")
+func (ctx Context) RetainedEarningsAccount() *Account {
+	res, err := ctx.accounts.Get("Equity:RetainedEarnings")
 	if err != nil {
 		panic(fmt.Sprintf("could not create valuationAccount: %v", err))
 	}
@@ -72,8 +90,8 @@ func (c Context) RetainedEarningsAccount() *Account {
 }
 
 // TBDAccount returns the TBD account.
-func (c Context) TBDAccount() *Account {
-	tbdAccount, err := c.accounts.Get("Expenses:TBD")
+func (ctx Context) TBDAccount() *Account {
+	tbdAccount, err := ctx.accounts.Get("Expenses:TBD")
 	if err != nil {
 		panic(fmt.Sprintf("could not create Expenses:TBD account: %v", err))
 	}
@@ -82,18 +100,18 @@ func (c Context) TBDAccount() *Account {
 
 // ValuationAccountFor returns the valuation account which corresponds to
 // the given Asset or Liability account.
-func (c Context) ValuationAccountFor(a *Account) (*Account, error) {
+func (ctx Context) ValuationAccountFor(a *Account) (*Account, error) {
 	suffix := a.Split()[1:]
-	segments := append(c.ValuationAccount().Split(), suffix...)
-	return c.GetAccount(strings.Join(segments, ":"))
+	segments := append(ctx.ValuationAccount().Split(), suffix...)
+	return ctx.GetAccount(strings.Join(segments, ":"))
 }
 
 // Accounts returns the accounts.
-func (c Context) Accounts() *Accounts {
-	return c.accounts
+func (ctx Context) Accounts() *Accounts {
+	return ctx.accounts
 }
 
 // Commodities returns the commodities.
-func (c Context) Commodities() *Commodities {
-	return c.commodities
+func (ctx Context) Commodities() *Commodities {
+	return ctx.commodities
 }

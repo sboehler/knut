@@ -29,26 +29,37 @@ func (pr *ASTBuilder) BuildAST(ctx context.Context, inCh <-chan ast.Directive) (
 			Context: pr.Context,
 			Days:    make(map[time.Time]*ast.Day),
 		}
-		for d := range inCh {
-			switch t := d.(type) {
-			case *ast.Open:
-				res.AddOpen(t)
-			case *ast.Price:
-				res.AddPrice(t)
-			case *ast.Transaction:
-				res.AddTransaction(t)
-			case *ast.Assertion:
-				res.AddAssertion(t)
-			case *ast.Value:
-				res.AddValue(t)
-			case *ast.Close:
-				res.AddClose(t)
-			default:
-				select {
-				case pr.errCh <- fmt.Errorf("unknown: %#v", t):
-				case <-ctx.Done():
-					return
+		for inCh != nil {
+			select {
+
+			case d, ok := <-inCh:
+				if !ok {
+					inCh = nil
+					break
 				}
+				switch t := d.(type) {
+				case *ast.Open:
+					res.AddOpen(t)
+				case *ast.Price:
+					res.AddPrice(t)
+				case *ast.Transaction:
+					res.AddTransaction(t)
+				case *ast.Assertion:
+					res.AddAssertion(t)
+				case *ast.Value:
+					res.AddValue(t)
+				case *ast.Close:
+					res.AddClose(t)
+				default:
+					select {
+					case pr.errCh <- fmt.Errorf("unknown: %#v", t):
+					case <-ctx.Done():
+						return
+					}
+				}
+
+			case <-ctx.Done():
+				return
 			}
 		}
 		select {

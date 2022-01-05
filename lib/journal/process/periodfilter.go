@@ -15,22 +15,19 @@ type PeriodFilter struct {
 	Period   date.Period
 	Last     int
 	Diff     bool
-
-	resCh chan *val.Day
-	errCh chan error
 }
 
 // ProcessStream does the filtering.
 func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-chan *val.Day, <-chan error) {
-	pf.resCh = make(chan *val.Day, 100)
-	pf.errCh = make(chan error)
+	resCh := make(chan *val.Day, 100)
+	errCh := make(chan error)
 
 	var index int
 
 	go func() {
 
-		defer close(pf.resCh)
-		defer close(pf.errCh)
+		defer close(resCh)
+		defer close(errCh)
 
 		if pf.To.IsZero() {
 			pf.To = date.Today()
@@ -40,7 +37,14 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 			init  bool
 			day   *val.Day
 		)
-		for day = range inCh {
+		for {
+			if d, ok, err := pop(ctx, inCh); err != nil {
+				return
+			} else if !ok {
+				break
+			} else {
+				day = d
+			}
 			if !init {
 				if len(day.Transactions) == 0 {
 					continue
@@ -50,7 +54,7 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 					r := &val.Day{
 						Date: dates[index],
 					}
-					if pf.sendOrExit(ctx, r) {
+					if push(ctx, resCh, r) != nil {
 						return
 					}
 					index++
@@ -65,7 +69,7 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 					Prices:       day.Prices,
 					Transactions: day.Transactions,
 				}
-				if pf.sendOrExit(ctx, r) {
+				if push(ctx, resCh, r) != nil {
 					return
 				}
 				index++
@@ -78,23 +82,14 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 				Prices:       day.Prices,
 				Transactions: day.Transactions,
 			}
-			if pf.sendOrExit(ctx, r) {
+			if push(ctx, resCh, r) != nil {
 				return
 			}
 			index++
 		}
 	}()
-	return pf.resCh, pf.errCh
+	return resCh, errCh
 
-}
-
-func (pf *PeriodFilter) sendOrExit(ctx context.Context, day *val.Day) bool {
-	select {
-	case pf.resCh <- day:
-		return false
-	case <-ctx.Done():
-		return true
-	}
 }
 
 func (pf *PeriodFilter) computeDates(day *val.Day) []time.Time {

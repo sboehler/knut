@@ -12,91 +12,99 @@ import (
 // ASTBuilder builds an abstract syntax tree.
 type ASTBuilder struct {
 	Context journal.Context
-
-	resCh chan *ast.AST
-	errCh chan error
 }
 
 // BuildAST reads directives from the given channel and
 // builds a Ledger if successful.
 func (pr *ASTBuilder) BuildAST(ctx context.Context, inCh <-chan ast.Directive) (<-chan *ast.AST, <-chan error) {
-	pr.resCh = make(chan *ast.AST)
-	pr.errCh = make(chan error)
+	resCh := make(chan *ast.AST)
+	errCh := make(chan error)
 	go func() {
-		defer close(pr.resCh)
-		defer close(pr.errCh)
+		defer close(resCh)
+		defer close(errCh)
 		res := &ast.AST{
 			Context: pr.Context,
 			Days:    make(map[time.Time]*ast.Day),
 		}
-		for inCh != nil {
-			select {
-
-			case d, ok := <-inCh:
-				if !ok {
-					inCh = nil
-					break
-				}
-				switch t := d.(type) {
-				case *ast.Open:
-					res.AddOpen(t)
-				case *ast.Price:
-					res.AddPrice(t)
-				case *ast.Transaction:
-					res.AddTransaction(t)
-				case *ast.Assertion:
-					res.AddAssertion(t)
-				case *ast.Value:
-					res.AddValue(t)
-				case *ast.Close:
-					res.AddClose(t)
-				default:
-					select {
-					case pr.errCh <- fmt.Errorf("unknown: %#v", t):
-					case <-ctx.Done():
-						return
-					}
-				}
-
-			case <-ctx.Done():
+		for {
+			d, ok, err := pop(ctx, inCh)
+			if err != nil {
 				return
 			}
-		}
-		select {
-		case pr.resCh <- res:
-		case <-ctx.Done():
+			if !ok {
+				push(ctx, resCh, res)
+				return
+			}
+			switch t := d.(type) {
+			case *ast.Open:
+				res.AddOpen(t)
+			case *ast.Price:
+				res.AddPrice(t)
+			case *ast.Transaction:
+				res.AddTransaction(t)
+			case *ast.Assertion:
+				res.AddAssertion(t)
+			case *ast.Value:
+				res.AddValue(t)
+			case *ast.Close:
+				res.AddClose(t)
+			default:
+				if push(ctx, errCh, fmt.Errorf("unknown: %#v", t)) != nil {
+					return
+				}
+			}
 		}
 	}()
-	return pr.resCh, pr.errCh
+	return resCh, errCh
+}
+
+func pop[T any](ctx context.Context, ch <-chan T) (T, bool, error) {
+	var res T
+	select {
+	case d, ok := <-ch:
+		return d, ok, ctx.Err()
+	case <-ctx.Done():
+		return res, false, ctx.Err()
+	}
+}
+
+func push[T any](ctx context.Context, ch chan<- T, ts ...T) error {
+	for _, t := range ts {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case ch <- t:
+		}
+	}
+	return nil
 }
 
 // ASTExpander expands and filters the given AST.
 type ASTExpander struct {
 	Expand bool
 	Filter journal.Filter
-
-	resCh chan *ast.AST
-	errCh chan error
 }
 
 // ExpandAndFilterAST processes the given AST.
 func (pr *ASTExpander) ExpandAndFilterAST(ctx context.Context, inCh <-chan *ast.AST) (<-chan *ast.AST, <-chan error) {
-	pr.resCh = make(chan *ast.AST)
-	pr.errCh = make(chan error)
+	resCh := make(chan *ast.AST)
+	errCh := make(chan error)
 	go func() {
-		defer close(pr.resCh)
-		defer close(pr.errCh)
+		defer close(resCh)
+		defer close(errCh)
 
-		for d := range inCh {
-			r := pr.process(d)
-			select {
-			case <-ctx.Done():
+		for {
+			d, ok, err := pop(ctx, inCh)
+			if !ok || err != nil {
 				return
-			case pr.resCh <- r:
+			}
+			r := pr.process(d)
+			if push(ctx, resCh, r) != nil {
+				return
 			}
 		}
 	}()
-	return pr.resCh, pr.errCh
+	return resCh, errCh
 }
 
 // process processes the AST and returns a new copy.

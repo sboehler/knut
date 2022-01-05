@@ -11,39 +11,38 @@ import (
 // specified.
 type Differ struct {
 	Diff bool
-
-	errCh chan error
-	resCh chan *val.Day
 }
 
 // ProcessStream does the filtering.
 func (pf Differ) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-chan *val.Day, <-chan error) {
-	pf.errCh = make(chan error)
+	errCh := make(chan error)
 	if !pf.Diff {
-		close(pf.errCh)
-		return inCh, pf.errCh
+		close(errCh)
+		return inCh, errCh
 	}
-	pf.resCh = make(chan *val.Day, 100)
+	resCh := make(chan *val.Day, 100)
 
 	go func() {
-		defer close(pf.resCh)
-		defer close(pf.errCh)
+		defer close(resCh)
+		defer close(errCh)
 
 		var (
 			v    amounts.Amounts
 			init bool
 		)
 
-		for d := range inCh {
+		for {
+			d, ok, err := pop(ctx, inCh)
+			if !ok || err != nil {
+				return
+			}
 			if init {
 				res := &val.Day{
 					Date:   d.Date,
 					Values: d.Values.Clone(),
 				}
 				res.Values.Minus(v)
-				select {
-				case pf.resCh <- res:
-				case <-ctx.Done():
+				if push(ctx, resCh, res) != nil {
 					return
 				}
 			}
@@ -52,5 +51,5 @@ func (pf Differ) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-cha
 		}
 
 	}()
-	return pf.resCh, pf.errCh
+	return resCh, errCh
 }

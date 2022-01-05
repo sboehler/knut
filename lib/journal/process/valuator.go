@@ -15,60 +15,60 @@ type Valuator struct {
 	Context   journal.Context
 	Valuation *journal.Commodity
 
-	errCh chan error
-	resCh chan *val.Day
-
-	values amounts.Amounts
+	//values amounts.Amounts
 }
 
 // ProcessStream computes prices.
 func (pr *Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (chan *val.Day, chan error) {
-	pr.errCh = make(chan error)
-	pr.resCh = make(chan *val.Day, 100)
+	errCh := make(chan error)
+	resCh := make(chan *val.Day, 100)
 
-	pr.values = make(amounts.Amounts)
+	values := make(amounts.Amounts)
 
 	go func() {
-		defer close(pr.resCh)
-		defer close(pr.errCh)
+		defer close(resCh)
+		defer close(errCh)
 
-		for day := range inCh {
-			day.Values = pr.values
+		for {
+			day, ok, err := pop(ctx, inCh)
+			if !ok || err != nil {
+				return
+			}
+			day.Values = values
 
 			for _, t := range day.Day.Transactions {
-				if pr.valuateAndBookTransaction(ctx, day, t) {
+				if errors := pr.valuateAndBookTransaction(ctx, day, t); push(ctx, errCh, errors...) != nil {
 					return
 				}
 			}
 
 			pr.computeValuationTransactions(day)
-			pr.values = pr.values.Clone()
+			values = values.Clone()
 
-			select {
-			case pr.resCh <- day:
-			case <-ctx.Done():
+			if push(ctx, resCh, day) != nil {
 				return
 			}
 		}
 	}()
 
-	return pr.resCh, pr.errCh
+	return resCh, errCh
 }
 
-func (pr Valuator) valuateAndBookTransaction(ctx context.Context, day *val.Day, t *ast.Transaction) bool {
+func (pr Valuator) valuateAndBookTransaction(ctx context.Context, day *val.Day, t *ast.Transaction) []error {
+	var errors []error
 	tx := t.Clone()
 	for i, posting := range t.Postings {
 		if pr.Valuation != nil && pr.Valuation != posting.Commodity {
 			var err error
-			if posting.Amount, err = day.Prices.Valuate(posting.Commodity, posting.Amount); pr.errOrExit(ctx, err) {
-				return true
+			if posting.Amount, err = day.Prices.Valuate(posting.Commodity, posting.Amount); err != nil {
+				errors = append(errors, err)
 			}
 		}
 		day.Values.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
 		tx.Postings[i] = posting
 	}
 	day.Transactions = append(day.Transactions, tx)
-	return false
+	return errors
 }
 
 // computeValuationTransactions checks whether the valuation for the positions
@@ -111,19 +111,4 @@ func (pr Valuator) computeValuationTransactions(day *val.Day) {
 			day.Values.Book(valAcc, pos.Account, diff, pos.Commodity)
 		}
 	}
-}
-
-// errOrExit will pass the error to errCh if it is not nil. It will return
-// false if the error was successfully passed or if the error is nil. It
-// returns true if the error couldn't be passed because the context was canceled.
-func (pr *Valuator) errOrExit(ctx context.Context, err error) bool {
-	if err != nil {
-		select {
-		case <-ctx.Done():
-			return true
-		case pr.errCh <- err:
-			return false
-		}
-	}
-	return false
 }

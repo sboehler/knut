@@ -22,14 +22,6 @@ type PASTBuilder struct {
 
 	// Expand controls whether Accrual add-ons are expanded.
 	Expand bool
-
-	// Private fields to hold and share channels between methods.
-	errCh chan error
-	resCh chan *past.Day
-
-	amounts      amounts.Amounts
-	accounts     accounts
-	transactions []*ast.Transaction
 }
 
 // FromAST processes an AST to a PAST. It check assertions
@@ -53,6 +45,9 @@ func (pr PASTBuilder) FromAST(ctx context.Context, a *ast.AST) (*past.PAST, erro
 				break
 			}
 			return nil, err
+
+		case <-ctx.Done():
+			return nil, ctx.Err()
 		}
 	}
 	return &past.PAST{
@@ -64,16 +59,8 @@ func (pr PASTBuilder) FromAST(ctx context.Context, a *ast.AST) (*past.PAST, erro
 // errOrExit will pass the error to errCh if it is not nil. It will return
 // false if the error was successfully passed or if the error is nil. It
 // returns true if the error couldn't be passed because the context was canceled.
-func (pr *PASTBuilder) errOrExit(ctx context.Context, err error) bool {
-	if err != nil {
-		select {
-		case <-ctx.Done():
-			return true
-		case pr.errCh <- err:
-			return false
-		}
-	}
-	return false
+func errOrExit(ctx context.Context, errCh chan<- error, err error) bool {
+	return err != nil && push(ctx, errCh, err) != nil
 }
 
 // StreamFromAST processes an AST to a stream of past.Day. It check assertions
@@ -81,48 +68,49 @@ func (pr *PASTBuilder) errOrExit(ctx context.Context, err error) bool {
 // resolve Value directives and convert them to transactions.
 func (pr *PASTBuilder) StreamFromAST(ctx context.Context, a *ast.AST) (<-chan *past.Day, <-chan error) {
 
-	pr.errCh = make(chan error)
-	pr.resCh = make(chan *past.Day, 100)
+	errCh := make(chan error)
+	resCh := make(chan *past.Day, 100)
 
 	go func() {
-		defer close(pr.resCh)
-		defer close(pr.errCh)
+		defer close(resCh)
+		defer close(errCh)
 
-		pr.amounts = make(amounts.Amounts)
-		pr.accounts = make(accounts)
+		amounts := make(amounts.Amounts)
+		accounts := make(accounts)
 
 		for _, d := range a.SortedDays() {
-			if pr.processOpenings(ctx, d) {
+			var (
+				transactions []*ast.Transaction
+				errors       []error
+			)
+			if errors = pr.processOpenings(ctx, accounts, d); push(ctx, errCh, errors...) != nil {
 				return
 			}
-			if pr.processTransactions(ctx, d) {
+			if errors = pr.processTransactions(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
 				return
 			}
-			if pr.processValues(ctx, d) {
+			if transactions, errors = pr.processValues(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
 				return
 			}
-			if pr.processAssertions(ctx, d) {
+			if errors = pr.processAssertions(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
 				return
 			}
-			if pr.processClosings(ctx, d) {
+			if errors = pr.processClosings(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
 				return
 			}
 			res := &past.Day{
 				Date:         d.Date,
 				AST:          d,
-				Transactions: pr.transactions,
-				Amounts:      pr.amounts,
+				Amounts:      amounts,
+				Transactions: append(transactions, d.Transactions...),
 			}
-			pr.amounts = pr.amounts.Clone()
-			pr.transactions = nil
-			select {
-			case pr.resCh <- res:
-			case <-ctx.Done():
+			amounts = amounts.Clone()
+			if push(ctx, resCh, res) != nil {
 				return
 			}
 		}
 	}()
-	return pr.resCh, pr.errCh
+	return resCh, errCh
 }
 
 // ProcessAST processes an AST to a stream of past.Day. It check assertions
@@ -130,140 +118,137 @@ func (pr *PASTBuilder) StreamFromAST(ctx context.Context, a *ast.AST) (<-chan *p
 // resolve Value directives and convert them to transactions.
 func (pr *PASTBuilder) ProcessAST(ctx context.Context, inCh <-chan *ast.AST) (<-chan *past.Day, <-chan error) {
 
-	pr.errCh = make(chan error)
-	pr.resCh = make(chan *past.Day, 100)
+	errCh := make(chan error)
+	resCh := make(chan *past.Day, 100)
 
 	go func() {
-		defer close(pr.resCh)
-		defer close(pr.errCh)
+		defer close(resCh)
+		defer close(errCh)
 
-		for a := range inCh {
-
-			pr.amounts = make(amounts.Amounts)
-			pr.accounts = make(accounts)
+		for {
+			a, ok, err := pop(ctx, inCh)
+			if !ok || err != nil {
+				return
+			}
+			amounts := make(amounts.Amounts)
+			accounts := make(accounts)
 
 			for _, d := range a.SortedDays() {
-				if pr.processOpenings(ctx, d) {
+				var (
+					transactions []*ast.Transaction
+					errors       []error
+				)
+				if errors = pr.processOpenings(ctx, accounts, d); push(ctx, errCh, errors...) != nil {
 					return
 				}
-				if pr.processTransactions(ctx, d) {
+				if errors = pr.processTransactions(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
 					return
 				}
-				if pr.processValues(ctx, d) {
+				if transactions, errors = pr.processValues(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
 					return
 				}
-				if pr.processAssertions(ctx, d) {
+				if errors = pr.processAssertions(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
 					return
 				}
-				if pr.processClosings(ctx, d) {
+				if errors = pr.processClosings(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
 					return
 				}
 				res := &past.Day{
 					Date:         d.Date,
 					AST:          d,
-					Transactions: pr.transactions,
-					Amounts:      pr.amounts,
+					Transactions: append(transactions, d.Transactions...),
+					Amounts:      amounts,
 				}
-				pr.amounts = pr.amounts.Clone()
-				pr.transactions = nil
-				select {
-				case pr.resCh <- res:
-				case <-ctx.Done():
+				amounts = amounts.Clone()
+				if push(ctx, resCh, res) != nil {
 					return
 				}
 			}
 		}
 	}()
-	return pr.resCh, pr.errCh
+	return resCh, errCh
 }
 
-func (pr *PASTBuilder) processOpenings(ctx context.Context, d *ast.Day) bool {
+func (pr *PASTBuilder) processOpenings(ctx context.Context, accounts accounts, d *ast.Day) []error {
+	var errors []error
 	for _, o := range d.Openings {
-		if err := pr.accounts.Open(o.Account); pr.errOrExit(ctx, err) {
-			return true
+		if err := accounts.Open(o.Account); err != nil {
+			errors = append(errors, err)
 		}
 	}
-	return false
+	return errors
 }
 
-func (pr *PASTBuilder) processTransactions(ctx context.Context, d *ast.Day) bool {
+func (pr *PASTBuilder) processTransactions(ctx context.Context, accounts accounts, amounts amounts.Amounts, d *ast.Day) []error {
+	var errors []error
 	for _, t := range d.Transactions {
 		for _, p := range t.Postings {
-			if !pr.accounts.IsOpen(p.Credit) {
-				if pr.errOrExit(ctx, Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)}) {
-					return true
-				}
+			if !accounts.IsOpen(p.Credit) {
+				errors = append(errors, Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)})
 			}
-			if !pr.accounts.IsOpen(p.Debit) {
-				if pr.errOrExit(ctx, Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)}) {
-					return true
-				}
+			if !accounts.IsOpen(p.Debit) {
+				errors = append(errors, Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)})
 			}
-			pr.amounts.Book(p.Credit, p.Debit, p.Amount, p.Commodity)
+			amounts.Book(p.Credit, p.Debit, p.Amount, p.Commodity)
 		}
-		pr.transactions = append(pr.transactions, t)
 	}
-	return false
+	return errors
 }
 
-func (pr *PASTBuilder) processValues(ctx context.Context, d *ast.Day) bool {
+func (pr *PASTBuilder) processValues(ctx context.Context, accounts accounts, amounts amounts.Amounts, d *ast.Day) ([]*ast.Transaction, []error) {
+	var errors []error
+	var transactions []*ast.Transaction
 	for _, v := range d.Values {
-		if !pr.accounts.IsOpen(v.Account) {
-			if pr.errOrExit(ctx, Error{v, "account is not open"}) {
-				return true
-			}
+		if !accounts.IsOpen(v.Account) {
+			errors = append(errors, Error{v, "account is not open"})
 		}
 		valAcc, err := pr.Context.ValuationAccountFor(v.Account)
-		if pr.errOrExit(ctx, err) {
-			return true
+		if err != nil {
+			errors = append(errors, err)
 		}
-		posting := ast.NewPosting(valAcc, v.Account, v.Commodity, v.Amount.Sub(pr.amounts.Amount(v.Account, v.Commodity)))
-		pr.amounts.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
-		pr.transactions = append(pr.transactions, &ast.Transaction{
+		posting := ast.NewPosting(valAcc, v.Account, v.Commodity, v.Amount.Sub(amounts.Amount(v.Account, v.Commodity)))
+		amounts.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
+		transactions = append(transactions, &ast.Transaction{
 			Date:        v.Date,
 			Description: fmt.Sprintf("Valuation adjustment for %v in %v", v.Commodity, v.Account),
 			Tags:        nil,
 			Postings:    []ast.Posting{posting},
 		})
 	}
-	return false
+	return transactions, errors
 }
 
-func (pr *PASTBuilder) processAssertions(ctx context.Context, d *ast.Day) bool {
-	// check assertions
+func (pr *PASTBuilder) processAssertions(ctx context.Context, accounts accounts, amts amounts.Amounts, d *ast.Day) []error {
+	var errors []error
 	for _, a := range d.Assertions {
-		if !pr.accounts.IsOpen(a.Account) {
-			if pr.errOrExit(ctx, Error{a, "account is not open"}) {
-				return true
-			}
+		if !accounts.IsOpen(a.Account) {
+			errors = append(errors, Error{a, "account is not open"})
 		}
 		position := amounts.CommodityAccount{Account: a.Account, Commodity: a.Commodity}
-		if va, ok := pr.amounts[position]; !ok || !va.Equal(a.Amount) {
-			if pr.errOrExit(ctx, Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va, position.Commodity)}) {
-				return true
-			}
+		if va, ok := amts[position]; !ok || !va.Equal(a.Amount) {
+			errors = append(errors, Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va, position.Commodity)})
 		}
 	}
-	return false
+	return errors
 }
 
-func (pr *PASTBuilder) processClosings(ctx context.Context, d *ast.Day) bool {
-	// close accounts
+func (pr *PASTBuilder) processClosings(ctx context.Context, accounts accounts, amounts amounts.Amounts, d *ast.Day) []error {
+	var errors []error
 	for _, c := range d.Closings {
-		for pos, amount := range pr.amounts {
+		for pos, amount := range amounts {
 			if pos.Account != c.Account {
 				continue
 			}
-			if !amount.IsZero() && pr.errOrExit(ctx, Error{c, "account has nonzero position"}) {
-				return true
+			if !amount.IsZero() {
+				errors = append(errors, Error{c, "account has nonzero position"})
 			}
-			delete(pr.amounts, pos)
+			delete(amounts, pos)
 		}
-		if err := pr.accounts.Close(c.Account); pr.errOrExit(ctx, err) {
-			return true
+		if err := accounts.Close(c.Account); err != nil {
+			errors = append(errors, err)
 		}
 	}
-	return false
+	return errors
 }
 
 // accounts keeps track of open accounts.

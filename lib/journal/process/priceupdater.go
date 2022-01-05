@@ -26,7 +26,11 @@ func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day)
 		defer close(errCh)
 
 		var previous *val.Day
-		for day := range inCh {
+		for {
+			day, ok, err := pop(ctx, inCh)
+			if !ok || err != nil {
+				return
+			}
 			var npr journal.NormalizedPrices
 			if pr.Valuation != nil {
 				if day.AST != nil && len(day.AST.Prices) > 0 {
@@ -45,10 +49,8 @@ func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day)
 				Day:    day,
 				Prices: npr,
 			}
-			select {
-			case resCh <- vday:
-				previous = vday
-			case <-ctx.Done():
+			previous = vday
+			if push(ctx, resCh, vday) != nil {
 				return
 			}
 		}

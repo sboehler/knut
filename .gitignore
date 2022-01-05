@@ -4,3 +4,4 @@ knut.exe
 .code-workspace
 builddoc
 *.sqlite3
+coverage.out

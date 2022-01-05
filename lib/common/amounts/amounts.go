@@ -50,8 +50,9 @@ func (am Amounts) Clone() Amounts {
 }
 
 // Minus mutably subtracts.
-func (am Amounts) Minus(a Amounts) {
+func (am Amounts) Minus(a Amounts) Amounts {
 	for ca, v := range a {
 		am[ca] = am[ca].Sub(v)
 	}
+	return am
 }

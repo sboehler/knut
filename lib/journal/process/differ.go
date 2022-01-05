@@ -39,9 +39,8 @@ func (pf Differ) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-cha
 			if init {
 				res := &val.Day{
 					Date:   d.Date,
-					Values: d.Values.Clone(),
+					Values: d.Values.Clone().Minus(v),
 				}
-				res.Values.Minus(v)
 				if push(ctx, resCh, res) != nil {
 					return
 				}

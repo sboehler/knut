@@ -15,7 +15,7 @@ type TestData struct {
 	commodity1, commodity2 *journal.Commodity
 	open1, open2           *ast.Open
 	price1                 *ast.Price
-	trx1                   *ast.Transaction
+	trx1, trx2             *ast.Transaction
 }
 
 func newTestData(jctx journal.Context) TestData {
@@ -36,10 +36,17 @@ func newTestData(jctx journal.Context) TestData {
 		open1 = &ast.Open{Date: date2, Account: account1}
 		open2 = &ast.Open{Date: date2, Account: account2}
 		trx1  = &ast.Transaction{
-			Date:        date2,
+			Date:        date1,
 			Description: "foo",
 			Postings: []ast.Posting{
 				ast.NewPosting(account1, account2, commodity1, decimal.NewFromInt(10)),
+			},
+		}
+		trx2 = &ast.Transaction{
+			Date:        date2,
+			Description: "foo",
+			Postings: []ast.Posting{
+				ast.NewPosting(account2, account1, commodity2, decimal.NewFromInt(11)),
 			},
 		}
 	)
@@ -49,6 +56,6 @@ func newTestData(jctx journal.Context) TestData {
 		commodity1, commodity2,
 		open1, open2,
 		price1,
-		trx1,
+		trx1, trx2,
 	}
 }

@@ -92,10 +92,11 @@ func TestASTBuilderInvalidDirective(t *testing.T) {
 
 func TestASTBuilderCanceled(t *testing.T) {
 	var (
-		jctx         = journal.NewContext()
-		ctx, cancel  = context.WithCancel(context.Background())
-		astBuilder   = ASTBuilder{Context: jctx}
-		inCh         = make(chan ast.Directive)
+		jctx        = journal.NewContext()
+		ctx, cancel = context.WithCancel(context.Background())
+		astBuilder  = ASTBuilder{Context: jctx}
+
+		inCh         chan ast.Directive
 		resCh, errCh = astBuilder.BuildAST(ctx, inCh)
 	)
 

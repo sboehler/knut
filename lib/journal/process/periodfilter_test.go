@@ -7,27 +7,45 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/val"
+	"github.com/shopspring/decimal"
 )
 
 func TestPeriodFilter(t *testing.T) {
-
-	day := func(y int, m time.Month, d int, marker ...bool) *val.Day {
+	var (
+		jctx = journal.NewContext()
+		td   = newTestData(jctx)
+	)
+	dayNV := func(y int, m time.Month, d int, marker ...bool) *val.Day {
 		var trx []*ast.Transaction
 		if len(marker) > 0 {
 			trx = append(trx, nil)
 		}
-		return &val.Day{Date: date.Date(y, m, d), Transactions: trx}
+		return &val.Day{
+			Date:         date.Date(y, m, d),
+			Transactions: trx,
+		}
+	}
+	day := func(y int, m time.Month, d int, v int64, marker ...bool) *val.Day {
+		var trx []*ast.Transaction
+		if len(marker) > 0 {
+			trx = append(trx, nil)
+		}
+		return &val.Day{
+			Date:         date.Date(y, m, d),
+			Transactions: trx,
+			Values: amounts.Amounts{
+				amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(v),
+			},
+		}
 	}
 
 	var (
-		// jctx = journal.NewContext()
-		// td   = newTestData(jctx)
-
 		tests = []struct {
 			desc    string
 			sut     PeriodFilter
@@ -46,11 +64,14 @@ func TestPeriodFilter(t *testing.T) {
 					To: date.Date(2022, 1, 10),
 				},
 				input: func(ch chan *val.Day) {
-					ch <- day(2022, 1, 2, true)
-					ch <- day(2022, 1, 3)
-					ch <- day(2022, 1, 4)
+					ch <- day(2022, 1, 2, 1, true)
+					ch <- day(2022, 1, 3, 2)
+					ch <- day(2022, 1, 4, 3)
 				},
-				want: []*val.Day{day(2022, 1, 2), day(2022, 1, 10)},
+				want: []*val.Day{
+					day(2022, 1, 2, 1),
+					day(2022, 1, 10, 3),
+				},
 			},
 			{
 				desc: "monthly, no from date",
@@ -59,11 +80,14 @@ func TestPeriodFilter(t *testing.T) {
 					Period: date.Monthly,
 				},
 				input: func(ch chan *val.Day) {
-					ch <- day(2022, 1, 2, true)
-					ch <- day(2022, 1, 3)
-					ch <- day(2022, 1, 4)
+					ch <- day(2022, 1, 2, 100, true)
+					ch <- day(2022, 1, 3, 200)
+					ch <- day(2022, 1, 4, 300)
 				},
-				want: []*val.Day{day(2021, 12, 31), day(2022, 1, 31)},
+				want: []*val.Day{
+					dayNV(2021, 12, 31),
+					day(2022, 1, 31, 300),
+				},
 			},
 			{
 				desc: "monthly, last 5, no from date",
@@ -73,16 +97,17 @@ func TestPeriodFilter(t *testing.T) {
 					Last:   5,
 				},
 				input: func(ch chan *val.Day) {
-					ch <- day(2021, 1, 2, true)
-					ch <- day(2022, 1, 3)
-					ch <- day(2022, 1, 4)
+					ch <- day(2021, 1, 1, 100, true)
+					ch <- day(2022, 1, 1, 200)
+					ch <- day(2022, 1, 4, 300)
 				},
 				want: []*val.Day{
-					day(2021, 9, 30),
-					day(2021, 10, 31),
-					day(2021, 11, 30),
-					day(2021, 12, 31),
-					day(2022, 1, 31)},
+					day(2021, 9, 30, 100),
+					day(2021, 10, 31, 100),
+					day(2021, 11, 30, 100),
+					day(2021, 12, 31, 100),
+					day(2022, 1, 31, 300),
+				},
 			},
 		}
 	)

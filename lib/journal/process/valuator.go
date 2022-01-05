@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/val"
@@ -30,14 +31,14 @@ func (pr *Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (ch
 		defer close(errCh)
 
 		for {
-			day, ok, err := pop(ctx, inCh)
+			day, ok, err := cpr.Pop(ctx, inCh)
 			if !ok || err != nil {
 				return
 			}
 			day.Values = values
 
 			for _, t := range day.Day.Transactions {
-				if errors := pr.valuateAndBookTransaction(ctx, day, t); push(ctx, errCh, errors...) != nil {
+				if errors := pr.valuateAndBookTransaction(ctx, day, t); cpr.Push(ctx, errCh, errors...) != nil {
 					return
 				}
 			}
@@ -45,7 +46,7 @@ func (pr *Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (ch
 			pr.computeValuationTransactions(day)
 			values = values.Clone()
 
-			if push(ctx, resCh, day) != nil {
+			if cpr.Push(ctx, resCh, day) != nil {
 				return
 			}
 		}

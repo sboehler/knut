@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 )
@@ -27,12 +28,12 @@ func (pr *ASTBuilder) BuildAST(ctx context.Context, inCh <-chan ast.Directive) (
 			Days:    make(map[time.Time]*ast.Day),
 		}
 		for {
-			d, ok, err := pop(ctx, inCh)
+			d, ok, err := cpr.Pop(ctx, inCh)
 			if err != nil {
 				return
 			}
 			if !ok {
-				push(ctx, resCh, res)
+				cpr.Push(ctx, resCh, res)
 				return
 			}
 			switch t := d.(type) {
@@ -49,34 +50,13 @@ func (pr *ASTBuilder) BuildAST(ctx context.Context, inCh <-chan ast.Directive) (
 			case *ast.Close:
 				res.AddClose(t)
 			default:
-				if push(ctx, errCh, fmt.Errorf("unknown: %#v", t)) != nil {
+				if cpr.Push(ctx, errCh, fmt.Errorf("unknown: %#v", t)) != nil {
 					return
 				}
 			}
 		}
 	}()
 	return resCh, errCh
-}
-
-func pop[T any](ctx context.Context, ch <-chan T) (T, bool, error) {
-	var res T
-	select {
-	case d, ok := <-ch:
-		return d, ok, ctx.Err()
-	case <-ctx.Done():
-		return res, false, ctx.Err()
-	}
-}
-
-func push[T any](ctx context.Context, ch chan<- T, ts ...T) error {
-	for _, t := range ts {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case ch <- t:
-		}
-	}
-	return nil
 }
 
 // ASTExpander expands and filters the given AST.
@@ -94,12 +74,12 @@ func (pr *ASTExpander) ExpandAndFilterAST(ctx context.Context, inCh <-chan *ast.
 		defer close(errCh)
 
 		for {
-			d, ok, err := pop(ctx, inCh)
+			d, ok, err := cpr.Pop(ctx, inCh)
 			if !ok || err != nil {
 				return
 			}
 			r := pr.process(d)
-			if push(ctx, resCh, r) != nil {
+			if cpr.Push(ctx, resCh, r) != nil {
 				return
 			}
 		}

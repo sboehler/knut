@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/past"
 	"github.com/sboehler/knut/lib/journal/val"
@@ -27,7 +28,7 @@ func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day)
 
 		var previous *val.Day
 		for {
-			day, ok, err := pop(ctx, inCh)
+			day, ok, err := cpr.Pop(ctx, inCh)
 			if !ok || err != nil {
 				return
 			}
@@ -50,7 +51,7 @@ func (pr PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day)
 				Prices: npr,
 			}
 			previous = vday
-			if push(ctx, resCh, vday) != nil {
+			if cpr.Push(ctx, resCh, vday) != nil {
 				return
 			}
 		}

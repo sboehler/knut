@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal/val"
 )
 
@@ -32,7 +33,7 @@ func (pf Differ) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-cha
 		)
 
 		for {
-			d, ok, err := pop(ctx, inCh)
+			d, ok, err := cpr.Pop(ctx, inCh)
 			if !ok || err != nil {
 				return
 			}
@@ -41,7 +42,7 @@ func (pf Differ) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-cha
 					Date:   d.Date,
 					Values: d.Values.Clone().Minus(v),
 				}
-				if push(ctx, resCh, res) != nil {
+				if cpr.Push(ctx, resCh, res) != nil {
 					return
 				}
 			}

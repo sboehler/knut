@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/past"
@@ -37,7 +38,7 @@ func (pr *PASTBuilder) ProcessAST(ctx context.Context, inCh <-chan *ast.AST) (<-
 		defer close(errCh)
 
 		for {
-			a, ok, err := pop(ctx, inCh)
+			a, ok, err := cpr.Pop(ctx, inCh)
 			if !ok || err != nil {
 				return
 			}
@@ -49,19 +50,19 @@ func (pr *PASTBuilder) ProcessAST(ctx context.Context, inCh <-chan *ast.AST) (<-
 					transactions []*ast.Transaction
 					errors       []error
 				)
-				if errors = pr.processOpenings(ctx, accounts, d); push(ctx, errCh, errors...) != nil {
+				if errors = pr.processOpenings(ctx, accounts, d); cpr.Push(ctx, errCh, errors...) != nil {
 					return
 				}
-				if errors = pr.processTransactions(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
+				if errors = pr.processTransactions(ctx, accounts, amounts, d); cpr.Push(ctx, errCh, errors...) != nil {
 					return
 				}
-				if transactions, errors = pr.processValues(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
+				if transactions, errors = pr.processValues(ctx, accounts, amounts, d); cpr.Push(ctx, errCh, errors...) != nil {
 					return
 				}
-				if errors = pr.processAssertions(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
+				if errors = pr.processAssertions(ctx, accounts, amounts, d); cpr.Push(ctx, errCh, errors...) != nil {
 					return
 				}
-				if errors = pr.processClosings(ctx, accounts, amounts, d); push(ctx, errCh, errors...) != nil {
+				if errors = pr.processClosings(ctx, accounts, amounts, d); cpr.Push(ctx, errCh, errors...) != nil {
 					return
 				}
 				res := &past.Day{
@@ -71,7 +72,7 @@ func (pr *PASTBuilder) ProcessAST(ctx context.Context, inCh <-chan *ast.AST) (<-
 					Amounts:      amounts,
 				}
 				amounts = amounts.Clone()
-				if push(ctx, resCh, res) != nil {
+				if cpr.Push(ctx, resCh, res) != nil {
 					return
 				}
 			}

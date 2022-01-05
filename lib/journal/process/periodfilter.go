@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal/val"
 )
@@ -38,7 +39,7 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 			day   *val.Day
 		)
 		for {
-			if d, ok, err := pop(ctx, inCh); err != nil {
+			if d, ok, err := cpr.Pop(ctx, inCh); err != nil {
 				return
 			} else if !ok {
 				break
@@ -54,7 +55,7 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 					r := &val.Day{
 						Date: dates[index],
 					}
-					if push(ctx, resCh, r) != nil {
+					if cpr.Push(ctx, resCh, r) != nil {
 						return
 					}
 					index++
@@ -69,7 +70,7 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 					Prices:       day.Prices,
 					Transactions: day.Transactions,
 				}
-				if push(ctx, resCh, r) != nil {
+				if cpr.Push(ctx, resCh, r) != nil {
 					return
 				}
 				index++
@@ -82,7 +83,7 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 				Prices:       day.Prices,
 				Transactions: day.Transactions,
 			}
-			if push(ctx, resCh, r) != nil {
+			if cpr.Push(ctx, resCh, r) != nil {
 				return
 			}
 			index++

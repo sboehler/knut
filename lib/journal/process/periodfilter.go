@@ -65,10 +65,10 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 
 			for index < len(dates) && !dates[index].After(day.Date) {
 				r := &val.Day{
-					Date:         dates[index],
-					Values:       day.Values,
-					Prices:       day.Prices,
-					Transactions: day.Transactions,
+					Date:   dates[index],
+					Values: day.Values,
+					Prices: day.Prices,
+					//Transactions: day.Transactions,
 				}
 				if cpr.Push(ctx, resCh, r) != nil {
 					return
@@ -78,10 +78,10 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 		}
 		for index < len(dates) {
 			r := &val.Day{
-				Date:         dates[index],
-				Values:       day.Values,
-				Prices:       day.Prices,
-				Transactions: day.Transactions,
+				Date:   dates[index],
+				Values: day.Values,
+				Prices: day.Prices,
+				//Transactions: day.Transactions,
 			}
 			if cpr.Push(ctx, resCh, r) != nil {
 				return

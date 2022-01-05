@@ -7,59 +7,14 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/shopspring/decimal"
 )
 
 type DummyDirective struct{}
 
 func (d DummyDirective) Position() ast.Range {
 	return ast.Range{}
-}
-
-type TestData struct {
-	date1, date2           time.Time
-	account1, account2     *journal.Account
-	commodity1, commodity2 *journal.Commodity
-	open1, open2           *ast.Open
-	price1                 *ast.Price
-	trx1                   *ast.Transaction
-}
-
-func newTestData(jctx journal.Context) TestData {
-	var (
-		date1      = date.Date(2022, 1, 4)
-		date2      = date.Date(2022, 1, 5)
-		account1   = jctx.Account("Assets:Account")
-		account2   = jctx.Account("Assets:Other")
-		commodity1 = jctx.Commodity("COM")
-		commodity2 = jctx.Commodity("TGT")
-		price1     = &ast.Price{
-			Date:      date1,
-			Commodity: commodity1,
-			Target:    commodity2,
-			Price:     decimal.NewFromInt(4),
-		}
-		open1 = &ast.Open{Date: date2, Account: account1}
-		open2 = &ast.Open{Date: date2, Account: account2}
-		trx1  = &ast.Transaction{
-			Date:        date2,
-			Description: "foo",
-			Postings: []ast.Posting{
-				ast.NewPosting(account1, account2, commodity1, decimal.NewFromInt(10)),
-			},
-		}
-	)
-	return TestData{
-		date1, date2,
-		account1, account2,
-		commodity1, commodity2,
-		open1, open2,
-		price1,
-		trx1,
-	}
 }
 
 func TestASTBuilderHappyCase(t *testing.T) {
@@ -88,7 +43,7 @@ func TestASTBuilderHappyCase(t *testing.T) {
 		t.Fatalf("ok = false, want ok = true")
 	}
 	if diff := cmp.Diff(got, want, cmpopts.IgnoreUnexported(journal.Context{}, journal.Commodity{}, journal.Account{})); diff != "" {
-		t.Fatalf(diff)
+		t.Fatalf("unexpected diff (+got/-want):\n%s", diff)
 	}
 	if _, ok = <-resCh; ok {
 		t.Fatalf("resCh is open, want closed")

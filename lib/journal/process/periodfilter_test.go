@@ -151,3 +151,22 @@ func TestPeriodFilter(t *testing.T) {
 		})
 	}
 }
+
+func TestPeriodFilterCanceled(t *testing.T) {
+	var (
+		ctx, cancel  = context.WithCancel(context.Background())
+		periodFilter = PeriodFilter{}
+
+		inCh         chan *val.Day
+		resCh, errCh = periodFilter.ProcessStream(ctx, inCh)
+	)
+
+	cancel()
+
+	if _, ok := <-resCh; ok {
+		t.Fatalf("resCh is open, want closed")
+	}
+	if _, ok := <-errCh; ok {
+		t.Fatalf("errCh is open, want closed")
+	}
+}

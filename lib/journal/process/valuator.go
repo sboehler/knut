@@ -96,20 +96,16 @@ func (pr Valuator) computeValuationTransactions(day *val.Day) {
 		if diff.IsZero() {
 			continue
 		}
-		valAcc, err := pr.Context.ValuationAccountFor(pos.Account)
-		if err != nil {
-			panic(fmt.Sprintf("could not obtain valuation account for account %s", pos.Account))
-		}
-		desc := fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account)
 		if !diff.IsZero() {
+			credit := pr.Context.ValuationAccountFor(pos.Account)
 			day.Transactions = append(day.Transactions, &ast.Transaction{
 				Date:        day.Date,
-				Description: desc,
+				Description: fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account),
 				Postings: []ast.Posting{
-					ast.NewPosting(valAcc, pos.Account, pos.Commodity, diff),
+					ast.NewPosting(credit, pos.Account, pos.Commodity, diff),
 				},
 			})
-			day.Values.Book(valAcc, pos.Account, diff, pos.Commodity)
+			day.Values.Book(credit, pos.Account, diff, pos.Commodity)
 		}
 	}
 }

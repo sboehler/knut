@@ -100,10 +100,10 @@ func (ctx Context) TBDAccount() *Account {
 
 // ValuationAccountFor returns the valuation account which corresponds to
 // the given Asset or Liability account.
-func (ctx Context) ValuationAccountFor(a *Account) (*Account, error) {
+func (ctx Context) ValuationAccountFor(a *Account) *Account {
 	suffix := a.Split()[1:]
 	segments := append(ctx.ValuationAccount().Split(), suffix...)
-	return ctx.GetAccount(strings.Join(segments, ":"))
+	return ctx.Account(strings.Join(segments, ":"))
 }
 
 // Accounts returns the accounts.

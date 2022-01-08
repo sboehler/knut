@@ -114,10 +114,7 @@ func (pr *PASTBuilder) processValues(ctx context.Context, accounts accounts, amo
 		if !accounts.IsOpen(v.Account) {
 			errors = append(errors, Error{v, "account is not open"})
 		}
-		valAcc, err := pr.Context.ValuationAccountFor(v.Account)
-		if err != nil {
-			errors = append(errors, err)
-		}
+		valAcc := pr.Context.ValuationAccountFor(v.Account)
 		posting := ast.NewPosting(valAcc, v.Account, v.Commodity, v.Amount.Sub(amounts.Amount(v.Account, v.Commodity)))
 		amounts.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
 		transactions = append(transactions, &ast.Transaction{

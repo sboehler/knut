@@ -1,91 +1,74 @@
 package performance
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/past"
+	"github.com/sboehler/knut/lib/journal/val"
 )
 
 // Calculator calculates portfolio performance
 type Calculator struct {
+	Context   journal.Context
 	Valuation *journal.Commodity
 	Filter    journal.Filter
 }
 
 // Perf computes portfolio performance.
-func (calc Calculator) Perf(l *past.PAST) <-chan DailyPerfValues {
-	// var (
-	// 	bal               = balance.New(l.Context, b.Valuation)
-	// 	ps                = make(prices.Prices)
-	// 	np                prices.NormalizedPrices
-	// 	ch                = make(chan DailyPerfValues)
-	// 	previous, current DailyPerfValues
-	// )
-	// go func() {
-	// 	defer close(ch)
-	// 	for _, step := range l.Days {
-	// 		for _, p := range step.Prices {
-	// 			ps.Insert(p)
-	// 		}
-	// 		np = ps.Normalize(b.Valuation)
-	// 		if current.Err = bal.Update(step, np, false); current.Err != nil {
-	// 			ch <- current
-	// 			return
-	// 		}
-	// 		current = b.computeFlows(step)
-	// 		current.V0 = previous.V1
-	// 		current.V1 = b.computeValue(bal)
-	// 		ch <- current
-	// 		fmt.Printf("%s %.4f\n", step.Date, current.performance())
-	// 		previous = current
-	// 	}
-	// }()
-	// return ch
+func (calc Calculator) Perf(ctx context.Context, inCh <-chan *val.Day) (<-chan *DailyPerfValues, <-chan error) {
+	resCh := make(chan *DailyPerfValues)
+	errCh := make(chan error)
 
-	// TODO: make this a ast.Process step!
-	return make(chan DailyPerfValues)
+	go func() {
+		defer close(resCh)
+		defer close(errCh)
+
+		var prev pcv
+
+		for {
+			d, ok, err := cpr.Pop(ctx, inCh)
+			if !ok {
+				break
+			}
+			if err != nil {
+				return
+			}
+
+			dpr := calc.computeFlows(d)
+			dpr.V1 = calc.valueByCommodity(d)
+			dpr.V0 = prev
+			prev = dpr.V1
+
+			if cpr.Push(ctx, resCh, dpr) != nil {
+				return
+			}
+		}
+	}()
+	return resCh, errCh
 }
 
-// Valuator computes a daily value per commodity.
-type Valuator struct {
-	Values amounts.Amounts
-	Filter journal.Filter
-	Result *DailyPerfValues
-}
-
-// Process implements process.Processor.
-func (v *Valuator) Process(_ *past.Day) error {
+func (calc *Calculator) valueByCommodity(d *val.Day) pcv {
 	var res = make(pcv)
-	for ca, val := range v.Values {
-		var t = ca.Account.Type()
+	for pos, val := range d.Values {
+		var t = pos.Account.Type()
 		if t != journal.ASSETS && t != journal.LIABILITIES {
 			continue
 		}
-		if !v.Filter.MatchAccount(ca.Account) || !v.Filter.MatchCommodity(ca.Commodity) {
+		if !calc.Filter.MatchAccount(pos.Account) || !calc.Filter.MatchCommodity(pos.Commodity) {
 			continue
 		}
 		valF, _ := val.Float64()
-		res[ca.Commodity] = res[ca.Commodity] + valF
+		res[pos.Commodity] = res[pos.Commodity] + valF
 	}
-	v.Result.V0 = v.Result.V1
-	v.Result.V1 = res
-	return nil
-}
-
-// FlowComputer computes internal and external value flows for a portfolio.
-type FlowComputer struct {
-	Filter    journal.Filter
-	Result    *DailyPerfValues
-	Valuation *journal.Commodity
+	return res
 }
 
 // pcv is a per-commodity value.
 type pcv map[*journal.Commodity]float64
 
-// Process implements process.Processor.
-func (calc *FlowComputer) Process(step *past.Day) error {
+func (calc *Calculator) computeFlows(step *val.Day) *DailyPerfValues {
 	var internalInflows, internalOutflows, inflows, outflows pcv
 	for _, trx := range step.Transactions {
 		var cs = trx.Commodities()
@@ -166,12 +149,12 @@ func (calc *FlowComputer) Process(step *past.Day) error {
 			}
 		}
 	}
-	calc.Result.InternalInflow = internalInflows
-	calc.Result.InternalOutflow = internalOutflows
-	calc.Result.Inflow = inflows
-	calc.Result.Outflow = outflows
-
-	return nil
+	return &DailyPerfValues{
+		InternalInflow:  internalInflows,
+		InternalOutflow: internalOutflows,
+		Inflow:          inflows,
+		Outflow:         outflows,
+	}
 }
 
 func get(m *pcv) pcv {
@@ -181,7 +164,7 @@ func get(m *pcv) pcv {
 	return *m
 }
 
-func (calc FlowComputer) determineStructure(g pcv) map[*journal.Commodity]bool {
+func (calc Calculator) determineStructure(g pcv) map[*journal.Commodity]bool {
 	var res = make(map[*journal.Commodity]bool)
 	for c := range g {
 		if !c.IsCurrency {
@@ -205,7 +188,7 @@ func (calc FlowComputer) determineStructure(g pcv) map[*journal.Commodity]bool {
 	return res
 }
 
-func (calc FlowComputer) isPortfolioAccount(a *journal.Account) bool {
+func (calc Calculator) isPortfolioAccount(a *journal.Account) bool {
 	return (a.Type() == journal.ASSETS || a.Type() == journal.LIABILITIES) && calc.Filter.MatchAccount(a)
 }
 

@@ -8,11 +8,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/past"
+	"github.com/sboehler/knut/lib/journal/val"
 	"github.com/shopspring/decimal"
 )
 
-func TestFlowComputer(t *testing.T) {
+func TestComputeFlows(t *testing.T) {
 	var (
 		ctx          = journal.NewContext()
 		chf, _       = ctx.GetCommodity("CHF")
@@ -165,21 +165,20 @@ func TestFlowComputer(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			var (
-				d = &past.Day{
+				d = &val.Day{
 					Date:         time.Date(2021, 11, 15, 0, 0, 0, 0, time.UTC),
 					Transactions: []*ast.Transaction{test.trx},
 				}
 
-				fc = FlowComputer{
-					Result:    new(DailyPerfValues),
+				fc = Calculator{
 					Filter:    journal.Filter{Accounts: regexp.MustCompile("Assets:Portfolio")},
 					Valuation: chf,
 				}
 			)
-			if err := fc.Process(d); err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if diff := cmp.Diff(test.want, fc.Result); diff != "" {
+
+			got := fc.computeFlows(d)
+
+			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Fatalf("unexpected diff (-want, +got):\n%s", diff)
 			}
 		})

@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 )
@@ -56,52 +57,28 @@ func (rp *RecursiveParser) parseRecursively(ctx context.Context, file string) {
 	defer rp.wg.Done()
 	p, cls, err := FromPath(rp.Context, file)
 	if err != nil {
-		select {
-		case rp.errCh <- err:
-		case <-ctx.Done():
-		}
+		cpr.Push(ctx, rp.errCh, err)
 		return
 	}
-	defer func() {
-		err = cls()
-		if err != nil {
-			select {
-			case rp.errCh <- err:
-			case <-ctx.Done():
-			}
-		}
-	}()
+	defer cls()
 
 	resCh, errCh := p.Parse(ctx)
 
-	for resCh != nil || errCh != nil {
-		select {
-		case d, ok := <-resCh:
-			if !ok {
-				resCh = nil
-				break
-			}
-			switch t := d.(type) {
-			case *ast.Include:
-				rp.wg.Add(1)
-				go rp.parseRecursively(ctx, path.Join(filepath.Dir(file), t.Path))
-			default:
-				select {
-				case rp.resCh <- d:
-				case <-ctx.Done():
-					return
-				}
-			}
-		case err, ok := <-errCh:
-			if !ok {
-				errCh = nil
-				break
-			}
-			select {
-			case rp.errCh <- err:
-			case <-ctx.Done():
-				return
-			}
+	for {
+		d, ok, err := cpr.Get(resCh, errCh)
+		if !ok {
+			break
+		}
+		if err != nil && cpr.Push(ctx, rp.errCh, err) != nil {
+			return
+		}
+		if t, ok := d.(*ast.Include); ok {
+			rp.wg.Add(1)
+			go rp.parseRecursively(ctx, path.Join(filepath.Dir(file), t.Path))
+			continue
+		}
+		if cpr.Push(ctx, rp.resCh, d) != nil {
+			return
 		}
 	}
 }

@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
@@ -133,25 +134,18 @@ func readFile(ctx2 context.Context, ctx journal.Context, filepath string) (res m
 	defer func() { err = multierr.Append(err, cls()) }()
 	var prices = make(map[time.Time]*ast.Price)
 	resCh, errCh := p.Parse(ctx2)
-	for resCh != nil || errCh != nil {
-		select {
-		case d, ok := <-resCh:
-			if !ok {
-				resCh = nil
-				break
-			}
-			if p, ok := d.(*ast.Price); ok {
-				prices[p.Date] = p
-			} else {
-				return nil, fmt.Errorf("unexpected directive in prices file: %v", d)
-			}
-
-		case err, ok := <-errCh:
-			if !ok {
-				errCh = nil
-				break
-			}
+	for {
+		d, ok, err := cpr.Get(resCh, errCh)
+		if !ok {
+			break
+		}
+		if err != nil {
 			return nil, err
+		}
+		if p, ok := d.(*ast.Price); ok {
+			prices[p.Date] = p
+		} else {
+			return nil, fmt.Errorf("unexpected directive in prices file: %v", d)
 		}
 	}
 	return prices, nil

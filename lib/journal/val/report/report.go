@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/val"
 	"github.com/shopspring/decimal"
@@ -73,13 +74,17 @@ func (rb *Builder) FromStream(ctx context.Context, ch <-chan *val.Day) (<-chan *
 		defer close(errCh)
 
 		res := new(Report)
-		for d := range ch {
+		for {
+			d, ok, err := cpr.Pop(ctx, ch)
+			if !ok {
+				break
+			}
+			if err != nil {
+				return
+			}
 			rb.add(res, d)
 		}
-		select {
-		case <-ctx.Done():
-		case resCh <- res:
-		}
+		cpr.Push(ctx, resCh, res)
 	}()
 	return resCh, errCh
 }

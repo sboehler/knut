@@ -25,6 +25,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
@@ -136,16 +137,10 @@ func (p *Parser) Parse(ctx context.Context) (<-chan ast.Directive, <-chan error)
 				return
 			}
 			if err != nil {
-				select {
-				case <-ctx.Done():
-					return
-				case errCh <- err:
-					return
-				}
+				cpr.Push(ctx, errCh, err)
+				return
 			}
-			select {
-			case resCh <- d:
-			case <-ctx.Done():
+			if cpr.Push(ctx, resCh, d) != nil {
 				return
 			}
 		}

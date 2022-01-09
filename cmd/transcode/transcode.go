@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast/beancount"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
@@ -109,22 +110,15 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	errCh := mergeErrors(errCh0, errCh1, errCh2, errCh3, errCh4)
 
 	var days []*val.Day
-	for resCh != nil || errCh != nil {
-		select {
-		case d, ok := <-resCh:
-			if !ok {
-				resCh = nil
-				break
-			}
-			days = append(days, d)
-
-		case err, ok := <-errCh:
-			if !ok {
-				errCh = nil
-				break
-			}
+	for {
+		d, ok, err := cpr.Get(resCh, errCh)
+		if !ok {
+			break
+		}
+		if err != nil {
 			return err
 		}
+		days = append(days, d)
 	}
 
 	var w = bufio.NewWriter(cmd.OutOrStdout())

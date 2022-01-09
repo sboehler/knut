@@ -1,7 +1,10 @@
 // Package cpr contains concurrency primitives.
 package cpr
 
-import "context"
+import (
+	"context"
+	"sync"
+)
 
 // Get gets and returns a new T from the supplied channel. It returns
 // a T, a boolean which indicates whether the channel is still open, or\
@@ -46,4 +49,26 @@ func Push[T any](ctx context.Context, ch chan<- T, ts ...T) error {
 		}
 	}
 	return nil
+}
+
+// Demultiplex demultiplexes the given channels.
+func Demultiplex[T any](inChs ...<-chan T) chan T {
+	var (
+		wg    sync.WaitGroup
+		resCh = make(chan T)
+	)
+	wg.Add(len(inChs))
+	for _, inCh := range inChs {
+		go func(ch <-chan T) {
+			defer wg.Done()
+			for t := range ch {
+				resCh <- t
+			}
+		}(inCh)
+	}
+	go func() {
+		wg.Wait()
+		close(resCh)
+	}()
+	return resCh
 }

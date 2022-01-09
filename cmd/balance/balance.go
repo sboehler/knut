@@ -20,7 +20,6 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
-	"sync"
 	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
@@ -182,7 +181,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	ch7, errCh7 := differ.ProcessStream(ctx, ch6)
 	resCh, errCh8 := reportBuilder.FromStream(ctx, ch7)
 
-	errCh := mergeErrors(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5, errCh6, errCh7, errCh8)
+	errCh := cpr.Demultiplex(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5, errCh6, errCh7, errCh8)
 
 	rep, ok, err := cpr.Get(resCh, errCh)
 	if !ok {
@@ -194,25 +193,4 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 	return tableRenderer.Render(reportRenderer.Render(rep), out)
-}
-
-func mergeErrors(inChs ...<-chan error) chan error {
-	var (
-		wg    sync.WaitGroup
-		errCh = make(chan error)
-	)
-	wg.Add(len(inChs))
-	for _, inCh := range inChs {
-		go func(ch <-chan error) {
-			defer wg.Done()
-			for err := range ch {
-				errCh <- err
-			}
-		}(inCh)
-	}
-	go func() {
-		wg.Wait()
-		close(errCh)
-	}()
-	return errCh
 }

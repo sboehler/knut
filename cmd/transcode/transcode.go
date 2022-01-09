@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/cpr"
@@ -107,7 +106,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	ch3, errCh3 := priceUpdater.ProcessStream(ctx, ch2)
 	resCh, errCh4 := valuator.ProcessStream(ctx, ch3)
 
-	errCh := mergeErrors(errCh0, errCh1, errCh2, errCh3, errCh4)
+	errCh := cpr.Demultiplex(errCh0, errCh1, errCh2, errCh3, errCh4)
 
 	var days []*val.Day
 	for {
@@ -126,25 +125,4 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 
 	// transcode the ledger here
 	return beancount.Transcode(w, days, valuation)
-}
-
-func mergeErrors(inChs ...<-chan error) chan error {
-	var (
-		wg    sync.WaitGroup
-		errCh = make(chan error)
-	)
-	wg.Add(len(inChs))
-	for _, inCh := range inChs {
-		go func(ch <-chan error) {
-			defer wg.Done()
-			for err := range ch {
-				errCh <- err
-			}
-		}(inCh)
-	}
-	go func() {
-		wg.Wait()
-		close(errCh)
-	}()
-	return errCh
 }

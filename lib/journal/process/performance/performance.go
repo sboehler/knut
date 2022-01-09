@@ -37,8 +37,8 @@ func (calc Calculator) Perf(ctx context.Context, inCh <-chan *val.Day) (<-chan *
 			}
 
 			dpr := calc.computeFlows(d)
-			dpr.V1 = calc.valueByCommodity(d)
 			dpr.V0 = prev
+			dpr.V1 = calc.valueByCommodity(d)
 			prev = dpr.V1
 
 			if cpr.Push(ctx, resCh, dpr) != nil {
@@ -50,9 +50,9 @@ func (calc Calculator) Perf(ctx context.Context, inCh <-chan *val.Day) (<-chan *
 }
 
 func (calc *Calculator) valueByCommodity(d *val.Day) pcv {
-	var res = make(pcv)
+	res := make(pcv)
 	for pos, val := range d.Values {
-		var t = pos.Account.Type()
+		t := pos.Account.Type()
 		if t != journal.ASSETS && t != journal.LIABILITIES {
 			continue
 		}
@@ -71,17 +71,19 @@ type pcv map[*journal.Commodity]float64
 func (calc *Calculator) computeFlows(step *val.Day) *DailyPerfValues {
 	var internalInflows, internalOutflows, inflows, outflows pcv
 	for _, trx := range step.Transactions {
-		var cs = trx.Commodities()
-		var gains pcv
+		var (
+			nbrCommodities = len(trx.Commodities())
+			gains          pcv
+		)
 
 		for _, pst := range trx.Postings {
-			var value, _ = pst.Value.Float64()
+			value, _ := pst.Value.Float64()
 			if calc.isPortfolioAccount(pst.Debit) {
 				// TODO: handle marker booking for dividends (or more general?).
 				switch pst.Credit.Type() {
 				case journal.INCOME, journal.EXPENSES:
 					if pst.TargetCommodity == nil {
-						if len(cs) == 1 {
+						if nbrCommodities == 1 {
 							// treat like a regular inflow
 							get(&inflows)[pst.Commodity] += value
 						} else {
@@ -99,7 +101,7 @@ func (calc *Calculator) computeFlows(step *val.Day) *DailyPerfValues {
 						get(&inflows)[pst.Commodity] += value
 					}
 				case journal.EQUITY:
-					if !pst.Amount.IsZero() && len(cs) > 1 {
+					if !pst.Amount.IsZero() && nbrCommodities > 1 {
 						get(&gains)[pst.Commodity] += value
 					}
 				}
@@ -108,7 +110,7 @@ func (calc *Calculator) computeFlows(step *val.Day) *DailyPerfValues {
 				switch pst.Debit.Type() {
 				case journal.INCOME, journal.EXPENSES:
 					if pst.TargetCommodity == nil {
-						if len(cs) == 1 {
+						if nbrCommodities == 1 {
 							// treat like a regular inflow
 							get(&outflows)[pst.Commodity] -= value
 						} else {
@@ -125,13 +127,13 @@ func (calc *Calculator) computeFlows(step *val.Day) *DailyPerfValues {
 						get(&outflows)[pst.Commodity] -= value
 					}
 				case journal.EQUITY:
-					if !pst.Amount.IsZero() && len(cs) > 1 {
+					if !pst.Amount.IsZero() && nbrCommodities > 1 {
 						get(&gains)[pst.Commodity] -= value
 					}
 				}
 			}
 		}
-		if len(cs) > 1 {
+		if nbrCommodities > 1 {
 			var diff float64
 			for _, gain := range gains {
 				diff += gain

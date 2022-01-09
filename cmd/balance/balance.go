@@ -134,8 +134,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		}
 		pastBuilder = process.PASTBuilder{
 			Context: jctx,
-			Filter:  filter,
-			Expand:  true,
 		}
 		priceUpdater = process.PriceUpdater{
 			Context:   jctx,

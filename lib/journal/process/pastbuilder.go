@@ -16,13 +16,6 @@ type PASTBuilder struct {
 
 	// The context of this journal.
 	Context journal.Context
-
-	// Filter applies the given filter to postings of transactions
-	// and assertions.
-	Filter journal.Filter
-
-	// Expand controls whether Accrual add-ons are expanded.
-	Expand bool
 }
 
 // ProcessAST processes an AST to a stream of past.Day. It check assertions

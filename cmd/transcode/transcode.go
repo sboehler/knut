@@ -83,9 +83,11 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 		astBuilder = process.ASTBuilder{
 			Context: jctx,
 		}
+		astExpander = process.ASTExpander{
+			Expand: true,
+		}
 		pastBuilder = process.PASTBuilder{
 			Context: jctx,
-			Expand:  true,
 		}
 		priceUpdater = process.PriceUpdater{
 			Context:   jctx,
@@ -102,11 +104,12 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 
 	ch0, errCh0 := par.Parse(ctx)
 	ch1, errCh1 := astBuilder.BuildAST(ctx, ch0)
-	ch2, errCh2 := pastBuilder.ProcessAST(ctx, ch1)
-	ch3, errCh3 := priceUpdater.ProcessStream(ctx, ch2)
-	resCh, errCh4 := valuator.ProcessStream(ctx, ch3)
+	ch2, errCh2 := astExpander.ExpandAndFilterAST(ctx, ch1)
+	ch3, errCh3 := pastBuilder.ProcessAST(ctx, ch2)
+	ch4, errCh4 := priceUpdater.ProcessStream(ctx, ch3)
+	resCh, errCh5 := valuator.ProcessStream(ctx, ch4)
 
-	errCh := cpr.Demultiplex(errCh0, errCh1, errCh2, errCh3, errCh4)
+	errCh := cpr.Demultiplex(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5)
 
 	var days []*val.Day
 	for {

@@ -122,14 +122,6 @@ func (m *Model) Infer(trx *ast.Transaction, tbd *journal.Account) {
 	}
 }
 
-func dedup(ss []string) map[string]bool {
-	var res = make(map[string]bool)
-	for _, s := range ss {
-		res[s] = true
-	}
-	return res
-}
-
 func tokenize(trx *ast.Transaction, posting *ast.Posting, account *journal.Account) map[string]struct{} {
 	tokens := append(strings.Fields(trx.Description), posting.Commodity.String(), posting.Amount.String())
 	if account == posting.Credit {

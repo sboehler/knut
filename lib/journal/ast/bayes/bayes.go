@@ -43,10 +43,10 @@ func NewModel(exclude *journal.Account) *Model {
 // Update updates the model with the given transaction.
 func (m *Model) Update(t *ast.Transaction) {
 	for _, p := range t.Postings {
-		m.accounts++
-		m.accountCounts[p.Credit]++
 		if p.Credit != m.exclude {
-			for _, token := range tokenize(t, &p, p.Credit) {
+			m.accounts++
+			m.accountCounts[p.Credit]++
+			for token := range tokenize(t, &p, p.Credit) {
 				tc, ok := m.tokenCounts[token]
 				if !ok {
 					tc = make(map[*journal.Account]int)
@@ -58,7 +58,7 @@ func (m *Model) Update(t *ast.Transaction) {
 		if p.Debit != m.exclude {
 			m.accounts++
 			m.accountCounts[p.Debit]++
-			for _, token := range tokenize(t, &p, p.Debit) {
+			for token := range tokenize(t, &p, p.Debit) {
 				tc, ok := m.tokenCounts[token]
 				if !ok {
 					tc = make(map[*journal.Account]int)
@@ -74,21 +74,25 @@ func (m *Model) Update(t *ast.Transaction) {
 // Infer replaces the given account with an inferred account.
 func (m *Model) Infer(trx *ast.Transaction, tbd *journal.Account) {
 	for i := range trx.Postings {
-		var posting = &trx.Postings[i]
-		var tokens []string
-		if posting.Credit == tbd {
+		var (
+			posting = &trx.Postings[i]
+			tokens  map[string]struct{}
+		)
+		switch tbd {
+		case posting.Credit:
 			tokens = tokenize(trx, posting, posting.Credit)
-		}
-		if posting.Debit == tbd {
+		case posting.Debit:
 			tokens = tokenize(trx, posting, posting.Debit)
+		default:
+			continue
 		}
-		var scores = make(map[*journal.Account]float64)
+		scores := make(map[*journal.Account]float64)
 		for a, accountCount := range m.accountCounts {
 			if a == tbd {
 				continue
 			}
 			scores[a] = math.Log(float64(accountCount) / float64(m.accounts))
-			for token := range dedup(tokens) {
+			for token := range tokens {
 				if tokenCount, ok := m.tokenCounts[token][a]; ok {
 					scores[a] += math.Log(float64(tokenCount) / float64(accountCount))
 				} else {
@@ -126,17 +130,17 @@ func dedup(ss []string) map[string]bool {
 	return res
 }
 
-func tokenize(trx *ast.Transaction, posting *ast.Posting, account *journal.Account) []string {
-	var tokens = append(strings.Fields(trx.Description), posting.Commodity.String(), posting.Amount.String())
+func tokenize(trx *ast.Transaction, posting *ast.Posting, account *journal.Account) map[string]struct{} {
+	tokens := append(strings.Fields(trx.Description), posting.Commodity.String(), posting.Amount.String())
 	if account == posting.Credit {
 		tokens = append(tokens, "credit", posting.Debit.String())
 	}
 	if account == posting.Debit {
 		tokens = append(tokens, "debit", posting.Credit.String())
 	}
-	var result = make([]string, 0, len(tokens))
+	result := make(map[string]struct{})
 	for _, token := range tokens {
-		result = append(result, strings.ToLower(token))
+		result[strings.ToLower(token)] = struct{}{}
 	}
 	return result
 }

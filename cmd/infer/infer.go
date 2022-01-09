@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/bayes"
@@ -103,28 +104,20 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 func train(ctx context.Context, jctx journal.Context, file string, exclude *journal.Account) (*bayes.Model, error) {
 	var (
 		j = parser.RecursiveParser{Context: jctx, File: file}
-		m = bayes.NewModel()
+		m = bayes.NewModel(exclude)
 	)
 	resCh, errCh := j.Parse(ctx)
 
-	for resCh != nil || errCh != nil {
-		select {
-
-		case d, ok := <-resCh:
-			if !ok {
-				resCh = nil
-				break
-			}
-			if t, ok := d.(*ast.Transaction); ok {
-				m.Update(t)
-			}
-
-		case err, ok := <-errCh:
-			if !ok {
-				errCh = nil
-				break
-			}
+	for {
+		d, ok, err := cpr.Get(resCh, errCh)
+		if !ok {
+			break
+		}
+		if err != nil {
 			return nil, err
+		}
+		if t, ok := d.(*ast.Transaction); ok {
+			m.Update(t)
 		}
 	}
 	return m, nil
@@ -138,24 +131,18 @@ func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model 
 	defer cls()
 	var directives []ast.Directive
 	resCh, errCh := p.Parse(ctx)
-	for resCh != nil || errCh != nil {
-		select {
-		case d, ok := <-resCh:
-			if !ok {
-				resCh = nil
-				break
-			}
-			if t, ok := d.(*ast.Transaction); ok {
-				model.Infer(t, account)
-			}
-			directives = append(directives, d)
-		case err, ok := <-errCh:
-			if !ok {
-				errCh = nil
-				break
-			}
+	for {
+		d, ok, err := cpr.Get(resCh, errCh)
+		if !ok {
+			break
+		}
+		if err != nil {
 			return nil, err
 		}
+		if t, ok := d.(*ast.Transaction); ok {
+			model.Infer(t, account)
+		}
+		directives = append(directives, d)
 	}
 	return directives, nil
 }

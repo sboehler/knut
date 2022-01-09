@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
@@ -183,25 +184,16 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 
 	errCh := mergeErrors(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5, errCh6, errCh7, errCh8)
 
-	for {
-		select {
-
-		case rep, ok := <-resCh:
-			if !ok {
-				return fmt.Errorf("no report was produced")
-			}
-			out := bufio.NewWriter(cmd.OutOrStdout())
-			defer out.Flush()
-			return tableRenderer.Render(reportRenderer.Render(rep), out)
-
-		case err, ok := <-errCh:
-			if !ok {
-				errCh = nil
-				break
-			}
-			return err
-		}
+	rep, ok, err := cpr.Get(resCh, errCh)
+	if !ok {
+		return fmt.Errorf("no report was produced")
 	}
+	if err != nil {
+		return err
+	}
+	out := bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	return tableRenderer.Render(reportRenderer.Render(rep), out)
 }
 
 func mergeErrors(inChs ...<-chan error) chan error {

@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
 
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/format"
@@ -64,30 +65,21 @@ func execute(cmd *cobra.Command, args []string) error {
 		defer close(sema)
 
 		for _, arg := range args {
-			select {
-			case sema <- true:
-			case <-ctx.Done():
-				return
+			if cpr.Push(ctx, sema, true) != nil {
 			}
 			go func(arg string) {
 				if err := formatFile(ctx, arg); err != nil {
-					select {
-					case errCh <- err:
-					case <-ctx.Done():
+					if cpr.Push(ctx, errCh, err) != nil {
 						return
 					}
 				}
-				select {
-				case <-sema:
-				case <-ctx.Done():
+				if _, _, err := cpr.Pop(ctx, sema); err != nil {
 					return
 				}
 			}(arg)
 		}
 		for i := 0; i < concurrency; i++ {
-			select {
-			case sema <- true:
-			case <-ctx.Done():
+			if cpr.Push(ctx, sema, true) != nil {
 				return
 			}
 		}
@@ -124,33 +116,26 @@ func formatFile(ctx context.Context, target string) error {
 	return multierr.Append(err, atomic.ReplaceFile(tmpDestFile.Name(), target))
 }
 
-func readDirectives(ctx context.Context, target string) (directives []ast.Directive, err error) {
+func readDirectives(ctx context.Context, target string) ([]ast.Directive, error) {
 	p, close, err := parser.FromPath(journal.NewContext(), target)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err = multierr.Append(err, close())
-	}()
+	defer close()
 
 	resCh, errCh := p.Parse(ctx)
 
-	for resCh != nil || errCh != nil {
-		select {
-		case d, ok := <-resCh:
-			if !ok {
-				resCh = nil
-				break
-			}
-			directives = append(directives, d)
+	var directives []ast.Directive
 
-		case err, ok := <-errCh:
-			if !ok {
-				errCh = nil
-				break
-			}
+	for {
+		d, ok, err := cpr.Get(resCh, errCh)
+		if !ok {
+			break
+		}
+		if err != nil {
 			return nil, err
 		}
+		directives = append(directives, d)
 	}
 	return directives, nil
 }

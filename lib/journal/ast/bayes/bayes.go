@@ -27,10 +27,12 @@ type Model struct {
 	accounts      int
 	accountCounts map[*journal.Account]int
 	tokenCounts   map[string]map[*journal.Account]int
+
+	exclude *journal.Account
 }
 
 // NewModel creates a new model.
-func NewModel() *Model {
+func NewModel(exclude *journal.Account) *Model {
 	return &Model{
 		accounts:      0,
 		accountCounts: make(map[*journal.Account]int),
@@ -43,23 +45,27 @@ func (m *Model) Update(t *ast.Transaction) {
 	for _, p := range t.Postings {
 		m.accounts++
 		m.accountCounts[p.Credit]++
-		for _, token := range tokenize(t, &p, p.Credit) {
-			tc, ok := m.tokenCounts[token]
-			if !ok {
-				tc = make(map[*journal.Account]int)
-				m.tokenCounts[token] = tc
+		if p.Credit != m.exclude {
+			for _, token := range tokenize(t, &p, p.Credit) {
+				tc, ok := m.tokenCounts[token]
+				if !ok {
+					tc = make(map[*journal.Account]int)
+					m.tokenCounts[token] = tc
+				}
+				tc[p.Credit]++
 			}
-			tc[p.Credit]++
 		}
-		m.accounts++
-		m.accountCounts[p.Debit]++
-		for _, token := range tokenize(t, &p, p.Debit) {
-			tc, ok := m.tokenCounts[token]
-			if !ok {
-				tc = make(map[*journal.Account]int)
-				m.tokenCounts[token] = tc
+		if p.Debit != m.exclude {
+			m.accounts++
+			m.accountCounts[p.Debit]++
+			for _, token := range tokenize(t, &p, p.Debit) {
+				tc, ok := m.tokenCounts[token]
+				if !ok {
+					tc = make(map[*journal.Account]int)
+					m.tokenCounts[token] = tc
+				}
+				tc[p.Debit]++
 			}
-			tc[p.Debit]++
 		}
 
 	}

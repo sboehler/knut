@@ -71,15 +71,6 @@ func (ctx Context) ValuationAccount() *Account {
 	return res
 }
 
-// EquityAccount is the equity account used for trades
-func (ctx Context) EquityAccount() *Account {
-	res, err := ctx.accounts.Get("Equity:Equity")
-	if err != nil {
-		panic(fmt.Sprintf("could not create equityAccount: %v", err))
-	}
-	return res
-}
-
 // RetainedEarningsAccount returns the account for automatic valuation bookings.
 func (ctx Context) RetainedEarningsAccount() *Account {
 	res, err := ctx.accounts.Get("Equity:RetainedEarnings")

@@ -98,7 +98,6 @@ func (pr *ASTExpander) process(a *ast.AST) *ast.AST {
 
 		day.Openings = astDay.Openings
 		day.Prices = astDay.Prices
-		day.Closings = astDay.Closings
 
 		for _, val := range astDay.Values {
 			if pr.Filter.MatchAccount(val.Account) && pr.Filter.MatchCommodity(val.Commodity) {
@@ -113,6 +112,12 @@ func (pr *ASTExpander) process(a *ast.AST) *ast.AST {
 		for _, a := range astDay.Assertions {
 			if pr.Filter.MatchAccount(a.Account) && pr.Filter.MatchCommodity(a.Commodity) {
 				day.Assertions = append(day.Assertions, a)
+			}
+		}
+
+		for _, c := range astDay.Closings {
+			if pr.Filter.MatchAccount(c.Account) {
+				day.Closings = append(day.Closings, c)
 			}
 		}
 	}

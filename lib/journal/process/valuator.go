@@ -102,7 +102,7 @@ func (pr Valuator) computeValuationTransactions(day *val.Day) {
 				Date:        day.Date,
 				Description: fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account),
 				Postings: []ast.Posting{
-					ast.NewPosting(credit, pos.Account, pos.Commodity, diff),
+					ast.NewPostingWithTargets(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
 				},
 			})
 			day.Values.Book(credit, pos.Account, diff, pos.Commodity)

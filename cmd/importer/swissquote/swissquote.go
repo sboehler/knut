@@ -53,20 +53,22 @@ func init() {
 }
 
 type runner struct {
-	account, dividend, tax, fee, interest flags.AccountFlag
+	account, dividend, tax, fee, interest, trading flags.AccountFlag
 }
 
 func (r *runner) setupFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(&r.account, "account", "a", "account name")
 	cmd.Flags().VarP(&r.interest, "interest", "i", "account name of the interest expense account")
 	cmd.Flags().VarP(&r.dividend, "dividend", "d", "account name of the dividend account")
-	cmd.Flags().VarP(&r.tax, "tax", "t", "account name of the withholding tax account")
+	cmd.Flags().VarP(&r.tax, "tax", "w", "account name of the withholding tax account")
 	cmd.Flags().VarP(&r.fee, "fee", "f", "account name of the fee account")
+	cmd.Flags().VarP(&r.trading, "trading", "t", "account name of the trading gain / loss account")
 	cmd.MarkFlagRequired("account")
 	cmd.MarkFlagRequired("interest")
 	cmd.MarkFlagRequired("dividend")
 	cmd.MarkFlagRequired("tax")
 	cmd.MarkFlagRequired("fee")
+	cmd.MarkFlagRequired("trading")
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
@@ -97,6 +99,9 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if p.fee, err = r.fee.Value(ctx); err != nil {
 		return err
 	}
+	if p.trading, err = r.trading.Value(ctx); err != nil {
+		return err
+	}
 	if err = p.parse(); err != nil {
 		return err
 	}
@@ -112,7 +117,7 @@ type parser struct {
 	builder *ast.AST
 	last    *record
 
-	account, dividend, tax, fee, interest *journal.Account
+	account, dividend, tax, fee, interest, trading *journal.Account
 }
 
 func (p *parser) parse() error {
@@ -259,8 +264,8 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 		Date:        r.date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, r.symbol, qty),
-			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, r.currency, proceeds),
+			ast.NewPosting(p.trading, p.account, r.symbol, qty),
+			ast.NewPosting(p.trading, p.account, r.currency, proceeds),
 			ast.NewPosting(p.fee, p.account, r.currency, fee),
 		},
 	})
@@ -289,8 +294,8 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		Date:        r.date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, p.last.currency, p.last.netAmount),
-			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, r.currency, r.netAmount),
+			ast.NewPosting(p.trading, p.account, p.last.currency, p.last.netAmount),
+			ast.NewPosting(p.trading, p.account, r.currency, r.netAmount),
 		},
 	})
 	p.last = nil

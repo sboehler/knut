@@ -54,18 +54,20 @@ func init() {
 }
 
 type runner struct {
-	accountFlag, dividendFlag, taxFlag, feeFlag, interestFlag flags.AccountFlag
+	accountFlag, dividendFlag, taxFlag, feeFlag, interestFlag, tradingFlag flags.AccountFlag
 }
 
 func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().VarP(&r.accountFlag, "account", "a", "account name")
 	c.Flags().VarP(&r.interestFlag, "interest", "i", "account name of the interest expense account")
 	c.Flags().VarP(&r.dividendFlag, "dividend", "d", "account name of the dividend account")
-	c.Flags().VarP(&r.taxFlag, "tax", "t", "account name of the withholding tax account")
+	c.Flags().VarP(&r.taxFlag, "tax", "w", "account name of the withholding tax account")
 	c.Flags().VarP(&r.feeFlag, "fee", "f", "account name of the fee account")
+	c.Flags().VarP(&r.tradingFlag, "trading", "t", "account name of the trading gain / loss account")
 	c.MarkFlagRequired("account")
 	c.MarkFlagRequired("interest")
 	c.MarkFlagRequired("dividend")
+	c.MarkFlagRequired("trading")
 	c.MarkFlagRequired("tax")
 	c.MarkFlagRequired("fee")
 }
@@ -98,6 +100,9 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if p.fee, err = r.feeFlag.Value(ctx); err != nil {
 		return err
 	}
+	if p.trading, err = r.tradingFlag.Value(ctx); err != nil {
+		return err
+	}
 	if err = p.parse(); err != nil {
 		return err
 	}
@@ -113,7 +118,7 @@ type parser struct {
 	baseCurrency     *journal.Commodity
 	dateFrom, dateTo time.Time
 
-	account, dividend, tax, fee, interest *journal.Account
+	account, dividend, tax, fee, interest, trading *journal.Account
 }
 
 func (p *parser) parse() error {
@@ -288,9 +293,9 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, stock, qty),
-			ast.NewPosting(p.builder.Context.EquityAccount(), p.account, currency, proceeds),
-			ast.NewPosting(p.fee, p.account, currency, fee),
+			ast.NewPostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
+			ast.NewPostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
+			ast.NewPostingWithTargets(p.fee, p.account, currency, fee, []*journal.Commodity{stock, currency}),
 		},
 	})
 	return true, nil
@@ -340,11 +345,11 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
 	var postings = []ast.Posting{
-		ast.NewPosting(p.builder.Context.EquityAccount(), p.account, stock, qty),
-		ast.NewPosting(p.builder.Context.EquityAccount(), p.account, currency, proceeds),
+		ast.NewPostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
+		ast.NewPostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
 	}
 	if !fee.IsZero() {
-		postings = append(postings, ast.NewPosting(p.fee, p.account, p.baseCurrency, fee))
+		postings = append(postings, ast.NewPostingWithTargets(p.fee, p.account, p.baseCurrency, fee, []*journal.Commodity{stock, currency}))
 	}
 	p.builder.AddTransaction(&ast.Transaction{
 		Date:        date,
@@ -448,8 +453,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPosting(p.dividend, p.account, currency, amount),
-			ast.NewPosting(p.dividend, p.dividend, security, decimal.Zero),
+			ast.NewPostingWithTargets(p.dividend, p.account, currency, amount, []*journal.Commodity{security}),
 		},
 	})
 	return true, nil
@@ -510,8 +514,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPosting(p.tax, p.account, currency, amount),
-			ast.NewPosting(p.tax, p.tax, security, decimal.Zero),
+			ast.NewPostingWithTargets(p.tax, p.account, currency, amount, []*journal.Commodity{security}),
 		},
 	})
 	return true, nil
@@ -542,7 +545,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPosting(p.interest, p.account, currency, amount)},
+			ast.NewPostingWithTargets(p.interest, p.account, currency, amount, []*journal.Commodity{currency})},
 	})
 	return true, nil
 }

@@ -38,6 +38,7 @@ func TestGolden(t *testing.T) {
 				"--fee", "Expenses:Fees",
 				"--tax", "Expenses:Tax",
 				"--interest", "Expenses:Interest",
+				"--trading", "Expenses:Trading",
 				path.Join("testdata", fmt.Sprintf("%s.input", test)),
 			}
 

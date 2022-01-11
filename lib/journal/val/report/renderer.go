@@ -77,14 +77,14 @@ func (rn *Renderer) computeWeights() map[*journal.Account]float64 {
 			for _, ibd := range rn.report.Positions[acc] {
 				for _, v := range ibd {
 					f, _ := v.Float64()
-					w += math.Abs(f)
+					w += f
 				}
 			}
 			for _, chAcc := range acc.Children() {
 				w += weights[chAcc]
 			}
 		}
-		weights[acc] = w
+		weights[acc] = math.Abs(w)
 	}
 	return weights
 }

@@ -111,8 +111,12 @@ func (p Printer) printPosting(w io.Writer, t ast.Posting) (int, error) {
 	if err != nil {
 		return n, err
 	}
-	if t.TargetCommodity != nil {
-		c, err = fmt.Fprintf(w, " (%s)", t.TargetCommodity)
+	if len(t.Targets) > 0 {
+		var s []string
+		for _, t := range t.Targets {
+			s = append(s, t.String())
+		}
+		c, err = fmt.Fprintf(w, " (%s)", strings.Join(s, ","))
 		n += c
 		if err != nil {
 			return n, err

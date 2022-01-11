@@ -69,93 +69,74 @@ func (calc *Calculator) valueByCommodity(d *val.Day) pcv {
 type pcv map[*journal.Commodity]float64
 
 func (calc *Calculator) computeFlows(step *val.Day) *DailyPerfValues {
+
 	var internalInflows, internalOutflows, inflows, outflows pcv
+
 	for _, trx := range step.Transactions {
-		var (
-			nbrCommodities = len(trx.Commodities())
-			gains          pcv
-		)
+
+		// We make the convention that flows per transaction and commodity are
+		// either positive or negative, but not both.
+		var flows, internalFlows pcv
 
 		for _, pst := range trx.Postings {
-			value, _ := pst.Value.Float64()
-			if calc.isPortfolioAccount(pst.Debit) {
-				// TODO: handle marker booking for dividends (or more general?).
-				switch pst.Credit.Type() {
-				case journal.INCOME, journal.EXPENSES:
-					if pst.TargetCommodity == nil {
-						if nbrCommodities == 1 {
-							// treat like a regular inflow
-							get(&inflows)[pst.Commodity] += value
-						} else {
-							// create an unbalanced inflow
-							get(&gains)[pst.Commodity] += value
-						}
-					} else if pst.Commodity != pst.TargetCommodity {
-						// did not change the value of target, so we need to create
-						// a virtual outflow
-						get(&internalOutflows)[pst.TargetCommodity] -= value
-						get(&internalInflows)[pst.Commodity] += value
-					}
-				case journal.ASSETS, journal.LIABILITIES:
-					if !calc.Filter.MatchAccount(pst.Credit) {
-						get(&inflows)[pst.Commodity] += value
-					}
-				case journal.EQUITY:
-					if !pst.Amount.IsZero() && nbrCommodities > 1 {
-						get(&gains)[pst.Commodity] += value
-					}
-				}
+			value, _ := pst.Amount.Float64()
+			var otherAccount *journal.Account
+
+			if calc.isPortfolioAccount(pst.Credit) && !calc.isPortfolioAccount(pst.Debit) {
+				// portfolio outflow
+				otherAccount = pst.Debit
+				value = -value
+			} else if !calc.isPortfolioAccount(pst.Credit) && calc.isPortfolioAccount(pst.Debit) {
+				// portfolio inflow
+				otherAccount = pst.Credit
+			} else {
+				// nothing to do, as the posting does not affect the portfolio
+				continue
 			}
-			if calc.isPortfolioAccount(pst.Credit) {
-				switch pst.Debit.Type() {
-				case journal.INCOME, journal.EXPENSES:
-					if pst.TargetCommodity == nil {
-						if nbrCommodities == 1 {
-							// treat like a regular inflow
-							get(&outflows)[pst.Commodity] -= value
-						} else {
-							get(&gains)[pst.Commodity] -= value
-						}
-					} else if pst.Commodity != pst.TargetCommodity {
-						// did not change the value of target, so we need to create
-						// a virtual inflow
-						get(&internalOutflows)[pst.Commodity] -= value
-						get(&internalInflows)[pst.TargetCommodity] += value
+
+			// tgts contains the commodities among which the performance effects of this
+			// transaction should be split: non-currencies > currencies > valuation currency.
+			tgts := calc.determineStructure(pst.Targets)
+
+			switch otherAccount.Type() {
+
+			case journal.INCOME, journal.EXPENSES, journal.EQUITY:
+				if len(tgts) == 0 {
+					// no effect: regular flow into or out of the portfolio
+					get(&flows)[pst.Commodity] += value
+				} else if len(tgts) > 1 || len(tgts) == 1 && tgts[0] != pst.Commodity {
+					// effect on multiple commodities: re-allocate the flows among the target commodities
+					l := float64(len(tgts))
+					intf := get(&internalFlows)
+					for _, com := range tgts {
+						intf[com] -= value / l
 					}
-				case journal.ASSETS, journal.LIABILITIES:
-					if !calc.Filter.MatchAccount(pst.Debit) {
-						get(&outflows)[pst.Commodity] -= value
-					}
-				case journal.EQUITY:
-					if !pst.Amount.IsZero() && nbrCommodities > 1 {
-						get(&gains)[pst.Commodity] -= value
-					}
+					intf[pst.Commodity] += value
 				}
+
+			case journal.ASSETS, journal.LIABILITIES:
+				get(&flows)[pst.Commodity] += value
 			}
 		}
-		if nbrCommodities > 1 {
-			var diff float64
-			for _, gain := range gains {
-				diff += gain
-			}
-			var s = calc.determineStructure(gains)
-			for c := range s {
-				gains[c] -= diff / float64(len(s))
-			}
-			for c, gain := range gains {
-				if gain > 0 {
-					get(&internalInflows)[c] += gain
-				} else if gain < 0 {
-					get(&internalOutflows)[c] += gain
-				}
-			}
-		}
+
+		split(flows, &inflows, &outflows)
+		split(internalFlows, &internalInflows, &internalOutflows)
 	}
 	return &DailyPerfValues{
 		InternalInflow:  internalInflows,
 		InternalOutflow: internalOutflows,
 		Inflow:          inflows,
 		Outflow:         outflows,
+	}
+}
+
+func split(flows pcv, in, out *pcv) {
+	for c, f := range flows {
+		if f > 0 {
+			get(in)[c] += f
+		} else if f < 0 {
+			get(out)[c] += f
+		}
 	}
 }
 
@@ -166,26 +147,26 @@ func get(m *pcv) pcv {
 	return *m
 }
 
-func (calc Calculator) determineStructure(g pcv) map[*journal.Commodity]bool {
-	var res = make(map[*journal.Commodity]bool)
-	for c := range g {
+func (calc Calculator) determineStructure(g []*journal.Commodity) []*journal.Commodity {
+	var res []*journal.Commodity
+	for _, c := range g {
 		if !c.IsCurrency {
-			res[c] = true
+			res = append(res, c)
 		}
 	}
 	if len(res) > 0 {
 		return res
 	}
-	for c := range g {
+	for _, c := range g {
 		if c != calc.Valuation {
-			res[c] = true
+			res = append(res, c)
 		}
 	}
 	if len(res) > 0 {
 		return res
 	}
-	for c := range g {
-		res[c] = true
+	for _, c := range g {
+		res = append(res, c)
 	}
 	return res
 }

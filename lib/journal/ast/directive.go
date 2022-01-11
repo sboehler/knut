@@ -55,10 +55,11 @@ type Close struct {
 
 // Posting represents a posting.
 type Posting struct {
-	Amount, Value              decimal.Decimal
-	Credit, Debit              *journal.Account
-	Commodity, TargetCommodity *journal.Commodity
-	Lot                        *Lot
+	Amount        decimal.Decimal
+	Credit, Debit *journal.Account
+	Commodity     *journal.Commodity
+	Targets       []*journal.Commodity
+	Lot           *Lot
 }
 
 // NewPosting creates a new posting from the given parameters. If amount is negative, it

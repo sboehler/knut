@@ -40,7 +40,12 @@ func TestComputeFlows(t *testing.T) {
 				desc: "outflow",
 				trx: &ast.Transaction{
 					Postings: []ast.Posting{
-						{Credit: portfolio, Debit: acc2, Amount: decimal.NewFromInt(2), Value: decimal.NewFromInt(1), Commodity: usd},
+						{
+							Credit:    portfolio,
+							Debit:     acc2,
+							Amount:    decimal.NewFromInt(1),
+							Commodity: usd,
+						},
 					},
 				},
 				want: &DailyPerfValues{Outflow: pcv{usd: -1.0}},
@@ -49,7 +54,12 @@ func TestComputeFlows(t *testing.T) {
 				desc: "inflow",
 				trx: &ast.Transaction{
 					Postings: []ast.Posting{
-						{Credit: acc1, Debit: portfolio, Amount: decimal.NewFromInt(2), Value: decimal.NewFromInt(1), Commodity: usd},
+						{
+							Credit:    acc1,
+							Debit:     portfolio,
+							Amount:    decimal.NewFromInt(1),
+							Commodity: usd,
+						},
 					},
 				},
 				want: &DailyPerfValues{Inflow: pcv{usd: 1.0}},
@@ -58,7 +68,13 @@ func TestComputeFlows(t *testing.T) {
 				desc: "dividend",
 				trx: &ast.Transaction{
 					Postings: []ast.Posting{
-						{Credit: dividend, Debit: portfolio, Amount: decimal.NewFromInt(2), Value: decimal.NewFromInt(1), Commodity: usd, TargetCommodity: aapl},
+						{
+							Credit:    dividend,
+							Debit:     portfolio,
+							Amount:    decimal.NewFromInt(1),
+							Commodity: usd,
+							Targets:   []*journal.Commodity{aapl, usd},
+						},
 					},
 				},
 				want: &DailyPerfValues{
@@ -70,7 +86,13 @@ func TestComputeFlows(t *testing.T) {
 				desc: "expense",
 				trx: &ast.Transaction{
 					Postings: []ast.Posting{
-						{Credit: portfolio, Debit: expense, Amount: decimal.NewFromInt(2), Value: decimal.NewFromInt(1), Commodity: usd, TargetCommodity: aapl},
+						{
+							Credit:    portfolio,
+							Debit:     expense,
+							Amount:    decimal.NewFromInt(1),
+							Commodity: usd,
+							Targets:   []*journal.Commodity{aapl, usd},
+						},
 					},
 				},
 				want: &DailyPerfValues{
@@ -82,8 +104,20 @@ func TestComputeFlows(t *testing.T) {
 				desc: "stock purchase",
 				trx: &ast.Transaction{
 					Postings: []ast.Posting{
-						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1100), Value: decimal.NewFromInt(1010), Commodity: usd},
-						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1), Value: decimal.NewFromInt(1000), Commodity: aapl},
+						{
+							Credit:    portfolio,
+							Debit:     equity,
+							Amount:    decimal.NewFromInt(1010),
+							Commodity: usd,
+							Targets:   []*journal.Commodity{usd, aapl},
+						},
+						{
+							Credit:    equity,
+							Debit:     portfolio,
+							Amount:    decimal.NewFromInt(1000),
+							Commodity: aapl,
+							Targets:   []*journal.Commodity{usd, aapl},
+						},
 					},
 				},
 				want: &DailyPerfValues{
@@ -95,9 +129,27 @@ func TestComputeFlows(t *testing.T) {
 				desc: "stock purchase with fee",
 				trx: &ast.Transaction{
 					Postings: []ast.Posting{
-						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1100), Value: decimal.NewFromInt(1010), Commodity: usd},
-						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1), Value: decimal.NewFromInt(1000), Commodity: aapl},
-						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(10), Value: decimal.NewFromInt(10), Commodity: usd},
+						{
+							Credit:    portfolio,
+							Debit:     equity,
+							Amount:    decimal.NewFromInt(1010),
+							Commodity: usd,
+							Targets:   []*journal.Commodity{usd, aapl},
+						},
+						{
+							Credit:    equity,
+							Debit:     portfolio,
+							Amount:    decimal.NewFromInt(1000),
+							Commodity: aapl,
+							Targets:   []*journal.Commodity{usd, aapl},
+						},
+						{
+							Credit:    portfolio,
+							Debit:     equity,
+							Amount:    decimal.NewFromInt(10),
+							Commodity: usd,
+							Targets:   []*journal.Commodity{usd, aapl},
+						},
 					},
 				},
 				want: &DailyPerfValues{
@@ -109,8 +161,20 @@ func TestComputeFlows(t *testing.T) {
 				desc: "stock sale",
 				trx: &ast.Transaction{
 					Postings: []ast.Posting{
-						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1), Value: decimal.NewFromInt(1000), Commodity: aapl},
-						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1100), Value: decimal.NewFromInt(990), Commodity: usd},
+						{
+							Credit:    portfolio,
+							Debit:     equity,
+							Amount:    decimal.NewFromInt(1000),
+							Commodity: aapl,
+							Targets:   []*journal.Commodity{usd, aapl},
+						},
+						{
+							Credit:    equity,
+							Debit:     portfolio,
+							Amount:    decimal.NewFromInt(990),
+							Commodity: usd,
+							Targets:   []*journal.Commodity{usd, aapl},
+						},
 					},
 				},
 				want: &DailyPerfValues{
@@ -123,8 +187,20 @@ func TestComputeFlows(t *testing.T) {
 				desc: "forex without fee",
 				trx: &ast.Transaction{
 					Postings: []ast.Posting{
-						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1000), Value: decimal.NewFromInt(1400), Commodity: gbp},
-						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1500), Value: decimal.NewFromInt(1350), Commodity: usd},
+						{
+							Credit:    portfolio,
+							Debit:     equity,
+							Amount:    decimal.NewFromInt(1400),
+							Commodity: gbp,
+							Targets:   []*journal.Commodity{usd, gbp},
+						},
+						{
+							Credit:    equity,
+							Debit:     portfolio,
+							Amount:    decimal.NewFromInt(1350),
+							Commodity: usd,
+							Targets:   []*journal.Commodity{usd, gbp},
+						},
 					},
 				},
 				want: &DailyPerfValues{
@@ -136,9 +212,27 @@ func TestComputeFlows(t *testing.T) {
 				desc: "forex with fee",
 				trx: &ast.Transaction{
 					Postings: []ast.Posting{
-						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1000), Value: decimal.NewFromInt(1400), Commodity: gbp},
-						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1500), Value: decimal.NewFromInt(1350), Commodity: usd},
-						{Credit: portfolio, Debit: expense, Amount: decimal.NewFromInt(10), Value: decimal.NewFromInt(10), Commodity: chf},
+						{
+							Credit:    portfolio,
+							Debit:     equity,
+							Amount:    decimal.NewFromInt(1400),
+							Commodity: gbp,
+							Targets:   []*journal.Commodity{usd, gbp},
+						},
+						{
+							Credit:    equity,
+							Debit:     portfolio,
+							Amount:    decimal.NewFromInt(1350),
+							Commodity: usd,
+							Targets:   []*journal.Commodity{usd, gbp},
+						},
+						{
+							Credit:    portfolio,
+							Debit:     expense,
+							Amount:    decimal.NewFromInt(10),
+							Commodity: chf,
+							Targets:   []*journal.Commodity{usd, gbp},
+						},
 					},
 				},
 				want: &DailyPerfValues{
@@ -150,9 +244,27 @@ func TestComputeFlows(t *testing.T) {
 				desc: "forex with native fee",
 				trx: &ast.Transaction{
 					Postings: []ast.Posting{
-						{Credit: portfolio, Debit: equity, Amount: decimal.NewFromInt(1000), Value: decimal.NewFromInt(1400), Commodity: gbp},
-						{Credit: equity, Debit: portfolio, Amount: decimal.NewFromInt(1500), Value: decimal.NewFromInt(1350), Commodity: usd},
-						{Credit: portfolio, Debit: expense, Amount: decimal.NewFromInt(10), Value: decimal.NewFromInt(10), Commodity: usd},
+						{
+							Credit:    portfolio,
+							Debit:     equity,
+							Amount:    decimal.NewFromInt(1400),
+							Commodity: gbp,
+							Targets:   []*journal.Commodity{usd, gbp},
+						},
+						{
+							Credit:    equity,
+							Debit:     portfolio,
+							Amount:    decimal.NewFromInt(1350),
+							Commodity: usd,
+							Targets:   []*journal.Commodity{usd, gbp},
+						},
+						{
+							Credit:    portfolio,
+							Debit:     expense,
+							Amount:    decimal.NewFromInt(10),
+							Commodity: usd,
+							Targets:   []*journal.Commodity{usd, gbp},
+						},
 					},
 				},
 				want: &DailyPerfValues{

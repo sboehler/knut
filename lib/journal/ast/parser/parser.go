@@ -306,10 +306,11 @@ func (p *Parser) parsePostings() ([]ast.Posting, error) {
 	var postings []ast.Posting
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		var (
-			credit, debit  *journal.Account
-			amount         decimal.Decimal
-			commodity, tgt *journal.Commodity
-			lot            *ast.Lot
+			credit, debit *journal.Account
+			amount        decimal.Decimal
+			commodity     *journal.Commodity
+			targets       []*journal.Commodity
+			lot           *ast.Lot
 
 			err error
 		)
@@ -353,7 +354,7 @@ func (p *Parser) parsePostings() ([]ast.Posting, error) {
 				if lot != nil {
 					return nil, fmt.Errorf("duplicate target commodity")
 				}
-				if tgt, err = p.parseTargetCommodity(); err != nil {
+				if targets, err = p.parseTargetCommodities(); err != nil {
 					return nil, err
 				}
 				if err = p.consumeWhitespace1(); err != nil {
@@ -362,12 +363,12 @@ func (p *Parser) parsePostings() ([]ast.Posting, error) {
 			}
 		}
 		postings = append(postings, ast.Posting{
-			Credit:          credit,
-			Debit:           debit,
-			Amount:          amount,
-			Commodity:       commodity,
-			TargetCommodity: tgt,
-			Lot:             lot,
+			Credit:    credit,
+			Debit:     debit,
+			Amount:    amount,
+			Commodity: commodity,
+			Targets:   targets,
+			Lot:       lot,
 		})
 		if err = p.consumeRestOfWhitespaceLine(); err != nil {
 			return nil, err
@@ -654,27 +655,39 @@ func (p *Parser) parseLot() (*ast.Lot, error) {
 	}, nil
 }
 
-func (p *Parser) parseTargetCommodity() (*journal.Commodity, error) {
+func (p *Parser) parseTargetCommodities() ([]*journal.Commodity, error) {
 	var (
-		commodity *journal.Commodity
-		err       error
+		res []*journal.Commodity
+		err error
 	)
 	if err = p.scanner.ConsumeRune('('); err != nil {
 		return nil, err
 	}
-	if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
-		return nil, err
+	for {
+		if err = p.scanner.ConsumeWhile(isWhitespace); err != nil {
+			return nil, err
+		}
+		c, err := p.parseCommodity()
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, c)
+		if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
+			return nil, err
+		}
+		if p.current() == ',' {
+			continue
+		}
+		if p.current() == ')' {
+			break
+		}
+		return nil, fmt.Errorf("expected ',' or ')', got %v", p.current())
 	}
-	if commodity, err = p.parseCommodity(); err != nil {
-		return nil, err
-	}
-	if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
-		return nil, err
-	}
+
 	if err = p.scanner.ConsumeRune(')'); err != nil {
 		return nil, err
 	}
-	return commodity, nil
+	return res, nil
 }
 
 func (p *Parser) parseTags() ([]ast.Tag, error) {

@@ -676,6 +676,9 @@ func (p *Parser) parseTargetCommodities() ([]*journal.Commodity, error) {
 			return nil, err
 		}
 		if p.current() == ',' {
+			if err = p.scanner.ConsumeRune(','); err != nil {
+				return nil, err
+			}
 			continue
 		}
 		if p.current() == ')' {

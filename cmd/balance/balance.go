@@ -117,10 +117,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 
 	var (
-		filter = journal.Filter{
-			Accounts:    r.accounts.Value(),
-			Commodities: r.commodities.Value(),
-		}
 		par = parser.RecursiveParser{
 			File:    args[0],
 			Context: jctx,
@@ -130,7 +126,10 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		}
 		astExpander = process.ASTExpander{
 			Expand: true,
-			Filter: filter,
+			Filter: journal.Filter{
+				Accounts:    r.accounts.Value(),
+				Commodities: r.commodities.Value(),
+			},
 		}
 		pastBuilder = process.PASTBuilder{
 			Context: jctx,

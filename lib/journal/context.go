@@ -71,15 +71,6 @@ func (ctx Context) ValuationAccount() *Account {
 	return res
 }
 
-// RetainedEarningsAccount returns the account for automatic valuation bookings.
-func (ctx Context) RetainedEarningsAccount() *Account {
-	res, err := ctx.accounts.Get("Equity:RetainedEarnings")
-	if err != nil {
-		panic(fmt.Sprintf("could not create valuationAccount: %v", err))
-	}
-	return res
-}
-
 // TBDAccount returns the TBD account.
 func (ctx Context) TBDAccount() *Account {
 	tbdAccount, err := ctx.accounts.Get("Expenses:TBD")

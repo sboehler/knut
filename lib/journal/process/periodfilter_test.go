@@ -21,16 +21,6 @@ func TestPeriodFilter(t *testing.T) {
 		jctx = journal.NewContext()
 		td   = newTestData(jctx)
 	)
-	dayNV := func(y int, m time.Month, d int, marker ...bool) *val.Day {
-		var trx []*ast.Transaction
-		if len(marker) > 0 {
-			trx = append(trx, nil)
-		}
-		return &val.Day{
-			Date:         date.Date(y, m, d),
-			Transactions: trx,
-		}
-	}
 	day := func(y int, m time.Month, d int, v int64, marker ...bool) *val.Day {
 		var trx []*ast.Transaction
 		if len(marker) > 0 {
@@ -69,14 +59,13 @@ func TestPeriodFilter(t *testing.T) {
 					ch <- day(2022, 1, 4, 3)
 				},
 				want: []*val.Day{
-					day(2022, 1, 2, 1),
 					day(2022, 1, 10, 3),
 				},
 			},
 			{
 				desc: "monthly, no from date",
 				sut: PeriodFilter{
-					To:     date.Date(2022, 1, 10),
+					To:       date.Date(2022, 1, 10),
 					Interval: date.Monthly,
 				},
 				input: func(ch chan *val.Day) {
@@ -85,16 +74,15 @@ func TestPeriodFilter(t *testing.T) {
 					ch <- day(2022, 1, 4, 300)
 				},
 				want: []*val.Day{
-					dayNV(2021, 12, 31),
 					day(2022, 1, 31, 300),
 				},
 			},
 			{
 				desc: "monthly, last 5, no from date",
 				sut: PeriodFilter{
-					To:     date.Date(2022, 1, 10),
+					To:       date.Date(2022, 1, 10),
 					Interval: date.Monthly,
-					Last:   5,
+					Last:     5,
 				},
 				input: func(ch chan *val.Day) {
 					ch <- day(2021, 1, 1, 100, true)
@@ -137,7 +125,7 @@ func TestPeriodFilter(t *testing.T) {
 				got = append(got, d)
 			}
 
-			if diff := cmp.Diff(got, test.want, cmpopts.IgnoreUnexported(journal.Context{}, journal.Commodity{}, journal.Account{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmpopts.IgnoreUnexported(journal.Context{}, journal.Commodity{}, journal.Account{})); diff != "" {
 				t.Fatalf("unexpected diff (+got/-want):\n%s", diff)
 			}
 

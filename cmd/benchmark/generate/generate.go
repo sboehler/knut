@@ -234,11 +234,11 @@ func generateOpenings(c config, as []*journal.Account) []*ast.Open {
 
 func generateTransactions(c config, cs []*journal.Commodity, as []*journal.Account) []*ast.Transaction {
 	var trx []*ast.Transaction
-	var dates = date.Series(c.from.AddDate(0, 0, 1), c.to, date.Daily)
+	var dates = date.Periods(c.from, c.to, date.Daily)
 	for i := 0; i < c.transactions; i++ {
 
 		trx = append(trx, &ast.Transaction{
-			Date:        dates[rand.Intn(len(dates))],
+			Date:        dates[rand.Intn(len(dates))].End,
 			Description: generateIdentifier(200),
 			Postings: []ast.Posting{
 				ast.NewPosting(as[rand.Intn(len(as))], as[rand.Intn(len(as))], cs[rand.Intn(len(cs))], decimal.NewFromFloat(rand.Float64()*1000).Round(4)),
@@ -254,10 +254,10 @@ func generatePrices(c config, cs []*journal.Commodity) []*ast.Price {
 	var prices []*ast.Price
 	for _, commodity := range cs[1:] {
 		var price = decimal.NewFromFloat(1.0 + 200*rand.Float64())
-		for _, d := range date.Series(c.from, c.to, date.Daily) {
+		for _, d := range date.Periods(c.from, c.to, date.Daily) {
 			price = price.Mul(decimal.NewFromFloat(1 + rand.NormFloat64()*stdev)).Truncate(4)
 			prices = append(prices, &ast.Price{
-				Date:      d,
+				Date:      d.End,
 				Commodity: commodity,
 				Target:    cs[0],
 				Price:     price,

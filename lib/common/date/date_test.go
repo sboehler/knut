@@ -15,8 +15,11 @@
 package date
 
 import (
+	"fmt"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestStartOf(t *testing.T) {
@@ -123,94 +126,81 @@ func TestEndOf(t *testing.T) {
 	}
 }
 
-func TestSeries(t *testing.T) {
+func TestPeriods(t *testing.T) {
 	var tests = []struct {
 		t0       time.Time
 		t1       time.Time
 		interval Interval
-		result   []time.Time
+		result   []Period
 	}{
 		{
 			t0:       Date(2020, 5, 19),
 			t1:       Date(2020, 5, 22),
 			interval: Once,
-			result: []time.Time{
-				Date(2020, 5, 19),
-				Date(2020, 5, 22),
+			result: []Period{
+				{Date(2020, 5, 19), Date(2020, 5, 22)},
 			},
 		},
 		{
 			t0:       Date(2020, 5, 19),
 			t1:       Date(2020, 5, 22),
 			interval: Daily,
-			result: []time.Time{
-				Date(2020, 5, 18),
-				Date(2020, 5, 19),
-				Date(2020, 5, 20),
-				Date(2020, 5, 21),
-				Date(2020, 5, 22),
+			result: []Period{
+				{Date(2020, 5, 19), Date(2020, 5, 19)},
+				{Date(2020, 5, 20), Date(2020, 5, 20)},
+				{Date(2020, 5, 21), Date(2020, 5, 21)},
+				{Date(2020, 5, 22), Date(2020, 5, 22)},
 			},
 		},
 		{
 			t0:       Date(2020, 1, 1),
 			t1:       Date(2020, 1, 31),
 			interval: Weekly,
-			result: []time.Time{
-				Date(2019, 12, 29),
-				Date(2020, 1, 5),
-				Date(2020, 1, 12),
-				Date(2020, 1, 19),
-				Date(2020, 1, 26),
-				Date(2020, 2, 2),
+			result: []Period{
+				{Date(2019, 12, 30), Date(2020, 1, 5)},
+				{Date(2020, 1, 6), Date(2020, 1, 12)},
+				{Date(2020, 1, 13), Date(2020, 1, 19)},
+				{Date(2020, 1, 20), Date(2020, 1, 26)},
+				{Date(2020, 1, 27), Date(2020, 2, 2)},
 			},
 		},
 		{
 			t0:       Date(2019, 12, 31),
 			t1:       Date(2020, 1, 31),
 			interval: Monthly,
-			result: []time.Time{
-				Date(2019, 11, 30),
-				Date(2019, 12, 31),
-				Date(2020, 1, 31),
+			result: []Period{
+				{Date(2019, 12, 1), Date(2019, 12, 31)},
+				{Date(2020, 1, 1), Date(2020, 1, 31)},
 			},
 		},
 		{
 			t0:       Date(2020, 1, 1),
 			t1:       Date(2020, 1, 31),
 			interval: Monthly,
-			result: []time.Time{
-				Date(2019, 12, 31),
-				Date(2020, 1, 31),
+			result: []Period{
+				{Date(2020, 1, 1), Date(2020, 1, 31)},
 			},
 		},
 		{
 			t0:       Date(2017, 4, 1),
 			t1:       Date(2019, 3, 3),
 			interval: Yearly,
-			result: []time.Time{
-				Date(2016, 12, 31),
-				Date(2017, 12, 31),
-				Date(2018, 12, 31),
-				Date(2019, 12, 31),
+			result: []Period{
+				{Date(2017, 1, 1), Date(2017, 12, 31)},
+				{Date(2018, 1, 1), Date(2018, 12, 31)},
+				{Date(2019, 1, 1), Date(2019, 12, 31)},
 			},
 		},
 	}
 
-	for _, test := range tests {
-		if got := Series(test.t0, test.t1, test.interval); !Equal(got, test.result) {
-			t.Errorf("Series(%v, %v, %v): Got %v, wanted %v", test.t0, test.t1, test.interval, got, test.result)
-		}
-	}
-}
+	for i, test := range tests {
+		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
 
-func Equal(d1, d2 []time.Time) bool {
-	if len(d1) != len(d2) {
-		return false
+			got := Periods(test.t0, test.t1, test.interval)
+
+			if diff := cmp.Diff(test.result, got); diff != "" {
+				t.Fatalf("Periods(%s, %s, %v): unexpected diff (+got/-want):\n%s", test.t0.Format("2006-01-02"), test.t1.Format("2006-01-02"), test.interval, diff)
+			}
+		})
 	}
-	for i, d := range d1 {
-		if d != d2[i] {
-			return false
-		}
-	}
-	return true
 }

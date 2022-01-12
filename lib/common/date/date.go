@@ -100,25 +100,29 @@ func EndOf(d time.Time, p Interval) time.Time {
 	return d
 }
 
-// Series returns a series of dates in the given interval,
-// which contains both t0 and t1.
-func Series(t0, t1 time.Time, p Interval) []time.Time {
-	if p == Once {
-		return []time.Time{t0, t1}
-	}
-	var (
-		res = []time.Time{StartOf(t0, p).AddDate(0, 0, -1)}
-		t   = t0
-	)
-	for t == t1 || t.Before(t1) {
-		res = append(res, EndOf(t, p))
-		t = EndOf(t, p).AddDate(0, 0, 1)
-	}
-	return res
-}
-
 // Today returns today's date.
 func Today() time.Time {
 	now := time.Now()
 	return Date(now.Year(), now.Month(), now.Day())
+}
+
+// Period represents a time period
+type Period struct {
+	Start, End time.Time
+}
+
+// Periods returns a series of periods in the given interval,
+// which contains both t0 and t1.
+func Periods(t0, t1 time.Time, p Interval) []Period {
+	var res []Period
+	if p == Once {
+		if t0.Before(t1) {
+			res = append(res, Period{t0, t1})
+		}
+	} else {
+		for t := t0; !t.After(t1); t = EndOf(t, p).AddDate(0, 0, 1) {
+			res = append(res, Period{StartOf(t, p), EndOf(t, p)})
+		}
+	}
+	return res
 }

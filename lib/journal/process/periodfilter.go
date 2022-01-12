@@ -29,8 +29,8 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 		defer close(errCh)
 
 		var (
-			dates []time.Time
-			prev  = new(val.Day)
+			periods []date.Period
+			prev    = new(val.Day)
 
 			index int
 			init  bool
@@ -44,12 +44,12 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 				if len(day.Transactions) == 0 {
 					continue
 				}
-				dates = pf.computeDates(day.Date)
+				periods = pf.computeDates(day.Date)
 				init = true
 			}
-			for index < len(dates) && (!ok || dates[index].Before(day.Date)) {
+			for index < len(periods) && (!ok || periods[index].End.Before(day.Date)) {
 				r := &val.Day{
-					Date:   dates[index],
+					Date:   periods[index].End,
 					Values: prev.Values,
 					Prices: prev.Prices,
 				}
@@ -68,7 +68,7 @@ func (pf PeriodFilter) ProcessStream(ctx context.Context, inCh <-chan *val.Day) 
 
 }
 
-func (pf *PeriodFilter) computeDates(t time.Time) []time.Time {
+func (pf *PeriodFilter) computeDates(t time.Time) []date.Period {
 	from := pf.From
 	if from.Before(t) {
 		from = t
@@ -76,10 +76,7 @@ func (pf *PeriodFilter) computeDates(t time.Time) []time.Time {
 	if pf.To.IsZero() {
 		pf.To = date.Today()
 	}
-	if !from.Before(pf.To) {
-		return nil
-	}
-	dates := date.Series(from, pf.To, pf.Interval)
+	dates := date.Periods(from, pf.To, pf.Interval)
 
 	if pf.Last > 0 {
 		last := pf.Last

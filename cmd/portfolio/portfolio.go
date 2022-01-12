@@ -20,9 +20,14 @@ import (
 	"os"
 	"runtime/pprof"
 
-	"github.com/sboehler/knut/cmd/flags"
-
 	"github.com/spf13/cobra"
+
+	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/common/cpr"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"github.com/sboehler/knut/lib/journal/process"
+	"github.com/sboehler/knut/lib/journal/process/performance"
 )
 
 // CreateCmd creates the command.
@@ -74,53 +79,63 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 }
 
 func (r *runner) execute(cmd *cobra.Command, args []string) error {
-	// var (
-	// 	ctx       = journal.NewContext()
-	// 	valuation *journal.Commodity
-	// 	err       error
-	// )
-	// if valuation, err = r.valuation.Value(ctx); err != nil {
-	// 	return err
-	// }
+	var (
+		ctx       = cmd.Context()
+		jctx      = journal.NewContext()
+		valuation *journal.Commodity
+		err       error
+	)
+	if valuation, err = r.valuation.Value(jctx); err != nil {
+		return err
+	}
 
-	// var (
-	// 	p = parser.RecursiveParser{
-	// 		File:    args[0],
-	// 		Context: ctx,
-	// 	}
-	// 	bal    = balance.New(ctx, valuation)
-	// 	filter = journal.Filter{
-	// 		Commodities: r.commodities.Value(),
-	// 		Accounts:    r.accounts.Value(),
-	// 	}
-	// 	res   = new(performance.DailyPerfValues)
-	// 	steps = []past.Processor{
-	// 		balance.DateUpdater{Balance: bal},
-	// 		balance.AccountOpener{Balance: bal},
-	// 		balance.TransactionBooker{Balance: bal},
-	// 		balance.ValueBooker{Balance: bal},
-	// 		balance.Asserter{Balance: bal},
-	// 		&balance.PriceUpdater{Balance: bal},
-	// 		balance.TransactionValuator{Balance: bal},
-	// 		balance.ValuationTransactionComputer{Balance: bal},
-	// 		balance.AccountCloser{Balance: bal},
-	// 		&performance.Valuator{Filter: filter, Result: res},
-	// 		&performance.FlowComputer{Filter: filter, Result: res},
-	// 		//TODO: compute performance here
-	// 	}
-	// 	perfCalc = performance.Calculator{
-	// 		Filter:    filter,
-	// 		Valuation: valuation,
-	// 	}
-	// 	l *past.PAST
-	// )
-	// if l, err = p.BuildLedger(journal.Filter{}); err != nil {
-	// 	return err
-	// }
-	// if err = past.Sync(l, steps); err != nil {
-	// 	return err
-	// }
-	// for range perfCalc.Perf(l) {
-	// }
-	return nil
+	var (
+		par = parser.RecursiveParser{
+			File:    args[0],
+			Context: jctx,
+		}
+		astBuilder = process.ASTBuilder{
+			Context: jctx,
+		}
+		astExpander = process.ASTExpander{
+			Expand: true,
+		}
+		pastBuilder = process.PASTBuilder{
+			Context: jctx,
+		}
+		priceUpdater = process.PriceUpdater{
+			Context:   jctx,
+			Valuation: valuation,
+		}
+		valuator = process.Valuator{
+			Context:   jctx,
+			Valuation: valuation,
+		}
+		calculator = performance.Calculator{
+			Context:   jctx,
+			Valuation: valuation,
+			Filter: journal.Filter{
+				Accounts:    r.accounts.Value(),
+				Commodities: r.commodities.Value(),
+			},
+		}
+	)
+
+	ch0, errCh0 := par.Parse(ctx)
+	ch1, errCh1 := astBuilder.BuildAST(ctx, ch0)
+	ch2, errCh2 := astExpander.ExpandAndFilterAST(ctx, ch1)
+	ch3, errCh3 := pastBuilder.ProcessAST(ctx, ch2)
+	ch4, errCh4 := priceUpdater.ProcessStream(ctx, ch3)
+	ch5, errCh5 := valuator.ProcessStream(ctx, ch4)
+	resCh, errCh6 := calculator.Perf(ctx, ch5)
+
+	errCh := cpr.Demultiplex(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5, errCh6)
+
+	for {
+		p, ok, err := cpr.Get(resCh, errCh)
+		if !ok || err != nil {
+			return err
+		}
+		fmt.Printf("%v: %.1f%%\n", p.Date.Format("2006-01-02"), 100*(p.Performance()-1))
+	}
 }

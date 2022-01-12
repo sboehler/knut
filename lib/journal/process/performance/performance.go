@@ -2,7 +2,7 @@ package performance
 
 import (
 	"context"
-	"fmt"
+	"time"
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
@@ -34,6 +34,7 @@ func (calc Calculator) Perf(ctx context.Context, inCh <-chan *val.Day) (<-chan *
 			}
 
 			dpr := calc.computeFlows(d)
+			dpr.Date = d.Date
 			dpr.V0 = prev
 			dpr.V1 = calc.valueByCommodity(d)
 			prev = dpr.V1
@@ -176,11 +177,13 @@ func (calc Calculator) isPortfolioAccount(a *journal.Account) bool {
 
 // PerfPeriod represents monetary values and flows in a period.
 type PerfPeriod struct {
+	Date                                                     time.Time
 	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow pcv
 	Err                                                      error
 }
 
-func (dpv PerfPeriod) performance() float64 {
+// Performance computes the portfolio performance.
+func (dpv PerfPeriod) Performance() float64 {
 	var v0, v1, inflow, outflow, internalInflow, internalOutflow float64
 	for _, v := range dpv.V0 {
 		v0 += v
@@ -200,6 +203,9 @@ func (dpv PerfPeriod) performance() float64 {
 	for _, v := range dpv.InternalOutflow {
 		internalOutflow += v
 	}
-	fmt.Printf("%.0f %.0f %.0f %.0f %.0f %.0f\n", v0, v1, inflow, outflow, internalInflow, internalOutflow)
+	// fmt.Printf("%.0f %.0f %.0f %.0f %.0f %.0f\n", v0, v1, inflow, outflow, internalInflow, internalOutflow)
+	if v0 == v1 && inflow == 0 && outflow == 0 && internalInflow == 0 && internalOutflow == 0 {
+		return 1
+	}
 	return (v1 - outflow) / (v0 + inflow)
 }

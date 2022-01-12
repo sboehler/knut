@@ -17,8 +17,8 @@ type Calculator struct {
 }
 
 // Perf computes portfolio performance.
-func (calc Calculator) Perf(ctx context.Context, inCh <-chan *val.Day) (<-chan *DailyPerfValues, <-chan error) {
-	resCh := make(chan *DailyPerfValues)
+func (calc Calculator) Perf(ctx context.Context, inCh <-chan *val.Day) (<-chan *PerfPeriod, <-chan error) {
+	resCh := make(chan *PerfPeriod)
 	errCh := make(chan error)
 
 	go func() {
@@ -29,10 +29,7 @@ func (calc Calculator) Perf(ctx context.Context, inCh <-chan *val.Day) (<-chan *
 
 		for {
 			d, ok, err := cpr.Pop(ctx, inCh)
-			if !ok {
-				break
-			}
-			if err != nil {
+			if !ok || err != nil {
 				return
 			}
 
@@ -68,7 +65,7 @@ func (calc *Calculator) valueByCommodity(d *val.Day) pcv {
 // pcv is a per-commodity value.
 type pcv map[*journal.Commodity]float64
 
-func (calc *Calculator) computeFlows(step *val.Day) *DailyPerfValues {
+func (calc *Calculator) computeFlows(step *val.Day) *PerfPeriod {
 
 	var internalInflows, internalOutflows, inflows, outflows pcv
 
@@ -122,7 +119,7 @@ func (calc *Calculator) computeFlows(step *val.Day) *DailyPerfValues {
 		split(flows, &inflows, &outflows)
 		split(internalFlows, &internalInflows, &internalOutflows)
 	}
-	return &DailyPerfValues{
+	return &PerfPeriod{
 		InternalInflow:  internalInflows,
 		InternalOutflow: internalOutflows,
 		Inflow:          inflows,
@@ -177,13 +174,13 @@ func (calc Calculator) isPortfolioAccount(a *journal.Account) bool {
 
 // perf = ( V1 - Outflow ) / ( V0 + Inflow )
 
-// DailyPerfValues represents monetary values and flows in a period.
-type DailyPerfValues struct {
+// PerfPeriod represents monetary values and flows in a period.
+type PerfPeriod struct {
 	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow pcv
 	Err                                                      error
 }
 
-func (dpv DailyPerfValues) performance() float64 {
+func (dpv PerfPeriod) performance() float64 {
 	var v0, v1, inflow, outflow, internalInflow, internalOutflow float64
 	for _, v := range dpv.V0 {
 		v0 += v

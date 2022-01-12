@@ -134,37 +134,65 @@ func TestSeries(t *testing.T) {
 			t0:     Date(2020, 5, 19),
 			t1:     Date(2020, 5, 22),
 			period: Once,
-			result: []time.Time{Date(2020, 5, 19), Date(2020, 5, 22)},
+			result: []time.Time{
+				Date(2020, 5, 19),
+				Date(2020, 5, 22),
+			},
 		},
 		{
 			t0:     Date(2020, 5, 19),
 			t1:     Date(2020, 5, 22),
 			period: Daily,
-			result: []time.Time{Date(2020, 5, 18), Date(2020, 5, 19), Date(2020, 5, 20), Date(2020, 5, 21), Date(2020, 5, 22)},
+			result: []time.Time{
+				Date(2020, 5, 18),
+				Date(2020, 5, 19),
+				Date(2020, 5, 20),
+				Date(2020, 5, 21),
+				Date(2020, 5, 22),
+			},
 		},
 		{
 			t0:     Date(2020, 1, 1),
 			t1:     Date(2020, 1, 31),
 			period: Weekly,
-			result: []time.Time{Date(2019, 12, 29), Date(2020, 1, 5), Date(2020, 1, 12), Date(2020, 1, 19), Date(2020, 1, 26), Date(2020, 2, 2)},
+			result: []time.Time{
+				Date(2019, 12, 29),
+				Date(2020, 1, 5),
+				Date(2020, 1, 12),
+				Date(2020, 1, 19),
+				Date(2020, 1, 26),
+				Date(2020, 2, 2),
+			},
 		},
 		{
 			t0:     Date(2019, 12, 31),
 			t1:     Date(2020, 1, 31),
 			period: Monthly,
-			result: []time.Time{Date(2019, 11, 30), Date(2019, 12, 31), Date(2020, 1, 31)},
+			result: []time.Time{
+				Date(2019, 11, 30),
+				Date(2019, 12, 31),
+				Date(2020, 1, 31),
+			},
 		},
 		{
 			t0:     Date(2020, 1, 1),
 			t1:     Date(2020, 1, 31),
 			period: Monthly,
-			result: []time.Time{Date(2019, 12, 31), Date(2020, 1, 31)},
+			result: []time.Time{
+				Date(2019, 12, 31),
+				Date(2020, 1, 31),
+			},
 		},
 		{
 			t0:     Date(2017, 4, 1),
 			t1:     Date(2019, 3, 3),
 			period: Yearly,
-			result: []time.Time{Date(2016, 12, 31), Date(2017, 12, 31), Date(2018, 12, 31), Date(2019, 12, 31)},
+			result: []time.Time{
+				Date(2016, 12, 31),
+				Date(2017, 12, 31),
+				Date(2018, 12, 31),
+				Date(2019, 12, 31),
+			},
 		},
 	}
 

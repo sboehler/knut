@@ -59,7 +59,7 @@ type runner struct {
 	sortAlphabetically                      bool
 	digits                                  int32
 	accounts, commodities                   flags.RegexFlag
-	period                                  flags.PeriodFlags
+	interval                                flags.IntervalFlags
 	mapping                                 flags.MappingFlag
 	valuation                               flags.CommodityFlag
 }
@@ -87,7 +87,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().BoolVarP(&r.diff, "diff", "d", false, "diff")
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "s", false, "Show commodities on their own rows")
-	r.period.Setup(c.Flags())
+	r.interval.Setup(c.Flags())
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	c.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
 	c.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
@@ -102,7 +102,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		jctx = journal.NewContext()
 
 		valuation *journal.Commodity
-		period    date.Period
+		interval  date.Interval
 
 		err error
 	)
@@ -112,7 +112,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if valuation, err = r.valuation.Value(jctx); err != nil {
 		return err
 	}
-	if period, err = r.period.Value(); err != nil {
+	if interval, err = r.interval.Value(); err != nil {
 		return err
 	}
 
@@ -145,7 +145,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		periodFilter = process.PeriodFilter{
 			From:   r.from.Value(),
 			To:     r.to.Value(),
-			Period: period,
+			Interval: interval,
 			Last:   r.last,
 			Diff:   r.diff,
 		}

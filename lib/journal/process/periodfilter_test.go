@@ -77,7 +77,7 @@ func TestPeriodFilter(t *testing.T) {
 				desc: "monthly, no from date",
 				sut: PeriodFilter{
 					To:     date.Date(2022, 1, 10),
-					Period: date.Monthly,
+					Interval: date.Monthly,
 				},
 				input: func(ch chan *val.Day) {
 					ch <- day(2022, 1, 2, 100, true)
@@ -93,7 +93,7 @@ func TestPeriodFilter(t *testing.T) {
 				desc: "monthly, last 5, no from date",
 				sut: PeriodFilter{
 					To:     date.Date(2022, 1, 10),
-					Period: date.Monthly,
+					Interval: date.Monthly,
 					Last:   5,
 				},
 				input: func(ch chan *val.Day) {

@@ -94,13 +94,13 @@ func (rf *RegexFlag) Value() *regexp.Regexp {
 	return rf.regex
 }
 
-// PeriodFlags manages multiple flags to determine a time period.
-type PeriodFlags struct {
+// IntervalFlags manages multiple flags to determine a time period.
+type IntervalFlags struct {
 	flags [6]bool
 }
 
 // Setup configures the flags.
-func (pf *PeriodFlags) Setup(s *pflag.FlagSet) {
+func (pf *IntervalFlags) Setup(s *pflag.FlagSet) {
 	s.BoolVar(&pf.flags[date.Daily], "days", false, "days")
 	s.BoolVar(&pf.flags[date.Weekly], "weeks", false, "weeks")
 	s.BoolVar(&pf.flags[date.Monthly], "months", false, "months")
@@ -109,7 +109,7 @@ func (pf *PeriodFlags) Setup(s *pflag.FlagSet) {
 }
 
 // Value returns the period.
-func (pf PeriodFlags) Value() (date.Period, error) {
+func (pf IntervalFlags) Value() (date.Interval, error) {
 	var index, counter int
 	for i, val := range pf.flags {
 		if val {
@@ -118,9 +118,9 @@ func (pf PeriodFlags) Value() (date.Period, error) {
 		}
 	}
 	if counter > 1 {
-		return date.Once, fmt.Errorf("multiple incompatible time periods")
+		return date.Once, fmt.Errorf("multiple incompatible intervals")
 	}
-	return (date.Period)(index), nil
+	return (date.Interval)(index), nil
 }
 
 // MappingFlag manages a flag of type -c1,<regex>.

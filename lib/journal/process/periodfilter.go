@@ -13,7 +13,7 @@ import (
 // specified.
 type PeriodFilter struct {
 	From, To time.Time
-	Period   date.Period
+	Interval date.Interval
 	Last     int
 	Diff     bool
 }
@@ -79,7 +79,7 @@ func (pf *PeriodFilter) computeDates(t time.Time) []time.Time {
 	if !from.Before(pf.To) {
 		return nil
 	}
-	dates := date.Series(from, pf.To, pf.Period)
+	dates := date.Series(from, pf.To, pf.Interval)
 
 	if pf.Last > 0 {
 		last := pf.Last

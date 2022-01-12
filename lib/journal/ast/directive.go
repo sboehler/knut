@@ -216,9 +216,9 @@ type Value struct {
 // Accrual represents an accrual.
 type Accrual struct {
 	Range
-	Period  date.Period
-	T0, T1  time.Time
-	Account *journal.Account
+	Interval date.Interval
+	T0, T1   time.Time
+	Account  *journal.Account
 }
 
 // Expand expands an accrual transaction.
@@ -242,7 +242,7 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 		drAccountSingle = posting.Debit
 	}
 	var (
-		dates       = date.Series(a.T0, a.T1, a.Period)[1:]
+		dates       = date.Series(a.T0, a.T1, a.Interval)[1:]
 		amount, rem = posting.Amount.QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
 
 		result []*Transaction

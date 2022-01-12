@@ -16,12 +16,12 @@ package date
 
 import "time"
 
-// Period is a time interval.
-type Period int
+// Interval is a time interval.
+type Interval int
 
 const (
 	// Once represents the beginning of the interval.
-	Once Period = iota
+	Once Interval = iota
 	// Daily is a daily interval.
 	Daily
 	// Weekly is a weekly interval.
@@ -34,7 +34,7 @@ const (
 	Yearly
 )
 
-func (p Period) String() string {
+func (p Interval) String() string {
 	switch p {
 	case Once:
 		return "once"
@@ -59,7 +59,7 @@ func Date(year int, month time.Month, day int) time.Time {
 
 // StartOf returns the first date in the given period which
 // contains the receiver.
-func StartOf(d time.Time, p Period) time.Time {
+func StartOf(d time.Time, p Interval) time.Time {
 	switch p {
 	case Once:
 		return d
@@ -80,7 +80,7 @@ func StartOf(d time.Time, p Period) time.Time {
 
 // EndOf returns the last date in the given period that contains
 // the receiver.
-func EndOf(d time.Time, p Period) time.Time {
+func EndOf(d time.Time, p Interval) time.Time {
 	switch p {
 	case Once:
 		return d
@@ -102,7 +102,7 @@ func EndOf(d time.Time, p Period) time.Time {
 
 // Series returns a series of dates in the given interval,
 // which contains both t0 and t1.
-func Series(t0, t1 time.Time, p Period) []time.Time {
+func Series(t0, t1 time.Time, p Interval) []time.Time {
 	if p == Once {
 		return []time.Time{t0, t1}
 	}

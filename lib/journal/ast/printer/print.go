@@ -101,7 +101,7 @@ func (p Printer) printTransaction(w io.Writer, t *ast.Transaction) (n int, err e
 }
 
 func (p Printer) printAccrual(w io.Writer, a *ast.Accrual) (n int, err error) {
-	return fmt.Fprintf(w, "@accrue %s %s %s %s\n", a.Period, a.T0.Format("2006-01-02"), a.T1.Format("2006-01-02"), a.Account)
+	return fmt.Fprintf(w, "@accrue %s %s %s %s\n", a.Interval, a.T0.Format("2006-01-02"), a.T1.Format("2006-01-02"), a.Account)
 }
 
 func (p Printer) printPosting(w io.Writer, t ast.Posting) (int, error) {

@@ -22,11 +22,11 @@ import (
 func TestStartOf(t *testing.T) {
 	var tests = []struct {
 		date   time.Time
-		result map[Period]time.Time
+		result map[Interval]time.Time
 	}{
 		{
 			date: Date(2020, 1, 1),
-			result: map[Period]time.Time{
+			result: map[Interval]time.Time{
 				Weekly:    Date(2019, 12, 30),
 				Monthly:   Date(2020, 1, 1),
 				Quarterly: Date(2020, 1, 1),
@@ -34,7 +34,7 @@ func TestStartOf(t *testing.T) {
 		},
 		{
 			date: Date(2020, 1, 31),
-			result: map[Period]time.Time{
+			result: map[Interval]time.Time{
 				Weekly:    Date(2020, 1, 27),
 				Monthly:   Date(2020, 1, 1),
 				Quarterly: Date(2020, 1, 1),
@@ -42,7 +42,7 @@ func TestStartOf(t *testing.T) {
 		},
 		{
 			date: Date(2020, 2, 1),
-			result: map[Period]time.Time{
+			result: map[Interval]time.Time{
 				Weekly:    Date(2020, 1, 27),
 				Monthly:   Date(2020, 2, 1),
 				Quarterly: Date(2020, 1, 1),
@@ -50,22 +50,22 @@ func TestStartOf(t *testing.T) {
 		},
 		{
 			date: Date(2020, 6, 1),
-			result: map[Period]time.Time{
+			result: map[Interval]time.Time{
 				Quarterly: Date(2020, 4, 1),
 			},
 		},
 		{
 			date: Date(2020, 12, 3),
-			result: map[Period]time.Time{
+			result: map[Interval]time.Time{
 				Quarterly: Date(2020, 10, 1),
 			},
 		},
 	}
 
 	for _, test := range tests {
-		for period, result := range test.result {
-			if got := StartOf(test.date, period); got != result {
-				t.Errorf("StartOf(%v, %v): Got %v, wanted %v", test.date, period, got, result)
+		for interval, result := range test.result {
+			if got := StartOf(test.date, interval); got != result {
+				t.Errorf("StartOf(%v, %v): Got %v, wanted %v", test.date, interval, got, result)
 			}
 		}
 	}
@@ -74,11 +74,11 @@ func TestStartOf(t *testing.T) {
 func TestEndOf(t *testing.T) {
 	var tests = []struct {
 		date   time.Time
-		result map[Period]time.Time
+		result map[Interval]time.Time
 	}{
 		{
 			date: Date(2020, 1, 1),
-			result: map[Period]time.Time{
+			result: map[Interval]time.Time{
 				Weekly:    Date(2020, 1, 5),
 				Monthly:   Date(2020, 1, 31),
 				Quarterly: Date(2020, 3, 31),
@@ -86,7 +86,7 @@ func TestEndOf(t *testing.T) {
 		},
 		{
 			date: Date(2020, 1, 31),
-			result: map[Period]time.Time{
+			result: map[Interval]time.Time{
 				Weekly:    Date(2020, 2, 2),
 				Monthly:   Date(2020, 1, 31),
 				Quarterly: Date(2020, 3, 31),
@@ -94,7 +94,7 @@ func TestEndOf(t *testing.T) {
 		},
 		{
 			date: Date(2020, 2, 1),
-			result: map[Period]time.Time{
+			result: map[Interval]time.Time{
 				Weekly:    Date(2020, 2, 2),
 				Monthly:   Date(2020, 2, 29),
 				Quarterly: Date(2020, 3, 31),
@@ -102,22 +102,22 @@ func TestEndOf(t *testing.T) {
 		},
 		{
 			date: Date(2020, 6, 1),
-			result: map[Period]time.Time{
+			result: map[Interval]time.Time{
 				Quarterly: Date(2020, 6, 30),
 			},
 		},
 		{
 			date: Date(2020, 12, 31),
-			result: map[Period]time.Time{
+			result: map[Interval]time.Time{
 				Quarterly: Date(2020, 12, 31),
 			},
 		},
 	}
 
 	for _, test := range tests {
-		for period, result := range test.result {
-			if got := EndOf(test.date, period); got != result {
-				t.Errorf("EndOf(%v, %v): Got %v, wanted %v", test.date, period, got, result)
+		for interval, result := range test.result {
+			if got := EndOf(test.date, interval); got != result {
+				t.Errorf("EndOf(%v, %v): Got %v, wanted %v", test.date, interval, got, result)
 			}
 		}
 	}
@@ -125,24 +125,24 @@ func TestEndOf(t *testing.T) {
 
 func TestSeries(t *testing.T) {
 	var tests = []struct {
-		t0     time.Time
-		t1     time.Time
-		period Period
-		result []time.Time
+		t0       time.Time
+		t1       time.Time
+		interval Interval
+		result   []time.Time
 	}{
 		{
-			t0:     Date(2020, 5, 19),
-			t1:     Date(2020, 5, 22),
-			period: Once,
+			t0:       Date(2020, 5, 19),
+			t1:       Date(2020, 5, 22),
+			interval: Once,
 			result: []time.Time{
 				Date(2020, 5, 19),
 				Date(2020, 5, 22),
 			},
 		},
 		{
-			t0:     Date(2020, 5, 19),
-			t1:     Date(2020, 5, 22),
-			period: Daily,
+			t0:       Date(2020, 5, 19),
+			t1:       Date(2020, 5, 22),
+			interval: Daily,
 			result: []time.Time{
 				Date(2020, 5, 18),
 				Date(2020, 5, 19),
@@ -152,9 +152,9 @@ func TestSeries(t *testing.T) {
 			},
 		},
 		{
-			t0:     Date(2020, 1, 1),
-			t1:     Date(2020, 1, 31),
-			period: Weekly,
+			t0:       Date(2020, 1, 1),
+			t1:       Date(2020, 1, 31),
+			interval: Weekly,
 			result: []time.Time{
 				Date(2019, 12, 29),
 				Date(2020, 1, 5),
@@ -165,9 +165,9 @@ func TestSeries(t *testing.T) {
 			},
 		},
 		{
-			t0:     Date(2019, 12, 31),
-			t1:     Date(2020, 1, 31),
-			period: Monthly,
+			t0:       Date(2019, 12, 31),
+			t1:       Date(2020, 1, 31),
+			interval: Monthly,
 			result: []time.Time{
 				Date(2019, 11, 30),
 				Date(2019, 12, 31),
@@ -175,18 +175,18 @@ func TestSeries(t *testing.T) {
 			},
 		},
 		{
-			t0:     Date(2020, 1, 1),
-			t1:     Date(2020, 1, 31),
-			period: Monthly,
+			t0:       Date(2020, 1, 1),
+			t1:       Date(2020, 1, 31),
+			interval: Monthly,
 			result: []time.Time{
 				Date(2019, 12, 31),
 				Date(2020, 1, 31),
 			},
 		},
 		{
-			t0:     Date(2017, 4, 1),
-			t1:     Date(2019, 3, 3),
-			period: Yearly,
+			t0:       Date(2017, 4, 1),
+			t1:       Date(2019, 3, 3),
+			interval: Yearly,
 			result: []time.Time{
 				Date(2016, 12, 31),
 				Date(2017, 12, 31),
@@ -197,8 +197,8 @@ func TestSeries(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := Series(test.t0, test.t1, test.period); !Equal(got, test.result) {
-			t.Errorf("Series(%v, %v, %v): Got %v, wanted %v", test.t0, test.t1, test.period, got, test.result)
+		if got := Series(test.t0, test.t1, test.interval); !Equal(got, test.result) {
+			t.Errorf("Series(%v, %v, %v): Got %v, wanted %v", test.t0, test.t1, test.interval, got, test.result)
 		}
 	}
 }

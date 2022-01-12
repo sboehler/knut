@@ -238,20 +238,20 @@ func (p *Parser) parseAddOn() (*ast.Transaction, error) {
 		if err != nil {
 			return nil, err
 		}
-		var period date.Period
+		var interval date.Interval
 		switch periodStr {
 		case "once":
-			period = date.Once
+			interval = date.Once
 		case "daily":
-			period = date.Daily
+			interval = date.Daily
 		case "weekly":
-			period = date.Weekly
+			interval = date.Weekly
 		case "monthly":
-			period = date.Monthly
+			interval = date.Monthly
 		case "quarterly":
-			period = date.Quarterly
+			interval = date.Quarterly
 		case "yearly":
-			period = date.Yearly
+			interval = date.Yearly
 		default:
 			return nil, fmt.Errorf("expected \"once\", \"daily\", \"weekly\", \"monthly\", \"quarterly\" or \"yearly\", got %q", periodStr)
 		}
@@ -280,11 +280,11 @@ func (p *Parser) parseAddOn() (*ast.Transaction, error) {
 			return nil, err
 		}
 		addOns = append(addOns, &ast.Accrual{
-			Range:   p.getRange(),
-			T0:      dateFrom,
-			T1:      dateTo,
-			Period:  period,
-			Account: account,
+			Range:    p.getRange(),
+			T0:       dateFrom,
+			T1:       dateTo,
+			Interval: interval,
+			Account:  account,
 		})
 	}
 	d, err := p.parseDate()

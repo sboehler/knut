@@ -27,29 +27,21 @@ func (pf Differ) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-cha
 		defer close(resCh)
 		defer close(errCh)
 
-		var (
-			v    amounts.Amounts
-			init bool
-		)
-
+		var prev amounts.Amounts
 		for {
 			d, ok, err := cpr.Pop(ctx, inCh)
 			if !ok || err != nil {
 				return
 			}
-			if init {
-				res := &val.Day{
-					Date:   d.Date,
-					Values: d.Values.Clone().Minus(v),
-				}
-				if cpr.Push(ctx, resCh, res) != nil {
-					return
-				}
+			res := &val.Day{
+				Date:   d.Date,
+				Values: d.Values.Clone().Minus(prev),
 			}
-			init = true
-			v = d.Values
+			if cpr.Push(ctx, resCh, res) != nil {
+				return
+			}
+			prev = d.Values
 		}
-
 	}()
 	return resCh, errCh
 }

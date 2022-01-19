@@ -40,6 +40,12 @@ func TestDifferHappyCase(t *testing.T) {
 		}
 		want = []*val.Day{
 			{
+				Date: td.date1,
+				Values: amounts.Amounts{
+					amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(10),
+				},
+			},
+			{
 				Date: td.date2,
 				Values: amounts.Amounts{
 					amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(-3),
@@ -71,7 +77,7 @@ func TestDifferHappyCase(t *testing.T) {
 		}
 		got = append(got, d)
 	}
-	if diff := cmp.Diff(got, want, cmpopts.IgnoreUnexported(journal.Context{}, journal.Commodity{}, journal.Account{})); diff != "" {
+	if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(journal.Context{}, journal.Commodity{}, journal.Account{})); diff != "" {
 		t.Fatalf("unexpected diff (+got/-want):\n%s", diff)
 	}
 	if _, ok := <-resCh; ok {

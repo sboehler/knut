@@ -351,8 +351,8 @@ func (p *Parser) parsePostings() ([]ast.Posting, error) {
 					return nil, err
 				}
 			case '(':
-				if lot != nil {
-					return nil, fmt.Errorf("duplicate target commodity")
+				if targets != nil {
+					return nil, fmt.Errorf("duplicate target commodity declarations")
 				}
 				if targets, err = p.parseTargetCommodities(); err != nil {
 					return nil, err
@@ -656,15 +656,29 @@ func (p *Parser) parseLot() (*ast.Lot, error) {
 }
 
 func (p *Parser) parseTargetCommodities() ([]*journal.Commodity, error) {
-	var (
-		res []*journal.Commodity
-		err error
-	)
-	if err = p.scanner.ConsumeRune('('); err != nil {
+	// we use non-nil slices of size 0 to mark portfolio income / expenses
+	res := make([]*journal.Commodity, 0)
+	if err := p.scanner.ConsumeRune('('); err != nil {
 		return nil, err
 	}
-	for {
-		if err = p.scanner.ConsumeWhile(isWhitespace); err != nil {
+	if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
+		return nil, err
+	}
+	if p.current() != ')' {
+		c, err := p.parseCommodity()
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, c)
+		if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
+			return nil, err
+		}
+	}
+	for p.current() == ',' {
+		if err := p.scanner.ConsumeRune(','); err != nil {
+			return nil, err
+		}
+		if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
 			return nil, err
 		}
 		c, err := p.parseCommodity()
@@ -675,19 +689,8 @@ func (p *Parser) parseTargetCommodities() ([]*journal.Commodity, error) {
 		if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
 			return nil, err
 		}
-		if p.current() == ',' {
-			if err = p.scanner.ConsumeRune(','); err != nil {
-				return nil, err
-			}
-			continue
-		}
-		if p.current() == ')' {
-			break
-		}
-		return nil, fmt.Errorf("expected ',' or ')', got %v", p.current())
 	}
-
-	if err = p.scanner.ConsumeRune(')'); err != nil {
+	if err := p.scanner.ConsumeRune(')'); err != nil {
 		return nil, err
 	}
 	return res, nil

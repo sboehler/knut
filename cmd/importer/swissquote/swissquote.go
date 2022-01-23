@@ -333,7 +333,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ast.Posting{
-			ast.NewPosting(p.fee, p.account, r.currency, r.netAmount),
+			ast.NewPostingWithTargets(p.fee, p.account, r.currency, r.netAmount, make([]*journal.Commodity, 0)),
 		},
 	})
 	return true, nil

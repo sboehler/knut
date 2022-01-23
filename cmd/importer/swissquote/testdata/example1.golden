@@ -8,7 +8,7 @@ Income:Interest   Assets:Swissquote       0.19 USD (USD)
 Expenses:TBD      Assets:Swissquote    3656.89 USD
 
 2020-09-30 "Depotgebühren"
-Assets:Swissquote Expenses:Fees          45.52 CHF
+Assets:Swissquote Expenses:Fees          45.52 CHF ()
 
 2020-10-09 "76396333 Kauf 8 x VWRL Vanguard All World ETF Dist IE00B3RBWM25 @ 87.6 CHF"
 Expenses:Trading  Assets:Swissquote          8 VWRL (VWRL,CHF)

@@ -2,6 +2,7 @@ package performance
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/cpr"
@@ -68,7 +69,10 @@ type pcv map[*journal.Commodity]float64
 
 func (calc *Calculator) computeFlows(step *val.Day) *PerfPeriod {
 
-	var internalInflows, internalOutflows, inflows, outflows pcv
+	var (
+		internalInflows, internalOutflows, inflows, outflows pcv
+		portfolioFlows                                       float64
+	)
 
 	for _, trx := range step.Transactions {
 
@@ -99,9 +103,13 @@ func (calc *Calculator) computeFlows(step *val.Day) *PerfPeriod {
 			switch otherAccount.Type() {
 
 			case journal.INCOME, journal.EXPENSES, journal.EQUITY:
-				if len(tgts) == 0 {
+				if tgts == nil {
 					// no effect: regular flow into or out of the portfolio
 					get(&flows)[pst.Commodity] += value
+				} else if len(tgts) == 0 {
+					// performance effect on portfolio, not allocated to a specific commodity
+					get(&internalFlows)[pst.Commodity] += value
+					portfolioFlows -= value
 				} else if len(tgts) > 1 || len(tgts) == 1 && tgts[0] != pst.Commodity {
 					// effect on multiple commodities: re-allocate the flows among the target commodities
 					l := float64(len(tgts))
@@ -121,10 +129,12 @@ func (calc *Calculator) computeFlows(step *val.Day) *PerfPeriod {
 		split(internalFlows, &internalInflows, &internalOutflows)
 	}
 	return &PerfPeriod{
-		InternalInflow:  internalInflows,
-		InternalOutflow: internalOutflows,
-		Inflow:          inflows,
-		Outflow:         outflows,
+		InternalInflow:   internalInflows,
+		InternalOutflow:  internalOutflows,
+		Inflow:           inflows,
+		Outflow:          outflows,
+		PortfolioInflow:  math.Max(0, portfolioFlows),
+		PortfolioOutflow: math.Min(0, portfolioFlows),
 	}
 }
 
@@ -145,9 +155,14 @@ func get(m *pcv) pcv {
 	return *m
 }
 
-func (calc Calculator) determineStructure(g []*journal.Commodity) []*journal.Commodity {
+func (calc Calculator) determineStructure(tgts []*journal.Commodity) []*journal.Commodity {
+	if len(tgts) == 0 {
+		return tgts
+	}
 	var res []*journal.Commodity
-	for _, c := range g {
+
+	// collect non-currencies
+	for _, c := range tgts {
 		if !c.IsCurrency {
 			res = append(res, c)
 		}
@@ -155,7 +170,9 @@ func (calc Calculator) determineStructure(g []*journal.Commodity) []*journal.Com
 	if len(res) > 0 {
 		return res
 	}
-	for _, c := range g {
+
+	// collect currencies != valuation
+	for _, c := range tgts {
 		if c != calc.Valuation {
 			res = append(res, c)
 		}
@@ -163,10 +180,9 @@ func (calc Calculator) determineStructure(g []*journal.Commodity) []*journal.Com
 	if len(res) > 0 {
 		return res
 	}
-	for _, c := range g {
-		res = append(res, c)
-	}
-	return res
+
+	// return all
+	return tgts
 }
 
 func (calc Calculator) isPortfolioAccount(a *journal.Account) bool {
@@ -179,12 +195,16 @@ func (calc Calculator) isPortfolioAccount(a *journal.Account) bool {
 type PerfPeriod struct {
 	Date                                                     time.Time
 	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow pcv
+	PortfolioInflow, PortfolioOutflow                        float64
 	Err                                                      error
 }
 
 // Performance computes the portfolio performance.
 func (dpv PerfPeriod) Performance() float64 {
-	var v0, v1, inflow, outflow, internalInflow, internalOutflow float64
+	var (
+		v0, v1          float64
+		inflow, outflow = dpv.PortfolioInflow, dpv.PortfolioOutflow
+	)
 	for _, v := range dpv.V0 {
 		v0 += v
 	}
@@ -197,14 +217,7 @@ func (dpv PerfPeriod) Performance() float64 {
 	for _, v := range dpv.Outflow {
 		outflow += v
 	}
-	for _, v := range dpv.InternalInflow {
-		internalInflow += v
-	}
-	for _, v := range dpv.InternalOutflow {
-		internalOutflow += v
-	}
-	// fmt.Printf("%.0f %.0f %.0f %.0f %.0f %.0f\n", v0, v1, inflow, outflow, internalInflow, internalOutflow)
-	if v0 == v1 && inflow == 0 && outflow == 0 && internalInflow == 0 && internalOutflow == 0 {
+	if v0 == v1 && inflow == 0 && outflow == 0 {
 		return 1
 	}
 	return (v1 - outflow) / (v0 + inflow)

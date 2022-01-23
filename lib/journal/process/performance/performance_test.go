@@ -101,6 +101,24 @@ func TestComputeFlows(t *testing.T) {
 				},
 			},
 			{
+				desc: "expense with effect on porfolio",
+				trx: &ast.Transaction{
+					Postings: []ast.Posting{
+						{
+							Credit:    portfolio,
+							Debit:     expense,
+							Amount:    decimal.NewFromInt(1),
+							Commodity: usd,
+							Targets:   make([]*journal.Commodity, 0),
+						},
+					},
+				},
+				want: &PerfPeriod{
+					InternalOutflow: pcv{usd: -1.0},
+					PortfolioInflow: 1.0,
+				},
+			},
+			{
 				desc: "stock purchase",
 				trx: &ast.Transaction{
 					Postings: []ast.Posting{

@@ -19,11 +19,11 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
-	"golang.org/x/text/encoding/charmap"
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
@@ -68,7 +68,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	var p = Parser{
-		reader: csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(reader)),
+		reader: csv.NewReader(reader),
 		ast:    ast.New(ctx),
 	}
 	if p.account, err = r.accountFlag.Value(ctx); err != nil {
@@ -144,7 +144,8 @@ func (p *Parser) readHeaderLine(l []string) error {
 	}
 	var err error
 	if currencyHeaders[l[hfHeader]] {
-		if p.currency, err = p.ast.Context.GetCommodity(l[hfData]); err != nil {
+		sym := strings.Trim(l[hfData], "=\"")
+		if p.currency, err = p.ast.Context.GetCommodity(sym); err != nil {
 			return err
 		}
 	}
@@ -171,7 +172,7 @@ func (p *Parser) readBookingLine(l []string) error {
 		amount decimal.Decimal
 		err    error
 	)
-	if date, err = time.Parse("2006-01-02", l[bfBuchungsdatum]); err != nil {
+	if date, err = time.Parse("02.01.2006", l[bfBuchungsdatum]); err != nil {
 		return err
 	}
 	if amount, err = parseAmount(l); err != nil {
@@ -179,7 +180,7 @@ func (p *Parser) readBookingLine(l []string) error {
 	}
 	p.ast.AddTransaction(&ast.Transaction{
 		Date:        date,
-		Description: l[bfAvisierungstext],
+		Description: strings.TrimSpace(l[bfAvisierungstext]),
 		Postings: []ast.Posting{
 			ast.NewPosting(p.ast.Context.TBDAccount(), p.account, p.currency, amount),
 		},

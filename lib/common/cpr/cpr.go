@@ -7,7 +7,7 @@ import (
 )
 
 // Get gets and returns a new T from the supplied channel. It returns
-// a T, a boolean which indicates whether the channel is still open, or\
+// a T, a boolean which indicates whether the channel is still open, or
 // an error from the supplied errCh.
 func Get[T any](ch <-chan T, errCh <-chan error) (T, bool, error) {
 	for {

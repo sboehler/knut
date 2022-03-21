@@ -16,16 +16,16 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+func datedTrx(y int, m time.Month, d int) *ast.Transaction {
+	return &ast.Transaction{Date: date.Date(y, m, d)}
+}
+
 func TestPeriodFilter(t *testing.T) {
 	var (
 		jctx = journal.NewContext()
 		td   = newTestData(jctx)
 	)
-	day := func(y int, m time.Month, d int, v int64, marker ...bool) *val.Day {
-		var trx []*ast.Transaction
-		if len(marker) > 0 {
-			trx = append(trx, nil)
-		}
+	day := func(y int, m time.Month, d int, v int64, trx ...*ast.Transaction) *val.Day {
 		return &val.Day{
 			Date:         date.Date(y, m, d),
 			Transactions: trx,
@@ -54,12 +54,12 @@ func TestPeriodFilter(t *testing.T) {
 					To: date.Date(2022, 1, 10),
 				},
 				input: func(ch chan *val.Day) {
-					ch <- day(2022, 1, 2, 1, true)
+					ch <- day(2022, 1, 2, 1, datedTrx(2022, 1, 2))
 					ch <- day(2022, 1, 3, 2)
 					ch <- day(2022, 1, 4, 3)
 				},
 				want: []*val.Day{
-					day(2022, 1, 10, 3),
+					day(2022, 1, 10, 3, datedTrx(2022, 1, 2)),
 				},
 			},
 			{
@@ -69,12 +69,12 @@ func TestPeriodFilter(t *testing.T) {
 					Interval: date.Monthly,
 				},
 				input: func(ch chan *val.Day) {
-					ch <- day(2022, 1, 2, 100, true)
+					ch <- day(2022, 1, 2, 100, datedTrx(2022, 1, 2))
 					ch <- day(2022, 1, 3, 200)
 					ch <- day(2022, 1, 4, 300)
 				},
 				want: []*val.Day{
-					day(2022, 1, 31, 300),
+					day(2022, 1, 31, 300, datedTrx(2022, 1, 2)),
 				},
 			},
 			{
@@ -85,16 +85,16 @@ func TestPeriodFilter(t *testing.T) {
 					Last:     5,
 				},
 				input: func(ch chan *val.Day) {
-					ch <- day(2021, 1, 1, 100, true)
-					ch <- day(2022, 1, 1, 200)
-					ch <- day(2022, 1, 4, 300)
+					ch <- day(2021, 1, 1, 100, datedTrx(2021, 1, 1))
+					ch <- day(2022, 1, 1, 200, datedTrx(2022, 1, 1))
+					ch <- day(2022, 1, 4, 300, datedTrx(2022, 1, 4))
 				},
 				want: []*val.Day{
-					day(2021, 9, 30, 100),
+					day(2021, 9, 30, 100, datedTrx(2021, 1, 1)),
 					day(2021, 10, 31, 100),
 					day(2021, 11, 30, 100),
 					day(2021, 12, 31, 100),
-					day(2022, 1, 31, 300),
+					day(2022, 1, 31, 300, datedTrx(2022, 1, 1), datedTrx(2022, 1, 4)),
 				},
 			},
 		}

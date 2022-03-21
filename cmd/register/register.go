@@ -49,14 +49,16 @@ func CreateCmd() *cobra.Command {
 }
 
 type runner struct {
-	cpuprofile                        string
-	from, to                          flags.DateFlag
-	showCommodities, thousands, color bool
-	sortAlphabetically                bool
-	digits                            int32
-	accounts, commodities             flags.RegexFlag
-	mapping                           flags.MappingFlag
-	valuation                         flags.CommodityFlag
+	cpuprofile                              string
+	from, to                                flags.DateFlag
+	last                                    int
+	diff, showCommodities, thousands, color bool
+	sortAlphabetically                      bool
+	digits                                  int32
+	accounts, commodities                   flags.RegexFlag
+	interval                                flags.IntervalFlags
+	mapping                                 flags.MappingFlag
+	valuation                               flags.CommodityFlag
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) {
@@ -78,8 +80,11 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
 	c.Flags().Var(&r.from, "from", "from date")
 	c.Flags().Var(&r.to, "to", "to date")
+	c.Flags().IntVar(&r.last, "last", 0, "last n periods")
+	c.Flags().BoolVarP(&r.diff, "diff", "d", false, "diff")
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "s", false, "Show commodities on their own rows")
+	r.interval.Setup(c.Flags())
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	c.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
 	c.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
@@ -94,6 +99,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		jctx = journal.NewContext()
 
 		valuation *journal.Commodity
+		interval  date.Interval
 
 		err error
 	)
@@ -102,6 +108,9 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 	if valuation, err = r.valuation.Value(jctx); err != nil {
 		return err
+	}
+	if interval == date.Once {
+		interval = date.Daily
 	}
 
 	var (
@@ -130,6 +139,13 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context:   jctx,
 			Valuation: valuation,
 		}
+		periodFilter = process.PeriodFilter{
+			From:     r.from.Value(),
+			To:       r.to.Value(),
+			Interval: interval,
+			Last:     r.last,
+			Diff:     r.diff,
+		}
 		ctx = cmd.Context()
 	)
 
@@ -139,9 +155,11 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	ch3, errCh3 := pastBuilder.ProcessAST(ctx, ch2)
 	ch4, errCh4 := priceUpdater.ProcessStream(ctx, ch3)
 	ch5, errCh5 := valuator.ProcessStream(ctx, ch4)
-	resCh := ch5
+	ch6, errCh6 := periodFilter.ProcessStream(ctx, ch5)
 
-	errCh := cpr.Demultiplex(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5)
+	resCh := ch6
+
+	errCh := cpr.Demultiplex(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5, errCh6)
 
 	_, ok, err := cpr.Get(resCh, errCh)
 	if !ok {

@@ -24,19 +24,18 @@ func (r Range) Position() Range {
 // Directive is an element in a journal with a position.
 type Directive interface {
 	Position() Range
+	Dt() time.Time
 }
 
 var (
 	_ Directive = (*Assertion)(nil)
 	_ Directive = (*Close)(nil)
+	_ Directive = (*Currency)(nil)
 	_ Directive = (*Include)(nil)
 	_ Directive = (*Open)(nil)
 	_ Directive = (*Price)(nil)
 	_ Directive = (*Transaction)(nil)
 	_ Directive = (*Value)(nil)
-
-	// Add-Ons
-	_ Directive = (*Accrual)(nil)
 )
 
 // Open represents an open command.
@@ -46,11 +45,21 @@ type Open struct {
 	Account *journal.Account
 }
 
+// Dt returns the date.
+func (o *Open) Dt() time.Time {
+	return o.Date
+}
+
 // Close represents a close command.
 type Close struct {
 	Range
 	Date    time.Time
 	Account *journal.Account
+}
+
+// Dt returns the date.
+func (c *Close) Dt() time.Time {
+	return c.Date
 }
 
 // Posting represents a posting.
@@ -133,6 +142,11 @@ type Transaction struct {
 	AddOns      []interface{}
 }
 
+// Dt returns the date.
+func (t *Transaction) Dt() time.Time {
+	return t.Date
+}
+
 // Clone clones a transaction.
 func (t Transaction) Clone() *Transaction {
 	var (
@@ -188,11 +202,20 @@ type Price struct {
 	Price     decimal.Decimal
 }
 
+// Dt returns the date.
+func (p *Price) Dt() time.Time {
+	return p.Date
+}
+
 // Include represents an include directive.
 type Include struct {
 	Range
-	Date time.Time
 	Path string
+}
+
+// Dt returns the date.
+func (i *Include) Dt() time.Time {
+	return time.Time{}
 }
 
 // Assertion represents a balance assertion.
@@ -204,6 +227,11 @@ type Assertion struct {
 	Commodity *journal.Commodity
 }
 
+// Dt returns the date.
+func (a *Assertion) Dt() time.Time {
+	return a.Date
+}
+
 // Value represents a value directive.
 type Value struct {
 	Range
@@ -211,6 +239,11 @@ type Value struct {
 	Account   *journal.Account
 	Amount    decimal.Decimal
 	Commodity *journal.Commodity
+}
+
+// Dt returns the date.
+func (v *Value) Dt() time.Time {
+	return v.Date
 }
 
 // Accrual represents an accrual.
@@ -290,5 +323,11 @@ func isIE(a *journal.Account) bool {
 // Currency declares that a commodity is a currency.
 type Currency struct {
 	Range
+	Date time.Time
 	*journal.Commodity
+}
+
+// Dt returns the date.
+func (c *Currency) Dt() time.Time {
+	return c.Date
 }

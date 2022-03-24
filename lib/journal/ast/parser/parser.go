@@ -538,24 +538,24 @@ func (p *Parser) parseInclude() (*ast.Include, error) {
 	return result, nil
 }
 
-func (p *Parser) parseCurrency() (ast.Currency, error) {
+func (p *Parser) parseCurrency() (*ast.Currency, error) {
 	p.markStart()
 	if err := p.scanner.ParseString("currency"); err != nil {
-		return ast.Currency{}, err
+		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
-		return ast.Currency{}, err
+		return nil, err
 	}
 	i, err := p.parseCommodity()
 	if err != nil {
-		return ast.Currency{}, err
+		return nil, err
 	}
-	result := ast.Currency{
+	result := &ast.Currency{
 		Range:     p.getRange(),
 		Commodity: i,
 	}
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
-		return ast.Currency{}, err
+		return nil, err
 	}
 	return result, nil
 }

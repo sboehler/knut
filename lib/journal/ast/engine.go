@@ -2,34 +2,34 @@ package ast
 
 import (
 	"context"
-	"time"
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"golang.org/x/sync/errgroup"
 )
 
-type Dated interface {
-	Date() time.Time
-}
-
+// Source generates elements.
 type Source interface {
 	Pop(context.Context) (any, bool, error)
 }
 
+// Processor processes elements.
 type Processor interface {
 	Process(ctx context.Context, elem any, ok bool, next func(any) bool) error
 }
 
+// Sink consumes elements.
 type Sink interface {
 	Push(ctx context.Context, elem any, ok bool) error
 }
 
+// Engine processes a pipeline.
 type Engine struct {
 	Source     Source
 	Sink       Sink
 	Processors []Processor
 }
 
+// Process processes the pipeline in the engine.
 func (eng *Engine) Process(ctx context.Context) error {
 	ch := make(chan any)
 	grp, ctx := errgroup.WithContext(ctx)

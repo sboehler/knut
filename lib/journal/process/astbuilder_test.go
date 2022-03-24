@@ -17,6 +17,10 @@ func (d DummyDirective) Position() ast.Range {
 	return ast.Range{}
 }
 
+func (d DummyDirective) Dt() time.Time {
+	return time.Time{}
+}
+
 func TestASTBuilderHappyCase(t *testing.T) {
 	var (
 		jctx       = journal.NewContext()

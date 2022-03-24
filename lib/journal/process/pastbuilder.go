@@ -180,7 +180,7 @@ func (oa accounts) IsOpen(a *journal.Account) bool {
 	return oa[a] || a.Type() == journal.EQUITY
 }
 
-// PASTBuilder processes ASTs.
+// Booker processes ASTs.
 type Booker struct {
 
 	// The context of this journal.

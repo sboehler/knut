@@ -225,7 +225,7 @@ func (pr *ASTExpander) expandTransaction(a *ast.AST, t *ast.Transaction) {
 	}
 }
 
-// ASTExpander expands value directives.
+// Expander expands value directives.
 type Expander struct{}
 
 // Process expands transactions.

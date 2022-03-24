@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
@@ -177,4 +178,104 @@ func (oa accounts) Close(a *journal.Account) error {
 // IsOpen returns whether an account is open.
 func (oa accounts) IsOpen(a *journal.Account) bool {
 	return oa[a] || a.Type() == journal.EQUITY
+}
+
+// PASTBuilder processes ASTs.
+type Booker struct {
+
+	// The context of this journal.
+	Context journal.Context
+
+	amounts  amounts.Amounts
+	accounts accounts
+	date     time.Time
+}
+
+// Process checks assertions and the usage of open and closed accounts.
+// It also resolves Value directives and converts them to transactions.
+func (pr *Booker) Process(ctx context.Context, d any, ok bool, next func(any) bool) error {
+
+	if pr.amounts == nil {
+		pr.amounts = make(amounts.Amounts)
+		pr.accounts = make(accounts)
+	}
+	if !ok {
+		return nil
+	}
+	switch t := d.(type) {
+
+	case *ast.Open:
+		if err := pr.accounts.Open(t.Account); err != nil {
+			return err
+		}
+
+	case *ast.Transaction:
+		for _, p := range t.Postings {
+			if !pr.accounts.IsOpen(p.Credit) {
+				return Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)}
+			}
+			if !pr.accounts.IsOpen(p.Debit) {
+				return Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)}
+			}
+			pr.amounts.Book(p.Credit, p.Debit, p.Amount, p.Commodity)
+		}
+		next(t)
+
+	case *ast.Value:
+		if !pr.accounts.IsOpen(t.Account) {
+			return Error{t, "account is not open"}
+		}
+		valAcc := pr.Context.ValuationAccountFor(t.Account)
+		posting := ast.NewPostingWithTargets(valAcc, t.Account, t.Commodity, t.Amount.Sub(pr.amounts.Amount(t.Account, t.Commodity)), []*journal.Commodity{t.Commodity})
+		pr.amounts.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
+		next(&ast.Transaction{
+			Date:        t.Date,
+			Description: fmt.Sprintf("Valuation adjustment for %v in %v", t.Commodity, t.Account),
+			Postings:    []ast.Posting{posting},
+		})
+
+	case *ast.Assertion:
+		if !pr.accounts.IsOpen(t.Account) {
+			return Error{t, "account is not open"}
+		}
+		position := amounts.CommodityAccount{Account: t.Account, Commodity: t.Commodity}
+		if va, ok := pr.amounts[position]; !ok || !va.Equal(t.Amount) {
+			return Error{t, fmt.Sprintf("assertion failed: account %s has %s %s", t.Account, va, position.Commodity)}
+		}
+
+	case *ast.Close:
+		for pos, amount := range pr.amounts {
+			if pos.Account != t.Account {
+				continue
+			}
+			if !amount.IsZero() {
+				return Error{t, "account has nonzero position"}
+			}
+			delete(pr.amounts, pos)
+		}
+		if err := pr.accounts.Close(t.Account); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (pr *Booker) processClosings(ctx context.Context, accounts accounts, amounts amounts.Amounts, d *ast.Day) []error {
+	var errors []error
+	for _, c := range d.Closings {
+		for pos, amount := range amounts {
+			if pos.Account != c.Account {
+				continue
+			}
+			if !amount.IsZero() {
+				errors = append(errors, Error{c, "account has nonzero position"})
+			}
+			delete(amounts, pos)
+		}
+		if err := accounts.Close(c.Account); err != nil {
+			errors = append(errors, err)
+		}
+	}
+	return errors
 }

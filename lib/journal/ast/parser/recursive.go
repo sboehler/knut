@@ -82,3 +82,13 @@ func (rp *RecursiveParser) parseRecursively(ctx context.Context, file string) {
 		}
 	}
 }
+
+var _ ast.Source = (*RecursiveParser)(nil)
+
+// Pop implements ast.Source.
+func (rp *RecursiveParser) Pop(ctx context.Context) (any, bool, error) {
+	if rp.resCh == nil {
+		rp.Parse(ctx)
+	}
+	return cpr.Get(rp.resCh, rp.errCh)
+}

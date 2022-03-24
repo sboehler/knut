@@ -12,6 +12,7 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	go.uber.org/multierr v1.6.0
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/text v0.3.4
 	gopkg.in/yaml.v2 v2.4.0
 )

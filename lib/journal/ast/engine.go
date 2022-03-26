@@ -9,17 +9,17 @@ import (
 
 // Source generates elements.
 type Source interface {
-	Pop(context.Context) (any, bool, error)
+	Pop(context.Context) (Dated, bool, error)
 }
 
 // Processor processes elements.
 type Processor interface {
-	Process(ctx context.Context, elem any, ok bool, next func(any) bool) error
+	Process(ctx context.Context, elem Dated, ok bool, next func(Dated) bool) error
 }
 
 // Sink consumes elements.
 type Sink interface {
-	Push(ctx context.Context, elem any, ok bool) error
+	Push(ctx context.Context, elem Dated, ok bool) error
 }
 
 // Engine processes a pipeline.
@@ -31,7 +31,7 @@ type Engine struct {
 
 // Process processes the pipeline in the engine.
 func (eng *Engine) Process(ctx context.Context) error {
-	ch := make(chan any)
+	ch := make(chan Dated)
 	grp, ctx := errgroup.WithContext(ctx)
 	grp.Go(func() error {
 		defer close(ch)
@@ -49,8 +49,8 @@ func (eng *Engine) Process(ctx context.Context) error {
 	for _, pr := range eng.Processors {
 		pr := pr
 		prevCh := ch
-		nextCh := make(chan any)
-		next := func(elem any) bool {
+		nextCh := make(chan Dated)
+		next := func(elem Dated) bool {
 			return cpr.Push(ctx, nextCh, elem) == nil
 		}
 		grp.Go(func() error {

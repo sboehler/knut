@@ -69,7 +69,7 @@ type Sorter struct {
 }
 
 // Process implements Processor.
-func (srt *Sorter) Process(ctx context.Context, d any, ok bool, next func(any) bool) error {
+func (srt *Sorter) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
 	if srt.AST == nil {
 		srt.AST = &ast.AST{
 			Context: srt.Context,
@@ -79,39 +79,39 @@ func (srt *Sorter) Process(ctx context.Context, d any, ok bool, next func(any) b
 	if !ok {
 		for _, d := range srt.AST.Days {
 			for _, o := range d.Openings {
-				if !next(o) {
+				if !next(ast.Dated{Date: o.Date, Elem: o}) {
 					return nil
 				}
 			}
 			for _, o := range d.Prices {
-				if !next(o) {
+				if !next(ast.Dated{Date: o.Date, Elem: o}) {
 					return nil
 				}
 			}
 			for _, o := range d.Transactions {
-				if !next(o) {
+				if !next(ast.Dated{Date: o.Date, Elem: o}) {
 					return nil
 				}
 			}
 			for _, o := range d.Values {
-				if !next(o) {
+				if !next(ast.Dated{Date: o.Date, Elem: o}) {
 					return nil
 				}
 			}
 			for _, o := range d.Assertions {
-				if !next(o) {
+				if !next(ast.Dated{Date: o.Date, Elem: o}) {
 					return nil
 				}
 			}
 			for _, o := range d.Closings {
-				if !next(o) {
+				if !next(ast.Dated{Date: o.Date, Elem: o}) {
 					return nil
 				}
 			}
 		}
 		return nil
 	}
-	switch t := d.(type) {
+	switch t := d.Elem.(type) {
 	case *ast.Open:
 		srt.AST.AddOpen(t)
 	case *ast.Price:
@@ -229,14 +229,17 @@ func (pr *ASTExpander) expandTransaction(a *ast.AST, t *ast.Transaction) {
 type Expander struct{}
 
 // Process expands transactions.
-func (exp *Expander) Process(ctx context.Context, d any, ok bool, next func(any) bool) error {
-	if t, ok := d.(*ast.Transaction); ok {
+func (exp *Expander) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
+	if t, ok := d.Elem.(*ast.Transaction); ok {
 		if len(t.AddOns) > 0 {
 			for _, addOn := range t.AddOns {
 				switch acc := addOn.(type) {
 				case *ast.Accrual:
 					for _, ts := range acc.Expand(t) {
-						if !next(ts) {
+						if !next(ast.Dated{
+							Date: ts.Date,
+							Elem: ts,
+						}) {
 							return nil
 						}
 					}
@@ -257,8 +260,8 @@ type PostingFilter struct {
 }
 
 // Process expands transactions.
-func (pf *PostingFilter) Process(ctx context.Context, d any, ok bool, next func(any) bool) error {
-	switch t := d.(type) {
+func (pf *PostingFilter) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
+	switch t := d.Elem.(type) {
 
 	case *ast.Transaction:
 		var filtered []ast.Posting
@@ -271,10 +274,9 @@ func (pf *PostingFilter) Process(ctx context.Context, d any, ok bool, next func(
 			break
 		}
 		if len(filtered) < len(t.Postings) {
-			t = t.Clone()
 			t.Postings = filtered
 		}
-		next(t)
+		next(d)
 
 	case *ast.Value:
 		if !pf.Filter.MatchAccount(t.Account) {
@@ -283,7 +285,7 @@ func (pf *PostingFilter) Process(ctx context.Context, d any, ok bool, next func(
 		if !pf.Filter.MatchCommodity(t.Commodity) {
 			break
 		}
-		next(t)
+		next(d)
 
 	case *ast.Assertion:
 		if !pf.Filter.MatchAccount(t.Account) {
@@ -292,13 +294,13 @@ func (pf *PostingFilter) Process(ctx context.Context, d any, ok bool, next func(
 		if !pf.Filter.MatchCommodity(t.Commodity) {
 			break
 		}
-		next(t)
+		next(d)
 
 	case *ast.Close:
 		if !pf.Filter.MatchAccount(t.Account) {
 			break
 		}
-		next(t)
+		next(d)
 
 	default:
 		next(d)

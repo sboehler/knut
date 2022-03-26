@@ -5,6 +5,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
+	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/val"
 )
 
@@ -12,6 +13,8 @@ import (
 // specified.
 type Differ struct {
 	Diff bool
+
+	prev amounts.Amounts
 }
 
 // ProcessStream does the filtering.
@@ -44,4 +47,22 @@ func (pf Differ) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-cha
 		}
 	}()
 	return resCh, errCh
+}
+
+var _ ast.Processor = (*Differ)(nil)
+
+// Process diffs the amounts.
+func (pf *Differ) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
+	if !ok {
+		return nil
+	}
+	if v, ok := d.Elem.(amounts.Amounts); ok {
+		res := ast.Dated{
+			Date: d.Date,
+			Elem: v.Clone().Minus(pf.prev),
+		}
+		pf.prev = v
+		next(res)
+	}
+	return nil
 }

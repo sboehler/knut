@@ -191,18 +191,41 @@ type Booker struct {
 	date     time.Time
 }
 
+var _ ast.Processor = (*Booker)(nil)
+
 // Process checks assertions and the usage of open and closed accounts.
 // It also resolves Value directives and converts them to transactions.
-func (pr *Booker) Process(ctx context.Context, d any, ok bool, next func(any) bool) error {
+func (pr *Booker) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
 
 	if pr.amounts == nil {
 		pr.amounts = make(amounts.Amounts)
 		pr.accounts = make(accounts)
 	}
-	if !ok {
-		return nil
+
+	if !pr.date.IsZero() {
+		switch d.Elem.(type) {
+		case *ast.Transaction, *ast.Value:
+			if !pr.date.Equal(d.Date) {
+				if !next(ast.Dated{
+					Date: d.Date,
+					Elem: pr.amounts.Clone(),
+				}) {
+					return nil
+				}
+			}
+			pr.date = d.Date
+		default:
+			if !next(ast.Dated{
+				Date: d.Date,
+				Elem: pr.amounts.Clone(),
+			}) {
+				return nil
+			}
+			pr.date = time.Time{}
+		}
 	}
-	switch t := d.(type) {
+
+	switch t := d.Elem.(type) {
 
 	case *ast.Open:
 		if err := pr.accounts.Open(t.Account); err != nil {
@@ -219,7 +242,7 @@ func (pr *Booker) Process(ctx context.Context, d any, ok bool, next func(any) bo
 			}
 			pr.amounts.Book(p.Credit, p.Debit, p.Amount, p.Commodity)
 		}
-		next(t)
+		next(d)
 
 	case *ast.Value:
 		if !pr.accounts.IsOpen(t.Account) {
@@ -228,11 +251,13 @@ func (pr *Booker) Process(ctx context.Context, d any, ok bool, next func(any) bo
 		valAcc := pr.Context.ValuationAccountFor(t.Account)
 		posting := ast.NewPostingWithTargets(valAcc, t.Account, t.Commodity, t.Amount.Sub(pr.amounts.Amount(t.Account, t.Commodity)), []*journal.Commodity{t.Commodity})
 		pr.amounts.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
-		next(&ast.Transaction{
-			Date:        t.Date,
-			Description: fmt.Sprintf("Valuation adjustment for %v in %v", t.Commodity, t.Account),
-			Postings:    []ast.Posting{posting},
-		})
+		next(ast.Dated{
+			Date: t.Date,
+			Elem: &ast.Transaction{
+				Date:        t.Date,
+				Description: fmt.Sprintf("Valuation adjustment for %v in %v", t.Commodity, t.Account),
+				Postings:    []ast.Posting{posting},
+			}})
 
 	case *ast.Assertion:
 		if !pr.accounts.IsOpen(t.Account) {
@@ -256,26 +281,10 @@ func (pr *Booker) Process(ctx context.Context, d any, ok bool, next func(any) bo
 		if err := pr.accounts.Close(t.Account); err != nil {
 			return err
 		}
+
+	default:
+		next(d)
 	}
 
 	return nil
-}
-
-func (pr *Booker) processClosings(ctx context.Context, accounts accounts, amounts amounts.Amounts, d *ast.Day) []error {
-	var errors []error
-	for _, c := range d.Closings {
-		for pos, amount := range amounts {
-			if pos.Account != c.Account {
-				continue
-			}
-			if !amount.IsZero() {
-				errors = append(errors, Error{c, "account has nonzero position"})
-			}
-			delete(amounts, pos)
-		}
-		if err := accounts.Close(c.Account); err != nil {
-			errors = append(errors, err)
-		}
-	}
-	return errors
 }

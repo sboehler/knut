@@ -24,7 +24,12 @@ func (r Range) Position() Range {
 // Directive is an element in a journal with a position.
 type Directive interface {
 	Position() Range
-	Dt() time.Time
+}
+
+// Dated is an element with a date.
+type Dated struct {
+	Date time.Time
+	Elem any
 }
 
 var (
@@ -45,21 +50,11 @@ type Open struct {
 	Account *journal.Account
 }
 
-// Dt returns the date.
-func (o *Open) Dt() time.Time {
-	return o.Date
-}
-
 // Close represents a close command.
 type Close struct {
 	Range
 	Date    time.Time
 	Account *journal.Account
-}
-
-// Dt returns the date.
-func (c *Close) Dt() time.Time {
-	return c.Date
 }
 
 // Posting represents a posting.
@@ -142,11 +137,6 @@ type Transaction struct {
 	AddOns      []interface{}
 }
 
-// Dt returns the date.
-func (t *Transaction) Dt() time.Time {
-	return t.Date
-}
-
 // Clone clones a transaction.
 func (t Transaction) Clone() *Transaction {
 	var (
@@ -202,20 +192,10 @@ type Price struct {
 	Price     decimal.Decimal
 }
 
-// Dt returns the date.
-func (p *Price) Dt() time.Time {
-	return p.Date
-}
-
 // Include represents an include directive.
 type Include struct {
 	Range
 	Path string
-}
-
-// Dt returns the date.
-func (i *Include) Dt() time.Time {
-	return time.Time{}
 }
 
 // Assertion represents a balance assertion.
@@ -227,11 +207,6 @@ type Assertion struct {
 	Commodity *journal.Commodity
 }
 
-// Dt returns the date.
-func (a *Assertion) Dt() time.Time {
-	return a.Date
-}
-
 // Value represents a value directive.
 type Value struct {
 	Range
@@ -239,11 +214,6 @@ type Value struct {
 	Account   *journal.Account
 	Amount    decimal.Decimal
 	Commodity *journal.Commodity
-}
-
-// Dt returns the date.
-func (v *Value) Dt() time.Time {
-	return v.Date
 }
 
 // Accrual represents an accrual.
@@ -325,9 +295,4 @@ type Currency struct {
 	Range
 	Date time.Time
 	*journal.Commodity
-}
-
-// Dt returns the date.
-func (c *Currency) Dt() time.Time {
-	return c.Date
 }

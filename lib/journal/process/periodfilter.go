@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal/ast"
@@ -17,6 +18,11 @@ type PeriodFilter struct {
 	Interval date.Interval
 	Last     int
 	Diff     bool
+
+	periods []date.Period
+	index   int
+	date    time.Time
+	values  amounts.Amounts
 }
 
 // ProcessStream does the filtering.
@@ -95,4 +101,26 @@ func (pf *PeriodFilter) computeDates(t time.Time) []date.Period {
 		}
 	}
 	return dates
+}
+
+// Process filters values according to the period.
+func (pf *PeriodFilter) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
+	if v, ok := d.Elem.(amounts.Amounts); ok {
+		pf.values = v
+	}
+	if pf.date.IsZero() {
+		if _, ok := d.Elem.(*ast.Transaction); !ok {
+			return nil
+		}
+		pf.date = d.Date
+		pf.periods = pf.computeDates(d.Date)
+	}
+
+	for pf.index < len(pf.periods) && (!ok || pf.periods[pf.index].End.Before(d.Date)) {
+		if !next(ast.Dated{Date: pf.periods[pf.index].End, Elem: pf.values}) {
+			return nil
+		}
+		pf.index++
+	}
+	return nil
 }

@@ -230,22 +230,24 @@ type Expander struct{}
 
 // Process expands transactions.
 func (exp *Expander) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
+	if !ok {
+		return nil
+	}
 	if t, ok := d.Elem.(*ast.Transaction); ok {
-		if len(t.AddOns) > 0 {
-			for _, addOn := range t.AddOns {
-				switch acc := addOn.(type) {
-				case *ast.Accrual:
-					for _, ts := range acc.Expand(t) {
-						if !next(ast.Dated{
-							Date: ts.Date,
-							Elem: ts,
-						}) {
-							return nil
-						}
+		for _, addOn := range t.AddOns {
+			switch acc := addOn.(type) {
+			case *ast.Accrual:
+				for _, ts := range acc.Expand(t) {
+					if !next(ast.Dated{
+						Date: ts.Date,
+						Elem: ts,
+					}) {
+						return nil
 					}
-				default:
-					panic(fmt.Sprintf("unknown addon: %#v", acc))
 				}
+				return nil
+			default:
+				panic(fmt.Sprintf("unknown addon: %#v", acc))
 			}
 		}
 	}
@@ -261,6 +263,9 @@ type PostingFilter struct {
 
 // Process expands transactions.
 func (pf *PostingFilter) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
+	if !ok {
+		return nil
+	}
 	switch t := d.Elem.(type) {
 
 	case *ast.Transaction:

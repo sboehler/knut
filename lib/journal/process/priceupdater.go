@@ -17,6 +17,7 @@ type PriceUpdater struct {
 	Valuation *journal.Commodity
 
 	date   time.Time
+	send   bool
 	prices journal.Prices
 }
 
@@ -68,12 +69,11 @@ var _ ast.Processor = (*PriceUpdater)(nil)
 
 // Process generates normalized prices.
 func (pu *PriceUpdater) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
-	if pu.Valuation == nil {
-		next(d)
+	if !ok {
 		return nil
 	}
-	if !ok {
-		next(ast.Dated{Date: pu.date, Elem: pu.prices.Normalize(pu.Valuation)})
+	if pu.Valuation == nil {
+		next(d)
 		return nil
 	}
 	if pu.prices == nil {
@@ -82,19 +82,22 @@ func (pu *PriceUpdater) Process(ctx context.Context, d ast.Dated, ok bool, next 
 
 	switch p := d.Elem.(type) {
 	case *ast.Price:
-		if !pu.date.Equal(d.Date) {
-			if !pu.date.IsZero() {
-				next(ast.Dated{Date: d.Date, Elem: pu.prices.Normalize(pu.Valuation)})
+		if pu.send && !pu.date.Equal(d.Date) {
+			if !next(ast.Dated{Date: pu.date, Elem: pu.prices.Normalize(pu.Valuation)}) {
+				return nil
 			}
-			pu.date = d.Date
 		}
+		pu.send = true
 		pu.prices.Insert(p.Commodity, p.Price, p.Target)
 	default:
-		if !pu.date.IsZero() {
-			next(ast.Dated{Date: d.Date, Elem: pu.prices.Normalize(pu.Valuation)})
-			pu.date = time.Time{}
+		if pu.send {
+			if !next(ast.Dated{Date: pu.date, Elem: pu.prices.Normalize(pu.Valuation)}) {
+				return nil
+			}
+			pu.send = false
 		}
 		next(d)
 	}
+	pu.date = d.Date
 	return nil
 }

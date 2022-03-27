@@ -53,6 +53,7 @@ func CreateCmd() *cobra.Command {
 }
 
 type runner struct {
+	legacy                                  bool
 	cpuprofile                              string
 	from, to                                flags.DateFlag
 	last                                    int
@@ -74,13 +75,21 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
-	if err := r.execute2(cmd, args); err != nil {
-		fmt.Fprintln(cmd.ErrOrStderr(), err)
-		os.Exit(1)
+	if r.legacy {
+		if err := r.execute(cmd, args); err != nil {
+			fmt.Fprintln(cmd.ErrOrStderr(), err)
+			os.Exit(1)
+		}
+	} else {
+		if err := r.execute2(cmd, args); err != nil {
+			fmt.Fprintln(cmd.ErrOrStderr(), err)
+			os.Exit(1)
+		}
 	}
 }
 
 func (r *runner) setupFlags(c *cobra.Command) {
+	c.Flags().BoolVarP(&r.legacy, "legacy", "", false, "legacy implementation")
 	c.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
 	c.Flags().Var(&r.from, "from", "from date")
 	c.Flags().Var(&r.to, "to", "to date")
@@ -132,12 +141,12 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				Commodities: r.commodities.Value(),
 			},
 		}
-		pastBuilder = process.PASTBuilder{
-			Context: jctx,
-		}
 		priceUpdater = process.PriceUpdater{
 			Context:   jctx,
 			Valuation: valuation,
+		}
+		pastBuilder = process.PASTBuilder{
+			Context: jctx,
 		}
 		valuator = process.Valuator{
 			Context:   jctx,
@@ -267,14 +276,18 @@ func (r runner) execute2(cmd *cobra.Command, args []string) error {
 	engine := new(ast.Engine)
 
 	engine.Source = par
-	engine.Add(sorter)
 	engine.Add(expander)
 	engine.Add(filter)
+	engine.Add(sorter)
 	engine.Add(booker)
-	engine.Add(priceUpdater)
-	engine.Add(valuator)
+	if valuation != nil {
+		engine.Add(priceUpdater)
+		engine.Add(valuator)
+	}
 	engine.Add(periodFilter)
-	engine.Add(differ)
+	if r.diff {
+		engine.Add(differ)
+	}
 	engine.Sink = reportBuilder
 
 	if err := engine.Process(ctx); err != nil {

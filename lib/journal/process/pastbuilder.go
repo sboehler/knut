@@ -189,6 +189,7 @@ type Booker struct {
 	amounts  amounts.Amounts
 	accounts accounts
 	date     time.Time
+	send     bool
 }
 
 var _ ast.Processor = (*Booker)(nil)
@@ -202,27 +203,12 @@ func (pr *Booker) Process(ctx context.Context, d ast.Dated, ok bool, next func(a
 		pr.accounts = make(accounts)
 	}
 
-	if !pr.date.IsZero() {
-		switch d.Elem.(type) {
-		case *ast.Transaction, *ast.Value:
-			if !pr.date.Equal(d.Date) {
-				if !next(ast.Dated{
-					Date: d.Date,
-					Elem: pr.amounts.Clone(),
-				}) {
-					return nil
-				}
-			}
-			pr.date = d.Date
-		default:
-			if !next(ast.Dated{
-				Date: d.Date,
-				Elem: pr.amounts.Clone(),
-			}) {
-				return nil
-			}
-			pr.date = time.Time{}
+	if pr.date != d.Date && pr.send {
+		if !next(ast.Dated{Date: pr.date, Elem: pr.amounts.Clone()}) {
+			return nil
 		}
+		pr.date = d.Date
+		pr.send = false
 	}
 
 	switch t := d.Elem.(type) {
@@ -233,6 +219,7 @@ func (pr *Booker) Process(ctx context.Context, d ast.Dated, ok bool, next func(a
 		}
 
 	case *ast.Transaction:
+		pr.send = true
 		for _, p := range t.Postings {
 			if !pr.accounts.IsOpen(p.Credit) {
 				return Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)}
@@ -245,6 +232,7 @@ func (pr *Booker) Process(ctx context.Context, d ast.Dated, ok bool, next func(a
 		next(d)
 
 	case *ast.Value:
+		pr.send = true
 		if !pr.accounts.IsOpen(t.Account) {
 			return Error{t, "account is not open"}
 		}

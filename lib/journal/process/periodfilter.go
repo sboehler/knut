@@ -105,9 +105,6 @@ func (pf *PeriodFilter) computeDates(t time.Time) []date.Period {
 
 // Process filters values according to the period.
 func (pf *PeriodFilter) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
-	if v, ok := d.Elem.(amounts.Amounts); ok {
-		pf.values = v
-	}
 	if pf.date.IsZero() {
 		if _, ok := d.Elem.(*ast.Transaction); !ok {
 			return nil
@@ -121,6 +118,9 @@ func (pf *PeriodFilter) Process(ctx context.Context, d ast.Dated, ok bool, next 
 			return nil
 		}
 		pf.index++
+	}
+	if v, ok := d.Elem.(amounts.Amounts); ok {
+		pf.values = v
 	}
 	return nil
 }

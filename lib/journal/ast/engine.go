@@ -52,7 +52,7 @@ func (eng *Engine) Process(ctx context.Context) error {
 	for _, pr := range eng.Processors {
 		pr := pr
 		prevCh := ch
-		nextCh := make(chan Dated)
+		nextCh := make(chan Dated, 100)
 		ch = nextCh
 		next := func(elem Dated) bool {
 			return cpr.Push(ctx, nextCh, elem) == nil

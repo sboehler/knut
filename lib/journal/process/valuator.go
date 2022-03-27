@@ -18,6 +18,7 @@ type Valuator struct {
 	Valuation *journal.Commodity
 
 	values     amounts.Amounts
+	amounts    amounts.Amounts
 	normalized journal.NormalizedPrices
 	date       time.Time
 }
@@ -95,7 +96,7 @@ func (pr Valuator) computeValuationTransactions(day *val.Day) {
 		if err != nil {
 			panic(fmt.Sprintf("no valuation found for commodity %s", pos.Commodity))
 		}
-		var diff = value.Sub(day.Values[pos])
+		diff := value.Sub(day.Values[pos])
 		if diff.IsZero() {
 			continue
 		}
@@ -122,27 +123,9 @@ func (pr *Valuator) Process(ctx context.Context, d ast.Dated, ok bool, next func
 		pr.values = make(amounts.Amounts)
 	}
 
-	switch dd := d.Elem.(type) {
-
-	case journal.NormalizedPrices:
-		pr.normalized = dd
-
-	case *ast.Transaction:
-		// valuate transaction
-		for i, posting := range dd.Postings {
-			if pr.Valuation != nil && pr.Valuation != posting.Commodity {
-				var err error
-				if posting.Amount, err = pr.normalized.Valuate(posting.Commodity, posting.Amount); err != nil {
-					return err
-				}
-			}
-			pr.values.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
-			dd.Postings[i] = posting
-		}
-		next(d)
-	case amounts.Amounts:
+	if pr.date != d.Date {
 		// insert valuation transactions
-		for pos, va := range dd {
+		for pos, va := range pr.amounts {
 			if pos.Commodity == pr.Valuation {
 				continue
 			}
@@ -168,16 +151,39 @@ func (pr *Valuator) Process(ctx context.Context, d ast.Dated, ok bool, next func
 					},
 				}
 				pr.values.Book(credit, pos.Account, diff, pos.Commodity)
-				if !next(ast.Dated{Date: d.Date, Elem: t}) {
+				if !next(ast.Dated{Date: pr.date, Elem: t}) {
 					return nil
 				}
 			}
 		}
 		// replace amounts with values
-		next(ast.Dated{Date: d.Date, Elem: pr.values.Clone()})
+		next(ast.Dated{Date: pr.date, Elem: pr.values.Clone()})
+		pr.date = d.Date
+	}
+	switch dd := d.Elem.(type) {
+
+	case journal.NormalizedPrices:
+		pr.normalized = dd
+
+	case *ast.Transaction:
+		// valuate transaction
+		for i, posting := range dd.Postings {
+			if pr.Valuation != nil && pr.Valuation != posting.Commodity {
+				var err error
+				if posting.Amount, err = pr.normalized.Valuate(posting.Commodity, posting.Amount); err != nil {
+					return err
+				}
+			}
+			pr.values.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
+			dd.Postings[i] = posting
+		}
+		next(d)
+
+	case amounts.Amounts:
+		pr.amounts = dd
+
 	default:
 		next(d)
 	}
-
 	return nil
 }

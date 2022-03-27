@@ -33,28 +33,34 @@ type Engine struct {
 func (eng *Engine) Process(ctx context.Context) error {
 	ch := make(chan Dated)
 	grp, ctx := errgroup.WithContext(ctx)
-	grp.Go(func() error {
-		defer close(ch)
-		for {
-			elem, ok, err := eng.Source.Pop(ctx)
-			if err != nil || !ok {
-				return err
+	{
+		ch := ch
+		grp.Go(func() error {
+			defer close(ch)
+			for {
+				elem, ok, err := eng.Source.Pop(ctx)
+				if err != nil || !ok {
+					return err
+				}
+				if cpr.Push(ctx, ch, elem) != nil {
+					return nil
+				}
 			}
-			if cpr.Push(ctx, ch, elem) != nil {
-				return nil
-			}
-		}
-	})
+		})
+	}
 
 	for _, pr := range eng.Processors {
 		pr := pr
 		prevCh := ch
 		nextCh := make(chan Dated)
+		ch = nextCh
 		next := func(elem Dated) bool {
 			return cpr.Push(ctx, nextCh, elem) == nil
 		}
 		grp.Go(func() error {
-			defer close(nextCh)
+			defer func() {
+				close(nextCh)
+			}()
 			for {
 				elem, ok, err := cpr.Pop(ctx, prevCh)
 				if err != nil {
@@ -68,23 +74,25 @@ func (eng *Engine) Process(ctx context.Context) error {
 				}
 			}
 		})
-		ch = nextCh
 	}
 
-	grp.Go(func() error {
-		for {
-			elem, ok, err := cpr.Pop(ctx, ch)
-			if err != nil {
-				return nil
+	{
+		ch := ch
+		grp.Go(func() error {
+			for {
+				elem, ok, err := cpr.Pop(ctx, ch)
+				if err != nil {
+					return nil
+				}
+				if err := eng.Sink.Push(ctx, elem, ok); err != nil {
+					return err
+				}
+				if !ok {
+					return nil
+				}
 			}
-			if err := eng.Sink.Push(ctx, elem, ok); err != nil {
-				return err
-			}
-			if !ok {
-				return nil
-			}
-		}
-	})
+		})
+	}
 	return grp.Wait()
 }
 

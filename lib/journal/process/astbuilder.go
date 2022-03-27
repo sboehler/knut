@@ -77,7 +77,7 @@ func (srt *Sorter) Process(ctx context.Context, d ast.Dated, ok bool, next func(
 		}
 	}
 	if !ok {
-		for _, d := range srt.AST.Days {
+		for _, d := range srt.AST.SortedDays() {
 			for _, o := range d.Openings {
 				if !next(ast.Dated{Date: o.Date, Elem: o}) {
 					return nil

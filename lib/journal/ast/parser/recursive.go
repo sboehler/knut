@@ -39,7 +39,7 @@ type RecursiveParser struct {
 
 // Parse parses the journal at the path, and branches out for include files
 func (rp *RecursiveParser) Parse(ctx context.Context) (<-chan ast.Directive, <-chan error) {
-	rp.resCh = make(chan ast.Directive, 100)
+	rp.resCh = make(chan ast.Directive, 1000)
 	rp.errCh = make((chan error))
 
 	rp.wg.Add(1)

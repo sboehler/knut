@@ -157,7 +157,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			To:       r.to.Value(),
 			Interval: interval,
 			Last:     r.last,
-			Diff:     r.diff,
 		}
 		differ = process.Differ{
 			Diff: r.diff,
@@ -252,7 +251,6 @@ func (r runner) execute2(cmd *cobra.Command, args []string) error {
 			To:       r.to.Value(),
 			Interval: interval,
 			Last:     r.last,
-			Diff:     r.diff,
 		}
 		differ = &process.Differ{
 			Diff: r.diff,

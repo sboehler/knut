@@ -29,9 +29,11 @@ type Engine struct {
 	Processors []Processor
 }
 
+const channelBuffer = 1000
+
 // Process processes the pipeline in the engine.
 func (eng *Engine) Process(ctx context.Context) error {
-	ch := make(chan Dated)
+	ch := make(chan Dated, channelBuffer)
 	grp, ctx := errgroup.WithContext(ctx)
 	{
 		ch := ch
@@ -50,7 +52,7 @@ func (eng *Engine) Process(ctx context.Context) error {
 	}
 
 	for _, pr := range eng.Processors {
-		pr, prevCh, nextCh := pr, ch, make(chan Dated, 10)
+		pr, prevCh, nextCh := pr, ch, make(chan Dated, channelBuffer)
 		ch = nextCh
 		next := func(elem Dated) bool {
 			return cpr.Push(ctx, nextCh, elem) == nil

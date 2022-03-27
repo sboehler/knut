@@ -17,10 +17,11 @@ type Valuator struct {
 	Context   journal.Context
 	Valuation *journal.Commodity
 
-	values     amounts.Amounts
-	amounts    amounts.Amounts
-	normalized journal.NormalizedPrices
-	date       time.Time
+	values            amounts.Amounts
+	amounts           amounts.Amounts
+	normalized        journal.NormalizedPrices
+	date              time.Time
+	newPrices, newTrx bool
 }
 
 // ProcessStream computes prices.
@@ -124,48 +125,56 @@ func (pr *Valuator) Process(ctx context.Context, d ast.Dated, ok bool, next func
 	}
 
 	if pr.date != d.Date {
-		// insert valuation transactions
-		for pos, va := range pr.amounts {
-			if pos.Commodity == pr.Valuation {
-				continue
-			}
-			at := pos.Account.Type()
-			if at != journal.ASSETS && at != journal.LIABILITIES {
-				continue
-			}
-			value, err := pr.normalized.Valuate(pos.Commodity, va)
-			if err != nil {
-				return fmt.Errorf("no valuation found for commodity %s", pos.Commodity)
-			}
-			diff := value.Sub(pr.values[pos])
-			if diff.IsZero() {
-				continue
-			}
-			if !diff.IsZero() {
-				credit := pr.Context.ValuationAccountFor(pos.Account)
-				t := &ast.Transaction{
-					Date:        pr.date,
-					Description: fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account),
-					Postings: []ast.Posting{
-						ast.NewPostingWithTargets(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
-					},
+
+		if pr.newPrices {
+			// insert valuation transactions
+			for pos, va := range pr.amounts {
+				if pos.Commodity == pr.Valuation {
+					continue
 				}
-				pr.values.Book(credit, pos.Account, diff, pos.Commodity)
-				if !next(ast.Dated{Date: pr.date, Elem: t}) {
-					return nil
+				at := pos.Account.Type()
+				if at != journal.ASSETS && at != journal.LIABILITIES {
+					continue
+				}
+				value, err := pr.normalized.Valuate(pos.Commodity, va)
+				if err != nil {
+					return fmt.Errorf("no valuation found for commodity %s", pos.Commodity)
+				}
+				diff := value.Sub(pr.values[pos])
+				if diff.IsZero() {
+					continue
+				}
+				if !diff.IsZero() {
+					credit := pr.Context.ValuationAccountFor(pos.Account)
+					t := &ast.Transaction{
+						Date:        pr.date,
+						Description: fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account),
+						Postings: []ast.Posting{
+							ast.NewPostingWithTargets(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
+						},
+					}
+					pr.values.Book(credit, pos.Account, diff, pos.Commodity)
+					if !next(ast.Dated{Date: pr.date, Elem: t}) {
+						return nil
+					}
 				}
 			}
 		}
-		// replace amounts with values
-		next(ast.Dated{Date: pr.date, Elem: pr.values.Clone()})
+		if pr.newPrices || pr.newTrx {
+			next(ast.Dated{Date: pr.date, Elem: pr.values.Clone()})
+		}
+		pr.newPrices = false
+		pr.newTrx = false
 		pr.date = d.Date
 	}
 	switch dd := d.Elem.(type) {
 
 	case journal.NormalizedPrices:
+		pr.newPrices = true
 		pr.normalized = dd
 
 	case *ast.Transaction:
+		pr.newTrx = true
 		// valuate transaction
 		for i, posting := range dd.Postings {
 			if pr.Valuation != nil && pr.Valuation != posting.Commodity {

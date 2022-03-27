@@ -144,7 +144,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			To:       r.to.Value(),
 			Interval: interval,
 			Last:     r.last,
-			Diff:     r.diff,
 		}
 		ctx = cmd.Context()
 	)

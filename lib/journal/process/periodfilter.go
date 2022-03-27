@@ -17,7 +17,6 @@ type PeriodFilter struct {
 	From, To time.Time
 	Interval date.Interval
 	Last     int
-	Diff     bool
 
 	periods []date.Period
 	index   int
@@ -92,9 +91,6 @@ func (pf *PeriodFilter) computeDates(t time.Time) []date.Period {
 		last := pf.Last
 		if len(dates) < last {
 			last = len(dates)
-		}
-		if pf.Diff {
-			last++
 		}
 		if len(dates) > pf.Last {
 			dates = dates[len(dates)-last:]

@@ -64,32 +64,34 @@ func (pu PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day)
 	return resCh, errCh
 }
 
+var _ ast.Processor = (*PriceUpdater)(nil)
+
 // Process generates normalized prices.
-func (pu *PriceUpdater) Process(ctx context.Context, d any, ok bool, next func(any) bool) error {
+func (pu *PriceUpdater) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
 	if pu.Valuation == nil {
 		next(d)
 		return nil
 	}
 	if !ok {
-		next(pu.prices.Normalize(pu.Valuation))
+		next(ast.Dated{Date: pu.date, Elem: pu.prices.Normalize(pu.Valuation)})
 		return nil
 	}
 	if pu.prices == nil {
 		pu.prices = make(journal.Prices)
 	}
 
-	switch p := d.(type) {
+	switch p := d.Elem.(type) {
 	case *ast.Price:
-		if !pu.date.Equal(p.Date) {
+		if !pu.date.Equal(d.Date) {
 			if !pu.date.IsZero() {
-				next(pu.prices.Normalize(pu.Valuation))
+				next(ast.Dated{Date: d.Date, Elem: pu.prices.Normalize(pu.Valuation)})
 			}
-			pu.date = p.Date
+			pu.date = d.Date
 		}
 		pu.prices.Insert(p.Commodity, p.Price, p.Target)
 	default:
 		if !pu.date.IsZero() {
-			next(pu.prices.Normalize(pu.Valuation))
+			next(ast.Dated{Date: d.Date, Elem: pu.prices.Normalize(pu.Valuation)})
 			pu.date = time.Time{}
 		}
 		next(d)

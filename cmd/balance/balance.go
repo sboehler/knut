@@ -27,6 +27,7 @@ import (
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/journal/process"
 	"github.com/sboehler/knut/lib/journal/val/report"
@@ -73,7 +74,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
-	if err := r.execute(cmd, args); err != nil {
+	if err := r.execute2(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		os.Exit(1)
 	}
@@ -117,7 +118,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 
 	var (
-		par = parser.RecursiveParser{
+		par = &parser.RecursiveParser{
 			File:    args[0],
 			Context: jctx,
 		}
@@ -143,11 +144,11 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Valuation: valuation,
 		}
 		periodFilter = process.PeriodFilter{
-			From:   r.from.Value(),
-			To:     r.to.Value(),
+			From:     r.from.Value(),
+			To:       r.to.Value(),
 			Interval: interval,
-			Last:   r.last,
-			Diff:   r.diff,
+			Last:     r.last,
+			Diff:     r.diff,
 		}
 		differ = process.Differ{
 			Diff: r.diff,
@@ -187,6 +188,99 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	out := bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	return tableRenderer.Render(reportRenderer.Render(rep), out)
+}
+
+func (r runner) execute2(cmd *cobra.Command, args []string) error {
+	var (
+		jctx = journal.NewContext()
+
+		valuation *journal.Commodity
+		interval  date.Interval
+
+		err error
+	)
+	if time.Time(r.to).IsZero() {
+		r.to = flags.DateFlag(date.Today())
+	}
+	if valuation, err = r.valuation.Value(jctx); err != nil {
+		return err
+	}
+	if interval, err = r.interval.Value(); err != nil {
+		return err
+	}
+
+	var (
+		par = &parser.RecursiveParser{
+			File:    args[0],
+			Context: jctx,
+		}
+		sorter = &process.Sorter{
+			Context: jctx,
+		}
+		expander = &process.Expander{}
+		filter   = &process.PostingFilter{
+			Filter: journal.Filter{
+				Accounts:    r.accounts.Value(),
+				Commodities: r.commodities.Value(),
+			},
+		}
+		booker = &process.Booker{
+			Context: jctx,
+		}
+		priceUpdater = &process.PriceUpdater{
+			Context:   jctx,
+			Valuation: valuation,
+		}
+		valuator = &process.Valuator{
+			Context:   jctx,
+			Valuation: valuation,
+		}
+		periodFilter = &process.PeriodFilter{
+			From:     r.from.Value(),
+			To:       r.to.Value(),
+			Interval: interval,
+			Last:     r.last,
+			Diff:     r.diff,
+		}
+		differ = &process.Differ{
+			Diff: r.diff,
+		}
+		reportBuilder = &report.Builder{
+			Mapping: r.mapping.Value(),
+		}
+		reportRenderer = report.Renderer{
+			Context:            jctx,
+			ShowCommodities:    r.showCommodities || valuation == nil,
+			SortAlphabetically: r.sortAlphabetically,
+		}
+		tableRenderer = table.TextRenderer{
+			Color:     r.color,
+			Thousands: r.thousands,
+			Round:     r.digits,
+		}
+		ctx = cmd.Context()
+	)
+
+	engine := new(ast.Engine)
+
+	engine.Source = par
+	engine.Add(sorter)
+	engine.Add(expander)
+	engine.Add(filter)
+	engine.Add(booker)
+	engine.Add(priceUpdater)
+	engine.Add(valuator)
+	engine.Add(periodFilter)
+	engine.Add(differ)
+	engine.Sink = reportBuilder
+
+	if err := engine.Process(ctx); err != nil {
+		return err
+	}
+	rep := reportBuilder.Result
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 	return tableRenderer.Render(reportRenderer.Render(rep), out)

@@ -87,3 +87,8 @@ func (eng *Engine) Process(ctx context.Context) error {
 	})
 	return grp.Wait()
 }
+
+// Add adds a processor.
+func (eng *Engine) Add(p Processor) {
+	eng.Processors = append(eng.Processors, p)
+}

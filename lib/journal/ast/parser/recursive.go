@@ -16,14 +16,15 @@ package parser
 
 import (
 	"context"
+	"io"
 	"path"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
+	"golang.org/x/sync/errgroup"
 )
 
 // RecursiveParser parses a file hierarchy recursively.
@@ -34,7 +35,7 @@ type RecursiveParser struct {
 	errCh chan error
 	resCh chan ast.Directive
 
-	wg sync.WaitGroup
+	wg *errgroup.Group
 }
 
 // Parse parses the journal at the path, and branches out for include files
@@ -42,44 +43,45 @@ func (rp *RecursiveParser) Parse(ctx context.Context) (<-chan ast.Directive, <-c
 	rp.resCh = make(chan ast.Directive, 1000)
 	rp.errCh = make((chan error))
 
-	rp.wg.Add(1)
-	go rp.parseRecursively(ctx, rp.File)
+	rp.wg, ctx = errgroup.WithContext(ctx)
+
+	rp.wg.Go(func() error { return rp.parseRecursively(ctx, rp.File) })
 
 	// Parse and eventually close input channel
 	go func() {
 		defer close(rp.resCh)
 		defer close(rp.errCh)
-		rp.wg.Wait()
+		if err := rp.wg.Wait(); err != nil {
+			cpr.Push(ctx, rp.errCh, err)
+		}
 	}()
 	return rp.resCh, rp.errCh
 }
 
-func (rp *RecursiveParser) parseRecursively(ctx context.Context, file string) {
-	defer rp.wg.Done()
+func (rp *RecursiveParser) parseRecursively(ctx context.Context, file string) error {
 	p, cls, err := FromPath(rp.Context, file)
 	if err != nil {
-		cpr.Push(ctx, rp.errCh, err)
-		return
+		return err
 	}
 	defer cls()
 
-	resCh, errCh := p.Parse(ctx)
-
 	for {
-		d, ok, err := cpr.Get(resCh, errCh)
-		if !ok {
-			break
+		d, err := p.next()
+		if err == io.EOF {
+			return nil
 		}
-		if err != nil && cpr.Push(ctx, rp.errCh, err) != nil {
-			return
+		if err != nil {
+			return err
 		}
-		if t, ok := d.(*ast.Include); ok {
-			rp.wg.Add(1)
-			go rp.parseRecursively(ctx, path.Join(filepath.Dir(file), t.Path))
-			continue
-		}
-		if cpr.Push(ctx, rp.resCh, d) != nil {
-			return
+		switch t := d.(type) {
+		case *ast.Include:
+			rp.wg.Go(func() error {
+				return rp.parseRecursively(ctx, path.Join(filepath.Dir(file), t.Path))
+			})
+		default:
+			if err := cpr.Push(ctx, rp.resCh, d); err != nil {
+				return err
+			}
 		}
 	}
 }

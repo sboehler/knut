@@ -196,7 +196,7 @@ var _ ast.Processor = (*Booker)(nil)
 
 // Process checks assertions and the usage of open and closed accounts.
 // It also resolves Value directives and converts them to transactions.
-func (pr *Booker) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
+func (pr *Booker) Process(ctx context.Context, d ast.Dated, next func(ast.Dated) bool) error {
 
 	if pr.amounts == nil {
 		pr.amounts = make(amounts.Amounts)
@@ -274,5 +274,13 @@ func (pr *Booker) Process(ctx context.Context, d ast.Dated, ok bool, next func(a
 		next(d)
 	}
 
+	return nil
+}
+
+// Finalize implements Finalize.
+func (pr *Booker) Finalize(ctx context.Context, next func(ast.Dated) bool) error {
+	if pr.send {
+		next(ast.Dated{Date: pr.date, Elem: pr.amounts.Clone()})
+	}
 	return nil
 }

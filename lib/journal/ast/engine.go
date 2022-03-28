@@ -14,12 +14,24 @@ type Source interface {
 
 // Processor processes elements.
 type Processor interface {
-	Process(ctx context.Context, elem Dated, ok bool, next func(Dated) bool) error
+	Process(ctx context.Context, elem Dated, next func(Dated) bool) error
 }
 
 // Sink consumes elements.
 type Sink interface {
-	Push(ctx context.Context, elem Dated, ok bool) error
+	Push(ctx context.Context, elem Dated) error
+}
+
+// FinalizeSink has a method which is called after the last
+// element has been received.
+type FinalizeSink interface {
+	Finalize(ctx context.Context) error
+}
+
+// Finalize has a method which is called after the last element
+// has been received.
+type Finalize interface {
+	Finalize(ctx context.Context, next func(Dated) bool) error
 }
 
 // Engine processes a pipeline.
@@ -58,19 +70,20 @@ func (eng *Engine) Process(ctx context.Context) error {
 			return cpr.Push(ctx, nextCh, elem) == nil
 		}
 		grp.Go(func() error {
-			defer func() {
-				close(nextCh)
-			}()
+			defer close(nextCh)
 			for {
 				elem, ok, err := cpr.Pop(ctx, prevCh)
 				if err != nil {
-					return nil
-				}
-				if err := pr.Process(ctx, elem, ok, next); err != nil {
 					return err
 				}
 				if !ok {
+					if f, ok := pr.(Finalize); ok {
+						return f.Finalize(ctx, next)
+					}
 					return nil
+				}
+				if err := pr.Process(ctx, elem, next); err != nil {
+					return err
 				}
 			}
 		})
@@ -84,11 +97,14 @@ func (eng *Engine) Process(ctx context.Context) error {
 				if err != nil {
 					return nil
 				}
-				if err := eng.Sink.Push(ctx, elem, ok); err != nil {
-					return err
-				}
 				if !ok {
+					if f, ok := eng.Sink.(FinalizeSink); ok {
+						return f.Finalize(ctx)
+					}
 					return nil
+				}
+				if err := eng.Sink.Push(ctx, elem); err != nil {
+					return err
 				}
 			}
 		})

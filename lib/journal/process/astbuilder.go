@@ -69,48 +69,14 @@ type Sorter struct {
 }
 
 // Process implements Processor.
-func (srt *Sorter) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
+func (srt *Sorter) Process(ctx context.Context, d ast.Dated, next func(ast.Dated) bool) error {
 	if srt.AST == nil {
 		srt.AST = &ast.AST{
 			Context: srt.Context,
 			Days:    make(map[time.Time]*ast.Day),
 		}
 	}
-	if !ok {
-		for _, d := range srt.AST.SortedDays() {
-			for _, o := range d.Openings {
-				if !next(ast.Dated{Date: o.Date, Elem: o}) {
-					return nil
-				}
-			}
-			for _, o := range d.Prices {
-				if !next(ast.Dated{Date: o.Date, Elem: o}) {
-					return nil
-				}
-			}
-			for _, o := range d.Transactions {
-				if !next(ast.Dated{Date: o.Date, Elem: o}) {
-					return nil
-				}
-			}
-			for _, o := range d.Values {
-				if !next(ast.Dated{Date: o.Date, Elem: o}) {
-					return nil
-				}
-			}
-			for _, o := range d.Assertions {
-				if !next(ast.Dated{Date: o.Date, Elem: o}) {
-					return nil
-				}
-			}
-			for _, o := range d.Closings {
-				if !next(ast.Dated{Date: o.Date, Elem: o}) {
-					return nil
-				}
-			}
-		}
-		return nil
-	}
+
 	switch t := d.Elem.(type) {
 	case *ast.Open:
 		srt.AST.AddOpen(t)
@@ -126,6 +92,44 @@ func (srt *Sorter) Process(ctx context.Context, d ast.Dated, ok bool, next func(
 		srt.AST.AddClose(t)
 	default:
 		return fmt.Errorf("unknown: %#v", t)
+	}
+	return nil
+}
+
+// Finalize starts sending sorted directives.
+func (srt *Sorter) Finalize(ctx context.Context, next func(ast.Dated) bool) error {
+
+	for _, d := range srt.AST.SortedDays() {
+		for _, o := range d.Openings {
+			if !next(ast.Dated{Date: o.Date, Elem: o}) {
+				return nil
+			}
+		}
+		for _, o := range d.Prices {
+			if !next(ast.Dated{Date: o.Date, Elem: o}) {
+				return nil
+			}
+		}
+		for _, o := range d.Transactions {
+			if !next(ast.Dated{Date: o.Date, Elem: o}) {
+				return nil
+			}
+		}
+		for _, o := range d.Values {
+			if !next(ast.Dated{Date: o.Date, Elem: o}) {
+				return nil
+			}
+		}
+		for _, o := range d.Assertions {
+			if !next(ast.Dated{Date: o.Date, Elem: o}) {
+				return nil
+			}
+		}
+		for _, o := range d.Closings {
+			if !next(ast.Dated{Date: o.Date, Elem: o}) {
+				return nil
+			}
+		}
 	}
 	return nil
 }
@@ -229,10 +233,7 @@ func (pr *ASTExpander) expandTransaction(a *ast.AST, t *ast.Transaction) {
 type Expander struct{}
 
 // Process expands transactions.
-func (exp *Expander) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
-	if !ok {
-		return nil
-	}
+func (exp *Expander) Process(ctx context.Context, d ast.Dated, next func(ast.Dated) bool) error {
 	if t, ok := d.Elem.(*ast.Transaction); ok {
 		for _, addOn := range t.AddOns {
 			switch acc := addOn.(type) {
@@ -262,10 +263,7 @@ type PostingFilter struct {
 }
 
 // Process expands transactions.
-func (pf *PostingFilter) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
-	if !ok {
-		return nil
-	}
+func (pf *PostingFilter) Process(ctx context.Context, d ast.Dated, next func(ast.Dated) bool) error {
 	switch t := d.Elem.(type) {
 
 	case *ast.Transaction:

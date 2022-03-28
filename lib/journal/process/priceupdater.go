@@ -68,10 +68,7 @@ func (pu PriceUpdater) ProcessStream(ctx context.Context, inCh <-chan *past.Day)
 var _ ast.Processor = (*PriceUpdater)(nil)
 
 // Process generates normalized prices.
-func (pu *PriceUpdater) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
-	if !ok {
-		return nil
-	}
+func (pu *PriceUpdater) Process(ctx context.Context, d ast.Dated, next func(ast.Dated) bool) error {
 	if pu.Valuation == nil {
 		next(d)
 		return nil
@@ -99,5 +96,13 @@ func (pu *PriceUpdater) Process(ctx context.Context, d ast.Dated, ok bool, next 
 		next(d)
 	}
 	pu.date = d.Date
+	return nil
+}
+
+// Finalize implements Finalize.
+func (pu *PriceUpdater) Finalize(ctx context.Context, next func(ast.Dated) bool) error {
+	if pu.send {
+		next(ast.Dated{Date: pu.date, Elem: pu.prices.Normalize(pu.Valuation)})
+	}
 	return nil
 }

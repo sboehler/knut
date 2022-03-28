@@ -52,10 +52,7 @@ func (pf Differ) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-cha
 var _ ast.Processor = (*Differ)(nil)
 
 // Process diffs the amounts.
-func (pf *Differ) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
-	if !ok {
-		return nil
-	}
+func (pf *Differ) Process(ctx context.Context, d ast.Dated, next func(ast.Dated) bool) error {
 	if v, ok := d.Elem.(amounts.Amounts); ok {
 		res := ast.Dated{
 			Date: d.Date,

@@ -94,12 +94,9 @@ func (rb *Builder) FromStream(ctx context.Context, ch <-chan *val.Day) (<-chan *
 }
 
 // Push adds values to the report.
-func (rb *Builder) Push(ctx context.Context, d ast.Dated, ok bool) error {
+func (rb *Builder) Push(ctx context.Context, d ast.Dated) error {
 	if rb.Result == nil {
 		rb.Result = new(Report)
-	}
-	if !ok {
-		return nil
 	}
 	if v, ok := d.Elem.(amounts.Amounts); ok {
 		rb.Result.Dates = append(rb.Result.Dates, d.Date)

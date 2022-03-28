@@ -100,7 +100,7 @@ func (pf *PeriodFilter) computeDates(t time.Time) []date.Period {
 }
 
 // Process filters values according to the period.
-func (pf *PeriodFilter) Process(ctx context.Context, d ast.Dated, ok bool, next func(ast.Dated) bool) error {
+func (pf *PeriodFilter) Process(ctx context.Context, d ast.Dated, next func(ast.Dated) bool) error {
 	if pf.date.IsZero() {
 		if _, ok := d.Elem.(*ast.Transaction); !ok {
 			return nil
@@ -109,7 +109,7 @@ func (pf *PeriodFilter) Process(ctx context.Context, d ast.Dated, ok bool, next 
 		pf.periods = pf.computeDates(d.Date)
 	}
 
-	for pf.index < len(pf.periods) && (!ok || pf.periods[pf.index].End.Before(d.Date)) {
+	for pf.index < len(pf.periods) && (pf.periods[pf.index].End.Before(d.Date)) {
 		if !next(ast.Dated{Date: pf.periods[pf.index].End, Elem: pf.values}) {
 			return nil
 		}
@@ -117,6 +117,17 @@ func (pf *PeriodFilter) Process(ctx context.Context, d ast.Dated, ok bool, next 
 	}
 	if v, ok := d.Elem.(amounts.Amounts); ok {
 		pf.values = v
+	}
+	return nil
+}
+
+// Finalize implements Finalizer.
+func (pf *PeriodFilter) Finalize(ctx context.Context, next func(ast.Dated) bool) error {
+	for pf.index < len(pf.periods) {
+		if !next(ast.Dated{Date: pf.periods[pf.index].End, Elem: pf.values}) {
+			return nil
+		}
+		pf.index++
 	}
 	return nil
 }

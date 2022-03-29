@@ -24,6 +24,7 @@ import (
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/val"
 	"github.com/shopspring/decimal"
+	"golang.org/x/sync/errgroup"
 )
 
 // Report is a balance report for a range of dates.
@@ -67,6 +68,21 @@ func (rb *Builder) add(rep *Report, b *val.Day) {
 	}
 }
 
+func (rb *Builder) add2(rep *Report, b *ast.Day) {
+	rep.Dates = append(rep.Dates, b.Date)
+	if rep.Positions == nil {
+		rep.Positions = make(indexByAccount)
+	}
+	for pos, val := range b.Value {
+		if val.IsZero() {
+			continue
+		}
+		if acc := pos.Account.Map(rb.Mapping); acc != nil {
+			rep.Positions.Add(acc, pos.Commodity, b.Date, val)
+		}
+	}
+}
+
 // FromStream consumes the stream and produces a report.
 func (rb *Builder) FromStream(ctx context.Context, ch <-chan *val.Day) (<-chan *Report, <-chan error) {
 	var (
@@ -80,17 +96,36 @@ func (rb *Builder) FromStream(ctx context.Context, ch <-chan *val.Day) (<-chan *
 		res := new(Report)
 		for {
 			d, ok, err := cpr.Pop(ctx, ch)
-			if !ok {
-				break
-			}
 			if err != nil {
 				return
+			}
+			if !ok {
+				break
 			}
 			rb.add(res, d)
 		}
 		cpr.Push(ctx, resCh, res)
 	}()
 	return resCh, errCh
+}
+
+// Sink2 consumes the stream and produces a report.
+func (rb *Builder) Sink2(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) {
+	rb.Result = new(Report)
+
+	g.Go(func() error {
+		for {
+			d, ok, err := cpr.Pop(ctx, inCh)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				break
+			}
+			rb.add2(rb.Result, d)
+		}
+		return nil
+	})
 }
 
 // Push adds values to the report.

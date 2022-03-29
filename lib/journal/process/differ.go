@@ -7,6 +7,7 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/val"
+	"golang.org/x/sync/errgroup"
 )
 
 // Differ filters the incoming days according to the dates
@@ -47,6 +48,38 @@ func (pf Differ) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (<-cha
 		}
 	}()
 	return resCh, errCh
+}
+
+// Process2 does the diffing.
+func (pf Differ) Process2(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
+	if !pf.Diff {
+		return inCh
+	}
+	resCh := make(chan *ast.Day, 100)
+
+	g.Go(func() error {
+		defer close(resCh)
+
+		var prev amounts.Amounts
+		for {
+			d, ok, err := cpr.Pop(ctx, inCh)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				break
+			}
+			diff := d.Value.Clone().Minus(prev)
+
+			prev = d.Value
+			d.Value = diff
+			if err := cpr.Push(ctx, resCh, d); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return resCh
 }
 
 var _ ast.Processor = (*Differ)(nil)

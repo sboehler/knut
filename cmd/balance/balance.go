@@ -81,7 +81,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 	} else {
-		if err := r.execute2(cmd, args); err != nil {
+		if err := r.execute3(cmd, args); err != nil {
 			fmt.Fprintln(cmd.ErrOrStderr(), err)
 			os.Exit(1)
 		}
@@ -190,7 +190,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	errCh := cpr.Demultiplex(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5, errCh6, errCh7, errCh8)
 
 	rep, ok, err := cpr.Get(resCh, errCh)
-	if !ok {
+	if rep == nil || !ok {
 		return fmt.Errorf("no report was produced")
 	}
 	if err != nil {
@@ -295,4 +295,86 @@ func (r runner) execute2(cmd *cobra.Command, args []string) error {
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 	return tableRenderer.Render(reportRenderer.Render(rep), out)
+}
+
+func (r runner) execute3(cmd *cobra.Command, args []string) error {
+	var (
+		jctx = journal.NewContext()
+
+		valuation *journal.Commodity
+		interval  date.Interval
+
+		err error
+	)
+	if time.Time(r.to).IsZero() {
+		r.to = flags.DateFlag(date.Today())
+	}
+	if valuation, err = r.valuation.Value(jctx); err != nil {
+		return err
+	}
+	if interval, err = r.interval.Value(); err != nil {
+		return err
+	}
+
+	var (
+		astBuilder = &process.ASTBuilder{
+			Context: jctx,
+			Journal: args[0],
+			Filter: journal.Filter{
+				Accounts:    r.accounts.Value(),
+				Commodities: r.commodities.Value(),
+			},
+			Expand: true,
+		}
+		priceUpdater = &process.PriceUpdater{
+			Context:   jctx,
+			Valuation: valuation,
+		}
+		pastBuilder = &process.PASTBuilder{
+			Context: jctx,
+		}
+		valuator = &process.Valuator{
+			Context:   jctx,
+			Valuation: valuation,
+		}
+		periodFilter = &process.PeriodFilter{
+			From:     r.from.Value(),
+			To:       r.to.Value(),
+			Interval: interval,
+			Last:     r.last,
+		}
+		differ = &process.Differ{
+			Diff: r.diff,
+		}
+		reportBuilder = &report.Builder{
+			Mapping: r.mapping.Value(),
+		}
+		reportRenderer = report.Renderer{
+			Context:            jctx,
+			ShowCommodities:    r.showCommodities || valuation == nil,
+			SortAlphabetically: r.sortAlphabetically,
+		}
+		tableRenderer = table.TextRenderer{
+			Color:     r.color,
+			Thousands: r.thousands,
+			Round:     r.digits,
+		}
+		ctx = cmd.Context()
+	)
+
+	eng := new(ast.Engine2)
+	eng.Source = astBuilder
+	eng.Add(pastBuilder)
+	eng.Add(priceUpdater)
+	eng.Add(valuator)
+	eng.Add(periodFilter)
+	eng.Add(differ)
+	eng.Sink = reportBuilder
+
+	if err := eng.Process(ctx); err != nil {
+		return err
+	}
+	out := bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	return tableRenderer.Render(reportRenderer.Render(reportBuilder.Result), out)
 }

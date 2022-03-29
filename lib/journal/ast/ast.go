@@ -18,6 +18,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/journal"
 )
 
@@ -102,6 +103,13 @@ type Day struct {
 	Openings     []*Open
 	Transactions []*Transaction
 	Closings     []*Close
+
+	Amounts, Value   amounts.Amounts
+	AmountsD, ValueD amounts.Amounts
+
+	Normalized journal.NormalizedPrices
+
+	PeriodDays []*Day
 }
 
 // Less establishes an ordering on Day.

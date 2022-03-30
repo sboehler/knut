@@ -31,7 +31,7 @@ func (pr *JournalSource) Source(ctx context.Context, g *errgroup.Group) <-chan *
 		Context: pr.Context,
 		File:    pr.Path,
 	}
-	resCh := make(chan *ast.Day)
+	resCh := make(chan *ast.Day, 100)
 
 	g.Go(func() error {
 		defer close(resCh)

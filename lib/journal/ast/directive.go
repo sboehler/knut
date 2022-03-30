@@ -26,12 +26,6 @@ type Directive interface {
 	Position() Range
 }
 
-// Dated is an element with a date.
-type Dated struct {
-	Date time.Time
-	Elem any
-}
-
 var (
 	_ Directive = (*Assertion)(nil)
 	_ Directive = (*Close)(nil)

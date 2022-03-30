@@ -12,24 +12,24 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// ASTBuilder builds an abstract syntax tree.
-type ASTBuilder struct {
+// JournalSource emits journal data in daily batches.
+type JournalSource struct {
 	Context journal.Context
 
-	Journal string
-	Expand  bool
-	Filter  journal.Filter
+	Path   string
+	Expand bool
+	Filter journal.Filter
 }
 
 // Source is a source of days.
-func (pr *ASTBuilder) Source(ctx context.Context, g *errgroup.Group) <-chan *ast.Day {
+func (pr *JournalSource) Source(ctx context.Context, g *errgroup.Group) <-chan *ast.Day {
 	a := &ast.AST{
 		Context: pr.Context,
 		Days:    make(map[time.Time]*ast.Day),
 	}
 	p := parser.RecursiveParser{
 		Context: pr.Context,
-		File:    pr.Journal,
+		File:    pr.Path,
 	}
 	resCh := make(chan *ast.Day)
 

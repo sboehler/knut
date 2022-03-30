@@ -13,13 +13,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func TestPASTBuilderHappyCase(t *testing.T) {
+func TestbalancerHappyCase(t *testing.T) {
 	var (
-		jctx        = journal.NewContext()
-		td          = newTestData(jctx)
-		pastBuilder = Balancer{Context: jctx}
-		ctx         = context.Background()
-		input       = []*ast.Day{
+		jctx     = journal.NewContext()
+		td       = newTestData(jctx)
+		balancer = Balancer{Context: jctx}
+		ctx      = context.Background()
+		input    = []*ast.Day{
 			{
 				Date:         td.date1,
 				Openings:     []*ast.Open{td.open1, td.open2},
@@ -54,7 +54,7 @@ func TestPASTBuilderHappyCase(t *testing.T) {
 		}
 	)
 
-	got, err := cpr.RunTestEngine[*ast.Day](ctx, &pastBuilder, input...)
+	got, err := cpr.RunTestEngine[*ast.Day](ctx, &balancer, input...)
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

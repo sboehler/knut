@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
@@ -84,28 +83,6 @@ func (rb *BalanceBuilder) Sink(ctx context.Context, g *errgroup.Group, inCh <-ch
 		}
 		return nil
 	})
-}
-
-// Push adds values to the report.
-func (rb *BalanceBuilder) Push(ctx context.Context, d ast.Dated) error {
-	if rb.Result == nil {
-		rb.Result = new(Balance)
-	}
-	if v, ok := d.Elem.(amounts.Amounts); ok {
-		rb.Result.Dates = append(rb.Result.Dates, d.Date)
-		if rb.Result.Positions == nil {
-			rb.Result.Positions = make(indexByAccount)
-		}
-		for pos, val := range v {
-			if val.IsZero() {
-				continue
-			}
-			if acc := pos.Account.Map(rb.Mapping); acc != nil {
-				rb.Result.Positions.Add(acc, pos.Commodity, d.Date, val)
-			}
-		}
-	}
-	return nil
 }
 
 type indexByAccount map[*journal.Account]indexByCommodity

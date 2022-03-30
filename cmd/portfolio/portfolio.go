@@ -89,13 +89,13 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	var (
-		astBuilder = &process.ASTBuilder{
+		journalSource = &process.JournalSource{
 			Context: jctx,
 
-			Journal: args[0],
+			Path: args[0],
 			Expand:  true,
 		}
-		pastBuilder = &process.Balancer{
+		balancer = &process.Balancer{
 			Context: jctx,
 		}
 		priceUpdater = &process.PriceUpdater{
@@ -117,8 +117,8 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	)
 
 	eng := new(cpr.Engine[*ast.Day])
-	eng.Source = astBuilder
-	eng.Add(pastBuilder)
+	eng.Source = journalSource
+	eng.Add(balancer)
 	eng.Add(priceUpdater)
 	eng.Add(valuator)
 	eng.Add(calculator)

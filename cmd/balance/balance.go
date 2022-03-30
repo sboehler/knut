@@ -118,9 +118,9 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 
 	var (
-		astBuilder = &process.ASTBuilder{
+		journalSource = &process.JournalSource{
 			Context: jctx,
-			Journal: args[0],
+			Path: args[0],
 			Filter: journal.Filter{
 				Accounts:    r.accounts.Value(),
 				Commodities: r.commodities.Value(),
@@ -131,7 +131,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		pastBuilder = &process.Balancer{
+		balancer = &process.Balancer{
 			Context: jctx,
 		}
 		valuator = &process.Valuator{
@@ -164,8 +164,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	)
 
 	eng := new(cpr.Engine[*ast.Day])
-	eng.Source = astBuilder
-	eng.Add(pastBuilder)
+	eng.Source = journalSource
+	eng.Add(balancer)
 	eng.Add(priceUpdater)
 	eng.Add(valuator)
 	eng.Add(periodFilter)

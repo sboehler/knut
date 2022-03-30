@@ -16,8 +16,8 @@ type Balancer struct {
 	Context journal.Context
 }
 
-// Process2 processes days.
-func (pr *Balancer) Process2(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
+// Process processes days.
+func (pr *Balancer) Process(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
 
 	resCh := make(chan *ast.Day, 100)
 

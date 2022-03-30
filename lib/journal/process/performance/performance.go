@@ -18,8 +18,8 @@ type Calculator struct {
 	Filter    journal.Filter
 }
 
-// Process2 computes portfolio performance.
-func (calc Calculator) Process2(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
+// Process computes portfolio performance.
+func (calc Calculator) Process(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
 	resCh := make(chan *ast.Day)
 
 	g.Go(func() error {

@@ -13,7 +13,7 @@ type Source[T any] interface {
 
 // Processor processes elements.
 type Processor[T any] interface {
-	Process2(context.Context, *errgroup.Group, <-chan T) <-chan T
+	Process(context.Context, *errgroup.Group, <-chan T) <-chan T
 }
 
 // Sink consumes elements.
@@ -35,7 +35,7 @@ func (eng *Engine[T]) Process(ctx context.Context) error {
 	ch := eng.Source.Source(ctx, grp)
 
 	for _, pr := range eng.Processors {
-		ch = pr.Process2(ctx, grp, ch)
+		ch = pr.Process(ctx, grp, ch)
 	}
 
 	eng.Sink.Sink(ctx, grp, ch)

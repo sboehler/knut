@@ -15,8 +15,8 @@ type PriceUpdater struct {
 	Valuation *journal.Commodity
 }
 
-// Process2 computes prices.
-func (pu PriceUpdater) Process2(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
+// Process computes prices.
+func (pu PriceUpdater) Process(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
 	resCh := make(chan *ast.Day, 100)
 	g.Go(func() error {
 		defer close(resCh)

@@ -18,8 +18,8 @@ type PeriodFilter struct {
 	Last     int
 }
 
-// Process2 does the filtering.
-func (pf PeriodFilter) Process2(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
+// Process does the filtering.
+func (pf PeriodFilter) Process(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
 	resCh := make(chan *ast.Day, 100)
 
 	g.Go(func() error {

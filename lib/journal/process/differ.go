@@ -15,8 +15,8 @@ type Differ struct {
 	Diff bool
 }
 
-// Process2 does the diffing.
-func (pf Differ) Process2(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
+// Process does the diffing.
+func (pf Differ) Process(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
 	if !pf.Diff {
 		return inCh
 	}

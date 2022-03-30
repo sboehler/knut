@@ -67,8 +67,8 @@ func (rb *Builder) add2(rep *Report, b *ast.Day) {
 	}
 }
 
-// Sink2 consumes the stream and produces a report.
-func (rb *Builder) Sink2(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) {
+// Sink consumes the stream and produces a report.
+func (rb *Builder) Sink(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) {
 	rb.Result = new(Report)
 
 	g.Go(func() error {

@@ -49,8 +49,8 @@ func (calc Calculator) Process2(ctx context.Context, g *errgroup.Group, inCh <-c
 	return resCh
 }
 
-// Sink2 implements Sink.
-func (calc Calculator) Sink2(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) {
+// Sink implements Sink.
+func (calc Calculator) Sink(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) {
 	g.Go(func() error {
 		for {
 			p, ok, err := cpr.Pop(ctx, inCh)

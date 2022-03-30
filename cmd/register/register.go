@@ -146,7 +146,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		ctx = cmd.Context()
 	)
 
-	eng := new(ast.Engine2[*ast.Day])
+	eng := new(cpr.Engine[*ast.Day])
 	eng.Source = astBuilder
 	eng.Add(pastBuilder)
 	eng.Add(priceUpdater)
@@ -161,7 +161,7 @@ type regprinter struct {
 	w io.Writer
 }
 
-func (rp *regprinter) Sink2(ctx context.Context, g *errgroup.Group, ch <-chan *ast.Day) {
+func (rp *regprinter) Sink(ctx context.Context, g *errgroup.Group, ch <-chan *ast.Day) {
 	g.Go(func() error {
 		for {
 			_, ok, err := cpr.Pop(ctx, ch)

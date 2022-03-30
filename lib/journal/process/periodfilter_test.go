@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
@@ -101,7 +102,7 @@ func TestPeriodFilter(t *testing.T) {
 
 			ctx := context.Background()
 
-			got, err := ast.RunTestEngine[*ast.Day](ctx, test.sut, test.input...)
+			got, err := cpr.RunTestEngine[*ast.Day](ctx, test.sut, test.input...)
 
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)

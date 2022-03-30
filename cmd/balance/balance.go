@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
@@ -162,7 +163,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		ctx = cmd.Context()
 	)
 
-	eng := new(ast.Engine2[*ast.Day])
+	eng := new(cpr.Engine[*ast.Day])
 	eng.Source = astBuilder
 	eng.Add(pastBuilder)
 	eng.Add(priceUpdater)

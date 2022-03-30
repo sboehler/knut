@@ -21,8 +21,8 @@ type ASTBuilder struct {
 	Filter  journal.Filter
 }
 
-// Source2 is a source of days.
-func (pr *ASTBuilder) Source2(ctx context.Context, g *errgroup.Group) <-chan *ast.Day {
+// Source is a source of days.
+func (pr *ASTBuilder) Source(ctx context.Context, g *errgroup.Group) <-chan *ast.Day {
 	a := &ast.AST{
 		Context: pr.Context,
 		Days:    make(map[time.Time]*ast.Day),

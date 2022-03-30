@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/beancount"
@@ -89,10 +90,10 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		c = new(ast.Collector[*ast.Day])
+		c = new(cpr.Collector[*ast.Day])
 	)
 
-	eng := new(ast.Engine2[*ast.Day])
+	eng := new(cpr.Engine[*ast.Day])
 	eng.Source = astBuilder
 	eng.Add(pastBuilder)
 	eng.Add(priceUpdater)

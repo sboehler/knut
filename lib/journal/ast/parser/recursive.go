@@ -19,7 +19,6 @@ import (
 	"io"
 	"path"
 	"path/filepath"
-	"time"
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
@@ -84,36 +83,4 @@ func (rp *RecursiveParser) parseRecursively(ctx context.Context, file string) er
 			}
 		}
 	}
-}
-
-var _ ast.Source = (*RecursiveParser)(nil)
-
-// Pop implements ast.Source.
-func (rp *RecursiveParser) Pop(ctx context.Context) (ast.Dated, bool, error) {
-	if rp.resCh == nil {
-		rp.Parse(ctx)
-	}
-	res, ok, err := cpr.Get(rp.resCh, rp.errCh)
-	if err != nil || !ok {
-		return ast.Dated{}, ok, err
-	}
-	var d time.Time
-	switch t := res.(type) {
-	case *ast.Open:
-		d = t.Date
-	case *ast.Price:
-		d = t.Date
-	case *ast.Transaction:
-		d = t.Date
-	case *ast.Value:
-		d = t.Date
-	case *ast.Assertion:
-		d = t.Date
-	case *ast.Close:
-		d = t.Date
-	}
-	return ast.Dated{
-		Date: d,
-		Elem: res,
-	}, ok, err
 }

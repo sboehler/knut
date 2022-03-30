@@ -130,7 +130,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		pastBuilder = &process.PASTBuilder{
+		pastBuilder = &process.Balancer{
 			Context: jctx,
 		}
 		valuator = &process.Valuator{

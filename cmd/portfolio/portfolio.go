@@ -94,7 +94,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 			Journal: args[0],
 			Expand:  true,
 		}
-		pastBuilder = &process.PASTBuilder{
+		pastBuilder = &process.Balancer{
 			Context: jctx,
 		}
 		priceUpdater = &process.PriceUpdater{

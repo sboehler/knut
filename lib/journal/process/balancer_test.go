@@ -16,7 +16,7 @@ func TestPASTBuilderHappyCase(t *testing.T) {
 	var (
 		jctx        = journal.NewContext()
 		td          = newTestData(jctx)
-		pastBuilder = PASTBuilder{Context: jctx}
+		pastBuilder = Balancer{Context: jctx}
 		ctx         = context.Background()
 		input       = []*ast.Day{
 			{

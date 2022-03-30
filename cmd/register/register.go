@@ -125,7 +125,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				Commodities: r.commodities.Value(),
 			},
 		}
-		pastBuilder = &process.PASTBuilder{
+		pastBuilder = &process.Balancer{
 			Context: jctx,
 		}
 		priceUpdater = &process.PriceUpdater{

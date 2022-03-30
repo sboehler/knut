@@ -22,7 +22,6 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/val"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
@@ -53,21 +52,6 @@ type Builder struct {
 	Result *Report
 }
 
-func (rb *Builder) add(rep *Report, b *val.Day) {
-	rep.Dates = append(rep.Dates, b.Date)
-	if rep.Positions == nil {
-		rep.Positions = make(indexByAccount)
-	}
-	for pos, val := range b.Values {
-		if val.IsZero() {
-			continue
-		}
-		if acc := pos.Account.Map(rb.Mapping); acc != nil {
-			rep.Positions.Add(acc, pos.Commodity, b.Date, val)
-		}
-	}
-}
-
 func (rb *Builder) add2(rep *Report, b *ast.Day) {
 	rep.Dates = append(rep.Dates, b.Date)
 	if rep.Positions == nil {
@@ -81,32 +65,6 @@ func (rb *Builder) add2(rep *Report, b *ast.Day) {
 			rep.Positions.Add(acc, pos.Commodity, b.Date, val)
 		}
 	}
-}
-
-// FromStream consumes the stream and produces a report.
-func (rb *Builder) FromStream(ctx context.Context, ch <-chan *val.Day) (<-chan *Report, <-chan error) {
-	var (
-		resCh = make(chan *Report)
-		errCh = make(chan error)
-	)
-	go func() {
-		defer close(resCh)
-		defer close(errCh)
-
-		res := new(Report)
-		for {
-			d, ok, err := cpr.Pop(ctx, ch)
-			if err != nil {
-				return
-			}
-			if !ok {
-				break
-			}
-			rb.add(res, d)
-		}
-		cpr.Push(ctx, resCh, res)
-	}()
-	return resCh, errCh
 }
 
 // Sink2 consumes the stream and produces a report.

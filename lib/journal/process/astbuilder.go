@@ -19,13 +19,11 @@ type ASTBuilder struct {
 	Journal string
 	Expand  bool
 	Filter  journal.Filter
-
-	ast *ast.AST
 }
 
 // Source2 is a source of days.
 func (pr *ASTBuilder) Source2(ctx context.Context, g *errgroup.Group) <-chan *ast.Day {
-	pr.ast = &ast.AST{
+	a := &ast.AST{
 		Context: pr.Context,
 		Days:    make(map[time.Time]*ast.Day),
 	}
@@ -50,10 +48,10 @@ func (pr *ASTBuilder) Source2(ctx context.Context, g *errgroup.Group) <-chan *as
 			switch t := d.(type) {
 
 			case *ast.Open:
-				pr.ast.AddOpen(t)
+				a.AddOpen(t)
 
 			case *ast.Price:
-				pr.ast.AddPrice(t)
+				a.AddPrice(t)
 
 			case *ast.Transaction:
 				var filtered []ast.Posting
@@ -73,14 +71,14 @@ func (pr *ASTBuilder) Source2(ctx context.Context, g *errgroup.Group) <-chan *as
 						switch acc := addOn.(type) {
 						case *ast.Accrual:
 							for _, ts := range acc.Expand(t) {
-								pr.ast.AddTransaction(ts)
+								a.AddTransaction(ts)
 							}
 						default:
 							panic(fmt.Sprintf("unknown addon: %#v", acc))
 						}
 					}
 				} else {
-					pr.ast.AddTransaction(t)
+					a.AddTransaction(t)
 				}
 
 			case *ast.Assertion:
@@ -90,7 +88,7 @@ func (pr *ASTBuilder) Source2(ctx context.Context, g *errgroup.Group) <-chan *as
 				if !pr.Filter.MatchCommodity(t.Commodity) {
 					break
 				}
-				pr.ast.AddAssertion(t)
+				a.AddAssertion(t)
 
 			case *ast.Value:
 				if !pr.Filter.MatchAccount(t.Account) {
@@ -99,19 +97,19 @@ func (pr *ASTBuilder) Source2(ctx context.Context, g *errgroup.Group) <-chan *as
 				if !pr.Filter.MatchCommodity(t.Commodity) {
 					break
 				}
-				pr.ast.AddValue(t)
+				a.AddValue(t)
 
 			case *ast.Close:
 				if !pr.Filter.MatchAccount(t.Account) {
 					break
 				}
-				pr.ast.AddClose(t)
+				a.AddClose(t)
 
 			default:
 				return fmt.Errorf("unknown: %#v", t)
 			}
 		}
-		for _, d := range pr.ast.SortedDays() {
+		for _, d := range a.SortedDays() {
 			if err := cpr.Push(ctx, resCh, d); err != nil {
 				return err
 			}

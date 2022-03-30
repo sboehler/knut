@@ -30,16 +30,13 @@ type Engine[T any] struct {
 
 // Process processes the pipeline in the engine.
 func (eng *Engine[T]) Process(ctx context.Context) error {
-	grp, ctx := errgroup.WithContext(ctx)
-
-	ch := eng.Source.Source(ctx, grp)
-
+	g, ctx := errgroup.WithContext(ctx)
+	ch := eng.Source.Source(ctx, g)
 	for _, pr := range eng.Processors {
-		ch = pr.Process(ctx, grp, ch)
+		ch = pr.Process(ctx, g, ch)
 	}
-
-	eng.Sink.Sink(ctx, grp, ch)
-	return grp.Wait()
+	eng.Sink.Sink(ctx, g, ch)
+	return g.Wait()
 }
 
 // Add adds a processor.

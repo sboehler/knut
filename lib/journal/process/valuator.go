@@ -3,7 +3,6 @@ package process
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
@@ -17,48 +16,6 @@ import (
 type Valuator struct {
 	Context   journal.Context
 	Valuation *journal.Commodity
-
-	values            amounts.Amounts
-	amounts           amounts.Amounts
-	normalized        journal.NormalizedPrices
-	date              time.Time
-	newPrices, newTrx bool
-}
-
-// ProcessStream computes prices.
-func (pr *Valuator) ProcessStream(ctx context.Context, inCh <-chan *val.Day) (chan *val.Day, chan error) {
-	errCh := make(chan error)
-	resCh := make(chan *val.Day, 100)
-
-	values := make(amounts.Amounts)
-
-	go func() {
-		defer close(resCh)
-		defer close(errCh)
-
-		for {
-			day, ok, err := cpr.Pop(ctx, inCh)
-			if !ok || err != nil {
-				return
-			}
-			day.Values = values
-
-			for _, t := range day.Day.Transactions {
-				if errors := pr.valuateAndBookTransaction(ctx, day, t); cpr.Push(ctx, errCh, errors...) != nil {
-					return
-				}
-			}
-
-			pr.computeValuationTransactions(day)
-			values = values.Clone()
-
-			if cpr.Push(ctx, resCh, day) != nil {
-				return
-			}
-		}
-	}()
-
-	return resCh, errCh
 }
 
 // Process2 computes prices.
@@ -192,102 +149,4 @@ func (pr Valuator) computeValuationTransactions(day *val.Day) {
 			day.Values.Book(credit, pos.Account, diff, pos.Commodity)
 		}
 	}
-}
-
-// Process valuates the transactions and inserts valuation transactions.
-func (pr *Valuator) Process(ctx context.Context, d ast.Dated, next func(ast.Dated) bool) error {
-	if pr.values == nil {
-		pr.values = make(amounts.Amounts)
-	}
-
-	if pr.date != d.Date {
-		if pr.newPrices {
-			if err := pr.processValuationTransactions(next); err != nil {
-				return err
-			}
-		}
-		if pr.newPrices || pr.newTrx {
-			next(ast.Dated{Date: pr.date, Elem: pr.values.Clone()})
-		}
-		pr.newPrices = false
-		pr.newTrx = false
-		pr.date = d.Date
-	}
-	switch dd := d.Elem.(type) {
-
-	case journal.NormalizedPrices:
-		pr.newPrices = true
-		pr.normalized = dd
-
-	case *ast.Transaction:
-		pr.newTrx = true
-		// valuate transaction
-		for i, posting := range dd.Postings {
-			if pr.Valuation != nil && pr.Valuation != posting.Commodity {
-				var err error
-				if posting.Amount, err = pr.normalized.Valuate(posting.Commodity, posting.Amount); err != nil {
-					return err
-				}
-			}
-			pr.values.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
-			dd.Postings[i] = posting
-		}
-		next(d)
-
-	case amounts.Amounts:
-		pr.amounts = dd
-
-	default:
-		next(d)
-	}
-	return nil
-}
-
-// Finalize implements Finalize.
-func (pr *Valuator) Finalize(ctx context.Context, next func(ast.Dated) bool) error {
-	if pr.newPrices {
-		if err := pr.processValuationTransactions(next); err != nil {
-			return err
-		}
-	}
-	if pr.newPrices || pr.newTrx {
-		next(ast.Dated{Date: pr.date, Elem: pr.values.Clone()})
-	}
-	return nil
-}
-
-func (pr *Valuator) processValuationTransactions(next func(ast.Dated) bool) error {
-	for pos, va := range pr.amounts {
-		if pos.Commodity == pr.Valuation {
-			continue
-		}
-		at := pos.Account.Type()
-		if at != journal.ASSETS && at != journal.LIABILITIES {
-			continue
-		}
-		value, err := pr.normalized.Valuate(pos.Commodity, va)
-		if err != nil {
-			return fmt.Errorf("no valuation found for commodity %s", pos.Commodity)
-		}
-		diff := value.Sub(pr.values[pos])
-		if diff.IsZero() {
-			continue
-		}
-		if !diff.IsZero() {
-			credit := pr.Context.ValuationAccountFor(pos.Account)
-			t := &ast.Transaction{
-				Date:        pr.date,
-				Description: fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account),
-				Postings: []ast.Posting{
-					ast.NewPostingWithTargets(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
-				},
-			}
-			pr.values.Book(credit, pos.Account, diff, pos.Commodity)
-			if !next(ast.Dated{Date: pr.date, Elem: t}) {
-				return nil
-			}
-		}
-	}
-	return nil
-
 }

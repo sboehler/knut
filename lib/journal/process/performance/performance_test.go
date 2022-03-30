@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/val"
 	"github.com/shopspring/decimal"
 )
 
@@ -34,7 +33,7 @@ func TestComputeFlows(t *testing.T) {
 		tests = []struct {
 			desc string
 			trx  *ast.Transaction
-			want *PerfPeriod
+			want *ast.Performance
 		}{
 			{
 				desc: "outflow",
@@ -48,7 +47,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				},
-				want: &PerfPeriod{Outflow: pcv{usd: -1.0}},
+				want: &ast.Performance{Outflow: pcv{usd: -1.0}},
 			},
 			{
 				desc: "inflow",
@@ -62,7 +61,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				},
-				want: &PerfPeriod{Inflow: pcv{usd: 1.0}},
+				want: &ast.Performance{Inflow: pcv{usd: 1.0}},
 			},
 			{
 				desc: "dividend",
@@ -77,7 +76,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				},
-				want: &PerfPeriod{
+				want: &ast.Performance{
 					InternalInflow:  pcv{usd: 1.0},
 					InternalOutflow: pcv{aapl: -1.0},
 				},
@@ -95,7 +94,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				},
-				want: &PerfPeriod{
+				want: &ast.Performance{
 					InternalInflow:  pcv{aapl: 1.0},
 					InternalOutflow: pcv{usd: -1.0},
 				},
@@ -113,7 +112,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				},
-				want: &PerfPeriod{
+				want: &ast.Performance{
 					InternalOutflow: pcv{usd: -1.0},
 					PortfolioInflow: 1.0,
 				},
@@ -138,7 +137,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				},
-				want: &PerfPeriod{
+				want: &ast.Performance{
 					InternalInflow:  pcv{aapl: 1010.0},
 					InternalOutflow: pcv{usd: -1010.0},
 				},
@@ -170,7 +169,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				},
-				want: &PerfPeriod{
+				want: &ast.Performance{
 					InternalInflow:  pcv{aapl: 1020.0},
 					InternalOutflow: pcv{usd: -1020.0},
 				},
@@ -195,7 +194,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				},
-				want: &PerfPeriod{
+				want: &ast.Performance{
 					InternalInflow:  pcv{usd: 990.0},
 					InternalOutflow: pcv{aapl: -990.0},
 				},
@@ -221,7 +220,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				},
-				want: &PerfPeriod{
+				want: &ast.Performance{
 					InternalOutflow: pcv{gbp: -1375.0},
 					InternalInflow:  pcv{usd: 1375.0},
 				},
@@ -253,7 +252,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				},
-				want: &PerfPeriod{
+				want: &ast.Performance{
 					InternalOutflow: pcv{gbp: -1370.0, chf: -10},
 					InternalInflow:  pcv{usd: 1380.0},
 				},
@@ -285,7 +284,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				},
-				want: &PerfPeriod{
+				want: &ast.Performance{
 					InternalOutflow: pcv{gbp: -1370.0},
 					InternalInflow:  pcv{usd: 1370.0},
 				},
@@ -295,7 +294,7 @@ func TestComputeFlows(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			var (
-				d = &val.Day{
+				d = &ast.Day{
 					Date:         time.Date(2021, 11, 15, 0, 0, 0, 0, time.UTC),
 					Transactions: []*ast.Transaction{test.trx},
 				}

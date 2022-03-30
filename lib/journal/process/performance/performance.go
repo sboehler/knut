@@ -2,12 +2,13 @@ package performance
 
 import (
 	"context"
+	"fmt"
 	"math"
-	"time"
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/val"
+	"github.com/sboehler/knut/lib/journal/ast"
+	"golang.org/x/sync/errgroup"
 )
 
 // Calculator calculates portfolio performance
@@ -17,40 +18,57 @@ type Calculator struct {
 	Filter    journal.Filter
 }
 
-// Perf computes portfolio performance.
-func (calc Calculator) Perf(ctx context.Context, inCh <-chan *val.Day) (<-chan *PerfPeriod, <-chan error) {
-	resCh := make(chan *PerfPeriod)
-	errCh := make(chan error)
+// Process2 computes portfolio performance.
+func (calc Calculator) Process2(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
+	resCh := make(chan *ast.Day)
 
-	go func() {
+	g.Go(func() error {
 		defer close(resCh)
-		defer close(errCh)
-
 		var prev pcv
-
 		for {
 			d, ok, err := cpr.Pop(ctx, inCh)
-			if !ok || err != nil {
-				return
+			if err != nil {
+				return err
+			}
+			if !ok {
+				break
 			}
 
 			dpr := calc.computeFlows(d)
-			dpr.Date = d.Date
 			dpr.V0 = prev
 			dpr.V1 = calc.valueByCommodity(d)
 			prev = dpr.V1
+			d.Performance = dpr
 
-			if cpr.Push(ctx, resCh, dpr) != nil {
-				return
+			if err := cpr.Push(ctx, resCh, d); err != nil {
+				return err
 			}
 		}
-	}()
-	return resCh, errCh
+		return nil
+	})
+	return resCh
 }
 
-func (calc *Calculator) valueByCommodity(d *val.Day) pcv {
+// Sink2 implements Sink.
+func (calc Calculator) Sink2(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) {
+	g.Go(func() error {
+		for {
+			p, ok, err := cpr.Pop(ctx, inCh)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				break
+			}
+			fmt.Printf("%v: %.1f%%\n", p.Date.Format("2006-01-02"), 100*(Performance(p.Performance)-1))
+		}
+		return nil
+	})
+}
+
+func (calc *Calculator) valueByCommodity(d *ast.Day) pcv {
 	res := make(pcv)
-	for pos, val := range d.Values {
+	for pos, val := range d.Value {
 		t := pos.Account.Type()
 		if t != journal.ASSETS && t != journal.LIABILITIES {
 			continue
@@ -67,7 +85,7 @@ func (calc *Calculator) valueByCommodity(d *val.Day) pcv {
 // pcv is a per-commodity value.
 type pcv map[*journal.Commodity]float64
 
-func (calc *Calculator) computeFlows(step *val.Day) *PerfPeriod {
+func (calc *Calculator) computeFlows(step *ast.Day) *ast.Performance {
 
 	var (
 		internalInflows, internalOutflows, inflows, outflows pcv
@@ -128,7 +146,7 @@ func (calc *Calculator) computeFlows(step *val.Day) *PerfPeriod {
 		split(flows, &inflows, &outflows)
 		split(internalFlows, &internalInflows, &internalOutflows)
 	}
-	return &PerfPeriod{
+	return &ast.Performance{
 		InternalInflow:   internalInflows,
 		InternalOutflow:  internalOutflows,
 		Inflow:           inflows,
@@ -191,16 +209,8 @@ func (calc Calculator) isPortfolioAccount(a *journal.Account) bool {
 
 // perf = ( V1 - Outflow ) / ( V0 + Inflow )
 
-// PerfPeriod represents monetary values and flows in a period.
-type PerfPeriod struct {
-	Date                                                     time.Time
-	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow pcv
-	PortfolioInflow, PortfolioOutflow                        float64
-	Err                                                      error
-}
-
 // Performance computes the portfolio performance.
-func (dpv PerfPeriod) Performance() float64 {
+func Performance(dpv *ast.Performance) float64 {
 	var (
 		v0, v1          float64
 		inflow, outflow = dpv.PortfolioInflow, dpv.PortfolioOutflow

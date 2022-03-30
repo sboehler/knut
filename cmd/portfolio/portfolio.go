@@ -23,9 +23,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
 	"github.com/sboehler/knut/lib/journal/process/performance"
 )
@@ -88,30 +87,25 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	if valuation, err = r.valuation.Value(jctx); err != nil {
 		return err
 	}
-
 	var (
-		par = parser.RecursiveParser{
-			File:    args[0],
+		astBuilder = &process.ASTBuilder{
+			Context: jctx,
+
+			Journal: args[0],
+			Expand:  true,
+		}
+		pastBuilder = &process.PASTBuilder{
 			Context: jctx,
 		}
-		astBuilder = process.ASTBuilder{
-			Context: jctx,
-		}
-		astExpander = process.ASTExpander{
-			Expand: true,
-		}
-		pastBuilder = process.PASTBuilder{
-			Context: jctx,
-		}
-		priceUpdater = process.PriceUpdater{
+		priceUpdater = &process.PriceUpdater{
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		valuator = process.Valuator{
+		valuator = &process.Valuator{
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		calculator = performance.Calculator{
+		calculator = &performance.Calculator{
 			Context:   jctx,
 			Valuation: valuation,
 			Filter: journal.Filter{
@@ -121,21 +115,14 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 		}
 	)
 
-	ch0, errCh0 := par.Parse(ctx)
-	ch1, errCh1 := astBuilder.BuildAST(ctx, ch0)
-	ch2, errCh2 := astExpander.ExpandAndFilterAST(ctx, ch1)
-	ch3, errCh3 := pastBuilder.ProcessAST(ctx, ch2)
-	ch4, errCh4 := priceUpdater.ProcessStream(ctx, ch3)
-	ch5, errCh5 := valuator.ProcessStream(ctx, ch4)
-	resCh, errCh6 := calculator.Perf(ctx, ch5)
+	eng := new(ast.Engine2[*ast.Day])
+	eng.Source = astBuilder
+	eng.Add(pastBuilder)
+	eng.Add(priceUpdater)
+	eng.Add(valuator)
+	eng.Add(calculator)
+	eng.Sink = calculator
 
-	errCh := cpr.Demultiplex(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5, errCh6)
+	return eng.Process(ctx)
 
-	for {
-		p, ok, err := cpr.Get(resCh, errCh)
-		if !ok || err != nil {
-			return err
-		}
-		fmt.Printf("%v: %.1f%%\n", p.Date.Format("2006-01-02"), 100*(p.Performance()-1))
-	}
 }

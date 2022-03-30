@@ -16,17 +16,14 @@ package transcode
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"os"
 
 	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/beancount"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
 	"github.com/sboehler/knut/lib/journal/process"
-	"github.com/sboehler/knut/lib/journal/val"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
@@ -76,56 +73,39 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 		return err
 	}
 	var (
-		par = parser.RecursiveParser{
+		astBuilder = &process.ASTBuilder{
 			Context: jctx,
-			File:    args[0],
+			Journal: args[0],
+			Expand:  true,
 		}
-		astBuilder = process.ASTBuilder{
-			Context: jctx,
-		}
-		astExpander = process.ASTExpander{
-			Expand: true,
-		}
-		pastBuilder = process.PASTBuilder{
+		pastBuilder = &process.PASTBuilder{
 			Context: jctx,
 		}
-		priceUpdater = process.PriceUpdater{
+		priceUpdater = &process.PriceUpdater{
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		valuator = process.Valuator{
+		valuator = &process.Valuator{
 			Context:   jctx,
 			Valuation: valuation,
 		}
+		c = new(ast.Collector[*ast.Day])
 	)
 
-	ctx, cancel := context.WithCancel(cmd.Context())
-	defer cancel()
+	eng := new(ast.Engine2[*ast.Day])
+	eng.Source = astBuilder
+	eng.Add(pastBuilder)
+	eng.Add(priceUpdater)
+	eng.Add(valuator)
+	eng.Sink = c
 
-	ch0, errCh0 := par.Parse(ctx)
-	ch1, errCh1 := astBuilder.BuildAST(ctx, ch0)
-	ch2, errCh2 := astExpander.ExpandAndFilterAST(ctx, ch1)
-	ch3, errCh3 := pastBuilder.ProcessAST(ctx, ch2)
-	ch4, errCh4 := priceUpdater.ProcessStream(ctx, ch3)
-	resCh, errCh5 := valuator.ProcessStream(ctx, ch4)
-
-	errCh := cpr.Demultiplex(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5)
-
-	var days []*val.Day
-	for {
-		d, ok, err := cpr.Get(resCh, errCh)
-		if !ok {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		days = append(days, d)
+	if err := eng.Process(cmd.Context()); err != nil {
+		return err
 	}
 
-	var w = bufio.NewWriter(cmd.OutOrStdout())
+	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer func() { err = multierr.Append(err, w.Flush()) }()
 
 	// transcode the ledger here
-	return beancount.Transcode(w, days, valuation)
+	return beancount.Transcode(w, c.Result, valuation)
 }

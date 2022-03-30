@@ -110,9 +110,18 @@ type Day struct {
 	Normalized journal.NormalizedPrices
 
 	PeriodDays []*Day
+
+	Performance *Performance
 }
 
 // Less establishes an ordering on Day.
 func (d *Day) Less(d2 *Day) bool {
 	return d.Date.Before(d2.Date)
+}
+
+// Performance holds aggregate information used to compute
+// portfolio performance.
+type Performance struct {
+	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow map[*journal.Commodity]float64
+	PortfolioInflow, PortfolioOutflow                        float64
 }

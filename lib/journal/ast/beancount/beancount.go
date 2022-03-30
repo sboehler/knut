@@ -24,11 +24,10 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
-	"github.com/sboehler/knut/lib/journal/val"
 )
 
 // Transcode transcodes the given ledger to beancount.
-func Transcode(w io.Writer, l []*val.Day, c *journal.Commodity) error {
+func Transcode(w io.Writer, l []*ast.Day, c *journal.Commodity) error {
 	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c); err != nil {
 		return err
 	}
@@ -38,14 +37,12 @@ func Transcode(w io.Writer, l []*val.Day, c *journal.Commodity) error {
 	var p printer.Printer
 	var openValAccounts = make(map[*journal.Account]bool)
 	for _, day := range l {
-		if day.Day != nil && day.Day.AST != nil {
-			for _, open := range day.Day.AST.Openings {
-				if _, err := p.PrintDirective(w, open); err != nil {
-					return err
-				}
-				if _, err := io.WriteString(w, "\n\n"); err != nil {
-					return err
-				}
+		for _, open := range day.Openings {
+			if _, err := p.PrintDirective(w, open); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, "\n\n"); err != nil {
+				return err
 			}
 		}
 		sort.Slice(day.Transactions, func(i, j int) bool {
@@ -79,14 +76,12 @@ func Transcode(w io.Writer, l []*val.Day, c *journal.Commodity) error {
 				return err
 			}
 		}
-		if day.Day != nil && day.Day.AST != nil {
-			for _, close := range day.Day.AST.Closings {
-				if _, err := p.PrintDirective(w, close); err != nil {
-					return err
-				}
-				if _, err := io.WriteString(w, "\n\n"); err != nil {
-					return err
-				}
+		for _, close := range day.Closings {
+			if _, err := p.PrintDirective(w, close); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, "\n\n"); err != nil {
+				return err
 			}
 		}
 	}

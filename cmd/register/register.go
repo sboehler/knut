@@ -16,7 +16,9 @@ package register
 
 import (
 	"bufio"
+	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -26,8 +28,9 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/spf13/cobra"
 )
@@ -114,61 +117,65 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 
 	var (
-		par = parser.RecursiveParser{
-			File:    args[0],
+		astBuilder = &process.ASTBuilder{
 			Context: jctx,
-		}
-		astBuilder = process.ASTBuilder{
-			Context: jctx,
-		}
-		astExpander = process.ASTExpander{
-			Expand: true,
+			Expand:  true,
 			Filter: journal.Filter{
 				Accounts:    r.accounts.Value(),
 				Commodities: r.commodities.Value(),
 			},
 		}
-		pastBuilder = process.PASTBuilder{
+		pastBuilder = &process.PASTBuilder{
 			Context: jctx,
 		}
-		priceUpdater = process.PriceUpdater{
+		priceUpdater = &process.PriceUpdater{
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		valuator = process.Valuator{
+		valuator = &process.Valuator{
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		periodFilter = process.PeriodFilter{
+		periodFilter = &process.PeriodFilter{
 			From:     r.from.Value(),
 			To:       r.to.Value(),
 			Interval: interval,
 			Last:     r.last,
 		}
+		w   = &regprinter{w: cmd.OutOrStdout()}
 		ctx = cmd.Context()
 	)
 
-	ch0, errCh0 := par.Parse(ctx)
-	ch1, errCh1 := astBuilder.BuildAST(ctx, ch0)
-	ch2, errCh2 := astExpander.ExpandAndFilterAST(ctx, ch1)
-	ch3, errCh3 := pastBuilder.ProcessAST(ctx, ch2)
-	ch4, errCh4 := priceUpdater.ProcessStream(ctx, ch3)
-	ch5, errCh5 := valuator.ProcessStream(ctx, ch4)
-	ch6, errCh6 := periodFilter.ProcessStream(ctx, ch5)
+	eng := new(ast.Engine2[*ast.Day])
+	eng.Source = astBuilder
+	eng.Add(pastBuilder)
+	eng.Add(priceUpdater)
+	eng.Add(valuator)
+	eng.Add(periodFilter)
+	eng.Sink = w
 
-	resCh := ch6
+	return eng.Process(ctx)
+}
 
-	errCh := cpr.Demultiplex(errCh0, errCh1, errCh2, errCh3, errCh4, errCh5, errCh6)
+type regprinter struct {
+	w io.Writer
+}
 
-	_, ok, err := cpr.Get(resCh, errCh)
-	if !ok {
-		return fmt.Errorf("no report was produced")
-	}
-	if err != nil {
-		return err
-	}
-	out := bufio.NewWriter(cmd.OutOrStdout())
-	defer out.Flush()
-	_, err = out.WriteString("register")
-	return err
+func (rp *regprinter) Sink2(ctx context.Context, g *errgroup.Group, ch <-chan *ast.Day) {
+	g.Go(func() error {
+		for {
+			_, ok, err := cpr.Pop(ctx, ch)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				break
+			}
+			out := bufio.NewWriter(rp.w)
+			defer out.Flush()
+			_, err = out.WriteString("register")
+			return err
+		}
+		return nil
+	})
 }

@@ -26,8 +26,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Report is a balance report for a range of dates.
-type Report struct {
+// Balance is a balance report for a range of dates.
+type Balance struct {
 	Dates     []time.Time
 	Mapping   journal.Mapping
 	Positions indexByAccount
@@ -35,7 +35,7 @@ type Report struct {
 
 // Subtree returns the accounts of the minimal dense subtree which
 // covers the accounts in this report.
-func (rep Report) Subtree() map[*journal.Account]struct{} {
+func (rep Balance) Subtree() map[*journal.Account]struct{} {
 	m := make(map[*journal.Account]struct{})
 	for acc := range rep.Positions {
 		for p := acc; p != nil; p = p.Parent() {
@@ -45,14 +45,14 @@ func (rep Report) Subtree() map[*journal.Account]struct{} {
 	return m
 }
 
-// Builder builds a report.
-type Builder struct {
+// BalanceBuilder builds a report.
+type BalanceBuilder struct {
 	Mapping journal.Mapping
 
-	Result *Report
+	Result *Balance
 }
 
-func (rb *Builder) add2(rep *Report, b *ast.Day) {
+func (rb *BalanceBuilder) add2(rep *Balance, b *ast.Day) {
 	rep.Dates = append(rep.Dates, b.Date)
 	if rep.Positions == nil {
 		rep.Positions = make(indexByAccount)
@@ -68,8 +68,8 @@ func (rb *Builder) add2(rep *Report, b *ast.Day) {
 }
 
 // Sink consumes the stream and produces a report.
-func (rb *Builder) Sink(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) {
-	rb.Result = new(Report)
+func (rb *BalanceBuilder) Sink(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) {
+	rb.Result = new(Balance)
 
 	g.Go(func() error {
 		for {
@@ -87,9 +87,9 @@ func (rb *Builder) Sink(ctx context.Context, g *errgroup.Group, inCh <-chan *ast
 }
 
 // Push adds values to the report.
-func (rb *Builder) Push(ctx context.Context, d ast.Dated) error {
+func (rb *BalanceBuilder) Push(ctx context.Context, d ast.Dated) error {
 	if rb.Result == nil {
-		rb.Result = new(Report)
+		rb.Result = new(Balance)
 	}
 	if v, ok := d.Elem.(amounts.Amounts); ok {
 		rb.Result.Dates = append(rb.Result.Dates, d.Date)

@@ -26,12 +26,12 @@ type Renderer struct {
 	Context            journal.Context
 	ShowCommodities    bool
 	SortAlphabetically bool
-	report             *Report
+	report             *Balance
 	table              *table.Table
 }
 
 // Render renders a report.
-func (rn *Renderer) Render(r *Report) *table.Table {
+func (rn *Renderer) Render(r *Balance) *table.Table {
 	rn.report = r
 	rn.table = table.New(1, len(rn.report.Dates))
 	rn.table.AddSeparatorRow()

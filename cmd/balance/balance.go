@@ -29,7 +29,7 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
-	"github.com/sboehler/knut/lib/journal/val/report"
+	"github.com/sboehler/knut/lib/journal/report"
 
 	"github.com/spf13/cobra"
 )
@@ -147,7 +147,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		differ = &process.Differ{
 			Diff: r.diff,
 		}
-		reportBuilder = &report.Builder{
+		reportBuilder = &report.BalanceBuilder{
 			Mapping: r.mapping.Value(),
 		}
 		reportRenderer = report.Renderer{

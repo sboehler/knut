@@ -104,8 +104,7 @@ type Day struct {
 	Transactions []*Transaction
 	Closings     []*Close
 
-	Amounts, Value   amounts.Amounts
-	AmountsD, ValueD amounts.Amounts
+	Amounts, Value amounts.Amounts
 
 	Normalized journal.NormalizedPrices
 

@@ -33,24 +33,28 @@ func (pr *Valuator) Process(ctx context.Context, g *errgroup.Group, inCh <-chan 
 			if !ok {
 				break
 			}
-			day.Value = values
 
-			for _, t := range day.Transactions {
-				for i, posting := range t.Postings {
-					if pr.Valuation != nil && pr.Valuation != posting.Commodity {
-						var err error
-						if posting.Amount, err = day.Normalized.Valuate(posting.Commodity, posting.Amount); err != nil {
-							return err
+			if pr.Valuation != nil {
+				day.Value = values
+
+				for _, t := range day.Transactions {
+					for i := range t.Postings {
+						posting := &t.Postings[i]
+						if pr.Valuation != posting.Commodity {
+							if posting.Value, err = day.Normalized.Valuate(posting.Commodity, posting.Amount); err != nil {
+								return err
+							}
+						} else {
+							posting.Value = posting.Amount
 						}
+						values.Book(posting.Credit, posting.Debit, posting.Value, posting.Commodity)
 					}
-					values.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
-					t.Postings[i] = posting
 				}
+
+				pr.computeValuationTransactions(day)
+				values = values.Clone()
+
 			}
-
-			pr.computeValuationTransactions(day)
-			values = values.Clone()
-
 			if err := cpr.Push(ctx, resCh, day); err != nil {
 				return err
 			}
@@ -84,7 +88,7 @@ func (pr *Valuator) computeValuationTransactions(d *ast.Day) error {
 				Date:        d.Date,
 				Description: fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account),
 				Postings: []ast.Posting{
-					ast.NewPostingWithTargets(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
+					ast.NewValuePosting(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
 				},
 			}
 			d.Value.Book(credit, pos.Account, diff, pos.Commodity)

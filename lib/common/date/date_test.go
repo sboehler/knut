@@ -161,7 +161,7 @@ func TestPeriods(t *testing.T) {
 				{Date(2020, 1, 6), Date(2020, 1, 12)},
 				{Date(2020, 1, 13), Date(2020, 1, 19)},
 				{Date(2020, 1, 20), Date(2020, 1, 26)},
-				{Date(2020, 1, 27), Date(2020, 2, 2)},
+				{Date(2020, 1, 27), Date(2020, 1, 31)},
 			},
 		},
 		{
@@ -188,7 +188,7 @@ func TestPeriods(t *testing.T) {
 			result: []Period{
 				{Date(2017, 1, 1), Date(2017, 12, 31)},
 				{Date(2018, 1, 1), Date(2018, 12, 31)},
-				{Date(2019, 1, 1), Date(2019, 12, 31)},
+				{Date(2019, 1, 1), Date(2019, 3, 3)},
 			},
 		},
 	}

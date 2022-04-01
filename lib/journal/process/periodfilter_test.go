@@ -71,7 +71,7 @@ func TestPeriodFilter(t *testing.T) {
 					day(2022, 1, 4, 300),
 				},
 				want: []*ast.Day{
-					day(2022, 1, 31, 300, datedTrx(2022, 1, 2)),
+					day(2022, 1, 10, 300, datedTrx(2022, 1, 2)),
 				},
 			},
 			{
@@ -91,7 +91,7 @@ func TestPeriodFilter(t *testing.T) {
 					day(2021, 10, 31, 100),
 					day(2021, 11, 30, 100),
 					day(2021, 12, 31, 100),
-					day(2022, 1, 31, 300, datedTrx(2022, 1, 1), datedTrx(2022, 1, 4)),
+					day(2022, 1, 10, 300, datedTrx(2022, 1, 1), datedTrx(2022, 1, 4)),
 				},
 			},
 		}

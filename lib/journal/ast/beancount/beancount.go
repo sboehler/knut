@@ -24,6 +24,7 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/shopspring/decimal"
 )
 
 // Transcode transcodes the given ledger to beancount.
@@ -111,14 +112,20 @@ func writeTrx(w io.Writer, t *ast.Transaction, c *journal.Commodity) error {
 
 // WriteTo pretty-prints a posting.
 func writePosting(w io.Writer, p ast.Posting, c *journal.Commodity) error {
-	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit, p.Amount.Neg(), stripNonAlphanum(c)); err != nil {
+	var amt decimal.Decimal
+	if c == nil {
+		amt = p.Amount
+	} else {
+		amt = p.Value
+	}
+	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit, amt.Neg(), stripNonAlphanum(c)); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n"); err != nil {
 		return err
 	}
 
-	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Debit, p.Amount, stripNonAlphanum(c)); err != nil {
+	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Debit, amt, stripNonAlphanum(c)); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n"); err != nil {

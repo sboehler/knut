@@ -53,7 +53,7 @@ type Close struct {
 
 // Posting represents a posting.
 type Posting struct {
-	Amount        decimal.Decimal
+	Amount, Value decimal.Decimal
 	Credit, Debit *journal.Account
 	Commodity     *journal.Commodity
 	Targets       []*journal.Commodity
@@ -81,6 +81,21 @@ func NewPostingWithTargets(crAccount, drAccount *journal.Account, commodity *jou
 	p := NewPosting(crAccount, drAccount, commodity, amt)
 	p.Targets = targets
 	return p
+}
+
+// NewValuePosting creates a value adjustment posting.
+func NewValuePosting(crAccount, drAccount *journal.Account, commodity *journal.Commodity, val decimal.Decimal, targets []*journal.Commodity) Posting {
+	if val.IsNegative() {
+		crAccount, drAccount = drAccount, crAccount
+		val = val.Neg()
+	}
+	return Posting{
+		Credit:    crAccount,
+		Debit:     drAccount,
+		Value:     val,
+		Commodity: commodity,
+		Targets:   targets,
+	}
 }
 
 // Less determines an order on postings.

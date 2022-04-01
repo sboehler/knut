@@ -13,7 +13,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func TestbalancerHappyCase(t *testing.T) {
+func TestBalancerHappyCase(t *testing.T) {
 	var (
 		jctx     = journal.NewContext()
 		td       = newTestData(jctx)

@@ -14,7 +14,9 @@
 
 package date
 
-import "time"
+import (
+	"time"
+)
 
 // Interval is a time interval.
 type Interval int
@@ -102,7 +104,7 @@ func EndOf(d time.Time, p Interval) time.Time {
 
 // Today returns today's date.
 func Today() time.Time {
-	now := time.Now()
+	now := time.Now().Local()
 	return Date(now.Year(), now.Month(), now.Day())
 }
 
@@ -121,7 +123,11 @@ func Periods(t0, t1 time.Time, p Interval) []Period {
 		}
 	} else {
 		for t := t0; !t.After(t1); t = EndOf(t, p).AddDate(0, 0, 1) {
-			res = append(res, Period{StartOf(t, p), EndOf(t, p)})
+			ed := EndOf(t, p)
+			if ed.After(t1) {
+				ed = t1
+			}
+			res = append(res, Period{StartOf(t, p), ed})
 		}
 	}
 	return res

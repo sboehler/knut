@@ -33,6 +33,15 @@ func TestPeriodFilter(t *testing.T) {
 			},
 		}
 	}
+	pday := func(y int, m time.Month, d int, v int64, days ...*ast.Day) *ast.Day {
+		return &ast.Day{
+			Date:       date.Date(y, m, d),
+			PeriodDays: days,
+			Value: amounts.Amounts{
+				amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(v),
+			},
+		}
+	}
 
 	var (
 		tests = []struct {
@@ -56,7 +65,11 @@ func TestPeriodFilter(t *testing.T) {
 					day(2022, 1, 4, 3),
 				},
 				want: []*ast.Day{
-					day(2022, 1, 10, 3, datedTrx(2022, 1, 2)),
+					pday(2022, 1, 10, 3,
+						day(2022, 1, 2, 1, datedTrx(2022, 1, 2)),
+						day(2022, 1, 3, 2),
+						day(2022, 1, 4, 3),
+					),
 				},
 			},
 			{
@@ -71,7 +84,10 @@ func TestPeriodFilter(t *testing.T) {
 					day(2022, 1, 4, 300),
 				},
 				want: []*ast.Day{
-					day(2022, 1, 10, 300, datedTrx(2022, 1, 2)),
+					pday(2022, 1, 10, 300,
+						day(2022, 1, 2, 100, datedTrx(2022, 1, 2)),
+						day(2022, 1, 3, 200),
+						day(2022, 1, 4, 300)),
 				},
 			},
 			{
@@ -87,11 +103,13 @@ func TestPeriodFilter(t *testing.T) {
 					day(2022, 1, 4, 300, datedTrx(2022, 1, 4)),
 				},
 				want: []*ast.Day{
-					day(2021, 9, 30, 100, datedTrx(2021, 1, 1)),
-					day(2021, 10, 31, 100),
-					day(2021, 11, 30, 100),
-					day(2021, 12, 31, 100),
-					day(2022, 1, 10, 300, datedTrx(2022, 1, 1), datedTrx(2022, 1, 4)),
+					pday(2021, 9, 30, 100),
+					pday(2021, 10, 31, 100),
+					pday(2021, 11, 30, 100),
+					pday(2021, 12, 31, 100),
+					pday(2022, 1, 10, 300,
+						day(2022, 1, 1, 200, datedTrx(2022, 1, 1)),
+						day(2022, 1, 4, 300, datedTrx(2022, 1, 4))),
 				},
 			},
 		}

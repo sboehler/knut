@@ -120,7 +120,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	var (
 		journalSource = &process.JournalSource{
 			Context: jctx,
-			Path: args[0],
+			Path:    args[0],
 			Filter: journal.Filter{
 				Accounts:    r.accounts.Value(),
 				Commodities: r.commodities.Value(),
@@ -144,9 +144,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Interval: interval,
 			Last:     r.last,
 		}
-		differ = &process.Differ{
-			Diff: r.diff,
-		}
+		periodDiffer  = &process.PeriodDiffer{}
 		reportBuilder = &report.BalanceBuilder{
 			Mapping: r.mapping.Value(),
 		}
@@ -165,11 +163,13 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 
 	eng := new(cpr.Engine[*ast.Day])
 	eng.Source = journalSource
-	eng.Add(balancer)
 	eng.Add(priceUpdater)
+	eng.Add(balancer)
 	eng.Add(valuator)
 	eng.Add(periodFilter)
-	eng.Add(differ)
+	if r.diff {
+		eng.Add(periodDiffer)
+	}
 	eng.Sink = reportBuilder
 
 	if err := eng.Process(ctx); err != nil {

@@ -16,6 +16,7 @@ package report
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/cpr"
@@ -53,6 +54,9 @@ type BalanceBuilder struct {
 
 func (rb *BalanceBuilder) add2(rep *Balance, b *ast.Day) {
 	rep.Dates = append(rep.Dates, b.Date)
+	sort.Slice(rep.Dates, func(i, j int) bool {
+		return rep.Dates[i].Before(rep.Dates[j])
+	})
 	if rep.Positions == nil {
 		rep.Positions = make(indexByAccount)
 	}

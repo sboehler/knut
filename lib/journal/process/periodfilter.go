@@ -28,10 +28,10 @@ func (pf PeriodFilter) Process(ctx context.Context, g *errgroup.Group, inCh <-ch
 
 		var (
 			periods []date.Period
-			prev    = new(ast.Day)
-			trx     []*ast.Transaction
-			index   int
+			days    []*ast.Day
+			current int
 			init    bool
+			latest  *ast.Day
 		)
 		for {
 			day, ok, err := cpr.Pop(ctx, inCh)
@@ -43,26 +43,29 @@ func (pf PeriodFilter) Process(ctx context.Context, g *errgroup.Group, inCh <-ch
 					continue
 				}
 				periods = pf.computeDates(day.Date)
+				latest = day
 				init = true
 			}
-			for index < len(periods) && (!ok || periods[index].End.Before(day.Date)) {
-				r := &ast.Day{
-					Date:         periods[index].End,
-					Value:        prev.Value,
-					Transactions: trx,
-					Normalized:   prev.Normalized,
+			for ; current < len(periods) && (!ok || periods[current].End.Before(day.Date)); current++ {
+				pd := &ast.Day{
+					Date:       periods[current].End,
+					PeriodDays: days,
+					Amounts:    latest.Amounts,
+					Value:      latest.Value,
+					Normalized: latest.Normalized,
 				}
-				if err := cpr.Push(ctx, resCh, r); err != nil {
+				if err := cpr.Push(ctx, resCh, pd); err != nil {
 					return err
 				}
-				trx = nil
-				index++
+				days = nil
 			}
 			if !ok {
 				break
 			}
-			trx = append(trx, day.Transactions...)
-			prev = day
+			if current < len(periods) && periods[current].Contains(day.Date) {
+				days = append(days, day)
+			}
+			latest = day
 		}
 		return nil
 	})

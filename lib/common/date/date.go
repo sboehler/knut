@@ -132,3 +132,8 @@ func Periods(t0, t1 time.Time, p Interval) []Period {
 	}
 	return res
 }
+
+// Contains returns whether the period contains the given date.
+func (p Period) Contains(t time.Time) bool {
+	return !p.Start.After(t) && !p.End.Before(t)
+}

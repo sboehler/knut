@@ -66,16 +66,9 @@ func (pr *JournalSource) Source(ctx context.Context, g *errgroup.Group) <-chan *
 				if len(filtered) < len(t.Postings) {
 					t.Postings = filtered
 				}
-				if len(t.AddOns) > 0 {
-					for _, addOn := range t.AddOns {
-						switch acc := addOn.(type) {
-						case *ast.Accrual:
-							for _, ts := range acc.Expand(t) {
-								a.AddTransaction(ts)
-							}
-						default:
-							panic(fmt.Sprintf("unknown addon: %#v", acc))
-						}
+				if t.Accrual != nil {
+					for _, ts := range t.Accrual.Expand(t) {
+						a.AddTransaction(ts)
 					}
 				} else {
 					a.AddTransaction(t)

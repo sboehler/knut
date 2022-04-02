@@ -143,27 +143,7 @@ type Transaction struct {
 	Description string
 	Tags        []Tag
 	Postings    []Posting
-	AddOns      []interface{}
-}
-
-// Clone clones a transaction.
-func (t Transaction) Clone() *Transaction {
-	var (
-		tags     = make([]Tag, len(t.Tags))
-		postings = make([]Posting, len(t.Postings))
-		addOns   = make([]interface{}, len(t.AddOns))
-	)
-	copy(tags, t.Tags)
-	copy(postings, t.Postings)
-	copy(addOns, t.AddOns)
-	return &Transaction{
-		Range:       t.Range,
-		Date:        t.Date,
-		Description: t.Description,
-		Tags:        tags,
-		Postings:    postings,
-		AddOns:      addOns,
-	}
+	Accrual     *Accrual
 }
 
 // Commodities returns the commodities in this transaction.

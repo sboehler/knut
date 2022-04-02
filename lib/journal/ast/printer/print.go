@@ -56,16 +56,11 @@ func (p Printer) PrintDirective(w io.Writer, directive ast.Directive) (n int, er
 }
 
 func (p Printer) printTransaction(w io.Writer, t *ast.Transaction) (n int, err error) {
-	for _, addOn := range t.AddOns {
-		switch ao := addOn.(type) {
-		case *ast.Accrual:
-			c, err := p.printAccrual(w, ao)
-			n += c
-			if err != nil {
-				return n, err
-			}
-		default:
-			return n, fmt.Errorf("Unknown Add-On: %v", ao)
+	if t.Accrual != nil {
+		c, err := p.printAccrual(w, t.Accrual)
+		n += c
+		if err != nil {
+			return n, err
 		}
 	}
 	c, err := fmt.Fprintf(w, "%s \"%s\"", t.Date.Format("2006-01-02"), t.Description)

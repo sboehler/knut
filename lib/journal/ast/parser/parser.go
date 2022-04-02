@@ -223,7 +223,7 @@ func (p *Parser) parseTransaction(d time.Time) (*ast.Transaction, error) {
 
 func (p *Parser) parseAddOn() (*ast.Transaction, error) {
 	p.markStart()
-	var addOns []interface{}
+	var accrual *ast.Accrual
 	if p.current() == '@' {
 		if err := p.scanner.ConsumeRune('@'); err != nil {
 			return nil, err
@@ -279,13 +279,13 @@ func (p *Parser) parseAddOn() (*ast.Transaction, error) {
 		if err := p.consumeRestOfWhitespaceLine(); err != nil {
 			return nil, err
 		}
-		addOns = append(addOns, &ast.Accrual{
+		accrual = &ast.Accrual{
 			Range:    p.getRange(),
 			T0:       dateFrom,
 			T1:       dateTo,
 			Interval: interval,
 			Account:  account,
-		})
+		}
 	}
 	d, err := p.parseDate()
 	if err != nil {
@@ -298,7 +298,7 @@ func (p *Parser) parseAddOn() (*ast.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	t.AddOns = addOns
+	t.Accrual = accrual
 	return t, nil
 }
 

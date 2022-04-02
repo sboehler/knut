@@ -33,27 +33,15 @@ func (pr *Valuator) Process(ctx context.Context, g *errgroup.Group, inCh <-chan 
 			if !ok {
 				break
 			}
-
 			if pr.Valuation != nil {
 				day.Value = values
-
-				for _, t := range day.Transactions {
-					for i := range t.Postings {
-						posting := &t.Postings[i]
-						if pr.Valuation != posting.Commodity {
-							if posting.Value, err = day.Normalized.Valuate(posting.Commodity, posting.Amount); err != nil {
-								return err
-							}
-						} else {
-							posting.Value = posting.Amount
-						}
-						values.Book(posting.Credit, posting.Debit, posting.Value, posting.Commodity)
-					}
+				if err := pr.valuateTransactions(day); err != nil {
+					return err
 				}
-
-				pr.computeValuationTransactions(day)
+				if err := pr.computeValuationTransactions(day); err != nil {
+					return err
+				}
 				values = values.Clone()
-
 			}
 			if err := cpr.Push(ctx, resCh, day); err != nil {
 				return err
@@ -63,6 +51,24 @@ func (pr *Valuator) Process(ctx context.Context, g *errgroup.Group, inCh <-chan 
 	})
 
 	return resCh
+}
+
+func (pr Valuator) valuateTransactions(d *ast.Day) error {
+	var err error
+	for _, t := range d.Transactions {
+		for i := range t.Postings {
+			posting := &t.Postings[i]
+			if pr.Valuation != posting.Commodity {
+				if posting.Value, err = d.Normalized.Valuate(posting.Commodity, posting.Amount); err != nil {
+					return err
+				}
+			} else {
+				posting.Value = posting.Amount
+			}
+			d.Value.Book(posting.Credit, posting.Debit, posting.Value, posting.Commodity)
+		}
+	}
+	return nil
 }
 
 func (pr *Valuator) computeValuationTransactions(d *ast.Day) error {

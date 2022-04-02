@@ -47,14 +47,14 @@ func (pf PeriodFilter) Process(ctx context.Context, g *errgroup.Group, inCh <-ch
 				init = true
 			}
 			for ; current < len(periods) && (!ok || periods[current].End.Before(day.Date)); current++ {
-				pd := &ast.Day{
+				pDay := &ast.Day{
 					Date:       periods[current].End,
 					PeriodDays: days,
 					Amounts:    latest.Amounts,
 					Value:      latest.Value,
 					Normalized: latest.Normalized,
 				}
-				if err := cpr.Push(ctx, resCh, pd); err != nil {
+				if err := cpr.Push(ctx, resCh, pDay); err != nil {
 					return err
 				}
 				days = nil

@@ -30,7 +30,6 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/spf13/cobra"
 )
@@ -161,21 +160,19 @@ type regprinter struct {
 	w io.Writer
 }
 
-func (rp *regprinter) Sink(ctx context.Context, g *errgroup.Group, ch <-chan *ast.Day) {
-	g.Go(func() error {
-		for {
-			_, ok, err := cpr.Pop(ctx, ch)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				break
-			}
-			out := bufio.NewWriter(rp.w)
-			defer out.Flush()
-			_, err = out.WriteString("register")
+func (rp *regprinter) Sink(ctx context.Context, ch <-chan *ast.Day) error {
+	for {
+		_, ok, err := cpr.Pop(ctx, ch)
+		if err != nil {
 			return err
 		}
-		return nil
-	})
+		if !ok {
+			break
+		}
+		out := bufio.NewWriter(rp.w)
+		defer out.Flush()
+		_, err = out.WriteString("register")
+		return err
+	}
+	return nil
 }

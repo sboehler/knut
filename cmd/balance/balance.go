@@ -144,7 +144,9 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Interval: interval,
 			Last:     r.last,
 		}
-		periodDiffer  = &process.PeriodDiffer{}
+		periodDiffer = &process.PeriodDiffer{
+			Valuation: valuation,
+		}
 		reportBuilder = &report.BalanceBuilder{
 			Mapping: r.mapping.Value(),
 		}

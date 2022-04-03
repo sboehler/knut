@@ -16,19 +16,17 @@ package report
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/shopspring/decimal"
-	"golang.org/x/sync/errgroup"
 )
 
 // Balance is a balance report for a range of dates.
 type Balance struct {
-	Dates     []time.Time
+	Dates     map[time.Time]struct{}
 	Mapping   journal.Mapping
 	Positions indexByAccount
 }
@@ -53,13 +51,11 @@ type BalanceBuilder struct {
 }
 
 func (rb *BalanceBuilder) add2(rep *Balance, b *ast.Day) {
-	rep.Dates = append(rep.Dates, b.Date)
-	sort.Slice(rep.Dates, func(i, j int) bool {
-		return rep.Dates[i].Before(rep.Dates[j])
-	})
 	if rep.Positions == nil {
 		rep.Positions = make(indexByAccount)
+		rep.Dates = make(map[time.Time]struct{})
 	}
+	rep.Dates[b.Date] = struct{}{}
 	for pos, val := range b.Value {
 		if val.IsZero() {
 			continue
@@ -71,22 +67,19 @@ func (rb *BalanceBuilder) add2(rep *Balance, b *ast.Day) {
 }
 
 // Sink consumes the stream and produces a report.
-func (rb *BalanceBuilder) Sink(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) {
+func (rb *BalanceBuilder) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 	rb.Result = new(Balance)
-
-	g.Go(func() error {
-		for {
-			d, ok, err := cpr.Pop(ctx, inCh)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				break
-			}
-			rb.add2(rb.Result, d)
+	for {
+		d, ok, err := cpr.Pop(ctx, inCh)
+		if err != nil {
+			return err
 		}
-		return nil
-	})
+		if !ok {
+			break
+		}
+		rb.add2(rb.Result, d)
+	}
+	return nil
 }
 
 type indexByAccount map[*journal.Account]indexByCommodity

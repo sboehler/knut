@@ -7,7 +7,6 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"golang.org/x/sync/errgroup"
 )
 
 // PeriodFilter filters the incoming days according to the dates
@@ -19,58 +18,49 @@ type PeriodFilter struct {
 }
 
 // Process does the filtering.
-func (pf PeriodFilter) Process(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
-	resCh := make(chan *ast.Day, 100)
-
-	g.Go(func() error {
-
-		defer close(resCh)
-
-		var (
-			periods []date.Period
-			days    []*ast.Day
-			current int
-			init    bool
-			latest  *ast.Day
-		)
-		for {
-			day, ok, err := cpr.Pop(ctx, inCh)
-			if err != nil {
+func (pf PeriodFilter) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
+	var (
+		periods []date.Period
+		days    []*ast.Day
+		current int
+		init    bool
+		latest  *ast.Day
+	)
+	for {
+		day, ok, err := cpr.Pop(ctx, inCh)
+		if err != nil {
+			return err
+		}
+		if ok && !init {
+			if len(day.Transactions) == 0 {
+				continue
+			}
+			periods = pf.computeDates(day.Date)
+			latest = day
+			init = true
+		}
+		for ; current < len(periods) && (!ok || periods[current].End.Before(day.Date)); current++ {
+			pDay := &ast.Day{
+				Date:       periods[current].End,
+				PeriodDays: days,
+				Amounts:    latest.Amounts,
+				Value:      latest.Value,
+				Normalized: latest.Normalized,
+			}
+			if err := cpr.Push(ctx, outCh, pDay); err != nil {
 				return err
 			}
-			if ok && !init {
-				if len(day.Transactions) == 0 {
-					continue
-				}
-				periods = pf.computeDates(day.Date)
-				latest = day
-				init = true
-			}
-			for ; current < len(periods) && (!ok || periods[current].End.Before(day.Date)); current++ {
-				pDay := &ast.Day{
-					Date:       periods[current].End,
-					PeriodDays: days,
-					Amounts:    latest.Amounts,
-					Value:      latest.Value,
-					Normalized: latest.Normalized,
-				}
-				if err := cpr.Push(ctx, resCh, pDay); err != nil {
-					return err
-				}
-				days = nil
-			}
-			if !ok {
-				break
-			}
-			if current < len(periods) && periods[current].Contains(day.Date) {
-				days = append(days, day)
-			}
-			latest = day
+			days = nil
 		}
-		return nil
-	})
-	return resCh
-
+		if !ok {
+			break
+		}
+		if current < len(periods) && periods[current].Contains(day.Date) {
+			days = append(days, day)
+		}
+		latest = day
+	}
+	return nil
 }
 
 func (pf *PeriodFilter) computeDates(t time.Time) []date.Period {

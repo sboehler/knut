@@ -8,7 +8,6 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"golang.org/x/sync/errgroup"
 )
 
 // Calculator calculates portfolio performance
@@ -19,51 +18,43 @@ type Calculator struct {
 }
 
 // Process computes portfolio performance.
-func (calc Calculator) Process(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
-	resCh := make(chan *ast.Day)
-
-	g.Go(func() error {
-		defer close(resCh)
-		var prev pcv
-		for {
-			d, ok, err := cpr.Pop(ctx, inCh)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				break
-			}
-
-			dpr := calc.computeFlows(d)
-			dpr.V0 = prev
-			dpr.V1 = calc.valueByCommodity(d)
-			prev = dpr.V1
-			d.Performance = dpr
-
-			if err := cpr.Push(ctx, resCh, d); err != nil {
-				return err
-			}
+func (calc Calculator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
+	var prev pcv
+	for {
+		d, ok, err := cpr.Pop(ctx, inCh)
+		if err != nil {
+			return err
 		}
-		return nil
-	})
-	return resCh
+		if !ok {
+			break
+		}
+
+		dpr := calc.computeFlows(d)
+		dpr.V0 = prev
+		dpr.V1 = calc.valueByCommodity(d)
+		prev = dpr.V1
+		d.Performance = dpr
+
+		if err := cpr.Push(ctx, outCh, d); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Sink implements Sink.
-func (calc Calculator) Sink(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) {
-	g.Go(func() error {
-		for {
-			p, ok, err := cpr.Pop(ctx, inCh)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				break
-			}
-			fmt.Printf("%v: %.1f%%\n", p.Date.Format("2006-01-02"), 100*(Performance(p.Performance)-1))
+func (calc Calculator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
+	for {
+		p, ok, err := cpr.Pop(ctx, inCh)
+		if err != nil {
+			return err
 		}
-		return nil
-	})
+		if !ok {
+			break
+		}
+		fmt.Printf("%v: %.1f%%\n", p.Date.Format("2006-01-02"), 100*(Performance(p.Performance)-1))
+	}
+	return nil
 }
 
 func (calc *Calculator) valueByCommodity(d *ast.Day) pcv {

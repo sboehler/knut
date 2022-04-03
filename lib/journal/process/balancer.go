@@ -8,7 +8,6 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"golang.org/x/sync/errgroup"
 )
 
 // Balancer processes ASTs.
@@ -17,51 +16,43 @@ type Balancer struct {
 }
 
 // Process processes days.
-func (pr *Balancer) Process(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
+func (pr *Balancer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
+	amounts := make(amounts.Amounts)
+	accounts := make(accounts)
 
-	resCh := make(chan *ast.Day, 100)
-
-	g.Go(func() error {
-		defer close(resCh)
-
-		amounts := make(amounts.Amounts)
-		accounts := make(accounts)
-
-		for {
-			d, ok, err := cpr.Pop(ctx, inCh)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				break
-			}
-			var transactions []*ast.Transaction
-			if err := pr.processOpenings(ctx, accounts, d); err != nil {
-				return err
-			}
-			if err := pr.processTransactions(ctx, accounts, amounts, d); err != nil {
-				return err
-			}
-			if transactions, err = pr.processValues(ctx, accounts, amounts, d); err != nil {
-				return err
-			}
-			if err = pr.processAssertions(ctx, accounts, amounts, d); err != nil {
-				return err
-			}
-			if err = pr.processClosings(ctx, accounts, amounts, d); err != nil {
-				return err
-			}
-
-			d.Transactions = append(d.Transactions, transactions...)
-			d.Amounts = amounts.Clone()
-
-			if err := cpr.Push(ctx, resCh, d); err != nil {
-				return err
-			}
+	for {
+		d, ok, err := cpr.Pop(ctx, inCh)
+		if err != nil {
+			return err
 		}
-		return nil
-	})
-	return resCh
+		if !ok {
+			break
+		}
+		var transactions []*ast.Transaction
+		if err := pr.processOpenings(ctx, accounts, d); err != nil {
+			return err
+		}
+		if err := pr.processTransactions(ctx, accounts, amounts, d); err != nil {
+			return err
+		}
+		if transactions, err = pr.processValues(ctx, accounts, amounts, d); err != nil {
+			return err
+		}
+		if err = pr.processAssertions(ctx, accounts, amounts, d); err != nil {
+			return err
+		}
+		if err = pr.processClosings(ctx, accounts, amounts, d); err != nil {
+			return err
+		}
+
+		d.Transactions = append(d.Transactions, transactions...)
+		d.Amounts = amounts.Clone()
+
+		if err := cpr.Push(ctx, outCh, d); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (pr *Balancer) processOpenings(ctx context.Context, accounts accounts, d *ast.Day) error {

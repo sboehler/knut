@@ -9,7 +9,6 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
-	"golang.org/x/sync/errgroup"
 )
 
 // JournalSource emits journal data in daily batches.
@@ -22,7 +21,7 @@ type JournalSource struct {
 }
 
 // Source is a source of days.
-func (pr *JournalSource) Source(ctx context.Context, g *errgroup.Group) <-chan *ast.Day {
+func (pr *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) error {
 	a := &ast.AST{
 		Context: pr.Context,
 		Days:    make(map[time.Time]*ast.Day),
@@ -31,83 +30,77 @@ func (pr *JournalSource) Source(ctx context.Context, g *errgroup.Group) <-chan *
 		Context: pr.Context,
 		File:    pr.Path,
 	}
-	resCh := make(chan *ast.Day, 100)
 
-	g.Go(func() error {
-		defer close(resCh)
+	ch, errCh := p.Parse(ctx)
+	for {
+		d, ok, err := cpr.Get(ch, errCh)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			break
+		}
+		switch t := d.(type) {
 
-		ch, errCh := p.Parse(ctx)
-		for {
-			d, ok, err := cpr.Get(ch, errCh)
-			if err != nil {
-				return err
+		case *ast.Open:
+			a.AddOpen(t)
+
+		case *ast.Price:
+			a.AddPrice(t)
+
+		case *ast.Transaction:
+			var filtered []ast.Posting
+			for _, p := range t.Postings {
+				if p.Matches(pr.Filter) {
+					filtered = append(filtered, p)
+				}
 			}
-			if !ok {
+			if len(filtered) == 0 {
 				break
 			}
-			switch t := d.(type) {
-
-			case *ast.Open:
-				a.AddOpen(t)
-
-			case *ast.Price:
-				a.AddPrice(t)
-
-			case *ast.Transaction:
-				var filtered []ast.Posting
-				for _, p := range t.Postings {
-					if p.Matches(pr.Filter) {
-						filtered = append(filtered, p)
-					}
-				}
-				if len(filtered) == 0 {
-					break
-				}
-				if len(filtered) < len(t.Postings) {
-					t.Postings = filtered
-				}
-				if t.Accrual != nil {
-					for _, ts := range t.Accrual.Expand(t) {
-						a.AddTransaction(ts)
-					}
-				} else {
-					a.AddTransaction(t)
-				}
-
-			case *ast.Assertion:
-				if !pr.Filter.MatchAccount(t.Account) {
-					break
-				}
-				if !pr.Filter.MatchCommodity(t.Commodity) {
-					break
-				}
-				a.AddAssertion(t)
-
-			case *ast.Value:
-				if !pr.Filter.MatchAccount(t.Account) {
-					break
-				}
-				if !pr.Filter.MatchCommodity(t.Commodity) {
-					break
-				}
-				a.AddValue(t)
-
-			case *ast.Close:
-				if !pr.Filter.MatchAccount(t.Account) {
-					break
-				}
-				a.AddClose(t)
-
-			default:
-				return fmt.Errorf("unknown: %#v", t)
+			if len(filtered) < len(t.Postings) {
+				t.Postings = filtered
 			}
-		}
-		for _, d := range a.SortedDays() {
-			if err := cpr.Push(ctx, resCh, d); err != nil {
-				return err
+			if t.Accrual != nil {
+				for _, ts := range t.Accrual.Expand(t) {
+					a.AddTransaction(ts)
+				}
+			} else {
+				a.AddTransaction(t)
 			}
+
+		case *ast.Assertion:
+			if !pr.Filter.MatchAccount(t.Account) {
+				break
+			}
+			if !pr.Filter.MatchCommodity(t.Commodity) {
+				break
+			}
+			a.AddAssertion(t)
+
+		case *ast.Value:
+			if !pr.Filter.MatchAccount(t.Account) {
+				break
+			}
+			if !pr.Filter.MatchCommodity(t.Commodity) {
+				break
+			}
+			a.AddValue(t)
+
+		case *ast.Close:
+			if !pr.Filter.MatchAccount(t.Account) {
+				break
+			}
+			a.AddClose(t)
+
+		default:
+			return fmt.Errorf("unknown: %#v", t)
 		}
-		return nil
-	})
-	return resCh
+	}
+	for _, d := range a.SortedDays() {
+		if err := cpr.Push(ctx, outCh, d); err != nil {
+			return err
+		}
+	}
+	return nil
 }

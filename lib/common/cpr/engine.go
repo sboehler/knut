@@ -8,17 +8,17 @@ import (
 
 // Source generates elements.
 type Source[T any] interface {
-	Source(context.Context, *errgroup.Group) <-chan T
+	Source(context.Context, chan<- T) error
 }
 
 // Processor processes elements.
 type Processor[T any] interface {
-	Process(context.Context, *errgroup.Group, <-chan T) <-chan T
+	Process(context.Context, <-chan T, chan<- T) error
 }
 
 // Sink consumes elements.
 type Sink[T any] interface {
-	Sink(context.Context, *errgroup.Group, <-chan T)
+	Sink(context.Context, <-chan T) error
 }
 
 // Engine processes a pipeline.
@@ -28,14 +28,33 @@ type Engine[T any] struct {
 	Processors []Processor[T]
 }
 
+const bufSize = 100
+
 // Process processes the pipeline in the engine.
 func (eng *Engine[T]) Process(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
-	ch := eng.Source.Source(ctx, g)
-	for _, pr := range eng.Processors {
-		ch = pr.Process(ctx, g, ch)
+	ch := make(chan T, bufSize)
+	{
+		outCh := ch
+		g.Go(func() error {
+			defer close(outCh)
+			return eng.Source.Source(ctx, outCh)
+		})
 	}
-	eng.Sink.Sink(ctx, g, ch)
+	for _, pr := range eng.Processors {
+		pr, inCh, outCh := pr, ch, make(chan T, bufSize)
+		g.Go(func() error {
+			defer close(outCh)
+			return pr.Process(ctx, inCh, outCh)
+		})
+		ch = outCh
+	}
+	{
+		inCh := ch
+		g.Go(func() error {
+			return eng.Sink.Sink(ctx, inCh)
+		})
+	}
 	return g.Wait()
 }
 
@@ -50,20 +69,18 @@ type Collector[T any] struct {
 }
 
 // Sink implements Sink.
-func (c *Collector[T]) Sink(ctx context.Context, g *errgroup.Group, ch <-chan T) {
-	g.Go(func() error {
-		for {
-			d, ok, err := Pop(ctx, ch)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				break
-			}
-			c.Result = append(c.Result, d)
+func (c *Collector[T]) Sink(ctx context.Context, inCh <-chan T) error {
+	for {
+		d, ok, err := Pop(ctx, inCh)
+		if err != nil {
+			return err
 		}
-		return nil
-	})
+		if !ok {
+			break
+		}
+		c.Result = append(c.Result, d)
+	}
+	return nil
 }
 
 // Producer produces values.
@@ -72,18 +89,13 @@ type Producer[T any] struct {
 }
 
 // Source implements Source.
-func (p *Producer[T]) Source(ctx context.Context, g *errgroup.Group) <-chan T {
-	ch := make(chan T)
-	g.Go(func() error {
-		defer close(ch)
-		for _, i := range p.Items {
-			if err := Push(ctx, ch, i); err != nil {
-				return err
-			}
+func (p *Producer[T]) Source(ctx context.Context, outCh chan<- T) error {
+	for _, i := range p.Items {
+		if err := Push(ctx, outCh, i); err != nil {
+			return err
 		}
-		return nil
-	})
-	return ch
+	}
+	return nil
 }
 
 // RunTestEngine runs the processor in a test engine.

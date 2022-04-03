@@ -8,7 +8,6 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"golang.org/x/sync/errgroup"
 )
 
 // Valuator produces valuated days.
@@ -18,39 +17,31 @@ type Valuator struct {
 }
 
 // Process computes prices.
-func (pr *Valuator) Process(ctx context.Context, g *errgroup.Group, inCh <-chan *ast.Day) <-chan *ast.Day {
-	resCh := make(chan *ast.Day, 100)
-
-	g.Go(func() error {
-		defer close(resCh)
-
-		values := make(amounts.Amounts)
-		for {
-			day, ok, err := cpr.Pop(ctx, inCh)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				break
-			}
-			if pr.Valuation != nil {
-				day.Value = values
-				if err := pr.valuateTransactions(day); err != nil {
-					return err
-				}
-				if err := pr.computeValuationTransactions(day); err != nil {
-					return err
-				}
-				values = values.Clone()
-			}
-			if err := cpr.Push(ctx, resCh, day); err != nil {
-				return err
-			}
+func (pr *Valuator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
+	values := make(amounts.Amounts)
+	for {
+		day, ok, err := cpr.Pop(ctx, inCh)
+		if err != nil {
+			return err
 		}
-		return nil
-	})
-
-	return resCh
+		if !ok {
+			break
+		}
+		if pr.Valuation != nil {
+			day.Value = values
+			if err := pr.valuateTransactions(day); err != nil {
+				return err
+			}
+			if err := pr.computeValuationTransactions(day); err != nil {
+				return err
+			}
+			values = values.Clone()
+		}
+		if err := cpr.Push(ctx, outCh, day); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (pr Valuator) valuateTransactions(d *ast.Day) error {

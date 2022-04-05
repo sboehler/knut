@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/date"
@@ -96,6 +97,14 @@ func NewValuePosting(crAccount, drAccount *journal.Account, commodity *journal.C
 		Commodity: commodity,
 		Targets:   targets,
 	}
+}
+
+// SortPostings sorts the given postings.
+func SortPostings(ps []Posting) []Posting {
+	sort.Slice(ps, func(i, j int) bool {
+		return ps[i].Less(ps[j])
+	})
+	return ps
 }
 
 // Less determines an order on postings.

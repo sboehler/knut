@@ -374,7 +374,7 @@ func (p *Parser) parsePostings() ([]ast.Posting, error) {
 			return nil, err
 		}
 	}
-	return postings, nil
+	return ast.SortPostings(postings), nil
 }
 
 func (p *Parser) parseOpen(d time.Time) (*ast.Open, error) {

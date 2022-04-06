@@ -123,6 +123,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				Accounts:    r.accounts.Value(),
 				Commodities: r.commodities.Value(),
 			},
+			Path: args[0],
 		}
 		balancer = &process.Balancer{
 			Context: jctx,
@@ -147,8 +148,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 
 	eng := new(cpr.Engine[*ast.Day])
 	eng.Source = journalSource
-	eng.Add(balancer)
 	eng.Add(priceUpdater)
+	eng.Add(balancer)
 	eng.Add(valuator)
 	eng.Add(periodFilter)
 	eng.Sink = w
@@ -161,6 +162,8 @@ type regprinter struct {
 }
 
 func (rp *regprinter) Sink(ctx context.Context, ch <-chan *ast.Day) error {
+	out := bufio.NewWriter(rp.w)
+	defer out.Flush()
 	for {
 		_, ok, err := cpr.Pop(ctx, ch)
 		if err != nil {
@@ -169,10 +172,10 @@ func (rp *regprinter) Sink(ctx context.Context, ch <-chan *ast.Day) error {
 		if !ok {
 			break
 		}
-		out := bufio.NewWriter(rp.w)
-		defer out.Flush()
-		_, err = out.WriteString("register")
-		return err
+		_, err = out.WriteString("register\n")
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

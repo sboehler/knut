@@ -36,12 +36,6 @@ Assets:Accounts:Revolut Expenses:TBD                    20 EUR
 Assets:Accounts:Revolut Expenses:TBD                   145 EUR
 
 2020-08-09 balance Assets:Accounts:Revolut 678.9 EUR
-2020-08-10 "Desc8 Groceries"
-Assets:Accounts:Revolut Expenses:TBD                 26.02 EUR
-
-2020-08-10 "Desc9 Groceries"
-Assets:Accounts:Revolut Expenses:TBD                 98.53 EUR
-
 2020-08-10 "Desc10 Transport"
 Assets:Accounts:Revolut Expenses:TBD                     2 EUR
 
@@ -50,6 +44,12 @@ Assets:Accounts:Revolut Expenses:TBD                    20 EUR
 
 2020-08-10 "Desc12 Groceries"
 Assets:Accounts:Revolut Expenses:TBD                   3.3 EUR
+
+2020-08-10 "Desc8 Groceries"
+Assets:Accounts:Revolut Expenses:TBD                 26.02 EUR
+
+2020-08-10 "Desc9 Groceries"
+Assets:Accounts:Revolut Expenses:TBD                 98.53 EUR
 
 2020-08-10 balance Assets:Accounts:Revolut 529.05 EUR
 2020-08-17 "Desc1 Transport"

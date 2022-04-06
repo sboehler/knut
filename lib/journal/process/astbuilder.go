@@ -49,20 +49,15 @@ func (pr *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) erro
 			a.AddPrice(t)
 
 		case *ast.Transaction:
-			tb := t.ToBuilder()
-			var filtered []ast.Posting
-			for _, p := range tb.Postings {
-				if p.Matches(pr.Filter) {
-					filtered = append(filtered, p)
-				}
-			}
+			filtered := t.FilterPostings(pr.Filter)
 			if len(filtered) == 0 {
 				break
 			}
 			if len(filtered) < len(t.Postings()) {
+				tb := t.ToBuilder()
 				tb.Postings = filtered
+				t = tb.Build()
 			}
-			t = tb.Build()
 			if t.Accrual() != nil {
 				for _, ts := range t.Accrual().Expand(t) {
 					a.AddTransaction(ts)

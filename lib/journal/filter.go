@@ -18,17 +18,17 @@ import (
 	"regexp"
 )
 
-// Filter represents a filter creating a
+// Filter represents a filter for commodities and accounts.
 type Filter struct {
 	Accounts, Commodities *regexp.Regexp
 }
 
-// MatchAccount returns whether this filterthe given Account.
+// MatchAccount returns whether this filter matches the given account.
 func (b Filter) MatchAccount(a *Account) bool {
 	return b.Accounts == nil || b.Accounts.MatchString(a.String())
 }
 
-// MatchCommodity returns whether this filter matches the given Commodity.
+// MatchCommodity returns whether this filter matches the given commodity.
 func (b Filter) MatchCommodity(c *Commodity) bool {
 	return b.Commodities == nil || b.Commodities.MatchString(c.String())
 }

@@ -129,13 +129,8 @@ func (p Posting) Equal(p2 Posting) bool {
 		len(p.Targets) == len(p2.Targets)
 }
 
-// Matches returns whether this filter matches the given Posting.
-func (p Posting) Matches(b journal.Filter) bool {
-	return (b.MatchAccount(p.Credit) || b.MatchAccount(p.Debit)) && b.MatchCommodity(p.Commodity)
-}
-
-// SortPostings sorts the given postings.
-func SortPostings(ps []Posting) []Posting {
+// sortPostings sorts the given postings.
+func sortPostings(ps []Posting) []Posting {
 	sort.Slice(ps, func(i, j int) bool {
 		return ps[i].Less(ps[j])
 	})
@@ -240,9 +235,14 @@ func (t *Transaction) Less(t2 *Transaction) bool {
 func (t *Transaction) FilterPostings(f journal.Filter) []Posting {
 	var filtered []Posting
 	for _, p := range t.postings {
-		if p.Matches(f) {
-			filtered = append(filtered, p)
+		if !f.MatchAccount(p.Credit) && !f.MatchAccount(p.Debit) {
+			continue
 		}
+		if !f.MatchCommodity(p.Commodity) {
+			continue
+		}
+		filtered = append(filtered, p)
+
 	}
 	return filtered
 }
@@ -264,7 +264,7 @@ func (tb TransactionBuilder) Build() *Transaction {
 		date:        tb.Date,
 		description: tb.Description,
 		tags:        tb.Tags,
-		postings:    SortPostings(tb.Postings),
+		postings:    sortPostings(tb.Postings),
 		accrual:     tb.Accrual,
 	}
 }

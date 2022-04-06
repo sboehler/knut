@@ -110,7 +110,13 @@ func (p Posting) Less(p2 Posting) bool {
 	if !p.Amount.Equal(p2.Amount) {
 		return p.Amount.LessThan(p2.Amount)
 	}
-	return p.Commodity.String() < p2.Commodity.String()
+	if !p.Value.Equal(p2.Value) {
+		return p.Value.LessThan(p2.Value)
+	}
+	if p.Commodity.String() != p2.Commodity.String() {
+		return p.Commodity.String() != p2.Commodity.String()
+	}
+	return len(p.Targets) < len(p2.Targets)
 }
 
 // Equal determines a measure of equality.
@@ -118,7 +124,9 @@ func (p Posting) Equal(p2 Posting) bool {
 	return p.Credit == p2.Credit &&
 		p.Debit == p2.Debit &&
 		p.Amount.Equals(p2.Amount) &&
-		p.Commodity == p2.Commodity
+		p.Value.Equals(p2.Value) &&
+		p.Commodity == p2.Commodity &&
+		len(p.Targets) == len(p2.Targets)
 }
 
 // Matches returns whether this filter matches the given Posting.

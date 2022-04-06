@@ -228,8 +228,7 @@ func (t *Transaction) Less(t2 *Transaction) bool {
 	if t.description != t2.description {
 		return t.description < t2.description
 	}
-	var i int
-	for i < len(t.postings) && i < len(t2.postings) {
+	for i := 0; i < len(t.postings) && i < len(t2.postings); i++ {
 		if !t.postings[i].Equal(t2.postings[i]) {
 			return t.postings[i].Less(t2.postings[i])
 		}

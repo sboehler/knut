@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
@@ -46,6 +47,9 @@ func (pr *Balancer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh cha
 		}
 
 		d.Transactions = append(d.Transactions, transactions...)
+		sort.Slice(d.Transactions, func(i, j int) bool {
+			return d.Transactions[i].Less(d.Transactions[j])
+		})
 		d.Amounts = amounts.Clone()
 
 		if err := cpr.Push(ctx, outCh, d); err != nil {

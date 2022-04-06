@@ -50,6 +50,9 @@ func (ast *AST) Day(d time.Time) *Day {
 func (ast *AST) SortedDays() []*Day {
 	var sorted []*Day
 	for _, day := range ast.Days {
+		sort.Slice(day.Transactions, func(i, j int) bool {
+			return day.Transactions[i].Less(day.Transactions[j])
+		})
 		sorted = append(sorted, day)
 	}
 	sort.Slice(sorted, func(i, j int) bool {

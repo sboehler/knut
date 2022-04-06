@@ -98,7 +98,11 @@ func (p *Parser) next() (ast.Directive, error) {
 			if err != nil {
 				return nil, p.scanner.ParseError(err)
 			}
-			return a, nil
+			d, err := p.parseDirective(a)
+			if err != nil {
+				return nil, p.scanner.ParseError(err)
+			}
+			return d, nil
 		case p.current() == 'i':
 			i, err := p.parseInclude()
 			if err != nil {
@@ -112,7 +116,7 @@ func (p *Parser) next() (ast.Directive, error) {
 			}
 			return c, nil
 		case unicode.IsDigit(p.current()):
-			d, err := p.parseDirective()
+			d, err := p.parseDirective(nil)
 			if err != nil {
 				return nil, p.scanner.ParseError(err)
 			}
@@ -158,7 +162,7 @@ func (p *Parser) consumeComment() error {
 	return nil
 }
 
-func (p *Parser) parseDirective() (ast.Directive, error) {
+func (p *Parser) parseDirective(a *ast.Accrual) (ast.Directive, error) {
 	p.markStart()
 	d, err := p.parseDate()
 	if err != nil {
@@ -170,7 +174,7 @@ func (p *Parser) parseDirective() (ast.Directive, error) {
 	var result ast.Directive
 	switch p.current() {
 	case '"':
-		result, err = p.parseTransaction(d)
+		result, err = p.parseTransaction(d, a)
 	case 'o':
 		result, err = p.parseOpen(d)
 	case 'c':
@@ -190,7 +194,7 @@ func (p *Parser) parseDirective() (ast.Directive, error) {
 	return result, nil
 }
 
-func (p *Parser) parseTransaction(d time.Time) (*ast.Transaction, error) {
+func (p *Parser) parseTransaction(d time.Time, a *ast.Accrual) (*ast.Transaction, error) {
 	desc, err := p.parseQuotedString()
 	if err != nil {
 		return nil, err
@@ -211,95 +215,80 @@ func (p *Parser) parseTransaction(d time.Time) (*ast.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ast.Transaction{
+	return ast.TransactionBuilder{
 		Range:       p.getRange(),
 		Date:        d,
 		Description: desc,
 		Tags:        tags,
 		Postings:    postings,
-	}, nil
+		Accrual:     a,
+	}.Build(), nil
 
 }
 
-func (p *Parser) parseAddOn() (*ast.Transaction, error) {
+func (p *Parser) parseAddOn() (*ast.Accrual, error) {
 	p.markStart()
-	var accrual *ast.Accrual
-	if p.current() == '@' {
-		if err := p.scanner.ConsumeRune('@'); err != nil {
-			return nil, err
-		}
-		if err := p.scanner.ParseString("accrue"); err != nil {
-			return nil, err
-		}
-		if err := p.consumeWhitespace1(); err != nil {
-			return nil, err
-		}
-		periodStr, err := p.scanner.ReadWhile(unicode.IsLetter)
-		if err != nil {
-			return nil, err
-		}
-		var interval date.Interval
-		switch periodStr {
-		case "once":
-			interval = date.Once
-		case "daily":
-			interval = date.Daily
-		case "weekly":
-			interval = date.Weekly
-		case "monthly":
-			interval = date.Monthly
-		case "quarterly":
-			interval = date.Quarterly
-		case "yearly":
-			interval = date.Yearly
-		default:
-			return nil, fmt.Errorf("expected \"once\", \"daily\", \"weekly\", \"monthly\", \"quarterly\" or \"yearly\", got %q", periodStr)
-		}
-		if err := p.consumeWhitespace1(); err != nil {
-			return nil, err
-		}
-		dateFrom, err := p.parseDate()
-		if err != nil {
-			return nil, err
-		}
-		if err := p.consumeWhitespace1(); err != nil {
-			return nil, err
-		}
-		dateTo, err := p.parseDate()
-		if err != nil {
-			return nil, err
-		}
-		if err := p.consumeWhitespace1(); err != nil {
-			return nil, err
-		}
-		account, err := p.parseAccount()
-		if err != nil {
-			return nil, err
-		}
-		if err := p.consumeRestOfWhitespaceLine(); err != nil {
-			return nil, err
-		}
-		accrual = &ast.Accrual{
-			Range:    p.getRange(),
-			T0:       dateFrom,
-			T1:       dateTo,
-			Interval: interval,
-			Account:  account,
-		}
+	if err := p.scanner.ConsumeRune('@'); err != nil {
+		return nil, err
 	}
-	d, err := p.parseDate()
+	if err := p.scanner.ParseString("accrue"); err != nil {
+		return nil, err
+	}
+	if err := p.consumeWhitespace1(); err != nil {
+		return nil, err
+	}
+	periodStr, err := p.scanner.ReadWhile(unicode.IsLetter)
+	if err != nil {
+		return nil, err
+	}
+	var interval date.Interval
+	switch periodStr {
+	case "once":
+		interval = date.Once
+	case "daily":
+		interval = date.Daily
+	case "weekly":
+		interval = date.Weekly
+	case "monthly":
+		interval = date.Monthly
+	case "quarterly":
+		interval = date.Quarterly
+	case "yearly":
+		interval = date.Yearly
+	default:
+		return nil, fmt.Errorf("expected \"once\", \"daily\", \"weekly\", \"monthly\", \"quarterly\" or \"yearly\", got %q", periodStr)
+	}
+	if err := p.consumeWhitespace1(); err != nil {
+		return nil, err
+	}
+	dateFrom, err := p.parseDate()
 	if err != nil {
 		return nil, err
 	}
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	t, err := p.parseTransaction(d)
+	dateTo, err := p.parseDate()
 	if err != nil {
 		return nil, err
 	}
-	t.Accrual = accrual
-	return t, nil
+	if err := p.consumeWhitespace1(); err != nil {
+		return nil, err
+	}
+	account, err := p.parseAccount()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consumeRestOfWhitespaceLine(); err != nil {
+		return nil, err
+	}
+	return &ast.Accrual{
+		Range:    p.getRange(),
+		T0:       dateFrom,
+		T1:       dateTo,
+		Interval: interval,
+		Account:  account,
+	}, nil
 }
 
 func (p *Parser) parsePostings() ([]ast.Posting, error) {
@@ -374,7 +363,7 @@ func (p *Parser) parsePostings() ([]ast.Posting, error) {
 			return nil, err
 		}
 	}
-	return ast.SortPostings(postings), nil
+	return postings, nil
 }
 
 func (p *Parser) parseOpen(d time.Time) (*ast.Open, error) {

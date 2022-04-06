@@ -289,7 +289,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
@@ -297,7 +297,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 			ast.NewPostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
 			ast.NewPostingWithTargets(p.fee, p.account, currency, fee, []*journal.Commodity{stock, currency}),
 		},
-	})
+	}.Build())
 	return true, nil
 }
 
@@ -351,11 +351,11 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	if !fee.IsZero() {
 		postings = append(postings, ast.NewPostingWithTargets(p.fee, p.account, p.baseCurrency, fee, []*journal.Commodity{stock, currency}))
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 		Postings:    postings,
-	})
+	}.Build())
 	return true, nil
 }
 
@@ -398,13 +398,13 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Withdraw %s %s", amount, currency)
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
 			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, currency, amount),
 		},
-	})
+	}.Build())
 	return true, nil
 }
 
@@ -449,13 +449,13 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if security, err = p.builder.Context.GetCommodity(symbol); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
 			ast.NewPostingWithTargets(p.dividend, p.account, currency, amount, []*journal.Commodity{security}),
 		},
-	})
+	}.Build())
 	return true, nil
 }
 
@@ -510,13 +510,13 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if security, err = p.builder.Context.GetCommodity(symbol); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
 			ast.NewPostingWithTargets(p.tax, p.account, currency, amount, []*journal.Commodity{security}),
 		},
-	})
+	}.Build())
 	return true, nil
 }
 
@@ -541,12 +541,12 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	if amount, err = parseDecimal(r[dfAmount]); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
 			ast.NewPostingWithTargets(p.interest, p.account, currency, amount, []*journal.Commodity{currency})},
-	})
+	}.Build())
 	return true, nil
 }
 

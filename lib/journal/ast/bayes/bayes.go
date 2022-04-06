@@ -42,11 +42,11 @@ func NewModel(exclude *journal.Account) *Model {
 
 // Update updates the model with the given transaction.
 func (m *Model) Update(t *ast.Transaction) {
-	for _, p := range t.Postings {
+	for _, p := range t.Postings() {
 		if p.Credit != m.exclude {
 			m.accounts++
 			m.accountCounts[p.Credit]++
-			for token := range tokenize(t, &p, p.Credit) {
+			for token := range tokenize(t.Description(), &p, p.Credit) {
 				tc, ok := m.tokenCounts[token]
 				if !ok {
 					tc = make(map[*journal.Account]int)
@@ -58,7 +58,7 @@ func (m *Model) Update(t *ast.Transaction) {
 		if p.Debit != m.exclude {
 			m.accounts++
 			m.accountCounts[p.Debit]++
-			for token := range tokenize(t, &p, p.Debit) {
+			for token := range tokenize(t.Description(), &p, p.Debit) {
 				tc, ok := m.tokenCounts[token]
 				if !ok {
 					tc = make(map[*journal.Account]int)
@@ -72,17 +72,18 @@ func (m *Model) Update(t *ast.Transaction) {
 }
 
 // Infer replaces the given account with an inferred account.
-func (m *Model) Infer(trx *ast.Transaction, tbd *journal.Account) {
+func (m *Model) Infer(t *ast.Transaction, tbd *journal.Account) *ast.Transaction {
+	trx := t.ToBuilder()
 	for i := range trx.Postings {
 		var (
 			posting = &trx.Postings[i]
 			tokens  map[string]struct{}
 		)
 		switch tbd {
-		case posting.Credit:
-			tokens = tokenize(trx, posting, posting.Credit)
+		case posting.Credit, posting.Debit:
+			tokens = tokenize(t.Description(), posting, tbd)
 		case posting.Debit:
-			tokens = tokenize(trx, posting, posting.Debit)
+			tokens = tokenize(t.Description(), posting, tbd)
 		default:
 			continue
 		}
@@ -120,10 +121,11 @@ func (m *Model) Infer(trx *ast.Transaction, tbd *journal.Account) {
 			}
 		}
 	}
+	return trx.Build()
 }
 
-func tokenize(trx *ast.Transaction, posting *ast.Posting, account *journal.Account) map[string]struct{} {
-	tokens := append(strings.Fields(trx.Description), posting.Commodity.String(), posting.Amount.String())
+func tokenize(desc string, posting *ast.Posting, account *journal.Account) map[string]struct{} {
+	tokens := append(strings.Fields(desc), posting.Commodity.String(), posting.Amount.String())
 	if account == posting.Credit {
 		tokens = append(tokens, "credit", posting.Debit.String())
 	}

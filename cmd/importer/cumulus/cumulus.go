@@ -100,7 +100,7 @@ type parser struct {
 
 	// internal variables
 	reader       *csv.Reader
-	transactions []*ast.Transaction
+	transactions []ast.TransactionBuilder
 }
 
 func (p *parser) parse(r io.Reader) ([]*ast.Transaction, error) {
@@ -116,7 +116,11 @@ func (p *parser) parse(r io.Reader) ([]*ast.Transaction, error) {
 			return nil, err
 		}
 	}
-	return p.transactions, nil
+	var res []*ast.Transaction
+	for _, b := range p.transactions {
+		res = append(res, b.Build())
+	}
+	return res, nil
 }
 
 func (p *parser) readLine() error {
@@ -172,7 +176,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.transactions = append(p.transactions, &ast.Transaction{
+	p.transactions = append(p.transactions, ast.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
@@ -220,7 +224,7 @@ func (p *parser) parseFXComment(r []string) (bool, error) {
 	if len(p.transactions) == 0 {
 		return false, fmt.Errorf("fx comment but no previous transaction")
 	}
-	var t = p.transactions[len(p.transactions)-1]
+	var t = &p.transactions[len(p.transactions)-1]
 	t.Description = fmt.Sprintf("%s %s", t.Description, r[bfBeschreibung])
 	return true, nil
 }
@@ -257,7 +261,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.transactions = append(p.transactions, &ast.Transaction{
+	p.transactions = append(p.transactions, ast.TransactionBuilder{
 		Date:        date,
 		Description: r[rfBeschreibung],
 		Postings: []ast.Posting{

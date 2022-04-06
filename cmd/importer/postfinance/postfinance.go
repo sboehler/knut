@@ -178,13 +178,13 @@ func (p *Parser) readBookingLine(l []string) error {
 	if amount, err = parseAmount(l); err != nil {
 		return err
 	}
-	p.ast.AddTransaction(&ast.Transaction{
+	p.ast.AddTransaction(ast.TransactionBuilder{
 		Date:        date,
 		Description: strings.TrimSpace(l[bfAvisierungstext]),
 		Postings: []ast.Posting{
 			ast.NewPosting(p.ast.Context.TBDAccount(), p.account, p.currency, amount),
 		},
-	})
+	}.Build())
 	return nil
 }
 

@@ -37,7 +37,7 @@ func TestComputeFlows(t *testing.T) {
 		}{
 			{
 				desc: "outflow",
-				trx: &ast.Transaction{
+				trx: ast.TransactionBuilder{
 					Postings: []ast.Posting{
 						{
 							Credit:    portfolio,
@@ -46,12 +46,12 @@ func TestComputeFlows(t *testing.T) {
 							Commodity: usd,
 						},
 					},
-				},
+				}.Build(),
 				want: &ast.Performance{Outflow: pcv{usd: -1.0}},
 			},
 			{
 				desc: "inflow",
-				trx: &ast.Transaction{
+				trx: ast.TransactionBuilder{
 					Postings: []ast.Posting{
 						{
 							Credit:    acc1,
@@ -60,12 +60,12 @@ func TestComputeFlows(t *testing.T) {
 							Commodity: usd,
 						},
 					},
-				},
+				}.Build(),
 				want: &ast.Performance{Inflow: pcv{usd: 1.0}},
 			},
 			{
 				desc: "dividend",
-				trx: &ast.Transaction{
+				trx: ast.TransactionBuilder{
 					Postings: []ast.Posting{
 						{
 							Credit:    dividend,
@@ -75,7 +75,7 @@ func TestComputeFlows(t *testing.T) {
 							Targets:   []*journal.Commodity{aapl, usd},
 						},
 					},
-				},
+				}.Build(),
 				want: &ast.Performance{
 					InternalInflow:  pcv{usd: 1.0},
 					InternalOutflow: pcv{aapl: -1.0},
@@ -83,7 +83,7 @@ func TestComputeFlows(t *testing.T) {
 			},
 			{
 				desc: "expense",
-				trx: &ast.Transaction{
+				trx: ast.TransactionBuilder{
 					Postings: []ast.Posting{
 						{
 							Credit:    portfolio,
@@ -93,7 +93,7 @@ func TestComputeFlows(t *testing.T) {
 							Targets:   []*journal.Commodity{aapl, usd},
 						},
 					},
-				},
+				}.Build(),
 				want: &ast.Performance{
 					InternalInflow:  pcv{aapl: 1.0},
 					InternalOutflow: pcv{usd: -1.0},
@@ -101,7 +101,7 @@ func TestComputeFlows(t *testing.T) {
 			},
 			{
 				desc: "expense with effect on porfolio",
-				trx: &ast.Transaction{
+				trx: ast.TransactionBuilder{
 					Postings: []ast.Posting{
 						{
 							Credit:    portfolio,
@@ -111,7 +111,7 @@ func TestComputeFlows(t *testing.T) {
 							Targets:   make([]*journal.Commodity, 0),
 						},
 					},
-				},
+				}.Build(),
 				want: &ast.Performance{
 					InternalOutflow: pcv{usd: -1.0},
 					PortfolioInflow: 1.0,
@@ -119,7 +119,7 @@ func TestComputeFlows(t *testing.T) {
 			},
 			{
 				desc: "stock purchase",
-				trx: &ast.Transaction{
+				trx: ast.TransactionBuilder{
 					Postings: []ast.Posting{
 						{
 							Credit:    portfolio,
@@ -136,7 +136,7 @@ func TestComputeFlows(t *testing.T) {
 							Targets:   []*journal.Commodity{usd, aapl},
 						},
 					},
-				},
+				}.Build(),
 				want: &ast.Performance{
 					InternalInflow:  pcv{aapl: 1010.0},
 					InternalOutflow: pcv{usd: -1010.0},
@@ -144,7 +144,7 @@ func TestComputeFlows(t *testing.T) {
 			},
 			{
 				desc: "stock purchase with fee",
-				trx: &ast.Transaction{
+				trx: ast.TransactionBuilder{
 					Postings: []ast.Posting{
 						{
 							Credit:    portfolio,
@@ -168,7 +168,7 @@ func TestComputeFlows(t *testing.T) {
 							Targets:   []*journal.Commodity{usd, aapl},
 						},
 					},
-				},
+				}.Build(),
 				want: &ast.Performance{
 					InternalInflow:  pcv{aapl: 1020.0},
 					InternalOutflow: pcv{usd: -1020.0},
@@ -176,7 +176,7 @@ func TestComputeFlows(t *testing.T) {
 			},
 			{
 				desc: "stock sale",
-				trx: &ast.Transaction{
+				trx: ast.TransactionBuilder{
 					Postings: []ast.Posting{
 						{
 							Credit:    portfolio,
@@ -193,7 +193,7 @@ func TestComputeFlows(t *testing.T) {
 							Targets:   []*journal.Commodity{usd, aapl},
 						},
 					},
-				},
+				}.Build(),
 				want: &ast.Performance{
 					InternalInflow:  pcv{usd: 990.0},
 					InternalOutflow: pcv{aapl: -990.0},
@@ -202,7 +202,7 @@ func TestComputeFlows(t *testing.T) {
 
 			{
 				desc: "forex without fee",
-				trx: &ast.Transaction{
+				trx: ast.TransactionBuilder{
 					Postings: []ast.Posting{
 						{
 							Credit:    portfolio,
@@ -219,7 +219,7 @@ func TestComputeFlows(t *testing.T) {
 							Targets:   []*journal.Commodity{usd, gbp},
 						},
 					},
-				},
+				}.Build(),
 				want: &ast.Performance{
 					InternalOutflow: pcv{gbp: -1375.0},
 					InternalInflow:  pcv{usd: 1375.0},
@@ -227,7 +227,7 @@ func TestComputeFlows(t *testing.T) {
 			},
 			{
 				desc: "forex with fee",
-				trx: &ast.Transaction{
+				trx: ast.TransactionBuilder{
 					Postings: []ast.Posting{
 						{
 							Credit:    portfolio,
@@ -251,7 +251,7 @@ func TestComputeFlows(t *testing.T) {
 							Targets:   []*journal.Commodity{usd, gbp},
 						},
 					},
-				},
+				}.Build(),
 				want: &ast.Performance{
 					InternalOutflow: pcv{gbp: -1370.0, chf: -10},
 					InternalInflow:  pcv{usd: 1380.0},
@@ -259,7 +259,7 @@ func TestComputeFlows(t *testing.T) {
 			},
 			{
 				desc: "forex with native fee",
-				trx: &ast.Transaction{
+				trx: ast.TransactionBuilder{
 					Postings: []ast.Posting{
 						{
 							Credit:    portfolio,
@@ -283,7 +283,7 @@ func TestComputeFlows(t *testing.T) {
 							Targets:   []*journal.Commodity{usd, gbp},
 						},
 					},
-				},
+				}.Build(),
 				want: &ast.Performance{
 					InternalOutflow: pcv{gbp: -1370.0},
 					InternalInflow:  pcv{usd: 1370.0},

@@ -152,12 +152,12 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if chf, err = p.builder.Context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        d,
 		Description: desc,
 		Postings: []ast.Posting{
 			ast.NewPosting(p.account, p.builder.Context.TBDAccount(), chf, amt),
 		},
-	})
+	}.Build())
 	return true, nil
 }

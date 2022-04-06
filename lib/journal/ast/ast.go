@@ -72,7 +72,7 @@ func (ast *AST) AddPrice(p *Price) {
 
 // AddTransaction adds an Transaction directive.
 func (ast *AST) AddTransaction(t *Transaction) {
-	var d = ast.Day(t.Date)
+	var d = ast.Day(t.Date())
 	d.Transactions = append(d.Transactions, t)
 }
 

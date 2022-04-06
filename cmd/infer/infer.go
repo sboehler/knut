@@ -139,10 +139,13 @@ func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model 
 		if err != nil {
 			return nil, err
 		}
-		if t, ok := d.(*ast.Transaction); ok {
-			model.Infer(t, account)
+		switch t := d.(type) {
+		case *ast.Transaction:
+			t = model.Infer(t, account)
+			directives = append(directives, t)
+		default:
+			directives = append(directives, d)
 		}
-		directives = append(directives, d)
 	}
 	return directives, nil
 }

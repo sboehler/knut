@@ -49,8 +49,9 @@ func (pr *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) erro
 			a.AddPrice(t)
 
 		case *ast.Transaction:
+			tb := t.ToBuilder()
 			var filtered []ast.Posting
-			for _, p := range t.Postings {
+			for _, p := range tb.Postings {
 				if p.Matches(pr.Filter) {
 					filtered = append(filtered, p)
 				}
@@ -58,11 +59,12 @@ func (pr *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) erro
 			if len(filtered) == 0 {
 				break
 			}
-			if len(filtered) < len(t.Postings) {
-				t.Postings = filtered
+			if len(filtered) < len(t.Postings()) {
+				tb.Postings = filtered
 			}
-			if t.Accrual != nil {
-				for _, ts := range t.Accrual.Expand(t) {
+			t = tb.Build()
+			if t.Accrual() != nil {
+				for _, ts := range t.Accrual().Expand(t) {
 					a.AddTransaction(ts)
 				}
 			} else {

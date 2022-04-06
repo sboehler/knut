@@ -66,7 +66,7 @@ func (pr *Balancer) processOpenings(ctx context.Context, accounts accounts, d *a
 
 func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, amounts amounts.Amounts, d *ast.Day) error {
 	for _, t := range d.Transactions {
-		for _, p := range t.Postings {
+		for _, p := range t.Postings() {
 			if !accounts.IsOpen(p.Credit) {
 				return Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)}
 			}
@@ -88,12 +88,12 @@ func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amount
 		valAcc := pr.Context.ValuationAccountFor(v.Account)
 		posting := ast.NewPostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amounts.Amount(v.Account, v.Commodity)), []*journal.Commodity{v.Commodity})
 		amounts.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
-		transactions = append(transactions, &ast.Transaction{
+		transactions = append(transactions, ast.TransactionBuilder{
 			Date:        v.Date,
 			Description: fmt.Sprintf("Valuation adjustment for %v in %v", v.Commodity, v.Account),
 			Tags:        nil,
 			Postings:    []ast.Posting{posting},
-		})
+		}.Build())
 	}
 	return transactions, nil
 }

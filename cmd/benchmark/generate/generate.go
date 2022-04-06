@@ -237,13 +237,13 @@ func generateTransactions(c config, cs []*journal.Commodity, as []*journal.Accou
 	var dates = date.Periods(c.from, c.to, date.Daily)
 	for i := 0; i < c.transactions; i++ {
 
-		trx = append(trx, &ast.Transaction{
+		trx = append(trx, ast.TransactionBuilder{
 			Date:        dates[rand.Intn(len(dates))].End,
 			Description: generateIdentifier(200),
 			Postings: []ast.Posting{
 				ast.NewPosting(as[rand.Intn(len(as))], as[rand.Intn(len(as))], cs[rand.Intn(len(cs))], decimal.NewFromFloat(rand.Float64()*1000).Round(4)),
 			},
-		})
+		}.Build())
 	}
 	return trx
 }

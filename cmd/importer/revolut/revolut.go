@@ -204,7 +204,7 @@ func (p *parser) parseBooking(r []string) error {
 		return err
 	}
 	amount = amount.Mul(sign)
-	var t = &ast.Transaction{
+	var t = ast.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 	}
@@ -232,7 +232,7 @@ func (p *parser) parseBooking(r []string) error {
 			ast.NewPosting(p.ast.Context.TBDAccount(), p.account, p.currency, amount),
 		}
 	}
-	p.ast.AddTransaction(t)
+	p.ast.AddTransaction(t.Build())
 	return nil
 }
 

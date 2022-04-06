@@ -16,7 +16,7 @@ import (
 )
 
 func datedTrx(y int, m time.Month, d int) *ast.Transaction {
-	return &ast.Transaction{Date: date.Date(y, m, d)}
+	return ast.TransactionBuilder{Date: date.Date(y, m, d)}.Build()
 }
 
 func TestPeriodFilter(t *testing.T) {
@@ -126,7 +126,7 @@ func TestPeriodFilter(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if diff := cmp.Diff(test.want, got, cmpopts.IgnoreUnexported(journal.Context{}, journal.Commodity{}, journal.Account{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(ast.Transaction{}), cmpopts.IgnoreUnexported(journal.Context{}, journal.Commodity{}, journal.Account{})); diff != "" {
 				t.Fatalf("unexpected diff (+got/-want):\n%s", diff)
 			}
 		})

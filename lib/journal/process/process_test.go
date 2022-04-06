@@ -35,20 +35,20 @@ func newTestData(jctx journal.Context) TestData {
 		}
 		open1 = &ast.Open{Date: date2, Account: account1}
 		open2 = &ast.Open{Date: date2, Account: account2}
-		trx1  = &ast.Transaction{
+		trx1  = ast.TransactionBuilder{
 			Date:        date1,
 			Description: "foo",
 			Postings: []ast.Posting{
 				ast.NewPosting(account1, account2, commodity1, decimal.NewFromInt(10)),
 			},
-		}
-		trx2 = &ast.Transaction{
+		}.Build()
+		trx2 = ast.TransactionBuilder{
 			Date:        date2,
 			Description: "foo",
 			Postings: []ast.Posting{
 				ast.NewPosting(account2, account1, commodity2, decimal.NewFromInt(11)),
 			},
-		}
+		}.Build()
 	)
 	return TestData{
 		date1, date2, date3,

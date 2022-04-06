@@ -60,7 +60,7 @@ func TestBalancerHappyCase(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if diff := cmp.Diff(got, want, cmpopts.IgnoreUnexported(journal.Context{}, journal.Commodity{}, journal.Account{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(ast.Transaction{}), cmpopts.IgnoreUnexported(journal.Context{}, journal.Commodity{}, journal.Account{})); diff != "" {
 		t.Fatalf("unexpected diff (+got/-want):\n%s", diff)
 	}
 }

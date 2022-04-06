@@ -45,10 +45,14 @@ func (pr *Valuator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh cha
 }
 
 func (pr Valuator) valuateTransactions(d *ast.Day) error {
-	var err error
+	var (
+		err error
+		res []*ast.Transaction
+	)
 	for _, t := range d.Transactions {
-		for i := range t.Postings {
-			posting := &t.Postings[i]
+		tb := t.ToBuilder()
+		for i := range tb.Postings {
+			posting := &tb.Postings[i]
 			if pr.Valuation != posting.Commodity {
 				if posting.Value, err = d.Normalized.Valuate(posting.Commodity, posting.Amount); err != nil {
 					return err
@@ -58,7 +62,9 @@ func (pr Valuator) valuateTransactions(d *ast.Day) error {
 			}
 			d.Value.Book(posting.Credit, posting.Debit, posting.Value, posting.Commodity)
 		}
+		res = append(res, tb.Build())
 	}
+	d.Transactions = res
 	return nil
 }
 
@@ -81,13 +87,13 @@ func (pr *Valuator) computeValuationTransactions(d *ast.Day) error {
 		}
 		if !diff.IsZero() {
 			credit := pr.Context.ValuationAccountFor(pos.Account)
-			t := &ast.Transaction{
+			t := ast.TransactionBuilder{
 				Date:        d.Date,
 				Description: fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account),
 				Postings: []ast.Posting{
 					ast.NewValuePosting(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
 				},
-			}
+			}.Build()
 			d.Value.Book(credit, pos.Account, diff, pos.Commodity)
 			d.Transactions = append(d.Transactions, t)
 		}

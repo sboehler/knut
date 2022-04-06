@@ -32,7 +32,7 @@ func (pf PeriodDiffer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh 
 			value := make(amounts.Amounts)
 			for _, pd := range d.PeriodDays {
 				for _, trx := range pd.Transactions {
-					for _, p := range trx.Postings {
+					for _, p := range trx.Postings() {
 						amts.Book(p.Credit, p.Debit, p.Amount, p.Commodity)
 						if pf.Valuation != nil {
 							value.Book(p.Credit, p.Debit, p.Value, p.Commodity)

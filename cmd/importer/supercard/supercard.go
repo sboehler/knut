@@ -193,13 +193,13 @@ func (p *parser) parseBooking(r []string) error {
 	if commodity, err = p.builder.Context.GetCommodity(currency); err != nil {
 		return err
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        date,
 		Description: words,
 		Postings: []ast.Posting{
 			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, commodity, amount),
 		},
-	})
+	}.Build())
 	return nil
 }
 

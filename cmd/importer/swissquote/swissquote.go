@@ -260,7 +260,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	if proceeds.IsPositive() {
 		qty = qty.Neg()
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
 		Postings: []ast.Posting{
@@ -268,7 +268,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 			ast.NewPostingWithTargets(p.trading, p.account, r.currency, proceeds, []*journal.Commodity{r.symbol, r.currency}),
 			ast.NewPostingWithTargets(p.fee, p.account, r.currency, fee, []*journal.Commodity{r.symbol, r.currency}),
 		},
-	})
+	}.Build())
 	return true, nil
 }
 
@@ -290,14 +290,14 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		return true, nil
 	}
 	var desc = fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency, r.trxType, r.netAmount, r.currency)
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
 		Postings: []ast.Posting{
 			ast.NewPostingWithTargets(p.trading, p.account, p.last.currency, p.last.netAmount, []*journal.Commodity{p.last.currency, r.currency}),
 			ast.NewPostingWithTargets(p.trading, p.account, r.currency, r.netAmount, []*journal.Commodity{p.last.currency, r.currency}),
 		},
-	})
+	}.Build())
 	p.last = nil
 	return true, nil
 }
@@ -317,11 +317,11 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 	if !r.fee.IsZero() {
 		postings = append(postings, ast.NewPostingWithTargets(p.account, p.tax, r.currency, r.fee, []*journal.Commodity{r.symbol}))
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        r.date,
 		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol, r.name, r.isin),
 		Postings:    postings,
-	})
+	}.Build())
 	return true, nil
 }
 
@@ -329,13 +329,13 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 	if r.trxType != "Depotgebühren" {
 		return false, nil
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ast.Posting{
 			ast.NewPostingWithTargets(p.fee, p.account, r.currency, r.netAmount, make([]*journal.Commodity, 0)),
 		},
-	})
+	}.Build())
 	return true, nil
 }
 
@@ -349,13 +349,13 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 	if _, ok := w[r.trxType]; !ok {
 		return false, nil
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ast.Posting{
 			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
 		},
-	})
+	}.Build())
 	return true, nil
 }
 
@@ -363,23 +363,23 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 	if r.trxType != "Zins" {
 		return false, nil
 	}
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ast.Posting{
 			ast.NewPostingWithTargets(p.interest, p.account, r.currency, r.netAmount, []*journal.Commodity{r.currency}),
 		},
-	})
+	}.Build())
 	return true, nil
 }
 
 func (p *parser) parseCatchall(r *record) (bool, error) {
-	p.builder.AddTransaction(&ast.Transaction{
+	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ast.Posting{
 			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
 		},
-	})
+	}.Build())
 	return true, nil
 }

@@ -39,8 +39,8 @@ func TestDifferHappyCase(t *testing.T) {
 			{
 				Date: td.date1,
 				Amounts: amounts.Amounts{
-					amounts.CommodityAccount{Account: td.trx1.Postings[0].Credit, Commodity: td.trx1.Postings[0].Commodity}: td.trx1.Postings[0].Amount.Neg(),
-					amounts.CommodityAccount{Account: td.trx1.Postings[0].Debit, Commodity: td.trx1.Postings[0].Commodity}:  td.trx1.Postings[0].Amount,
+					amounts.CommodityAccount{Account: td.trx1.Postings()[0].Credit, Commodity: td.trx1.Postings()[0].Commodity}: td.trx1.Postings()[0].Amount.Neg(),
+					amounts.CommodityAccount{Account: td.trx1.Postings()[0].Debit, Commodity: td.trx1.Postings()[0].Commodity}:  td.trx1.Postings()[0].Amount,
 				},
 				PeriodDays: []*ast.Day{
 					{
@@ -51,8 +51,8 @@ func TestDifferHappyCase(t *testing.T) {
 			{
 				Date: td.date2,
 				Amounts: amounts.Amounts{
-					amounts.CommodityAccount{Account: td.trx2.Postings[0].Credit, Commodity: td.trx2.Postings[0].Commodity}: td.trx2.Postings[0].Amount.Neg(),
-					amounts.CommodityAccount{Account: td.trx2.Postings[0].Debit, Commodity: td.trx2.Postings[0].Commodity}:  td.trx2.Postings[0].Amount,
+					amounts.CommodityAccount{Account: td.trx2.Postings()[0].Credit, Commodity: td.trx2.Postings()[0].Commodity}: td.trx2.Postings()[0].Amount.Neg(),
+					amounts.CommodityAccount{Account: td.trx2.Postings()[0].Debit, Commodity: td.trx2.Postings()[0].Commodity}:  td.trx2.Postings()[0].Amount,
 				},
 				PeriodDays: []*ast.Day{
 					{
@@ -73,7 +73,7 @@ func TestDifferHappyCase(t *testing.T) {
 		return got[i].Date.Before(got[j].Date)
 	})
 
-	if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(journal.Context{}, journal.Commodity{}, journal.Account{})); diff != "" {
+	if diff := cmp.Diff(want, got, cmp.AllowUnexported(ast.Transaction{}), cmpopts.IgnoreUnexported(journal.Context{}, journal.Commodity{}, journal.Account{})); diff != "" {
 		t.Fatalf("unexpected diff (+got/-want):\n%s", diff)
 	}
 }

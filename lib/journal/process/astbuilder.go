@@ -62,9 +62,9 @@ func (pr *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) erro
 				for _, ts := range t.Accrual().Expand(t) {
 					a.AddTransaction(ts)
 				}
-			} else {
-				a.AddTransaction(t)
+				break
 			}
+			a.AddTransaction(t)
 
 		case *ast.Assertion:
 			if !pr.Filter.MatchAccount(t.Account) {

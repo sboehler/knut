@@ -95,7 +95,6 @@ func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amount
 		transactions = append(transactions, ast.TransactionBuilder{
 			Date:        v.Date,
 			Description: fmt.Sprintf("Valuation adjustment for %v in %v", v.Commodity, v.Account),
-			Tags:        nil,
 			Postings:    []ast.Posting{posting},
 		}.Build())
 	}

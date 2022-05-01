@@ -113,6 +113,11 @@ type Period struct {
 	Start, End time.Time
 }
 
+// Less defines an ordering for periods.
+func (p Period) Less(p2 Period) bool {
+	return p.End.Before(p2.End)
+}
+
 // Periods returns a series of periods in the given interval,
 // which contains both t0 and t1.
 func Periods(t0, t1 time.Time, p Interval) []Period {

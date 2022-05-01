@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/common/cpr"
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/shopspring/decimal"
@@ -26,7 +27,7 @@ import (
 
 // Balance is a balance report for a range of dates.
 type Balance struct {
-	Dates     map[time.Time]struct{}
+	Dates     map[date.Period]struct{}
 	Mapping   journal.Mapping
 	Positions indexByAccount
 }
@@ -54,9 +55,9 @@ type BalanceBuilder struct {
 func (rb *BalanceBuilder) add(rep *Balance, b *ast.Period) {
 	if rep.Positions == nil {
 		rep.Positions = make(indexByAccount)
-		rep.Dates = make(map[time.Time]struct{})
+		rep.Dates = make(map[date.Period]struct{})
 	}
-	rep.Dates[b.Period.End] = struct{}{}
+	rep.Dates[b.Period] = struct{}{}
 	a := b.Amounts
 	if rb.Valuation {
 		a = b.Values

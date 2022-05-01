@@ -17,8 +17,8 @@ package report
 import (
 	"math"
 	"sort"
-	"time"
 
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 )
@@ -31,7 +31,7 @@ type Renderer struct {
 
 	report *Balance
 	table  *table.Table
-	dates  []time.Time
+	dates  []date.Period
 }
 
 // Render renders a report.
@@ -41,14 +41,14 @@ func (rn *Renderer) Render(r *Balance) *table.Table {
 		rn.dates = append(rn.dates, d)
 	}
 	sort.Slice(rn.dates, func(i, j int) bool {
-		return rn.dates[i].Before(rn.dates[j])
+		return rn.dates[i].Less(rn.dates[j])
 	})
 	rn.table = table.New(1, len(rn.dates))
 	rn.table.AddSeparatorRow()
 
 	header := rn.table.AddRow().AddText("Account", table.Center)
 	for _, d := range rn.dates {
-		header.AddText(d.Format("2006-01-02"), table.Center)
+		header.AddText(d.End.Format("2006-01-02"), table.Center)
 	}
 	rn.table.AddSeparatorRow()
 
@@ -138,7 +138,7 @@ func (rn *Renderer) renderByCommodity(indent int, key string, negate bool, byCom
 func (rn Renderer) renderAmounts(indent int, key string, negate bool, byDate indexByDate) {
 	row := rn.table.AddRow().AddIndented(key, indent)
 	for _, date := range rn.dates {
-		amount, ok := byDate[date]
+		amount, ok := byDate[date.End]
 		if !ok || amount.IsZero() {
 			row.AddEmpty()
 			continue

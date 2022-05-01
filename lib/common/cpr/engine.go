@@ -12,8 +12,8 @@ type Source[T any] interface {
 }
 
 // Processor processes elements.
-type Processor[T any] interface {
-	Process(context.Context, <-chan T, chan<- T) error
+type Processor[T any, U any] interface {
+	Process(context.Context, <-chan T, chan<- U) error
 }
 
 // Sink consumes elements.
@@ -21,47 +21,7 @@ type Sink[T any] interface {
 	Sink(context.Context, <-chan T) error
 }
 
-// Engine processes a pipeline.
-type Engine[T any] struct {
-	Source     Source[T]
-	Sink       Sink[T]
-	Processors []Processor[T]
-}
-
 const bufSize = 100
-
-// Process processes the pipeline in the engine.
-func (eng *Engine[T]) Process(ctx context.Context) error {
-	g, ctx := errgroup.WithContext(ctx)
-	ch := make(chan T, bufSize)
-	{
-		outCh := ch
-		g.Go(func() error {
-			defer close(outCh)
-			return eng.Source.Source(ctx, outCh)
-		})
-	}
-	for _, pr := range eng.Processors {
-		pr, inCh, outCh := pr, ch, make(chan T, bufSize)
-		g.Go(func() error {
-			defer close(outCh)
-			return pr.Process(ctx, inCh, outCh)
-		})
-		ch = outCh
-	}
-	{
-		inCh := ch
-		g.Go(func() error {
-			return eng.Sink.Sink(ctx, inCh)
-		})
-	}
-	return g.Wait()
-}
-
-// Add adds a processor.
-func (eng *Engine[T]) Add(p Processor[T]) {
-	eng.Processors = append(eng.Processors, p)
-}
 
 // Collector collects channel result into an array.
 type Collector[T any] struct {
@@ -99,15 +59,63 @@ func (p *Producer[T]) Source(ctx context.Context, outCh chan<- T) error {
 }
 
 // RunTestEngine runs the processor in a test engine.
-func RunTestEngine[T any](ctx context.Context, ps Processor[T], ts ...T) ([]T, error) {
+func RunTestEngine[T any](ctx context.Context, ps Processor[T, T], ts ...T) ([]T, error) {
 	sink := new(Collector[T])
-	eng := &Engine[T]{
-		Source:     &Producer[T]{ts},
-		Processors: []Processor[T]{ps},
-		Sink:       sink,
-	}
-	if err := eng.Process(ctx); err != nil {
+	ppl := Connect[T](Compose[T](&Producer[T]{ts}, ps), sink)
+	if err := ppl.Process(ctx); err != nil {
 		return nil, err
 	}
 	return sink.Result, nil
+}
+
+// Pipeline represents a computation.
+type Pipeline interface {
+	Process(context.Context) error
+}
+
+type source[T any, U any] struct {
+	source Source[T]
+	proc   Processor[T, U]
+}
+
+func (src source[T, U]) Source(ctx context.Context, oCh chan<- U) error {
+	g, ctx := errgroup.WithContext(ctx)
+	ch := make(chan T, bufSize)
+	g.Go(func() error {
+		defer close(ch)
+		return src.source.Source(ctx, ch)
+	})
+	g.Go(func() error {
+		return src.proc.Process(ctx, ch, oCh)
+	})
+	return g.Wait()
+}
+
+type pipeline[T any] struct {
+	source Source[T]
+	sink   Sink[T]
+}
+
+// Process processes the pipeline.
+func (ppl pipeline[T]) Process(ctx context.Context) error {
+	g, ctx := errgroup.WithContext(ctx)
+	ch := make(chan T, bufSize)
+	g.Go(func() error {
+		defer close(ch)
+		return ppl.source.Source(ctx, ch)
+	})
+	g.Go(func() error {
+		return ppl.sink.Sink(ctx, ch)
+	})
+	return g.Wait()
+}
+
+// Compose composes a source and a processor.
+func Compose[T any, U any](s Source[T], p Processor[T, U]) Source[U] {
+	return source[T, U]{s, p}
+}
+
+// Connect connects a source and a sink.
+func Connect[T any](src Source[T], snk Sink[T]) Pipeline {
+	return pipeline[T]{src, snk}
 }

@@ -163,18 +163,16 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		ctx = cmd.Context()
 	)
 
-	eng := new(cpr.Engine[*ast.Day])
-	eng.Source = journalSource
-	eng.Add(priceUpdater)
-	eng.Add(balancer)
-	eng.Add(valuator)
-	eng.Add(periodFilter)
+	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
+	s = cpr.Compose[*ast.Day, *ast.Day](s, balancer)
+	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
+	s = cpr.Compose[*ast.Day, *ast.Day](s, periodFilter)
 	if r.diff {
-		eng.Add(periodDiffer)
+		s = cpr.Compose[*ast.Day, *ast.Day](s, periodDiffer)
 	}
-	eng.Sink = reportBuilder
+	ppl := cpr.Connect[*ast.Day](s, reportBuilder)
 
-	if err := eng.Process(ctx); err != nil {
+	if err := ppl.Process(ctx); err != nil {
 		return err
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())

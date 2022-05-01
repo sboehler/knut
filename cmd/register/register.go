@@ -146,15 +146,13 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		ctx = cmd.Context()
 	)
 
-	eng := new(cpr.Engine[*ast.Day])
-	eng.Source = journalSource
-	eng.Add(priceUpdater)
-	eng.Add(balancer)
-	eng.Add(valuator)
-	eng.Add(periodFilter)
-	eng.Sink = w
+	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
+	s = cpr.Compose[*ast.Day, *ast.Day](s, balancer)
+	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
+	s = cpr.Compose[*ast.Day, *ast.Day](s, periodFilter)
+	ppl := cpr.Connect[*ast.Day](s, w)
 
-	return eng.Process(ctx)
+	return ppl.Process(ctx)
 }
 
 type regprinter struct {

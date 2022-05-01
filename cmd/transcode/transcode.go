@@ -76,7 +76,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
 		journalSource = &process.JournalSource{
 			Context: jctx,
-			Path: args[0],
+			Path:    args[0],
 			Expand:  true,
 		}
 		balancer = &process.Balancer{
@@ -93,14 +93,12 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 		c = new(cpr.Collector[*ast.Day])
 	)
 
-	eng := new(cpr.Engine[*ast.Day])
-	eng.Source = journalSource
-	eng.Add(balancer)
-	eng.Add(priceUpdater)
-	eng.Add(valuator)
-	eng.Sink = c
+	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
+	s = cpr.Compose[*ast.Day, *ast.Day](s, balancer)
+	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
+	ppl := cpr.Connect[*ast.Day](s, c)
 
-	if err := eng.Process(cmd.Context()); err != nil {
+	if err := ppl.Process(cmd.Context()); err != nil {
 		return err
 	}
 

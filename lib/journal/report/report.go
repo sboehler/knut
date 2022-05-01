@@ -50,7 +50,7 @@ type BalanceBuilder struct {
 	Result *Balance
 }
 
-func (rb *BalanceBuilder) add2(rep *Balance, b *ast.Day) {
+func (rb *BalanceBuilder) add(rep *Balance, b *ast.Day) {
 	if rep.Positions == nil {
 		rep.Positions = make(indexByAccount)
 		rep.Dates = make(map[time.Time]struct{})
@@ -77,7 +77,7 @@ func (rb *BalanceBuilder) Sink(ctx context.Context, inCh <-chan *ast.Day) error 
 		if !ok {
 			break
 		}
-		rb.add2(rb.Result, d)
+		rb.add(rb.Result, d)
 	}
 	return nil
 }

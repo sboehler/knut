@@ -45,7 +45,8 @@ func (rep Balance) Subtree() map[*journal.Account]struct{} {
 
 // BalanceBuilder builds a report.
 type BalanceBuilder struct {
-	Mapping journal.Mapping
+	Mapping   journal.Mapping
+	Valuation bool
 
 	Result *Balance
 }
@@ -56,7 +57,11 @@ func (rb *BalanceBuilder) add(rep *Balance, b *ast.Period) {
 		rep.Dates = make(map[time.Time]struct{})
 	}
 	rep.Dates[b.Period.End] = struct{}{}
-	for pos, val := range b.Values {
+	a := b.Amounts
+	if rb.Valuation {
+		a = b.Values
+	}
+	for pos, val := range a {
 		if val.IsZero() {
 			continue
 		}

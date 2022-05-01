@@ -17,7 +17,7 @@ type PeriodDiffer struct {
 }
 
 // Process does the diffing.
-func (pf PeriodDiffer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
+func (pf PeriodDiffer) Process(ctx context.Context, inCh <-chan *ast.Period, outCh chan<- *ast.Period) error {
 	grp, ctx := errgroup.WithContext(ctx)
 	for {
 		d, ok, err := cpr.Pop(ctx, inCh)
@@ -30,7 +30,7 @@ func (pf PeriodDiffer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh 
 		grp.Go(func() error {
 			amts := make(amounts.Amounts)
 			value := make(amounts.Amounts)
-			for _, pd := range d.PeriodDays {
+			for _, pd := range d.Days {
 				for _, trx := range pd.Transactions {
 					for _, p := range trx.Postings() {
 						amts.Book(p.Credit, p.Debit, p.Amount, p.Commodity)
@@ -42,7 +42,7 @@ func (pf PeriodDiffer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh 
 			}
 			d.Amounts = amts
 			if pf.Valuation != nil {
-				d.Value = value
+				d.Values = value
 			}
 			if err := cpr.Push(ctx, outCh, d); err != nil {
 				return err

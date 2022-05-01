@@ -33,11 +33,11 @@ func TestPeriodFilter(t *testing.T) {
 			},
 		}
 	}
-	pday := func(y int, m time.Month, d int, v int64, days ...*ast.Day) *ast.Day {
-		return &ast.Day{
-			Date:       date.Date(y, m, d),
-			PeriodDays: days,
-			Value: amounts.Amounts{
+	period := func(start, end time.Time, v int64, days ...*ast.Day) *ast.Period {
+		return &ast.Period{
+			Period: date.Period{Start: start, End: end},
+			Days:   days,
+			Values: amounts.Amounts{
 				amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(v),
 			},
 		}
@@ -45,10 +45,11 @@ func TestPeriodFilter(t *testing.T) {
 
 	var (
 		tests = []struct {
-			desc        string
-			sut         PeriodFilter
-			input, want []*ast.Day
-			wantErr     bool
+			desc    string
+			sut     PeriodFilter
+			input   []*ast.Day
+			want    []*ast.Period
+			wantErr bool
 		}{
 			{
 				desc: "no input",
@@ -64,8 +65,8 @@ func TestPeriodFilter(t *testing.T) {
 					day(2022, 1, 3, 2),
 					day(2022, 1, 4, 3),
 				},
-				want: []*ast.Day{
-					pday(2022, 1, 10, 3,
+				want: []*ast.Period{
+					period(date.Date(2022, 1, 2), date.Date(2022, 1, 10), 3,
 						day(2022, 1, 2, 1, datedTrx(2022, 1, 2)),
 						day(2022, 1, 3, 2),
 						day(2022, 1, 4, 3),
@@ -83,8 +84,8 @@ func TestPeriodFilter(t *testing.T) {
 					day(2022, 1, 3, 200),
 					day(2022, 1, 4, 300),
 				},
-				want: []*ast.Day{
-					pday(2022, 1, 10, 300,
+				want: []*ast.Period{
+					period(date.Date(2022, 1, 1), date.Date(2022, 1, 10), 300,
 						day(2022, 1, 2, 100, datedTrx(2022, 1, 2)),
 						day(2022, 1, 3, 200),
 						day(2022, 1, 4, 300)),
@@ -102,12 +103,12 @@ func TestPeriodFilter(t *testing.T) {
 					day(2022, 1, 1, 200, datedTrx(2022, 1, 1)),
 					day(2022, 1, 4, 300, datedTrx(2022, 1, 4)),
 				},
-				want: []*ast.Day{
-					pday(2021, 9, 30, 100),
-					pday(2021, 10, 31, 100),
-					pday(2021, 11, 30, 100),
-					pday(2021, 12, 31, 100),
-					pday(2022, 1, 10, 300,
+				want: []*ast.Period{
+					period(date.Date(2021, 9, 1), date.Date(2021, 9, 30), 100),
+					period(date.Date(2021, 10, 1), date.Date(2021, 10, 31), 100),
+					period(date.Date(2021, 11, 1), date.Date(2021, 11, 30), 100),
+					period(date.Date(2021, 12, 1), date.Date(2021, 12, 31), 100),
+					period(date.Date(2022, 1, 1), date.Date(2022, 1, 10), 300,
 						day(2022, 1, 1, 200, datedTrx(2022, 1, 1)),
 						day(2022, 1, 4, 300, datedTrx(2022, 1, 4))),
 				},
@@ -120,7 +121,7 @@ func TestPeriodFilter(t *testing.T) {
 
 			ctx := context.Background()
 
-			got, err := cpr.RunTestEngine[*ast.Day](ctx, test.sut, test.input...)
+			got, err := cpr.RunTestEngine[*ast.Day, *ast.Period](ctx, test.sut, test.input...)
 
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)

@@ -149,8 +149,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, balancer)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
-	s = cpr.Compose[*ast.Day, *ast.Day](s, periodFilter)
-	ppl := cpr.Connect[*ast.Day](s, w)
+	s2 := cpr.Compose[*ast.Day, *ast.Period](s, periodFilter)
+	ppl := cpr.Connect[*ast.Period](s2, w)
 
 	return ppl.Process(ctx)
 }
@@ -159,7 +159,7 @@ type regprinter struct {
 	w io.Writer
 }
 
-func (rp *regprinter) Sink(ctx context.Context, ch <-chan *ast.Day) error {
+func (rp *regprinter) Sink(ctx context.Context, ch <-chan *ast.Period) error {
 	out := bufio.NewWriter(rp.w)
 	defer out.Flush()
 	for {

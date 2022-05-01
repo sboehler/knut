@@ -18,7 +18,7 @@ type PeriodFilter struct {
 }
 
 // Process does the filtering.
-func (pf PeriodFilter) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
+func (pf PeriodFilter) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Period) error {
 	var (
 		periods []date.Period
 		days    []*ast.Day
@@ -40,12 +40,11 @@ func (pf PeriodFilter) Process(ctx context.Context, inCh <-chan *ast.Day, outCh 
 			init = true
 		}
 		for ; current < len(periods) && (!ok || periods[current].End.Before(day.Date)); current++ {
-			pDay := &ast.Day{
-				Date:       periods[current].End,
-				PeriodDays: days,
-				Amounts:    latest.Amounts,
-				Value:      latest.Value,
-				Normalized: latest.Normalized,
+			pDay := &ast.Period{
+				Period: periods[current],
+				Days:   days,
+				Amounts: latest.Amounts,
+				Values: latest.Value,
 			}
 			if err := cpr.Push(ctx, outCh, pDay); err != nil {
 				return err

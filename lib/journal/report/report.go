@@ -50,24 +50,24 @@ type BalanceBuilder struct {
 	Result *Balance
 }
 
-func (rb *BalanceBuilder) add(rep *Balance, b *ast.Day) {
+func (rb *BalanceBuilder) add(rep *Balance, b *ast.Period) {
 	if rep.Positions == nil {
 		rep.Positions = make(indexByAccount)
 		rep.Dates = make(map[time.Time]struct{})
 	}
-	rep.Dates[b.Date] = struct{}{}
-	for pos, val := range b.Value {
+	rep.Dates[b.Period.End] = struct{}{}
+	for pos, val := range b.Values {
 		if val.IsZero() {
 			continue
 		}
 		if acc := pos.Account.Map(rb.Mapping); acc != nil {
-			rep.Positions.Add(acc, pos.Commodity, b.Date, val)
+			rep.Positions.Add(acc, pos.Commodity, b.Period.End, val)
 		}
 	}
 }
 
 // Sink consumes the stream and produces a report.
-func (rb *BalanceBuilder) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
+func (rb *BalanceBuilder) Sink(ctx context.Context, inCh <-chan *ast.Period) error {
 	rb.Result = new(Balance)
 	for {
 		d, ok, err := cpr.Pop(ctx, inCh)

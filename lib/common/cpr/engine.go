@@ -59,9 +59,9 @@ func (p *Producer[T]) Source(ctx context.Context, outCh chan<- T) error {
 }
 
 // RunTestEngine runs the processor in a test engine.
-func RunTestEngine[T any](ctx context.Context, ps Processor[T, T], ts ...T) ([]T, error) {
-	sink := new(Collector[T])
-	ppl := Connect[T](Compose[T](&Producer[T]{ts}, ps), sink)
+func RunTestEngine[T any, U any](ctx context.Context, ps Processor[T, U], ts ...T) ([]U, error) {
+	sink := new(Collector[U])
+	ppl := Connect[U](Compose[T](&Producer[T]{ts}, ps), sink)
 	if err := ppl.Process(ctx); err != nil {
 		return nil, err
 	}

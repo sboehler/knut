@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 )
 
@@ -126,4 +127,13 @@ func (d *Day) Less(d2 *Day) bool {
 type Performance struct {
 	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow map[*journal.Commodity]float64
 	PortfolioInflow, PortfolioOutflow                        float64
+}
+
+// Period represents a period.
+type Period struct {
+	Period date.Period
+
+	Amounts, Values amounts.Amounts
+
+	Days []*Day
 }

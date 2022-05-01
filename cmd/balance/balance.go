@@ -166,11 +166,11 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, balancer)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
-	s = cpr.Compose[*ast.Day, *ast.Day](s, periodFilter)
+	s2 := cpr.Compose[*ast.Day, *ast.Period](s, periodFilter)
 	if r.diff {
-		s = cpr.Compose[*ast.Day, *ast.Day](s, periodDiffer)
+		s2 = cpr.Compose[*ast.Period, *ast.Period](s2, periodDiffer)
 	}
-	ppl := cpr.Connect[*ast.Day](s, reportBuilder)
+	ppl := cpr.Connect[*ast.Period](s2, reportBuilder)
 
 	if err := ppl.Process(ctx); err != nil {
 		return err

@@ -112,8 +112,6 @@ type Day struct {
 
 	Normalized journal.NormalizedPrices
 
-	PeriodDays []*Day
-
 	Performance *Performance
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/shopspring/decimal"
 )
 
 func TestDifferHappyCase(t *testing.T) {
@@ -22,43 +23,57 @@ func TestDifferHappyCase(t *testing.T) {
 		ctx    = context.Background()
 		day1   = &ast.Period{
 			Period: date.Period{End: td.date1},
-			Days: []*ast.Day{
-				{
-					Transactions: []*ast.Transaction{td.trx1},
-				},
+			Amounts: amounts.Amounts{
+				amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+				amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(200),
+			},
+			PrevAmounts: amounts.Amounts{
+				amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(20),
+				amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(20),
 			},
 		}
+		ca1  = amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}
+		ca2  = amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}
 		day2 = &ast.Period{
 			Period: date.Period{End: td.date2},
-			Days: []*ast.Day{
-				{
-					Transactions: []*ast.Transaction{td.trx2},
-				},
+			Values: amounts.Amounts{
+				ca1: decimal.NewFromInt(100),
+				ca2: decimal.NewFromInt(200),
+			},
+			PrevValues: amounts.Amounts{
+				ca1: decimal.NewFromInt(20),
+				ca2: decimal.NewFromInt(20),
 			},
 		}
 		want = []*ast.Period{
 			{
 				Period: date.Period{End: td.date1},
 				Amounts: amounts.Amounts{
-					amounts.CommodityAccount{Account: td.trx1.Postings()[0].Credit, Commodity: td.trx1.Postings()[0].Commodity}: td.trx1.Postings()[0].Amount.Neg(),
-					amounts.CommodityAccount{Account: td.trx1.Postings()[0].Debit, Commodity: td.trx1.Postings()[0].Commodity}:  td.trx1.Postings()[0].Amount,
+					ca1: decimal.NewFromInt(100),
+					ca2: decimal.NewFromInt(200),
 				},
-				Days: []*ast.Day{
-					{
-						Transactions: []*ast.Transaction{td.trx1},
-					},
+				PrevAmounts: amounts.Amounts{
+					ca1: decimal.NewFromInt(20),
+					ca2: decimal.NewFromInt(20),
+				},
+				DeltaAmounts: amounts.Amounts{
+					ca1: decimal.NewFromInt(80),
+					ca2: decimal.NewFromInt(180),
 				},
 			},
 			{
 				Period: date.Period{End: td.date2},
-				Amounts: amounts.Amounts{
-					amounts.CommodityAccount{Account: td.trx2.Postings()[0].Credit, Commodity: td.trx2.Postings()[0].Commodity}: td.trx2.Postings()[0].Amount.Neg(),
-					amounts.CommodityAccount{Account: td.trx2.Postings()[0].Debit, Commodity: td.trx2.Postings()[0].Commodity}:  td.trx2.Postings()[0].Amount,
+				Values: amounts.Amounts{
+					amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+					amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(200),
 				},
-				Days: []*ast.Day{
-					{
-						Transactions: []*ast.Transaction{td.trx2},
-					},
+				PrevValues: amounts.Amounts{
+					amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(20),
+					amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(20),
+				},
+				DeltaValues: amounts.Amounts{
+					amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(80),
+					amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(180),
 				},
 			},
 		}

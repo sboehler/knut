@@ -66,7 +66,8 @@ func TestPeriodFilter(t *testing.T) {
 					day(2022, 1, 4, 3),
 				},
 				want: []*ast.Period{
-					period(date.Date(2022, 1, 2), date.Date(2022, 1, 10), 3,
+					period(date.Date(2022, 1, 2),
+						date.Date(2022, 1, 10), 3,
 						day(2022, 1, 2, 1, datedTrx(2022, 1, 2)),
 						day(2022, 1, 3, 2),
 						day(2022, 1, 4, 3),
@@ -104,13 +105,55 @@ func TestPeriodFilter(t *testing.T) {
 					day(2022, 1, 4, 300, datedTrx(2022, 1, 4)),
 				},
 				want: []*ast.Period{
-					period(date.Date(2021, 9, 1), date.Date(2021, 9, 30), 100),
-					period(date.Date(2021, 10, 1), date.Date(2021, 10, 31), 100),
-					period(date.Date(2021, 11, 1), date.Date(2021, 11, 30), 100),
-					period(date.Date(2021, 12, 1), date.Date(2021, 12, 31), 100),
-					period(date.Date(2022, 1, 1), date.Date(2022, 1, 10), 300,
-						day(2022, 1, 1, 200, datedTrx(2022, 1, 1)),
-						day(2022, 1, 4, 300, datedTrx(2022, 1, 4))),
+					{
+						Period: date.Period{Start: date.Date(2021, 9, 1), End: date.Date(2021, 9, 30)},
+						Values: amounts.Amounts{
+							amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+						},
+						PrevValues: amounts.Amounts{
+							amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+						},
+					},
+					{
+						Period: date.Period{Start: date.Date(2021, 10, 1), End: date.Date(2021, 10, 31)},
+						Values: amounts.Amounts{
+							amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+						},
+						PrevValues: amounts.Amounts{
+							amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+						},
+					},
+					{
+						Period: date.Period{Start: date.Date(2021, 11, 1), End: date.Date(2021, 11, 30)},
+						Values: amounts.Amounts{
+							amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+						},
+						PrevValues: amounts.Amounts{
+							amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+						},
+					},
+					{
+						Period: date.Period{Start: date.Date(2021, 12, 1), End: date.Date(2021, 12, 31)},
+						Values: amounts.Amounts{
+							amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+						},
+						PrevValues: amounts.Amounts{
+							amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+						},
+					},
+					{
+						Period: date.Period{Start: date.Date(2022, 1, 1), End: date.Date(2022, 1, 10)},
+						Values: amounts.Amounts{
+							amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(300),
+						},
+						PrevValues: amounts.Amounts{
+							amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+						},
+						Days: []*ast.Day{
+							day(2022, 1, 1, 200, datedTrx(2022, 1, 1)),
+							day(2022, 1, 4, 300, datedTrx(2022, 1, 4)),
+						},
+					},
 				},
 			},
 		}

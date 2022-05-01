@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
@@ -48,6 +49,7 @@ func (rep Balance) Subtree() map[*journal.Account]struct{} {
 type BalanceBuilder struct {
 	Mapping   journal.Mapping
 	Valuation bool
+	Diff      bool
 
 	Result *Balance
 }
@@ -58,9 +60,16 @@ func (rb *BalanceBuilder) add(rep *Balance, b *ast.Period) {
 		rep.Dates = make(map[date.Period]struct{})
 	}
 	rep.Dates[b.Period] = struct{}{}
-	a := b.Amounts
-	if rb.Valuation {
+	var a amounts.Amounts
+	switch {
+	case rb.Valuation && rb.Diff:
+		a = b.DeltaValues
+	case rb.Valuation && !rb.Diff:
 		a = b.Values
+	case !rb.Valuation && rb.Diff:
+		a = b.DeltaAmounts
+	case !rb.Valuation && !rb.Diff:
+		a = b.Amounts
 	}
 	for pos, val := range a {
 		if val.IsZero() {

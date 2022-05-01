@@ -131,7 +131,9 @@ type Performance struct {
 type Period struct {
 	Period date.Period
 
-	Amounts, Values amounts.Amounts
+	Amounts, Values           amounts.Amounts
+	DeltaAmounts, DeltaValues amounts.Amounts
+	PrevAmounts, PrevValues   amounts.Amounts
 
 	Days []*Day
 }

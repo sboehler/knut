@@ -46,18 +46,18 @@ func TestPeriodFilter(t *testing.T) {
 	var (
 		tests = []struct {
 			desc    string
-			sut     PeriodFilter
+			sut     *PeriodFilter
 			input   []*ast.Day
 			want    []*ast.Period
 			wantErr bool
 		}{
 			{
 				desc: "no input",
-				sut:  PeriodFilter{},
+				sut:  new(PeriodFilter),
 			},
 			{
 				desc: "no period, no from date",
-				sut: PeriodFilter{
+				sut: &PeriodFilter{
 					To: date.Date(2022, 1, 10),
 				},
 				input: []*ast.Day{
@@ -67,7 +67,8 @@ func TestPeriodFilter(t *testing.T) {
 				},
 				want: []*ast.Period{
 					period(date.Date(2022, 1, 2),
-						date.Date(2022, 1, 10), 3,
+						date.Date(2022, 1, 10),
+						3,
 						day(2022, 1, 2, 1, datedTrx(2022, 1, 2)),
 						day(2022, 1, 3, 2),
 						day(2022, 1, 4, 3),
@@ -76,7 +77,7 @@ func TestPeriodFilter(t *testing.T) {
 			},
 			{
 				desc: "monthly, no from date",
-				sut: PeriodFilter{
+				sut: &PeriodFilter{
 					To:       date.Date(2022, 1, 10),
 					Interval: date.Monthly,
 				},
@@ -94,7 +95,7 @@ func TestPeriodFilter(t *testing.T) {
 			},
 			{
 				desc: "monthly, last 5, no from date",
-				sut: PeriodFilter{
+				sut: &PeriodFilter{
 					To:       date.Date(2022, 1, 10),
 					Interval: date.Monthly,
 					Last:     5,

@@ -215,8 +215,12 @@ func (p *Parser) parseTransaction(d time.Time, a *ast.Accrual) (*ast.Transaction
 	if err != nil {
 		return nil, err
 	}
+	r := p.getRange()
+	if a != nil {
+		r.Start = a.Range.Start
+	}
 	return ast.TransactionBuilder{
-		Range:       p.getRange(),
+		Range:       r,
 		Date:        d,
 		Description: desc,
 		Tags:        tags,

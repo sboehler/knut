@@ -21,6 +21,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"regexp"
 	"runtime/pprof"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
+	"github.com/sboehler/knut/lib/journal/report/register"
 
 	"github.com/spf13/cobra"
 )
@@ -136,12 +138,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		periodFilter = &process.PeriodFilter{
-			From:     r.from.Value(),
-			To:       r.to.Value(),
-			Interval: interval,
-			Last:     r.last,
-		}
 		w   = &regprinter{w: cmd.OutOrStdout()}
 		ctx = cmd.Context()
 	)
@@ -149,8 +145,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, balancer)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
-	s2 := cpr.Compose[*ast.Day, *ast.Period](s, periodFilter)
-	ppl := cpr.Connect[*ast.Period](s2, w)
+	ppl := cpr.Connect[*ast.Day](s, w)
 
 	return ppl.Process(ctx)
 }
@@ -159,21 +154,24 @@ type regprinter struct {
 	w io.Writer
 }
 
-func (rp *regprinter) Sink(ctx context.Context, ch <-chan *ast.Period) error {
-	out := bufio.NewWriter(rp.w)
-	defer out.Flush()
+func (rp *regprinter) Sink(ctx context.Context, ch <-chan *ast.Day) error {
+	r := register.Register{
+		InFilter: journal.Filter{
+			Accounts: regexp.MustCompile("^Assets:"),
+		},
+	}
 	for {
-		_, ok, err := cpr.Pop(ctx, ch)
+		d, ok, err := cpr.Pop(ctx, ch)
 		if err != nil {
 			return err
 		}
 		if !ok {
 			break
 		}
-		_, err = out.WriteString("register\n")
-		if err != nil {
-			return err
-		}
+		r.Add(d)
 	}
+	out := bufio.NewWriter(rp.w)
+	defer out.Flush()
+	r.Render(out)
 	return nil
 }

@@ -49,8 +49,8 @@ type Producer[T any] struct {
 }
 
 // Source implements Source.
-func (p *Producer[T]) Source(ctx context.Context, outCh chan<- T) error {
-	for _, i := range p.Items {
+func (c *Producer[T]) Source(ctx context.Context, outCh chan<- T) error {
+	for _, i := range c.Items {
 		if err := Push(ctx, outCh, i); err != nil {
 			return err
 		}
@@ -78,15 +78,15 @@ type source[T any, U any] struct {
 	proc   Processor[T, U]
 }
 
-func (src source[T, U]) Source(ctx context.Context, oCh chan<- U) error {
+func (c source[T, U]) Source(ctx context.Context, oCh chan<- U) error {
 	g, ctx := errgroup.WithContext(ctx)
 	ch := make(chan T, bufSize)
 	g.Go(func() error {
 		defer close(ch)
-		return src.source.Source(ctx, ch)
+		return c.source.Source(ctx, ch)
 	})
 	g.Go(func() error {
-		return src.proc.Process(ctx, ch, oCh)
+		return c.proc.Process(ctx, ch, oCh)
 	})
 	return g.Wait()
 }
@@ -97,15 +97,15 @@ type pipeline[T any] struct {
 }
 
 // Process processes the pipeline.
-func (ppl pipeline[T]) Process(ctx context.Context) error {
+func (c pipeline[T]) Process(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 	ch := make(chan T, bufSize)
 	g.Go(func() error {
 		defer close(ch)
-		return ppl.source.Source(ctx, ch)
+		return c.source.Source(ctx, ch)
 	})
 	g.Go(func() error {
-		return ppl.sink.Sink(ctx, ch)
+		return c.sink.Sink(ctx, ch)
 	})
 	return g.Wait()
 }

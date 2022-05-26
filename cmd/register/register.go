@@ -172,6 +172,5 @@ func (rp *regprinter) Sink(ctx context.Context, ch <-chan *ast.Day) error {
 	}
 	out := bufio.NewWriter(rp.w)
 	defer out.Flush()
-	r.Render(out)
-	return nil
+	return r.Render(out)
 }

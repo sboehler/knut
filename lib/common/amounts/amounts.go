@@ -5,14 +5,26 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// CommodityAccount represents a position.
-type CommodityAccount struct {
+// Key represents a position.
+type Key struct {
 	Account   *journal.Account
 	Commodity *journal.Commodity
 }
 
+func CommodityKey(c *journal.Commodity) Key {
+	return Key{Commodity: c}
+}
+
+func AccountKey(a *journal.Account) Key {
+	return Key{Account: a}
+}
+
+func AccountCommodityKey(a *journal.Account, c *journal.Commodity) Key {
+	return Key{Account: a, Commodity: c}
+}
+
 // Less establishes a partial ordering of commodity accounts.
-func (p CommodityAccount) Less(p1 CommodityAccount) bool {
+func (p Key) Less(p1 Key) bool {
 	if p.Account.Type() != p1.Account.Type() {
 		return p.Account.Type() < p1.Account.Type()
 	}
@@ -23,21 +35,15 @@ func (p CommodityAccount) Less(p1 CommodityAccount) bool {
 }
 
 // Amounts keeps track of amounts by account and commodity.
-type Amounts map[CommodityAccount]decimal.Decimal
+type Amounts map[Key]decimal.Decimal
 
 // Amount returns the amount for the given account and commodity.
 func (am Amounts) Amount(a *journal.Account, c *journal.Commodity) decimal.Decimal {
-	return am[CommodityAccount{Account: a, Commodity: c}]
+	return am[Key{Account: a, Commodity: c}]
 }
 
-// Book books the given amount.
-func (am Amounts) Book(cr, dr *journal.Account, a decimal.Decimal, c *journal.Commodity) {
-	var (
-		crPos = CommodityAccount{cr, c}
-		drPos = CommodityAccount{dr, c}
-	)
-	am[crPos] = am[crPos].Sub(a)
-	am[drPos] = am[drPos].Add(a)
+func (am Amounts) Add(k Key, d decimal.Decimal) {
+	am[k] = am[k].Add(d)
 }
 
 // Clone clones these amounts.

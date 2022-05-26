@@ -33,13 +33,13 @@ func (r *Register) Add(d *ast.Day) {
 				continue
 			}
 			if inCr && r.OutFilter.MatchAccount(b.Debit) {
-				ca := amounts.CommodityAccount{Account: b.Debit, Commodity: b.Commodity}
+				ca := amounts.Key{Account: b.Debit, Commodity: b.Commodity}
 				amts[ca] = amts[ca].Sub(b.Amount)
 				vals[ca] = vals[ca].Sub(b.Value)
 
 			}
 			if inDr && r.OutFilter.MatchAccount(b.Credit) {
-				ca := amounts.CommodityAccount{Account: b.Credit, Commodity: b.Commodity}
+				ca := amounts.Key{Account: b.Credit, Commodity: b.Commodity}
 				amts[ca] = amts[ca].Add(b.Amount)
 				vals[ca] = vals[ca].Add(b.Value)
 			}

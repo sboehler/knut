@@ -68,7 +68,7 @@ func (pr *Balancer) processOpenings(ctx context.Context, accounts accounts, d *a
 	return nil
 }
 
-func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, amounts amounts.Amounts, d *ast.Day) error {
+func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, amts amounts.Amounts, d *ast.Day) error {
 	for _, t := range d.Transactions {
 		for _, p := range t.Postings() {
 			if !accounts.IsOpen(p.Credit) {
@@ -77,25 +77,27 @@ func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, 
 			if !accounts.IsOpen(p.Debit) {
 				return Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)}
 			}
-			amounts.Book(p.Credit, p.Debit, p.Amount, p.Commodity)
+			amts.Add(amounts.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
+			amts.Add(amounts.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
 		}
 	}
 	return nil
 }
 
-func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amounts amounts.Amounts, d *ast.Day) ([]*ast.Transaction, error) {
+func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts amounts.Amounts, d *ast.Day) ([]*ast.Transaction, error) {
 	var transactions []*ast.Transaction
 	for _, v := range d.Values {
 		if !accounts.IsOpen(v.Account) {
 			return nil, Error{v, "account is not open"}
 		}
 		valAcc := pr.Context.ValuationAccountFor(v.Account)
-		posting := ast.NewPostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amounts.Amount(v.Account, v.Commodity)), []*journal.Commodity{v.Commodity})
-		amounts.Book(posting.Credit, posting.Debit, posting.Amount, posting.Commodity)
+		p := ast.NewPostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amts.Amount(v.Account, v.Commodity)), []*journal.Commodity{v.Commodity})
+		amts.Add(amounts.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
+		amts.Add(amounts.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
 		transactions = append(transactions, ast.TransactionBuilder{
 			Date:        v.Date,
 			Description: fmt.Sprintf("Valuation adjustment for %v in %v", v.Commodity, v.Account),
-			Postings:    []ast.Posting{posting},
+			Postings:    []ast.Posting{p},
 		}.Build())
 	}
 	return transactions, nil
@@ -106,7 +108,7 @@ func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, am
 		if !accounts.IsOpen(a.Account) {
 			return Error{a, "account is not open"}
 		}
-		position := amounts.CommodityAccount{Account: a.Account, Commodity: a.Commodity}
+		position := amounts.Key{Account: a.Account, Commodity: a.Commodity}
 		if va, ok := amts[position]; !ok || !va.Equal(a.Amount) {
 			return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va, position.Commodity)}
 		}

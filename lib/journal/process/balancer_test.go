@@ -37,18 +37,18 @@ func TestBalancerHappyCase(t *testing.T) {
 				Prices:       []*ast.Price{td.price1},
 				Transactions: []*ast.Transaction{td.trx1},
 				Amounts: amounts.Amounts{
-					amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(-10),
-					amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity1}: decimal.NewFromInt(10),
+					amounts.Key{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(-10),
+					amounts.Key{Account: td.account2, Commodity: td.commodity1}: decimal.NewFromInt(10),
 				},
 			},
 			{
 				Date:         td.date2,
 				Transactions: []*ast.Transaction{td.trx2},
 				Amounts: amounts.Amounts{
-					amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(-10),
-					amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity1}: decimal.NewFromInt(10),
-					amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity2}: decimal.NewFromInt(11),
-					amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(-11),
+					amounts.Key{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(-10),
+					amounts.Key{Account: td.account2, Commodity: td.commodity1}: decimal.NewFromInt(10),
+					amounts.Key{Account: td.account1, Commodity: td.commodity2}: decimal.NewFromInt(11),
+					amounts.Key{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(-11),
 				},
 			},
 		}

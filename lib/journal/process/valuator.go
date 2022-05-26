@@ -60,7 +60,8 @@ func (pr Valuator) valuateTransactions(d *ast.Day) error {
 			} else {
 				posting.Value = posting.Amount
 			}
-			d.Value.Book(posting.Credit, posting.Debit, posting.Value, posting.Commodity)
+			d.Value.Add(amounts.AccountCommodityKey(posting.Credit, posting.Commodity), posting.Value.Neg())
+			d.Value.Add(amounts.AccountCommodityKey(posting.Debit, posting.Commodity), posting.Value)
 		}
 		res = append(res, tb.Build())
 	}
@@ -94,7 +95,8 @@ func (pr *Valuator) computeValuationTransactions(d *ast.Day) error {
 					ast.NewValuePosting(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
 				},
 			}.Build()
-			d.Value.Book(credit, pos.Account, diff, pos.Commodity)
+			d.Value.Add(amounts.AccountCommodityKey(credit, pos.Commodity), diff.Neg())
+			d.Value.Add(amounts.AccountCommodityKey(pos.Account, pos.Commodity), diff)
 			d.Transactions = append(d.Transactions, t)
 		}
 	}

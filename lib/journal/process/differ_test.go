@@ -24,16 +24,16 @@ func TestDifferHappyCase(t *testing.T) {
 		day1   = &ast.Period{
 			Period: date.Period{End: td.date1},
 			Amounts: amounts.Amounts{
-				amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
-				amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(200),
+				amounts.Key{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+				amounts.Key{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(200),
 			},
 			PrevAmounts: amounts.Amounts{
-				amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(20),
-				amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(20),
+				amounts.Key{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(20),
+				amounts.Key{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(20),
 			},
 		}
-		ca1  = amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}
-		ca2  = amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}
+		ca1  = amounts.Key{Account: td.account1, Commodity: td.commodity1}
+		ca2  = amounts.Key{Account: td.account2, Commodity: td.commodity2}
 		day2 = &ast.Period{
 			Period: date.Period{End: td.date2},
 			Values: amounts.Amounts{
@@ -64,16 +64,16 @@ func TestDifferHappyCase(t *testing.T) {
 			{
 				Period: date.Period{End: td.date2},
 				Values: amounts.Amounts{
-					amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
-					amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(200),
+					amounts.Key{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(100),
+					amounts.Key{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(200),
 				},
 				PrevValues: amounts.Amounts{
-					amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(20),
-					amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(20),
+					amounts.Key{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(20),
+					amounts.Key{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(20),
 				},
 				DeltaValues: amounts.Amounts{
-					amounts.CommodityAccount{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(80),
-					amounts.CommodityAccount{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(180),
+					amounts.Key{Account: td.account1, Commodity: td.commodity1}: decimal.NewFromInt(80),
+					amounts.Key{Account: td.account2, Commodity: td.commodity2}: decimal.NewFromInt(180),
 				},
 			},
 		}

@@ -23,7 +23,7 @@ func AccountCommodityKey(a *journal.Account, c *journal.Commodity) Key {
 	return Key{Account: a, Commodity: c}
 }
 
-// Less establishes a partial ordering of commodity accounts.
+// Less establishes a partial ordering of keys.
 func (p Key) Less(p1 Key) bool {
 	if p.Account.Type() != p1.Account.Type() {
 		return p.Account.Type() < p1.Account.Type()

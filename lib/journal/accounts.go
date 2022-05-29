@@ -228,6 +228,13 @@ func (a Account) Type() AccountType {
 	return a.accountType
 }
 
+func (a *Account) Less(a2 *Account) bool {
+	if a.Type() != a2.Type() {
+		return a.Type() < a2.Type()
+	}
+	return a.Name() < a2.Name()
+}
+
 // IsAL returns whether this account is an asset or liability account.
 func (a Account) IsAL() bool {
 	return a.accountType == ASSETS || a.accountType == LIABILITIES

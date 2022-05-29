@@ -142,3 +142,33 @@ func Periods(t0, t1 time.Time, p Interval) []Period {
 func (p Period) Contains(t time.Time) bool {
 	return !p.Start.After(t) && !p.End.Before(t)
 }
+
+// Periods returns a series of periods in the given interval,
+// which contains both t0 and t1.
+func PeriodsN(t0, t1 time.Time, p Interval, n int) []Period {
+	var res []Period
+	if p == Once {
+		if t0.Before(t1) {
+			res = append(res, Period{t0, t1})
+		}
+	} else {
+		for t := t1; !t.Before(t0); t = StartOf(t, p).AddDate(0, 0, -1) {
+			sd := StartOf(t, p)
+			if sd.Before(t0) {
+				sd = t0
+			}
+			res = append(res, Period{sd, t})
+			if len(res) == n {
+				break
+			}
+		}
+		reverse(res)
+	}
+	return res
+}
+
+func reverse(ps []Period) {
+	for i := 0; i < len(ps)/2; i++ {
+		ps[i], ps[len(ps)-i-1] = ps[len(ps)-i-1], ps[i]
+	}
+}

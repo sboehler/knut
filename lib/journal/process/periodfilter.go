@@ -90,16 +90,5 @@ func (pf *PeriodFilter) computeDates(t time.Time) []date.Period {
 	if pf.To.IsZero() {
 		pf.To = date.Today()
 	}
-	dates := date.Periods(pf.From, pf.To, pf.Interval)
-
-	if pf.Last > 0 {
-		last := pf.Last
-		if len(dates) < last {
-			last = len(dates)
-		}
-		if len(dates) > pf.Last {
-			dates = dates[len(dates)-last:]
-		}
-	}
-	return dates
+	return date.PeriodsN(pf.From, pf.To, pf.Interval, pf.Last)
 }

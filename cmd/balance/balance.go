@@ -138,24 +138,20 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		periodFilter = &process.PeriodFilter{
+		aggregator = &process.Aggregator{
 			From:     r.from.Value(),
 			To:       r.to.Value(),
 			Interval: interval,
 			Last:     r.last,
-		}
-		periodDiffer = &process.PeriodDiffer{
+
+			Mapping:   r.mapping.Value(),
 			Valuation: valuation,
 		}
-		reportBuilder = &report.BalanceBuilder{
-			Mapping:   r.mapping.Value(),
-			Valuation: valuation != nil,
-			Diff:      r.diff,
-		}
-		reportRenderer = report.Renderer{
+		reportRenderer = report.Renderer2{
 			Context:            jctx,
 			ShowCommodities:    r.showCommodities || valuation == nil,
 			SortAlphabetically: r.sortAlphabetically,
+			Valuation:          valuation,
 		}
 		tableRenderer = table.TextRenderer{
 			Color:     r.color,
@@ -168,16 +164,12 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, balancer)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
-	s2 := cpr.Compose[*ast.Day, *ast.Period](s, periodFilter)
-	if r.diff {
-		s2 = cpr.Compose[*ast.Period, *ast.Period](s2, periodDiffer)
-	}
-	ppl := cpr.Connect[*ast.Period](s2, reportBuilder)
+	ppl := cpr.Connect[*ast.Day](s, aggregator)
 
 	if err := ppl.Process(ctx); err != nil {
 		return err
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return tableRenderer.Render(reportRenderer.Render(reportBuilder.Result), out)
+	return tableRenderer.Render(reportRenderer.Render(aggregator.Amounts), out)
 }

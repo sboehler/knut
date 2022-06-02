@@ -94,7 +94,7 @@ type timePartition []time.Time
 
 func (tp timePartition) shard(t time.Time) time.Time {
 	index := sort.Search(len(tp), func(i int) bool {
-		return tp[i].After(t)
+		return !tp[i].Before(t)
 	})
 	if index == len(tp) {
 		return time.Time{}
@@ -117,7 +117,7 @@ func createPartition(t0, t1 time.Time, p date.Interval, n int) timePartition {
 			res = append(res, ed)
 		}
 	}
-	if len(res) > n {
+	if n > 0 && len(res) > n {
 		res = res[len(res)-n:]
 	}
 	return res

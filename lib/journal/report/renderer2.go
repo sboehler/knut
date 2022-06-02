@@ -67,10 +67,8 @@ func (rn *Renderer2) Render(r amounts2.Amounts) *table.Table {
 	}
 	rn.table.AddSeparatorRow()
 
-	var (
-		subtree = rn.subtree(accounts)
-		al, eie []*journal.Account
-	)
+	subtree := rn.subtree(accounts)
+	var al, eie []*journal.Account
 	for _, acc := range rn.Context.Accounts().PreOrder() {
 		if _, ok := subtree[acc]; !ok {
 			continue
@@ -81,20 +79,27 @@ func (rn *Renderer2) Render(r amounts2.Amounts) *table.Table {
 			eie = append(eie, acc)
 		}
 	}
-	for _, side := range []struct {
-		neg  bool
-		accs []*journal.Account
+	sides := []struct {
+		neg    bool
+		accs   []*journal.Account
+		totals map[time.Time]decimal.Decimal
 	}{
 		{
-			neg:  false,
-			accs: al,
+			neg:    false,
+			accs:   al,
+			totals: make(map[time.Time]decimal.Decimal),
 		},
 		{
-			neg:  true,
-			accs: eie,
+			neg:    true,
+			accs:   eie,
+			totals: make(map[time.Time]decimal.Decimal),
 		},
-	} {
-		for _, a := range side.accs {
+	}
+	for _, side := range sides {
+		for i, a := range side.accs {
+			if i > 0 && a.Level() == 1 {
+				rn.table.AddEmptyRow()
+			}
 			row := rn.table.AddRow().AddIndented(a.Segment(), 2*(a.Level()-1))
 			line := make(map[time.Time]decimal.Decimal)
 			for _, d := range rn.dates {
@@ -109,15 +114,28 @@ func (rn *Renderer2) Render(r amounts2.Amounts) *table.Table {
 				if v, ok := line[d]; ok && !v.IsZero() {
 					if side.neg {
 						row.AddNumber(v.Neg())
+						side.totals[d] = side.totals[d].Add(v.Neg())
 					} else {
 						row.AddNumber(v)
+						side.totals[d] = side.totals[d].Add(v)
 					}
 				} else {
 					row.AddEmpty()
 				}
 			}
 		}
+		rn.table.AddEmptyRow()
+		row := rn.table.AddRow().AddText("Total", table.Left)
+		for _, d := range rn.dates {
+			row.AddNumber(side.totals[d])
+		}
+		rn.table.AddSeparatorRow()
 	}
+	row := rn.table.AddRow().AddText("Delta", table.Left)
+	for _, d := range rn.dates {
+		row.AddNumber(sides[0].totals[d].Sub(sides[1].totals[d]))
+	}
+	rn.table.AddSeparatorRow()
 	return rn.table
 }
 

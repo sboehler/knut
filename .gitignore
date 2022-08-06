@@ -5,3 +5,4 @@ knut.exe
 builddoc
 *.sqlite3
 coverage.out
+.vscode

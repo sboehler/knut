@@ -56,7 +56,7 @@ func TestWriteReadAccount(t *testing.T) {
 		t.Fatalf("db.Read(): %v", err)
 	}
 	if diff := cmp.Diff(acc, got); diff != "" {
-		t.Fatalf("trxR.ReadAccount(%v): %s", acc.ID(), diff)
+		t.Fatalf("unexpected diff (-want,+got):\n%s\n", diff)
 	}
 	t.Cleanup(func() {
 		if err := db.Close(); err != nil {

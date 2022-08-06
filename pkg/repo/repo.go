@@ -120,7 +120,7 @@ func Read[T any, PT Entity[T]](trx *ReadTrx, id uint64) (PT, error) {
 
 }
 
-func encode[T any, PT *T](v PT) ([]byte, error) {
+func encode[T any](v T) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(v); err != nil {

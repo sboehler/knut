@@ -1,7 +1,0 @@
-Transaction Date, Posting Date, Card Number ,Billing Amount, Description, Merchant City , Merchant State , Merchant Zip , Reference Number , Debit/Credit Flag , SICMCC Code
-14.02.2020,14.02.2020,1234,CHF0.50,"desc0","",,, "",D,
-12.02.2020,13.02.2020,1234,CHF34.65,"desc1","desc2",CHE,1111, "42",D,5411
-12.02.2020,13.02.2020,1234,CHF64.60,"desc3","town",CHE,1111, "42",D,5411
-06.02.2020,06.02.2020,1234,-CHF2'000.50,"IHRE ZAHLUNG . BESTEN DANK","",,, "43",C,
-18.01.2020,20.01.2020,1234,CHF14.00,"desc4","ZURICH",CHE,8003, "44",D,5812
-14.01.2020,15.01.2020,1234,-CHF0.50,"RÜCKVERGÜTUNG RECHNUNGSGEBÜHR","",,, "45",C,

@@ -1,8 +1,0 @@
-- commodity: "USD"
-  target_commodity: "CHF"
-  file: "USD.prices"
-  symbol: "USDCHF=X"
-- commodity: "AAPL"
-  target_commodity: "USD"
-  file: "AAPL.prices"
-  symbol: "AAPL"

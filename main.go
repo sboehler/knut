@@ -19,16 +19,6 @@ import (
 	"os"
 
 	"github.com/sboehler/knut/cmd"
-
-	// enable importers here
-	_ "github.com/sboehler/knut/cmd/importer/cumulus"
-	_ "github.com/sboehler/knut/cmd/importer/interactivebrokers"
-	_ "github.com/sboehler/knut/cmd/importer/postfinance"
-	_ "github.com/sboehler/knut/cmd/importer/revolut"
-	_ "github.com/sboehler/knut/cmd/importer/supercard"
-	_ "github.com/sboehler/knut/cmd/importer/swisscard"
-	_ "github.com/sboehler/knut/cmd/importer/swissquote"
-	_ "github.com/sboehler/knut/cmd/importer/viac"
 )
 
 var version = "development"

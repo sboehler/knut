@@ -16,18 +16,6 @@
 package cmd
 
 import (
-	"github.com/sboehler/knut/cmd/balance"
-
-	"github.com/sboehler/knut/cmd/benchmark"
-	"github.com/sboehler/knut/cmd/completion"
-	"github.com/sboehler/knut/cmd/format"
-	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/cmd/infer"
-	"github.com/sboehler/knut/cmd/portfolio"
-	"github.com/sboehler/knut/cmd/prices"
-	"github.com/sboehler/knut/cmd/register"
-	"github.com/sboehler/knut/cmd/transcode"
-
 	"github.com/spf13/cobra"
 )
 
@@ -39,16 +27,5 @@ func CreateCmd(version string) *cobra.Command {
 		Long:    `knut is a plain text accounting tool for tracking personal finances and investments.`,
 		Version: version,
 	}
-	c.AddCommand(balance.CreateCmd())
-	c.AddCommand(portfolio.CreateCmd())
-	c.AddCommand(importer.CreateCmd())
-	c.AddCommand(prices.CreateCmd())
-	c.AddCommand(format.CreateCmd())
-	c.AddCommand(infer.CreateCmd())
-	c.AddCommand(transcode.CreateCmd())
-	c.AddCommand(register.CreateCmd())
-	c.AddCommand(benchmark.CreateCmd())
-	c.AddCommand(completion.CreateCmd(c))
-
 	return c
 }

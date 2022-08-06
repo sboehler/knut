@@ -145,7 +145,7 @@ func (p *parser) readLine() error {
 	if r[fieldBuchungstext] == "Saldovortrag" {
 		return nil
 	}
-	if len(r) == 11 {
+	if len(r) == 11 || r[fieldKontonummer] == "" {
 		return nil
 	}
 	if len(r) != 13 {
@@ -185,7 +185,7 @@ func (p *parser) parseBooking(r []string) error {
 		err       error
 	)
 	if date, err = p.parseDate(r); err != nil {
-		return err
+		return fmt.Errorf("%v %w", r, err)
 	}
 	if amount, err = p.parseAmount(r); err != nil {
 		return err

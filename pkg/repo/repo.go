@@ -94,30 +94,44 @@ func Create[T any, PT Entity[T]](trx *WriteTrx, e PT) error {
 		return err
 	}
 	e.SetID(id)
-	v, err := encode(e)
-	if err != nil {
-		return err
-	}
-	k := trx.db.keyFor(e)
-	if err := trx.trx.Set([]byte(k), v); err != nil {
-		return err
-	}
-	return nil
+	return Update(trx, e)
 }
 
 func Read[T any, PT Entity[T]](trx *ReadTrx, id uint64) (PT, error) {
-	acc := PT(new(T))
-	acc.SetID(id)
-	k := trx.db.keyFor(acc)
+	e := PT(new(T))
+	e.SetID(id)
+	k := trx.db.keyFor(e)
 	item, err := trx.trx.Get([]byte(k))
 	if err != nil {
 		return nil, fmt.Errorf("trx.Get(%v): %w", k, err)
 	}
-	if err := decode(acc, item); err != nil {
+	if err := decode(e, item); err != nil {
 		return nil, fmt.Errorf("decode(%v): %w", item, err)
 	}
-	return acc, nil
+	return e, nil
 
+}
+
+func Update[T any, PT Entity[T]](trx *WriteTrx, e PT) error {
+	k := trx.db.keyFor(e)
+	v, err := encode(e)
+	if err != nil {
+		return err
+	}
+	if err := trx.trx.Set([]byte(k), v); err != nil {
+		return fmt.Errorf("trx.Set(%v, %v): %w", k, v, err)
+	}
+	return nil
+}
+
+func Delete[T any, PT Entity[T]](trx *WriteTrx, id uint64) error {
+	e := PT(new(T))
+	e.SetID(id)
+	k := trx.db.keyFor(e)
+	if err := trx.trx.Delete([]byte(k)); err != nil {
+		return fmt.Errorf("trx.Delete(%v): %w", k, err)
+	}
+	return nil
 }
 
 func encode[T any](v T) ([]byte, error) {

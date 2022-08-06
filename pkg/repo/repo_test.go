@@ -22,12 +22,17 @@ func TestOpenClose(t *testing.T) {
 	})
 }
 
-func TestWriteReadAccount(t *testing.T) {
+func TestWriteReadUpdateDeleteAccount(t *testing.T) {
 	d := t.TempDir()
 	db, err := Open(d)
 	if err != nil {
 		t.Fatalf("Open(%s): %v", d, err)
 	}
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Fatalf("db.Close(): %v", err)
+		}
+	})
 	db.GetID()
 	db.GetID() // spend a few IDs
 
@@ -58,9 +63,48 @@ func TestWriteReadAccount(t *testing.T) {
 	if diff := cmp.Diff(acc, got); diff != "" {
 		t.Fatalf("unexpected diff (-want,+got):\n%s\n", diff)
 	}
-	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Fatalf("db.Close(): %v", err)
+	acc.Name = "barfoo"
+	err = db.Write(func(trx *WriteTrx) error {
+		err := Update(trx, acc)
+		if err != nil {
+			t.Fatalf("Update(trx, %v): %v", acc, err)
 		}
+		return nil
 	})
+	if err != nil {
+		t.Fatalf("db.Update(): %v", err)
+	}
+	err = db.Read(func(trx *ReadTrx) error {
+		got, err = Read[schema.Account](trx, acc.ID())
+		if err != nil {
+			t.Fatalf("Read(%v): %v", acc.ID(), err)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("db.Read(): %v", err)
+	}
+	if diff := cmp.Diff(acc, got); diff != "" {
+		t.Fatalf("unexpected diff (-want,+got):\n%s\n", diff)
+	}
+	err = db.Write(func(trx *WriteTrx) error {
+		err := Delete[schema.Account](trx, acc.ID())
+		if err != nil {
+			t.Fatalf("Delete(trx, %d): %v", acc.ID(), err)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("db.Delete(): %v", err)
+	}
+	err = db.Read(func(trx *ReadTrx) error {
+		got, err = Read[schema.Account](trx, acc.ID())
+		if err == nil {
+			t.Fatalf("Read(%v) returned nil, expected error", acc.ID())
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("db.Read(): %v", err)
+	}
 }

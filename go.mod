@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
+	github.com/google/go-cmp v0.5.4
 	github.com/spf13/cobra v1.1.1
 )
 

@@ -120,7 +120,7 @@ func Read[T any, PT Entity[T]](trx *ReadTrx, id uint64) (PT, error) {
 
 }
 
-func encode[T any, PT interface{ *T }](v PT) ([]byte, error) {
+func encode[T any, PT *T](v PT) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(v); err != nil {
@@ -129,7 +129,7 @@ func encode[T any, PT interface{ *T }](v PT) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func decode[T any, PT interface{ *T }](v PT, item *badger.Item) error {
+func decode[T any](v T, item *badger.Item) error {
 	return item.Value(func(bs []byte) error {
 		err := gob.NewDecoder(bytes.NewBuffer(bs)).Decode(v)
 		if err != nil {

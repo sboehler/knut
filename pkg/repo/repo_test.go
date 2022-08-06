@@ -28,24 +28,35 @@ func TestWriteReadAccount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open(%s): %v", d, err)
 	}
+	db.GetID()
+	db.GetID() // spend a few IDs
+
 	acc := &schema.Account{
 		Name:        "foobar",
 		AccountType: schema.EXPENSES,
 	}
-	trxW := db.Write()
-	if err := trxW.CreateAccount(acc); err != nil {
-		t.Fatalf("trxW.CreateAccount(%v): %v", acc, err)
-	}
-	if err := trxW.trx.Commit(); err != nil {
-		t.Fatalf("trxW.trx.Commit(): %v", err)
-	}
-	trxR := db.Read()
-	got, err := trxR.ReadAccount(acc.ID)
+	err = db.Write(func(trx *WriteTrx) error {
+		if err := Create(trx, acc); err != nil {
+			t.Fatalf("Create(%v): %v", acc, err)
+		}
+		return nil
+	})
 	if err != nil {
-		t.Fatalf("trxR.ReadAccount(%v): %v", acc.ID, err)
+		t.Fatalf("db.Write(): %v", err)
+	}
+	var got *schema.Account
+	err = db.Read(func(trx *ReadTrx) error {
+		got, err = Read[schema.Account](trx, acc.ID())
+		if err != nil {
+			t.Fatalf("Read(%v): %v", acc.ID(), err)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("db.Read(): %v", err)
 	}
 	if diff := cmp.Diff(acc, got); diff != "" {
-		t.Fatalf("trxR.ReadAccount(%v): %s", acc.ID, diff)
+		t.Fatalf("trxR.ReadAccount(%v): %s", acc.ID(), diff)
 	}
 	t.Cleanup(func() {
 		if err := db.Close(); err != nil {

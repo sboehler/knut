@@ -20,7 +20,15 @@ type AccountID int64
 
 // Account is an account.
 type Account struct {
-	ID          AccountID
+	AccountID   AccountID
 	AccountType AccountType
 	Name        string
+}
+
+func (a Account) ID() uint64 {
+	return uint64(a.AccountID)
+}
+
+func (a *Account) SetID(id uint64) {
+	a.AccountID = AccountID(id)
 }

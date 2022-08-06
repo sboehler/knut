@@ -44,20 +44,33 @@ func (db *DB) GetID() (uint64, error) {
 	return id, nil
 }
 
-func (db *DB) Read() *ReadTrx {
-	return &ReadTrx{
-		trx: db.bd.NewTransaction(false),
-		db:  db,
-	}
+func (db *DB) Read(f func(*ReadTrx) error) error {
+	return db.bd.View(func(txn *badger.Txn) error {
+		trx := &ReadTrx{
+			trx: txn,
+			db:  db,
+		}
+		return f(trx)
+	})
 }
 
-func (db *DB) Write() *WriteTrx {
-	return &WriteTrx{
-		ReadTrx{
-			trx: db.bd.NewTransaction(true),
-			db:  db,
-		},
+func (db *DB) Write(f func(*WriteTrx) error) error {
+	return db.bd.Update(func(txn *badger.Txn) error {
+		trx := &WriteTrx{
+			ReadTrx{
+				trx: txn,
+				db:  db,
+			}}
+		return f(trx)
+	})
+}
+
+func (db *DB) keyFor(v any) string {
+	switch i := v.(type) {
+	case *schema.Account:
+		return fmt.Sprintf("tables/accounts/pk/%d", i.ID())
 	}
+	panic(fmt.Sprintf("invalid entity: %v", v))
 }
 
 type ReadTrx struct {
@@ -65,49 +78,63 @@ type ReadTrx struct {
 	db  *DB
 }
 
-func (trx *ReadTrx) ReadAccount(id schema.AccountID) (*schema.Account, error) {
-	k := fmt.Sprintf("tables/accounts/pk/%d", id)
-	item, err := trx.trx.Get([]byte(k))
-	if err != nil {
-		return nil, err
-	}
-	var acc schema.Account
-	err = item.Value(func(v []byte) error {
-		err := gob.NewDecoder(bytes.NewBuffer(v)).Decode(&acc)
-		if err != nil {
-			return fmt.Errorf("decode(%v): %w", v, err)
-		}
-		return nil
-	})
-	return &acc, err
-}
-
 type WriteTrx struct {
 	ReadTrx
 }
 
-func (trx *WriteTrx) CreateAccount(acc *schema.Account) error {
+type Entity[T any] interface {
+	SetID(uint64)
+	ID() uint64
+	*T
+}
+
+func Create[T any, PT Entity[T]](trx *WriteTrx, e PT) error {
 	id, err := trx.db.GetID()
 	if err != nil {
 		return err
 	}
-	acc.ID = schema.AccountID(id)
-	v, err := encode(acc)
+	e.SetID(id)
+	v, err := encode(e)
 	if err != nil {
 		return err
 	}
-	k := fmt.Sprintf("tables/accounts/pk/%d", acc.ID)
+	k := trx.db.keyFor(e)
 	if err := trx.trx.Set([]byte(k), v); err != nil {
 		return err
 	}
 	return nil
 }
 
-func encode[T any](v T) ([]byte, error) {
+func Read[T any, PT Entity[T]](trx *ReadTrx, id uint64) (PT, error) {
+	acc := PT(new(T))
+	acc.SetID(id)
+	k := trx.db.keyFor(acc)
+	item, err := trx.trx.Get([]byte(k))
+	if err != nil {
+		return nil, fmt.Errorf("trx.Get(%v): %w", k, err)
+	}
+	if err := decode(acc, item); err != nil {
+		return nil, fmt.Errorf("decode(%v): %w", item, err)
+	}
+	return acc, nil
+
+}
+
+func encode[T any, PT interface{ *T }](v PT) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
-	if err := enc.Encode(&v); err != nil {
+	if err := enc.Encode(v); err != nil {
 		return nil, fmt.Errorf("enc.Encode(%v): %w", v, err)
 	}
 	return buf.Bytes(), nil
+}
+
+func decode[T any, PT interface{ *T }](v PT, item *badger.Item) error {
+	return item.Value(func(bs []byte) error {
+		err := gob.NewDecoder(bytes.NewBuffer(bs)).Decode(v)
+		if err != nil {
+			return fmt.Errorf("decode(%v): %w", bs, err)
+		}
+		return nil
+	})
 }

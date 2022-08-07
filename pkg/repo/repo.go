@@ -1,154 +1,51 @@
 package repo
 
-import (
-	"bytes"
-	"encoding/gob"
-	"fmt"
+import "github.com/sboehler/knut/pkg/repo/db"
 
-	badger "github.com/dgraph-io/badger/v3"
-	"github.com/sboehler/knut/pkg/repo/schema"
-)
-
-type DB struct {
-	bd *badger.DB
-}
+// AccountType is the type of an account.
+type AccountType int
 
 const (
-	IDSequence = "id_sequence"
+	// ASSETS represents an asset account.
+	ASSETS AccountType = iota
+	// LIABILITIES represents a liability account.
+	LIABILITIES
+	// EQUITY represents an equity account.
+	EQUITY
+	// INCOME represents an income account.
+	INCOME
+	// EXPENSES represents an expenses account.
+	EXPENSES
 )
 
-func Open(path string) (*DB, error) {
-	b, err := badger.Open(badger.DefaultOptions(path))
-	if err != nil {
-		return nil, err
-	}
-	return &DB{
-		bd: b,
-	}, nil
+// Account is an account.
+type Account struct {
+	AccountID   uint64
+	AccountType AccountType
+	Name        string
 }
 
-func (db *DB) Close() error {
-	return db.bd.Close()
+func (a Account) ID() uint64 {
+	return a.AccountID
 }
 
-func (db *DB) GetID() (uint64, error) {
-	s, err := db.bd.GetSequence([]byte(IDSequence), 1)
-	if err != nil {
-		return 0, err
-	}
-	defer s.Release()
-	id, err := s.Next()
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
+func (a *Account) SetID(id uint64) {
+	a.AccountID = id
 }
 
-func (db *DB) Read(f func(*ReadTrx) error) error {
-	return db.bd.View(func(txn *badger.Txn) error {
-		trx := &ReadTrx{
-			trx: txn,
-			db:  db,
-		}
-		return f(trx)
-	})
+type Commodity struct {
+	CommodityID uint64
 }
 
-func (db *DB) Write(f func(*WriteTrx) error) error {
-	return db.bd.Update(func(txn *badger.Txn) error {
-		trx := &WriteTrx{
-			ReadTrx{
-				trx: txn,
-				db:  db,
-			}}
-		return f(trx)
-	})
+func (a Commodity) ID() uint64 {
+	return a.CommodityID
 }
 
-func (db *DB) keyFor(v any) string {
-	switch i := v.(type) {
-	case *schema.Account:
-		return fmt.Sprintf("tables/accounts/pk/%d", i.ID())
-	}
-	panic(fmt.Sprintf("invalid entity: %v", v))
+func (a *Commodity) SetID(id uint64) {
+	a.CommodityID = id
 }
 
-type ReadTrx struct {
-	trx *badger.Txn
-	db  *DB
-}
-
-type WriteTrx struct {
-	ReadTrx
-}
-
-type Entity[T any] interface {
-	SetID(uint64)
-	ID() uint64
-	*T
-}
-
-func Create[T any, PT Entity[T]](trx *WriteTrx, e PT) error {
-	id, err := trx.db.GetID()
-	if err != nil {
-		return err
-	}
-	e.SetID(id)
-	return Update(trx, e)
-}
-
-func Read[T any, PT Entity[T]](trx *ReadTrx, id uint64) (PT, error) {
-	e := PT(new(T))
-	e.SetID(id)
-	k := trx.db.keyFor(e)
-	item, err := trx.trx.Get([]byte(k))
-	if err != nil {
-		return nil, fmt.Errorf("trx.Get(%v): %w", k, err)
-	}
-	if err := decode(e, item); err != nil {
-		return nil, fmt.Errorf("decode(%v): %w", item, err)
-	}
-	return e, nil
-
-}
-
-func Update[T any, PT Entity[T]](trx *WriteTrx, e PT) error {
-	k := trx.db.keyFor(e)
-	v, err := encode(e)
-	if err != nil {
-		return err
-	}
-	if err := trx.trx.Set([]byte(k), v); err != nil {
-		return fmt.Errorf("trx.Set(%v, %v): %w", k, v, err)
-	}
-	return nil
-}
-
-func Delete[T any, PT Entity[T]](trx *WriteTrx, id uint64) error {
-	e := PT(new(T))
-	e.SetID(id)
-	k := trx.db.keyFor(e)
-	if err := trx.trx.Delete([]byte(k)); err != nil {
-		return fmt.Errorf("trx.Delete(%v): %w", k, err)
-	}
-	return nil
-}
-
-func encode[T any](v T) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	if err := enc.Encode(v); err != nil {
-		return nil, fmt.Errorf("enc.Encode(%v): %w", v, err)
-	}
-	return buf.Bytes(), nil
-}
-
-func decode[T any](v T, item *badger.Item) error {
-	return item.Value(func(bs []byte) error {
-		err := gob.NewDecoder(bytes.NewBuffer(bs)).Decode(v)
-		if err != nil {
-			return fmt.Errorf("decode(%v): %w", bs, err)
-		}
-		return nil
-	})
-}
+var (
+	AccountTable   = db.Table[Account, *Account]{Name: "accounts", TableID: 0x1}
+	CommodityTable = db.Table[Commodity, *Commodity]{Name: "commodities", TableID: 0x2}
+)

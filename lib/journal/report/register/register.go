@@ -18,12 +18,14 @@ type Register struct {
 	Filter journal.Filter
 
 	sections []*Section
+
+	ShowCommodities bool
+	Valuation       *journal.Commodity
 }
 
 // Add adds another day.
 func (r *Register) Add(d *ast.Day) {
 	vals := make(amounts.Amounts)
-	amts := make(amounts.Amounts)
 	for _, t := range d.Transactions {
 		for _, b := range t.Postings() {
 			if !r.Domain.MatchCommodity(b.Commodity) {
@@ -35,23 +37,29 @@ func (r *Register) Add(d *ast.Day) {
 				continue
 			}
 
+			commodity := b.Commodity
+			value := b.Amount
+			if r.Valuation != nil {
+				value = b.Value
+				if !r.ShowCommodities {
+					commodity = r.Valuation
+				}
+			}
+
 			if inCr && r.Filter.MatchAccount(b.Debit) {
-				ca := amounts.Key{Account: b.Debit, Commodity: b.Commodity}
-				amts[ca] = amts[ca].Sub(b.Amount)
-				vals[ca] = vals[ca].Sub(b.Value)
+				ca := amounts.Key{Account: b.Debit, Commodity: commodity}
+				vals[ca] = vals[ca].Sub(value)
 
 			}
 			if inDr && r.Filter.MatchAccount(b.Credit) {
-				ca := amounts.Key{Account: b.Credit, Commodity: b.Commodity}
-				amts[ca] = amts[ca].Add(b.Amount)
-				vals[ca] = vals[ca].Add(b.Value)
+				ca := amounts.Key{Account: b.Credit, Commodity: commodity}
+				vals[ca] = vals[ca].Add(value)
 			}
 		}
 	}
 	r.sections = append(r.sections, &Section{
-		date:    d.Date,
-		values:  vals,
-		amounts: amts,
+		date:   d.Date,
+		values: vals,
 	})
 }
 
@@ -73,22 +81,25 @@ func (r *Register) Sink(ctx context.Context, ch <-chan *ast.Day) error {
 func (r *Register) Render(w io.Writer) error {
 	var lenAcc, lenCom, lenAmt int
 	for _, s := range r.sections {
-		for ca, a := range s.amounts {
-			if len(ca.Account.String()) > lenAcc {
-				lenAcc = len(ca.Account.String())
+		for ca, a := range s.values {
+			if l := len(ca.Account.String()); l > lenAcc {
+				lenAcc = l
 			}
-			if len(ca.Commodity.String()) > lenCom {
-				lenCom = len(ca.Commodity.String())
+			if l := len(ca.Commodity.String()); l > lenCom {
+				lenCom = l
 			}
-			if len(a.StringFixed(2)) > lenAmt {
-				lenAmt = len(a.StringFixed(2))
+			if l := len(a.StringFixed(2)); l > lenAmt {
+				lenAmt = l
 			}
 		}
+	}
+	if !r.ShowCommodities && r.Valuation != nil {
+		lenCom = len(r.Valuation.String())
 	}
 
 	for _, s := range r.sections {
 		var counter int
-		for ca, a := range s.amounts {
+		for ca, a := range s.values {
 			if counter == 0 {
 				fmt.Fprintf(w, "%s ", s.date.Format("2006-01-02"))
 			} else {
@@ -103,6 +114,6 @@ func (r *Register) Render(w io.Writer) error {
 
 // Section represents one day in the register report.
 type Section struct {
-	date            time.Time
-	amounts, values amounts.Amounts
+	date   time.Time
+	values amounts.Amounts
 }

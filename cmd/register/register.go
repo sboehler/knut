@@ -140,6 +140,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				Accounts:    r.accounts.Value(),
 				Commodities: r.commodities.Value(),
 			},
+			ShowCommodities: r.showCommodities,
+			Valuation:       valuation,
 		}
 		ctx = cmd.Context()
 	)

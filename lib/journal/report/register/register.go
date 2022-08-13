@@ -1,19 +1,21 @@
 package register
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 )
 
 // Register represents a register report.
 type Register struct {
-	InFilter  journal.Filter
-	OutFilter journal.Filter
+	Domain journal.Filter
+	Filter journal.Filter
 
 	sections []*Section
 }
@@ -24,21 +26,22 @@ func (r *Register) Add(d *ast.Day) {
 	amts := make(amounts.Amounts)
 	for _, t := range d.Transactions {
 		for _, b := range t.Postings() {
-			if !r.InFilter.MatchCommodity(b.Commodity) || !r.OutFilter.MatchCommodity(b.Commodity) {
+			if !r.Domain.MatchCommodity(b.Commodity) {
 				continue
 			}
-			inCr := r.InFilter.MatchAccount(b.Credit)
-			inDr := r.InFilter.MatchAccount(b.Debit)
-			if inCr && inDr {
+			inCr := r.Domain.MatchAccount(b.Credit)
+			inDr := r.Domain.MatchAccount(b.Debit)
+			if inCr == inDr {
 				continue
 			}
-			if inCr && r.OutFilter.MatchAccount(b.Debit) {
+
+			if inCr && r.Filter.MatchAccount(b.Debit) {
 				ca := amounts.Key{Account: b.Debit, Commodity: b.Commodity}
 				amts[ca] = amts[ca].Sub(b.Amount)
 				vals[ca] = vals[ca].Sub(b.Value)
 
 			}
-			if inDr && r.OutFilter.MatchAccount(b.Credit) {
+			if inDr && r.Filter.MatchAccount(b.Credit) {
 				ca := amounts.Key{Account: b.Credit, Commodity: b.Commodity}
 				amts[ca] = amts[ca].Add(b.Amount)
 				vals[ca] = vals[ca].Add(b.Value)
@@ -50,6 +53,20 @@ func (r *Register) Add(d *ast.Day) {
 		values:  vals,
 		amounts: amts,
 	})
+}
+
+func (r *Register) Sink(ctx context.Context, ch <-chan *ast.Day) error {
+	for {
+		d, ok, err := cpr.Pop(ctx, ch)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			break
+		}
+		r.Add(d)
+	}
+	return nil
 }
 
 // Render renders the register.

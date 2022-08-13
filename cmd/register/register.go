@@ -16,12 +16,9 @@ package register
 
 import (
 	"bufio"
-	"context"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"regexp"
 	"runtime/pprof"
 	"time"
 
@@ -138,39 +135,24 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		w   = &regprinter{w: cmd.OutOrStdout()}
+		reg = &register.Register{
+			Domain: journal.Filter{
+				Accounts:    r.accounts.Value(),
+				Commodities: r.commodities.Value(),
+			},
+		}
 		ctx = cmd.Context()
 	)
 
 	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, balancer)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
-	ppl := cpr.Connect[*ast.Day](s, w)
+	ppl := cpr.Connect[*ast.Day](s, reg)
 
-	return ppl.Process(ctx)
-}
-
-type regprinter struct {
-	w io.Writer
-}
-
-func (rp *regprinter) Sink(ctx context.Context, ch <-chan *ast.Day) error {
-	r := register.Register{
-		InFilter: journal.Filter{
-			Accounts: regexp.MustCompile("^Assets:"),
-		},
+	if err := ppl.Process(ctx); err != nil {
+		return err
 	}
-	for {
-		d, ok, err := cpr.Pop(ctx, ch)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			break
-		}
-		r.Add(d)
-	}
-	out := bufio.NewWriter(rp.w)
+	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return r.Render(out)
+	return reg.Render(out)
 }

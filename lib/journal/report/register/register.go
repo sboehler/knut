@@ -21,6 +21,7 @@ type Register struct {
 
 	ShowCommodities bool
 	Valuation       *journal.Commodity
+	Mapping         journal.Mapping
 }
 
 // Add adds another day.
@@ -47,12 +48,14 @@ func (r *Register) Add(d *ast.Day) {
 			}
 
 			if inCr && r.Filter.MatchAccount(b.Debit) {
-				ca := amounts.Key{Account: b.Debit, Commodity: commodity}
+				acc := b.Debit.Map(r.Mapping)
+				ca := amounts.Key{Account: acc, Commodity: commodity}
 				vals[ca] = vals[ca].Sub(value)
 
 			}
 			if inDr && r.Filter.MatchAccount(b.Credit) {
-				ca := amounts.Key{Account: b.Credit, Commodity: commodity}
+				acc := b.Credit.Map(r.Mapping)
+				ca := amounts.Key{Account: acc, Commodity: commodity}
 				vals[ca] = vals[ca].Add(value)
 			}
 		}

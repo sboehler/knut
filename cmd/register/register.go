@@ -142,6 +142,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			},
 			ShowCommodities: r.showCommodities,
 			Valuation:       valuation,
+			Mapping:         r.mapping.Value(),
 		}
 		ctx = cmd.Context()
 	)

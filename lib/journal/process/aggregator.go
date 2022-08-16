@@ -32,8 +32,8 @@ type Aggregator struct {
 	tp timePartition
 }
 
-func (rb *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
-	rb.Amounts = make(amounts2.Amounts)
+func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
+	agg.Amounts = make(amounts2.Amounts)
 	for {
 		d, ok, err := cpr.Pop(ctx, inCh)
 		if err != nil {
@@ -42,47 +42,47 @@ func (rb *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 		if !ok {
 			break
 		}
-		if rb.tp == nil {
+		if agg.tp == nil {
 			if len(d.Transactions) == 0 {
 				continue
 			}
-			if rb.From.IsZero() {
-				rb.From = d.Date
+			if agg.From.IsZero() {
+				agg.From = d.Date
 			}
-			rb.tp = createPartition(rb.From, rb.To, rb.Interval, rb.Last)
+			agg.tp = createPartition(agg.From, agg.To, agg.Interval, agg.Last)
 		}
-		dt := rb.tp.shard(d.Date)
+		dt := agg.tp.shard(d.Date)
 		for _, t := range d.Transactions {
 			for _, b := range t.Postings() {
 				kc := amounts2.Key{
 					Date:      dt,
-					Account:   b.Credit.Map(rb.Mapping),
+					Account:   b.Credit.Map(agg.Mapping),
 					Commodity: b.Commodity,
 				}
-				rb.Amounts[kc] = rb.Amounts[kc].Sub(b.Amount)
+				agg.Amounts[kc] = agg.Amounts[kc].Sub(b.Amount)
 				kd := amounts2.Key{
 					Date:      dt,
-					Account:   b.Debit.Map(rb.Mapping),
+					Account:   b.Debit.Map(agg.Mapping),
 					Commodity: b.Commodity,
 				}
-				rb.Amounts[kd] = rb.Amounts[kd].Add(b.Amount)
+				agg.Amounts[kd] = agg.Amounts[kd].Add(b.Amount)
 			}
-			if rb.Valuation != nil {
+			if agg.Valuation != nil {
 				for _, b := range t.Postings() {
 					kc := amounts2.Key{
 						Date:      dt,
-						Account:   b.Credit.Map(rb.Mapping),
+						Account:   b.Credit.Map(agg.Mapping),
 						Commodity: b.Commodity,
-						Valuation: rb.Valuation,
+						Valuation: agg.Valuation,
 					}
-					rb.Amounts[kc] = rb.Amounts[kc].Sub(b.Value)
+					agg.Amounts[kc] = agg.Amounts[kc].Sub(b.Value)
 					kd := amounts2.Key{
 						Date:      dt,
-						Account:   b.Debit.Map(rb.Mapping),
+						Account:   b.Debit.Map(agg.Mapping),
 						Commodity: b.Commodity,
-						Valuation: rb.Valuation,
+						Valuation: agg.Valuation,
 					}
-					rb.Amounts[kd] = rb.Amounts[kd].Add(b.Value)
+					agg.Amounts[kd] = agg.Amounts[kd].Add(b.Value)
 				}
 			}
 		}

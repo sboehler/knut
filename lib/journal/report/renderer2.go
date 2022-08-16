@@ -30,46 +30,46 @@ type Renderer2 struct {
 	SortAlphabetically bool
 	Valuation          *journal.Commodity
 
-	amounts amounts2.Amounts
-	table   *table.Table
-	dates   []time.Time
+	amounts  amounts2.Amounts
+	table    *table.Table
+	datesSeq []time.Time
 }
 
 // Render renders a report.
 func (rn *Renderer2) Render(r amounts2.Amounts) *table.Table {
 	rn.amounts = r
 
-	// sort dates
+	// sort datesSet
 	var (
-		dates       = make(map[time.Time]struct{})
-		accounts    = make(map[*journal.Account]struct{})
-		commodities = make(map[*journal.Commodity]struct{})
+		datesSet       = make(map[time.Time]struct{})
+		accountsSet    = make(map[*journal.Account]struct{})
+		commoditiesSet = make(map[*journal.Commodity]struct{})
 	)
 	for k := range rn.amounts {
 		if !k.Date.IsZero() {
-			dates[k.Date] = struct{}{}
+			datesSet[k.Date] = struct{}{}
 		}
-		accounts[k.Account] = struct{}{}
-		commodities[k.Commodity] = struct{}{}
+		accountsSet[k.Account] = struct{}{}
+		commoditiesSet[k.Commodity] = struct{}{}
 	}
-	for d := range dates {
-		rn.dates = append(rn.dates, d)
+	for d := range datesSet {
+		rn.datesSeq = append(rn.datesSeq, d)
 	}
-	sort.Slice(rn.dates, func(i, j int) bool { return rn.dates[i].Before(rn.dates[j]) })
+	sort.Slice(rn.datesSeq, func(i, j int) bool { return rn.datesSeq[i].Before(rn.datesSeq[j]) })
 
-	rn.table = table.New(1, len(rn.dates))
+	rn.table = table.New(1, len(rn.datesSeq))
 	rn.table.AddSeparatorRow()
 
 	header := rn.table.AddRow().AddText("Account", table.Center)
-	for _, d := range rn.dates {
+	for _, d := range rn.datesSeq {
 		header.AddText(d.Format("2006-01-02"), table.Center)
 	}
 	rn.table.AddSeparatorRow()
 
-	subtree := rn.subtree(accounts)
+	accountsSet = rn.fullTree(accountsSet)
 	var al, eie []*journal.Account
 	for _, acc := range rn.Context.Accounts().PreOrder() {
-		if _, ok := subtree[acc]; !ok {
+		if _, ok := accountsSet[acc]; !ok {
 			continue
 		}
 		if acc.IsAL() {
@@ -79,46 +79,45 @@ func (rn *Renderer2) Render(r amounts2.Amounts) *table.Table {
 		}
 	}
 	sides := []struct {
-		neg    bool
-		accs   []*journal.Account
-		totals amounts2.Amounts
+		neg         bool
+		accountsSeq []*journal.Account
+		totals      amounts2.Amounts
 	}{
 		{
-			neg:    false,
-			accs:   al,
-			totals: make(amounts2.Amounts),
+			neg:         false,
+			accountsSeq: al,
+			totals:      make(amounts2.Amounts),
 		},
 		{
-			neg:    true,
-			accs:   eie,
-			totals: make(amounts2.Amounts),
+			neg:         true,
+			accountsSeq: eie,
+			totals:      make(amounts2.Amounts),
 		},
 	}
 	for _, side := range sides {
-		for i, a := range side.accs {
+		for i, a := range side.accountsSeq {
 			if i > 0 && a.Level() == 1 {
 				rn.table.AddEmptyRow()
 			}
 			row := rn.table.AddRow().AddIndented(a.Segment(), 2*(a.Level()-1))
 			line := make(amounts2.Amounts)
-			for _, d := range rn.dates {
+			for _, d := range rn.datesSeq {
 				for c := range rn.Context.Commodities().Enumerate() {
 					k := amounts2.Key{Date: d, Account: a, Commodity: c, Valuation: rn.Valuation}
 					if v, ok := rn.amounts[k]; ok {
-						dk := amounts2.Key{Date: d}
-						line[dk] = line[dk].Add(v)
+						line.Add(amounts2.Key{Date: d}, v)
 					}
 				}
 			}
-			for _, d := range rn.dates {
+			for _, d := range rn.datesSeq {
 				k := amounts2.Key{Date: d}
 				if v, ok := line[k]; ok && !v.IsZero() {
 					if side.neg {
 						row.AddNumber(v.Neg())
-						side.totals[k] = side.totals[k].Add(v.Neg())
+						side.totals.Add(k, v.Neg())
 					} else {
 						row.AddNumber(v)
-						side.totals[k] = side.totals[k].Add(v)
+						side.totals.Add(k, v)
 					}
 				} else {
 					row.AddEmpty()
@@ -127,20 +126,20 @@ func (rn *Renderer2) Render(r amounts2.Amounts) *table.Table {
 		}
 		rn.table.AddEmptyRow()
 		row := rn.table.AddRow().AddText("Total", table.Left)
-		for _, d := range rn.dates {
+		for _, d := range rn.datesSeq {
 			row.AddNumber(side.totals[amounts2.Key{Date: d}])
 		}
 		rn.table.AddSeparatorRow()
 	}
 	row := rn.table.AddRow().AddText("Delta", table.Left)
-	for _, d := range rn.dates {
+	for _, d := range rn.datesSeq {
 		row.AddNumber(sides[0].totals[amounts2.Key{Date: d}].Sub(sides[1].totals[amounts2.Key{Date: d}]))
 	}
 	rn.table.AddSeparatorRow()
 	return rn.table
 }
 
-func (rn Renderer2) subtree(as map[*journal.Account]struct{}) map[*journal.Account]struct{} {
+func (rn Renderer2) fullTree(as map[*journal.Account]struct{}) map[*journal.Account]struct{} {
 	m := make(map[*journal.Account]struct{})
 	for acc := range as {
 		for p := acc; p != nil; p = p.Parent() {

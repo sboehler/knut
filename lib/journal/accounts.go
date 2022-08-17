@@ -22,6 +22,8 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/sboehler/knut/lib/common"
 )
 
 // AccountType is the type of an account.
@@ -247,9 +249,17 @@ func (a Account) Parent() *Account {
 
 // Children returns the children of this account.
 func (a Account) Children() []*Account {
-	var res = make([]*Account, len(a.children))
+	res := make([]*Account, len(a.children))
 	copy(res, a.children)
 	return res
+}
+
+func (a Account) SortedChildren(weights map[*Account]float64) []*Account {
+	chn := a.Children()
+	sort.Slice(chn, func(i, j int) bool {
+		return weights[chn[i]] < weights[chn[j]]
+	})
+	return chn
 }
 
 // Descendents returns all the descendents of this account, not including
@@ -360,4 +370,34 @@ func (m Mapping) level(a *Account) int {
 		}
 	}
 	return level
+}
+
+func WeightedSort(a1, a2 *Account, w map[*Account]float64) common.Ordering {
+	if a1 == a2 {
+		return common.Equal
+	}
+	if a1.Type() != a2.Type() {
+		if a1.Type() < a2.Type() {
+			return common.Smaller
+		}
+		return common.Greater
+	}
+	if a1.Parent() == a2.Parent() {
+		// compare weights
+		switch {
+		case w[a1] == w[a2]:
+			return common.Equal
+		case w[a1] < w[a2]:
+			return common.Smaller
+		default:
+			return common.Greater
+		}
+	}
+	if a1.Parent() == nil {
+		return common.Smaller
+	}
+	if a2.Parent() == nil {
+		return common.Greater
+	}
+	return WeightedSort(a1.Parent(), a2.Parent(), w)
 }

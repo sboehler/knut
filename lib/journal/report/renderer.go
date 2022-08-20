@@ -128,7 +128,7 @@ func (rn *Renderer) render(indent int, key string, negate bool, byCommodity inde
 
 func (rn *Renderer) renderByCommodity(indent int, key string, negate bool, byCommodity indexByCommodity) {
 	rn.table.AddRow().AddIndented(key, indent).FillEmpty()
-	for commodity := range rn.Context.Commodities().Enumerate() {
+	for _, commodity := range rn.Context.Commodities().All() {
 		if byDate, ok := byCommodity[commodity]; ok {
 			rn.renderAmounts(indent+2, commodity.String(), negate, byDate)
 		}

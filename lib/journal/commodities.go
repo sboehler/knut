@@ -15,7 +15,6 @@
 package journal
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
@@ -32,14 +31,9 @@ func (c Commodity) String() string {
 	return c.name
 }
 
-// MarshalJSON marshals a commodity to JSON.
-func (c Commodity) MarshalJSON() ([]byte, error) {
-	return json.Marshal(c.name)
-}
-
 // Commodities is a thread-safe collection of commodities.
 type Commodities struct {
-	lookup      map[string]*Commodity
+	index       map[string]*Commodity
 	commodities []*Commodity
 	mutex       sync.RWMutex
 }
@@ -47,14 +41,14 @@ type Commodities struct {
 // NewCommodities creates a new thread-safe collection of commodities.
 func NewCommodities() *Commodities {
 	return &Commodities{
-		lookup: make(map[string]*Commodity),
+		index: make(map[string]*Commodity),
 	}
 }
 
 // Get creates a new commodity.
 func (cs *Commodities) Get(name string) (*Commodity, error) {
 	cs.mutex.RLock()
-	res, ok := cs.lookup[name]
+	res, ok := cs.index[name]
 	cs.mutex.RUnlock()
 	if ok {
 		return res, nil
@@ -62,7 +56,7 @@ func (cs *Commodities) Get(name string) (*Commodity, error) {
 	cs.mutex.Lock()
 	defer cs.mutex.Unlock()
 	// check if the commodity has been created in the meantime
-	if res, ok = cs.lookup[name]; ok {
+	if res, ok = cs.index[name]; ok {
 		return res, nil
 	}
 	if !isValidCommodity(name) {
@@ -82,19 +76,16 @@ func (cs *Commodities) insert(c *Commodity) {
 	cs.commodities = append(cs.commodities, nil)
 	copy(cs.commodities[index+1:], cs.commodities[index:])
 	cs.commodities[index] = c
-	cs.lookup[c.name] = c
+	cs.index[c.name] = c
 }
 
-// Enumerate enumerates the commodities.
-func (cs *Commodities) Enumerate() <-chan *Commodity {
-	ch := make(chan *Commodity)
-	go func() {
-		defer close(ch)
-		for _, c := range cs.commodities {
-			ch <- c
-		}
-	}()
-	return ch
+// All enumerates the commodities.
+func (cs *Commodities) All() []*Commodity {
+	cs.mutex.RLock()
+	defer cs.mutex.RUnlock()
+	res := make([]*Commodity, len(cs.commodities))
+	copy(res, cs.commodities)
+	return res
 }
 
 // TagCurrency tags the commodity as a currency.

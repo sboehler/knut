@@ -51,3 +51,11 @@ func (am Amounts) Minus(a Amounts) Amounts {
 	}
 	return am
 }
+
+func (am Amounts) Index() []Key {
+	res := make([]Key, 0, len(am))
+	for k := range am {
+		res = append(res, k)
+	}
+	return res
+}

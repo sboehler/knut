@@ -50,14 +50,14 @@ func (r *Register) Add(d *ast.Day) {
 
 			if inCr && r.Filter.MatchAccount(b.Debit) {
 				acc := r.Context.Accounts().Map(b.Debit, r.Mapping)
-				ca := amounts.Key{Account: acc, Commodity: commodity}
-				vals[ca] = vals[ca].Sub(value)
+				ca := amounts.AccountCommodityKey(acc, commodity)
+				vals.Add(ca, value.Neg())
 
 			}
 			if inDr && r.Filter.MatchAccount(b.Credit) {
 				acc := r.Context.Accounts().Map(b.Credit, r.Mapping)
-				ca := amounts.Key{Account: acc, Commodity: commodity}
-				vals[ca] = vals[ca].Add(value)
+				ca := amounts.AccountCommodityKey(acc, commodity)
+				vals.Add(ca, value)
 			}
 		}
 	}

@@ -23,20 +23,12 @@ func AccountCommodityKey(a *journal.Account, c *journal.Commodity) Key {
 	return Key{Account: a, Commodity: c}
 }
 
-// Less establishes a partial ordering of keys.
-func (p Key) Less(p1 Key) bool {
-	if p.Account != p1.Account {
-		return p.Account.Less(p1.Account)
-	}
-	return p.Commodity.String() < p1.Commodity.String()
-}
-
 // Amounts keeps track of amounts by account and commodity.
 type Amounts map[Key]decimal.Decimal
 
-// Amount returns the amount for the given account and commodity.
-func (am Amounts) Amount(a *journal.Account, c *journal.Commodity) decimal.Decimal {
-	return am[Key{Account: a, Commodity: c}]
+// Amount returns the amount for the given key.
+func (am Amounts) Amount(k Key) decimal.Decimal {
+	return am[k]
 }
 
 func (am Amounts) Add(k Key, d decimal.Decimal) {

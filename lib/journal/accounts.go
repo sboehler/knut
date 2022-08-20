@@ -112,6 +112,16 @@ func (a Account) IsAL() bool {
 	return a.accountType == ASSETS || a.accountType == LIABILITIES
 }
 
+// WriteTo writes the account to the writer.
+func (a Account) WriteTo(w io.Writer) (int64, error) {
+	n, err := fmt.Fprint(w, a.Name())
+	return int64(n), err
+}
+
+func (a Account) String() string {
+	return a.Name()
+}
+
 // Accounts is a thread-safe collection of accounts.
 type Accounts struct {
 	mutex    sync.RWMutex
@@ -243,11 +253,15 @@ func (as *Accounts) SortedPreOrder(weights map[*Account]float64) []*Account {
 
 // Parent returns the parent of this account.
 func (as *Accounts) Parent(a *Account) *Account {
+	as.mutex.RLock()
+	defer as.mutex.RUnlock()
 	return as.parents[a]
 }
 
 // Children returns the children of this account.
 func (as *Accounts) Children(a *Account) []*Account {
+	as.mutex.RLock()
+	defer as.mutex.RUnlock()
 	ch := as.children[a]
 	if ch == nil {
 		return nil
@@ -262,26 +276,25 @@ func (as *Accounts) Children(a *Account) []*Account {
 // Descendents returns all the descendents of this account, not including
 // the account itself.
 func (as *Accounts) Descendents(a *Account) []*Account {
-	var res []*Account
+	as.mutex.RLock()
+	defer as.mutex.RUnlock()
+	return as.descendents(a, nil)
+}
+
+// Descendents returns all the descendents of this account, not including
+// the account itself.
+func (as *Accounts) descendents(a *Account, res []*Account) []*Account {
 	for ch := range as.children[a] {
 		res = append(res, ch)
-		res = append(res, as.Descendents(ch)...)
+		res = as.descendents(ch, res)
 	}
 	return res
 }
 
-// WriteTo writes the account to the writer.
-func (a Account) WriteTo(w io.Writer) (int64, error) {
-	n, err := fmt.Fprint(w, a.Name())
-	return int64(n), err
-}
-
-func (a Account) String() string {
-	return a.Name()
-}
-
 // Map maps an account to itself or to one of its ancestors.
 func (as *Accounts) Map(a *Account, m Mapping) *Account {
+	as.mutex.RLock()
+	defer as.mutex.RUnlock()
 	if len(m) == 0 {
 		return a
 	}
@@ -320,7 +333,11 @@ func (as *Accounts) post(a *Account, acc []*Account) []*Account {
 }
 
 func (as *Accounts) sorted(a *Account, in []*Account, weights map[*Account]float64) []*Account {
-	children := as.Children(a)
+	childMap := as.children[a]
+	children := make([]*Account, 0, len(childMap))
+	for ch := range childMap {
+		children = append(children, ch)
+	}
 	sort.Slice(children, func(i int, j int) bool {
 		return weights[children[i]] > weights[children[j]]
 	})

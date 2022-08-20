@@ -67,24 +67,78 @@ var accountTypes = map[string]AccountType{
 	"Income":      INCOME,
 }
 
+// Account represents an account which can be used in bookings.
+type Account struct {
+	accountType AccountType
+	name        string
+	segment     string
+	level       int
+}
+
+// Split returns the account name split into segments.
+func (a *Account) Split() []string {
+	return strings.Split(a.name, ":")
+}
+
+// Name returns the name of this account.
+func (a Account) Name() string {
+	return a.name
+}
+
+// Segment returns the name of this account.
+func (a Account) Segment() string {
+	return a.segment
+}
+
+// Level returns the name of this account.
+func (a Account) Level() int {
+	return a.level
+}
+
+// Type returns the account type.
+func (a Account) Type() AccountType {
+	return a.accountType
+}
+
+func (a *Account) Less(a2 *Account) bool {
+	if a.accountType != a2.accountType {
+		return a.accountType < a2.accountType
+	}
+	return a.name < a2.name
+}
+
+// IsAL returns whether this account is an asset or liability account.
+func (a Account) IsAL() bool {
+	return a.accountType == ASSETS || a.accountType == LIABILITIES
+}
+
 // Accounts is a thread-safe collection of accounts.
 type Accounts struct {
 	mutex    sync.RWMutex
 	index    map[string]*Account
 	accounts map[AccountType]*Account
+	children map[*Account]map[*Account]bool
+	parents  map[*Account]*Account
 }
 
 // NewAccounts creates a new thread-safe collection of accounts.
 func NewAccounts() *Accounts {
+	accounts := map[AccountType]*Account{
+		ASSETS:      {accountType: ASSETS, name: "Assets", segment: "Assets", level: 1},
+		LIABILITIES: {accountType: LIABILITIES, name: "Liabilities", segment: "Liabilities", level: 1},
+		EQUITY:      {accountType: EQUITY, name: "Equity", segment: "Equity", level: 1},
+		INCOME:      {accountType: INCOME, name: "Income", segment: "Income", level: 1},
+		EXPENSES:    {accountType: EXPENSES, name: "Expenses", segment: "Expenses", level: 1},
+	}
+	index := make(map[string]*Account)
+	for _, account := range accounts {
+		index[account.name] = account
+	}
 	return &Accounts{
-		index: make(map[string]*Account),
-		accounts: map[AccountType]*Account{
-			ASSETS:      {accountType: ASSETS, segment: "Assets", level: 1},
-			LIABILITIES: {accountType: LIABILITIES, segment: "Liabilities", level: 1},
-			EQUITY:      {accountType: EQUITY, segment: "Equity", level: 1},
-			INCOME:      {accountType: INCOME, segment: "Income", level: 1},
-			EXPENSES:    {accountType: EXPENSES, segment: "Expenses", level: 1},
-		},
+		accounts: accounts,
+		index:    index,
+		parents:  make(map[*Account]*Account),
+		children: make(map[*Account]map[*Account]bool),
 	}
 }
 
@@ -102,7 +156,7 @@ func (as *Accounts) Get(name string) (*Account, error) {
 	if a, ok := as.index[name]; ok {
 		return a, nil
 	}
-	var segments = strings.Split(name, ":")
+	segments := strings.Split(name, ":")
 	if len(segments) < 2 {
 		return nil, fmt.Errorf("invalid account name: %q", name)
 	}
@@ -116,10 +170,29 @@ func (as *Accounts) Get(name string) (*Account, error) {
 			return nil, fmt.Errorf("account name %q has an invalid segment %q", name, s)
 		}
 	}
-	root := as.accounts[at]
-	res = root.insert(tail)
-	as.index[name] = res
-	return res, nil
+	var parent *Account
+	for i := range segments {
+		n := strings.Join(segments[:i+1], ":")
+		acc, ok := as.index[n]
+		if !ok {
+			acc = &Account{
+				accountType: at,
+				name:        n,
+				segment:     segments[i],
+				level:       i + 1,
+			}
+			as.index[n] = acc
+			as.parents[acc] = parent
+			ch, ok := as.children[parent]
+			if !ok {
+				ch = make(map[*Account]bool)
+				as.children[parent] = ch
+			}
+			ch[acc] = true
+		}
+		parent = acc
+	}
+	return parent, nil
 }
 
 func isValidSegment(s string) bool {
@@ -140,7 +213,7 @@ func (as *Accounts) PreOrder() []*Account {
 	defer as.mutex.RUnlock()
 	var res []*Account
 	for _, at := range AccountTypes {
-		res = as.accounts[at].pre(res)
+		res = as.pre(as.accounts[at], res)
 	}
 	return res
 }
@@ -151,7 +224,7 @@ func (as *Accounts) PostOrder() []*Account {
 	defer as.mutex.RUnlock()
 	var res []*Account
 	for _, at := range AccountTypes {
-		res = as.accounts[at].post(res)
+		res = as.post(as.accounts[at], res)
 	}
 	return res
 }
@@ -163,101 +236,36 @@ func (as *Accounts) SortedPreOrder(weights map[*Account]float64) []*Account {
 	defer as.mutex.RUnlock()
 	var res []*Account
 	for _, at := range AccountTypes {
-		res = as.accounts[at].sorted(res, weights)
+		res = as.sorted(as.accounts[at], res, weights)
 	}
 	return res
 }
 
-// Account represents an account which can be used in bookings.
-type Account struct {
-	accountType AccountType
-	segment     string
-	parent      *Account
-	children    []*Account
-	level       int
-}
-
-func (a *Account) insert(segments []string) *Account {
-	if len(segments) == 0 {
-		return a
-	}
-	head, tail := segments[0], segments[1:]
-	index := sort.Search(len(a.children), func(i int) bool { return a.children[i].segment >= head })
-	if index == len(a.children) || a.children[index].segment != head {
-		a.children = append(a.children, nil)
-		copy(a.children[index+1:], a.children[index:])
-		a.children[index] = &Account{
-			segment:     head,
-			accountType: a.accountType,
-			parent:      a,
-			level:       a.level + 1,
-		}
-	}
-	return a.children[index].insert(tail)
-}
-
-// Split returns the account name split into segments.
-func (a *Account) Split() []string {
-	if a == nil {
-		return nil
-	}
-	var res []string
-	if a.parent != nil {
-		res = a.parent.Split()
-	}
-	return append(res, a.segment)
-}
-
-// Name returns the name of this account.
-func (a Account) Name() string {
-	return strings.Join(a.Split(), ":")
-}
-
-// Segment returns the name of this account.
-func (a Account) Segment() string {
-	return a.segment
-}
-
-// Level returns the name of this account.
-func (a Account) Level() int {
-	return a.level
-}
-
-// Type returns the account type.
-func (a Account) Type() AccountType {
-	return a.accountType
-}
-
-func (a *Account) Less(a2 *Account) bool {
-	if a.Type() != a2.Type() {
-		return a.Type() < a2.Type()
-	}
-	return a.Name() < a2.Name()
-}
-
-// IsAL returns whether this account is an asset or liability account.
-func (a Account) IsAL() bool {
-	return a.accountType == ASSETS || a.accountType == LIABILITIES
-}
-
 // Parent returns the parent of this account.
-func (a Account) Parent() *Account {
-	return a.parent
+func (as *Accounts) Parent(a *Account) *Account {
+	return as.parents[a]
 }
 
 // Children returns the children of this account.
-func (a Account) Children() []*Account {
-	var res = make([]*Account, len(a.children))
-	copy(res, a.children)
+func (as *Accounts) Children(a *Account) []*Account {
+	ch := as.children[a]
+	if ch == nil {
+		return nil
+	}
+	res := make([]*Account, 0, len(ch))
+	for c := range ch {
+		res = append(res, c)
+	}
 	return res
 }
 
 // Descendents returns all the descendents of this account, not including
 // the account itself.
-func (a Account) Descendents() []*Account {
+func (as *Accounts) Descendents(a *Account) []*Account {
 	var res []*Account
-	for _, ch := range a.children {
-		res = append(res, ch.Descendents()...)
+	for ch := range as.children[a] {
+		res = append(res, ch)
+		res = append(res, as.Descendents(ch)...)
 	}
 	return res
 }
@@ -273,7 +281,7 @@ func (a Account) String() string {
 }
 
 // Map maps an account to itself or to one of its ancestors.
-func (a *Account) Map(m Mapping) *Account {
+func (as *Accounts) Map(a *Account, m Mapping) *Account {
 	if len(m) == 0 {
 		return a
 	}
@@ -281,48 +289,44 @@ func (a *Account) Map(m Mapping) *Account {
 	if level >= a.level {
 		return a
 	}
-	return a.nthParent(a.level - level)
+	return as.nthParent(a, a.level-level)
 }
 
-func (a *Account) nthParent(n int) *Account {
+func (as *Accounts) nthParent(a *Account, n int) *Account {
 	if n <= 0 {
 		return a
 	}
-	if a.parent == nil {
+	p, ok := as.parents[a]
+	if !ok {
 		return nil
 	}
-	return a.parent.nthParent(n - 1)
+	return as.nthParent(p, n-1)
 }
 
-func (a *Account) pre(acc []*Account) []*Account {
+func (as *Accounts) pre(a *Account, acc []*Account) []*Account {
 	acc = append(acc, a)
-	for _, c := range a.children {
-		acc = c.pre(acc)
+	for c := range as.children[a] {
+		acc = as.pre(c, acc)
 	}
 	return acc
 }
 
-func (a *Account) post(acc []*Account) []*Account {
-	for _, c := range a.children {
-		acc = c.post(acc)
+func (as *Accounts) post(a *Account, acc []*Account) []*Account {
+	for c := range as.children[a] {
+		acc = as.post(c, acc)
 	}
 	acc = append(acc, a)
 	return acc
 }
 
-func (a *Account) sorted(in []*Account, weights map[*Account]float64) []*Account {
-	var children []*Account
-	for _, ch := range a.Children() {
-		if _, ok := weights[ch]; ok {
-			children = append(children, ch)
-		}
-	}
+func (as *Accounts) sorted(a *Account, in []*Account, weights map[*Account]float64) []*Account {
+	children := as.Children(a)
 	sort.Slice(children, func(i int, j int) bool {
 		return weights[children[i]] > weights[children[j]]
 	})
 	in = append(in, a)
 	for _, ch := range children {
-		in = ch.sorted(in, weights)
+		in = as.sorted(ch, in, weights)
 	}
 	return in
 }

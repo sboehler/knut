@@ -28,6 +28,7 @@ import (
 
 // Balance is a balance report for a range of dates.
 type Balance struct {
+	Context   journal.Context
 	Dates     map[date.Period]struct{}
 	Mapping   journal.Mapping
 	Positions indexByAccount
@@ -38,7 +39,7 @@ type Balance struct {
 func (rep Balance) Subtree() map[*journal.Account]struct{} {
 	m := make(map[*journal.Account]struct{})
 	for acc := range rep.Positions {
-		for p := acc; p != nil; p = p.Parent() {
+		for p := acc; p != nil; p = rep.Context.Accounts().Parent(p) {
 			m[p] = struct{}{}
 		}
 	}
@@ -47,6 +48,7 @@ func (rep Balance) Subtree() map[*journal.Account]struct{} {
 
 // BalanceBuilder builds a report.
 type BalanceBuilder struct {
+	Context   journal.Context
 	Mapping   journal.Mapping
 	Valuation bool
 	Diff      bool
@@ -75,7 +77,7 @@ func (rb *BalanceBuilder) add(rep *Balance, b *ast.Period) {
 		if val.IsZero() {
 			continue
 		}
-		if acc := pos.Account.Map(rb.Mapping); acc != nil {
+		if acc := rb.Context.Accounts().Map(pos.Account, rb.Mapping); acc != nil {
 			rep.Positions.Add(acc, pos.Commodity, b.Period.End, val)
 		}
 	}
@@ -83,7 +85,9 @@ func (rb *BalanceBuilder) add(rep *Balance, b *ast.Period) {
 
 // Sink consumes the stream and produces a report.
 func (rb *BalanceBuilder) Sink(ctx context.Context, inCh <-chan *ast.Period) error {
-	rb.Result = new(Balance)
+	rb.Result = &Balance{
+		Context: rb.Context,
+	}
 	for {
 		d, ok, err := cpr.Pop(ctx, inCh)
 		if err != nil {

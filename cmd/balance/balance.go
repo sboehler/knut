@@ -148,6 +148,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Valuation: valuation,
 		}
 		reportBuilder = &report.BalanceBuilder{
+			Context:   jctx,
 			Mapping:   r.mapping.Value(),
 			Valuation: valuation != nil,
 			Diff:      r.diff,

@@ -136,6 +136,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Valuation: valuation,
 		}
 		reg = &register.Register{
+			Context: jctx,
 			Domain: journal.Filter{
 				Accounts:    r.accounts.Value(),
 				Commodities: r.commodities.Value(),

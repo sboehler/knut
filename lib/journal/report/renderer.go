@@ -90,7 +90,7 @@ func (rn *Renderer) computeWeights() map[*journal.Account]float64 {
 					w += f
 				}
 			}
-			for _, chAcc := range acc.Children() {
+			for _, chAcc := range rn.Context.Accounts().Children(acc) {
 				w += weights[chAcc]
 			}
 		}
@@ -105,10 +105,10 @@ func (rn *Renderer) renderSection(al []*journal.Account, negate bool) indexByCom
 		return res
 	}
 	for i, acc := range al {
-		if i != 0 && acc.Level() == 1 {
+		if i != 0 && acc.Level() == 0 {
 			rn.table.AddEmptyRow()
 		}
-		rn.render(2*(acc.Level()-1), acc.Segment(), !acc.IsAL(), rn.report.Positions[acc])
+		rn.render(2*(acc.Level()), acc.Segment(), !acc.IsAL(), rn.report.Positions[acc])
 		res.AddFrom(rn.report.Positions[acc])
 	}
 	res.Normalize()

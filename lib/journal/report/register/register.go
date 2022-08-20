@@ -14,8 +14,9 @@ import (
 
 // Register represents a register report.
 type Register struct {
-	Domain journal.Filter
-	Filter journal.Filter
+	Context journal.Context
+	Domain  journal.Filter
+	Filter  journal.Filter
 
 	sections []*Section
 
@@ -48,13 +49,13 @@ func (r *Register) Add(d *ast.Day) {
 			}
 
 			if inCr && r.Filter.MatchAccount(b.Debit) {
-				acc := b.Debit.Map(r.Mapping)
+				acc := r.Context.Accounts().Map(b.Debit, r.Mapping)
 				ca := amounts.Key{Account: acc, Commodity: commodity}
 				vals[ca] = vals[ca].Sub(value)
 
 			}
 			if inDr && r.Filter.MatchAccount(b.Credit) {
-				acc := b.Credit.Map(r.Mapping)
+				acc := r.Context.Accounts().Map(b.Credit, r.Mapping)
 				ca := amounts.Key{Account: acc, Commodity: commodity}
 				vals[ca] = vals[ca].Add(value)
 			}

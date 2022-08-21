@@ -1,14 +1,18 @@
 package amounts
 
 import (
+	"time"
+
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
 
 // Key represents a position.
 type Key struct {
+	Date      time.Time
 	Account   *journal.Account
 	Commodity *journal.Commodity
+	Valuation *journal.Commodity
 }
 
 func CommodityKey(c *journal.Commodity) Key {

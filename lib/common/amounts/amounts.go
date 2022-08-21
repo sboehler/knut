@@ -66,10 +66,10 @@ func (am Amounts) Index() []Key {
 	return res
 }
 
-type Mapper[T any] func(T) T
+type Mapper func(Key) Key
 
-func Combine[T any](ms ...Mapper[T]) Mapper[T] {
-	return func(k T) T {
+func Combine(ms ...Mapper) Mapper {
+	return func(k Key) Key {
 		for _, m := range ms {
 			k = m(k)
 		}
@@ -77,22 +77,24 @@ func Combine[T any](ms ...Mapper[T]) Mapper[T] {
 	}
 }
 
-func NoDate() Mapper[time.Time] {
-	return func(_ time.Time) time.Time {
-		return time.Time{}
+func NoDate() Mapper {
+	return func(k Key) Key {
+		k.Date = time.Time{}
+		return k
 	}
 }
 
-func TimePartition(t0, t1 time.Time, p date.Interval, n int) Mapper[time.Time] {
+func TimePartition(t0, t1 time.Time, p date.Interval, n int) Mapper {
 	part := createPartition(t0, t1, p, n)
-	return func(k time.Time) time.Time {
+	return func(k Key) Key {
 		index := sort.Search(len(part), func(i int) bool {
-			return !part[i].Before(k)
+			return !part[i].Before(k.Date)
 		})
 		if index == len(part) {
-			return time.Time{}
+			k.Date = time.Time{}
 		}
-		return part[index]
+		k.Date = part[index]
+		return k
 	}
 }
 
@@ -115,4 +117,11 @@ func createPartition(t0, t1 time.Time, p date.Interval, n int) []time.Time {
 		res = res[len(res)-n:]
 	}
 	return res
+}
+
+func MapAccounts(jctx journal.Context, m journal.Mapping) Mapper {
+	return func(k Key) Key {
+		k.Account = jctx.Accounts().Map(k.Account, m)
+		return k
+	}
 }

@@ -1,8 +1,10 @@
 package amounts
 
 import (
+	"sort"
 	"time"
 
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -60,6 +62,57 @@ func (am Amounts) Index() []Key {
 	res := make([]Key, 0, len(am))
 	for k := range am {
 		res = append(res, k)
+	}
+	return res
+}
+
+type Mapper[T any] func(T) T
+
+func Combine[T any](ms ...Mapper[T]) Mapper[T] {
+	return func(k T) T {
+		for _, m := range ms {
+			k = m(k)
+		}
+		return k
+	}
+}
+
+func NoDate() Mapper[time.Time] {
+	return func(_ time.Time) time.Time {
+		return time.Time{}
+	}
+}
+
+func TimePartition(t0, t1 time.Time, p date.Interval, n int) Mapper[time.Time] {
+	part := createPartition(t0, t1, p, n)
+	return func(k time.Time) time.Time {
+		index := sort.Search(len(part), func(i int) bool {
+			return !part[i].Before(k)
+		})
+		if index == len(part) {
+			return time.Time{}
+		}
+		return part[index]
+	}
+}
+
+func createPartition(t0, t1 time.Time, p date.Interval, n int) []time.Time {
+	var res []time.Time
+	if p == date.Once {
+		if t0.Before(t1) {
+			res = append(res, t1)
+		}
+	} else {
+		for t := t0; !t.After(t1); t = date.EndOf(t, p).AddDate(0, 0, 1) {
+			ed := date.EndOf(t, p)
+			if ed.After(t1) {
+				ed = t1
+			}
+			res = append(res, ed)
+		}
+	}
+	if n > 0 && len(res) > n {
+		res = res[len(res)-n:]
 	}
 	return res
 }

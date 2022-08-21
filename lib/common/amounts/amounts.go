@@ -84,16 +84,23 @@ func NoDate() Mapper {
 	}
 }
 
-func TimePartition(t0, t1 time.Time, p date.Interval, n int) Mapper {
-	part := createPartition(t0, t1, p, n)
+type TimePartition struct {
+	From, To time.Time
+	Interval date.Interval
+	Last     int
+}
+
+func (tp TimePartition) Mapper() Mapper {
+	part := createPartition(tp.From, tp.To, tp.Interval, tp.Last)
 	return func(k Key) Key {
 		index := sort.Search(len(part), func(i int) bool {
 			return !part[i].Before(k.Date)
 		})
-		if index == len(part) {
+		if index < len(part) {
+			k.Date = part[index]
+		} else {
 			k.Date = time.Time{}
 		}
-		k.Date = part[index]
 		return k
 	}
 }
@@ -119,9 +126,27 @@ func createPartition(t0, t1 time.Time, p date.Interval, n int) []time.Time {
 	return res
 }
 
-func MapAccounts(jctx journal.Context, m journal.Mapping) Mapper {
+type Account struct {
+	Context journal.Context
+	Mapping journal.Mapping
+}
+
+func (as Account) Mapper() Mapper {
 	return func(k Key) Key {
-		k.Account = jctx.Accounts().Map(k.Account, m)
+		k.Account = as.Context.Accounts().Map(k.Account, as.Mapping)
+		return k
+	}
+}
+
+type Commodity struct {
+	Show bool
+}
+
+func (c Commodity) Mapper() Mapper {
+	return func(k Key) Key {
+		if !c.Show {
+			k.Commodity = nil
+		}
 		return k
 	}
 }

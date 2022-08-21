@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
@@ -137,14 +138,22 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Valuation: valuation,
 		}
 		aggregator = &process.Aggregator{
-			Context:  jctx,
-			From:     r.from.Value(),
-			To:       r.to.Value(),
-			Interval: interval,
-			Last:     r.last,
-
-			Mapping:   r.mapping.Value(),
+			Context:   jctx,
 			Valuation: valuation,
+			Mappers: amounts.Combine(
+				amounts.Account{
+					Context: jctx,
+					Mapping: r.mapping.Value(),
+				}.Mapper(),
+				amounts.Commodity{
+					Show: r.showCommodities,
+				}.Mapper(),
+				amounts.TimePartition{
+					From:     r.from.ValueOr(journalSource.Min()),
+					To:       r.to.ValueOr(date.Today()),
+					Interval: interval,
+					Last:     r.last}.Mapper(),
+			),
 		}
 	)
 

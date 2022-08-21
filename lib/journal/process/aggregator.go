@@ -53,7 +53,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 			}
 			agg.tp = createPartition(agg.From, agg.To, agg.Interval, agg.Last)
 		}
-		dt := agg.tp.shard(d.Date)
+		dt := agg.tp.transform(d.Date)
 		for _, t := range d.Transactions {
 			for _, b := range t.Postings() {
 				kc := amounts.Key{
@@ -95,11 +95,11 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 type timePartition []time.Time
 
 func (tp timePartition) Transform(k amounts.Key) amounts.Key {
-	k.Date = tp.shard(k.Date)
+	k.Date = tp.transform(k.Date)
 	return k
 }
 
-func (tp timePartition) shard(t time.Time) time.Time {
+func (tp timePartition) transform(t time.Time) time.Time {
 	index := sort.Search(len(tp), func(i int) bool {
 		return !tp[i].Before(t)
 	})

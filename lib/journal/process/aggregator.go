@@ -61,13 +61,13 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 					Account:   agg.Context.Accounts().Map(b.Credit, agg.Mapping),
 					Commodity: b.Commodity,
 				}
-				agg.Amounts[kc] = agg.Amounts[kc].Sub(b.Amount)
+				agg.Amounts.Add(kc, b.Amount.Neg())
 				kd := amounts.Key{
 					Date:      dt,
 					Account:   agg.Context.Accounts().Map(b.Debit, agg.Mapping),
 					Commodity: b.Commodity,
 				}
-				agg.Amounts[kd] = agg.Amounts[kd].Add(b.Amount)
+				agg.Amounts.Add(kd, b.Amount)
 			}
 			if agg.Valuation != nil {
 				for _, b := range t.Postings() {
@@ -77,14 +77,14 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 						Commodity: b.Commodity,
 						Valuation: agg.Valuation,
 					}
-					agg.Amounts[kc] = agg.Amounts[kc].Sub(b.Value)
+					agg.Amounts.Add(kc, b.Value.Neg())
 					kd := amounts.Key{
 						Date:      dt,
 						Account:   agg.Context.Accounts().Map(b.Debit, agg.Mapping),
 						Commodity: b.Commodity,
 						Valuation: agg.Valuation,
 					}
-					agg.Amounts[kd] = agg.Amounts[kd].Add(b.Value)
+					agg.Amounts.Add(kd, b.Value)
 				}
 			}
 		}

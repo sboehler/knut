@@ -58,6 +58,14 @@ func (tf DateFlag) Value() time.Time {
 	return time.Time(tf)
 }
 
+func (tf DateFlag) ValueOr(t time.Time) time.Time {
+	v := tf.Value()
+	if v.IsZero() {
+		return t
+	}
+	return v
+}
+
 // RegexFlag manages a flag to get a regex.
 type RegexFlag struct {
 	regex *regexp.Regexp

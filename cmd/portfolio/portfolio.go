@@ -92,8 +92,9 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 		journalSource = &process.JournalSource{
 			Context: jctx,
 
-			Path:   args[0],
-			Expand: true,
+			Path:     args[0],
+			Expand:   true,
+			AutoLoad: true,
 		}
 		balancer = &process.Balancer{
 			Context: jctx,

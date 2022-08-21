@@ -20,7 +20,6 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
-	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/cpr"
@@ -100,6 +99,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
 	var (
+		ctx  = cmd.Context()
 		jctx = journal.NewContext()
 
 		valuation *journal.Commodity
@@ -107,9 +107,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 
 		err error
 	)
-	if time.Time(r.to).IsZero() {
-		r.to = flags.DateFlag(date.Today())
-	}
 	if valuation, err = r.valuation.Value(jctx); err != nil {
 		return err
 	}
@@ -117,16 +114,19 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	journalSource := &process.JournalSource{
+		Context: jctx,
+		Path:    args[0],
+		Filter: journal.Filter{
+			Accounts:    r.accounts.Value(),
+			Commodities: r.commodities.Value(),
+		},
+		Expand: true,
+	}
+	if err := journalSource.Load(ctx); err != nil {
+		return err
+	}
 	var (
-		journalSource = &process.JournalSource{
-			Context: jctx,
-			Path:    args[0],
-			Filter: journal.Filter{
-				Accounts:    r.accounts.Value(),
-				Commodities: r.commodities.Value(),
-			},
-			Expand: true,
-		}
 		priceUpdater = &process.PriceUpdater{
 			Context:   jctx,
 			Valuation: valuation,
@@ -139,8 +139,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Valuation: valuation,
 		}
 		periodFilter = &process.PeriodFilter{
-			From:     r.from.Value(),
-			To:       r.to.Value(),
+			From:     r.from.ValueOr(journalSource.Min()),
+			To:       r.to.ValueOr(date.Today()),
 			Interval: interval,
 			Last:     r.last,
 		}
@@ -163,7 +163,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Thousands: r.thousands,
 			Round:     r.digits,
 		}
-		ctx = cmd.Context()
 	)
 
 	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)

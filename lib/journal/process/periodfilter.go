@@ -20,26 +20,15 @@ type PeriodFilter struct {
 // Process does the filtering.
 func (pf *PeriodFilter) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Period) error {
 	var (
-		periods                 []date.Period
+		periods                 = date.PeriodsN(pf.From, pf.To, pf.Interval, pf.Last)
 		previous, current, next *ast.Day
 		ok                      bool
 		err                     error
 	)
-	// find the first day with transactions
-	for {
-		next, ok, err = cpr.Pop(ctx, inCh)
-		if err != nil || !ok {
-			return err
-		}
-		if len(next.Transactions) > 0 {
-			break
-		}
-	}
-	periods = pf.computeDates(next.Date)
 
 	// previous is the last day before the start of the current period.
 	// current is the last day before the end of the current period.
-	previous, current = new(ast.Day), new(ast.Day)
+	previous, current, next = new(ast.Day), new(ast.Day), new(ast.Day)
 
 	for _, period := range periods {
 		var days []*ast.Day
@@ -81,11 +70,4 @@ func (pf *PeriodFilter) Process(ctx context.Context, inCh <-chan *ast.Day, outCh
 			return err
 		}
 	}
-}
-
-func (pf *PeriodFilter) computeDates(t time.Time) []date.Period {
-	if pf.From.Before(t) {
-		pf.From = t
-	}
-	return date.PeriodsN(pf.From, pf.To, pf.Interval, pf.Last)
 }

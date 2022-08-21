@@ -122,7 +122,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				Accounts:    r.accounts.Value(),
 				Commodities: r.commodities.Value(),
 			},
-			Path: args[0],
+			Path:     args[0],
+			AutoLoad: true,
 		}
 		balancer = &process.Balancer{
 			Context: jctx,

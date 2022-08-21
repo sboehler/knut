@@ -97,6 +97,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
 	var (
+		ctx       = cmd.Context()
 		jctx      = journal.NewContext()
 		valuation *journal.Commodity
 		interval  date.Interval
@@ -111,17 +112,19 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if interval, err = r.interval.Value(); err != nil {
 		return err
 	}
-
+	journalSource := &process.JournalSource{
+		Context: jctx,
+		Path:    args[0],
+		Filter: journal.Filter{
+			Accounts:    r.accounts.Value(),
+			Commodities: r.commodities.Value(),
+		},
+		Expand: true,
+	}
+	if err := journalSource.Load(ctx); err != nil {
+		return err
+	}
 	var (
-		journalSource = &process.JournalSource{
-			Context: jctx,
-			Path:    args[0],
-			Filter: journal.Filter{
-				Accounts:    r.accounts.Value(),
-				Commodities: r.commodities.Value(),
-			},
-			Expand: true,
-		}
 		priceUpdater = &process.PriceUpdater{
 			Context:   jctx,
 			Valuation: valuation,
@@ -143,8 +146,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Mapping:   r.mapping.Value(),
 			Valuation: valuation,
 		}
-
-		ctx = cmd.Context()
 	)
 
 	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)

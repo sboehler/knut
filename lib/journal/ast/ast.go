@@ -25,8 +25,9 @@ import (
 
 // AST represents an unprocessed abstract syntax tree.
 type AST struct {
-	Context journal.Context
-	Days    map[time.Time]*Day
+	Context  journal.Context
+	Days     map[time.Time]*Day
+	min, max time.Time
 }
 
 // New creates a new AST
@@ -34,6 +35,8 @@ func New(ctx journal.Context) *AST {
 	return &AST{
 		Context: ctx,
 		Days:    make(map[time.Time]*Day),
+		min:     date.Date(9999, 12, 31),
+		max:     time.Time{},
 	}
 }
 
@@ -77,6 +80,12 @@ func (ast *AST) AddPrice(p *Price) {
 // AddTransaction adds an Transaction directive.
 func (ast *AST) AddTransaction(t *Transaction) {
 	var d = ast.Day(t.Date())
+	if ast.max.Before(d.Date) {
+		ast.max = d.Date
+	}
+	if ast.min.After(t.date) {
+		ast.min = d.Date
+	}
 	d.Transactions = append(d.Transactions, t)
 }
 
@@ -96,6 +105,14 @@ func (ast *AST) AddAssertion(a *Assertion) {
 func (ast *AST) AddClose(c *Close) {
 	var d = ast.Day(c.Date)
 	d.Closings = append(d.Closings, c)
+}
+
+func (ast *AST) Min() time.Time {
+	return ast.min
+}
+
+func (ast *AST) Max() time.Time {
+	return ast.max
 }
 
 // Day groups all commands for a given date.

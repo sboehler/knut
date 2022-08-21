@@ -15,22 +15,20 @@ import (
 type JournalSource struct {
 	Context journal.Context
 
-	Path   string
-	Expand bool
-	Filter journal.Filter
+	Path     string
+	Expand   bool
+	Filter   journal.Filter
+	AutoLoad bool
+
+	ast *ast.AST
 }
 
-// Source is a source of days.
-func (js *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) error {
-	a := &ast.AST{
-		Context: js.Context,
-		Days:    make(map[time.Time]*ast.Day),
-	}
+func (js *JournalSource) Load(ctx context.Context) error {
+	js.ast = ast.New(js.Context)
 	p := parser.RecursiveParser{
 		Context: js.Context,
 		File:    js.Path,
 	}
-
 	ch, errCh := p.Parse(ctx)
 	for {
 		d, ok, err := cpr.Get(ch, errCh)
@@ -43,10 +41,10 @@ func (js *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) erro
 		switch t := d.(type) {
 
 		case *ast.Open:
-			a.AddOpen(t)
+			js.ast.AddOpen(t)
 
 		case *ast.Price:
-			a.AddPrice(t)
+			js.ast.AddPrice(t)
 
 		case *ast.Transaction:
 			filtered := t.FilterPostings(js.Filter)
@@ -60,10 +58,10 @@ func (js *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) erro
 			}
 			if t.Accrual() != nil {
 				for _, ts := range t.Accrual().Expand(t) {
-					a.AddTransaction(ts)
+					js.ast.AddTransaction(ts)
 				}
 			} else {
-				a.AddTransaction(t)
+				js.ast.AddTransaction(t)
 			}
 
 		case *ast.Assertion:
@@ -73,7 +71,7 @@ func (js *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) erro
 			if !js.Filter.MatchCommodity(t.Commodity) {
 				break
 			}
-			a.AddAssertion(t)
+			js.ast.AddAssertion(t)
 
 		case *ast.Value:
 			if !js.Filter.MatchAccount(t.Account) {
@@ -82,19 +80,36 @@ func (js *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) erro
 			if !js.Filter.MatchCommodity(t.Commodity) {
 				break
 			}
-			a.AddValue(t)
+			js.ast.AddValue(t)
 
 		case *ast.Close:
 			if !js.Filter.MatchAccount(t.Account) {
 				break
 			}
-			a.AddClose(t)
+			js.ast.AddClose(t)
 
 		default:
 			return fmt.Errorf("unknown: %#v", t)
 		}
 	}
-	for _, d := range a.SortedDays() {
+	return nil
+}
+
+func (js JournalSource) Min() time.Time {
+	return js.ast.Min()
+}
+
+func (js JournalSource) Max() time.Time {
+	return js.ast.Max()
+}
+
+func (js JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) error {
+	if js.AutoLoad {
+		if err := js.Load(ctx); err != nil {
+			return err
+		}
+	}
+	for _, d := range js.ast.SortedDays() {
 		if err := cpr.Push(ctx, outCh, d); err != nil {
 			return err
 		}

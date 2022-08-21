@@ -56,9 +56,10 @@ func TestPeriodFilter(t *testing.T) {
 				sut:  new(PeriodFilter),
 			},
 			{
-				desc: "no period, no from date",
+				desc: "no period",
 				sut: &PeriodFilter{
-					To: date.Date(2022, 1, 10),
+					From: date.Date(2022, 1, 1),
+					To:   date.Date(2022, 1, 10),
 				},
 				input: []*ast.Day{
 					day(2022, 1, 2, 1, datedTrx(2022, 1, 2)),
@@ -66,7 +67,7 @@ func TestPeriodFilter(t *testing.T) {
 					day(2022, 1, 4, 3),
 				},
 				want: []*ast.Period{
-					period(date.Date(2022, 1, 2),
+					period(date.Date(2022, 1, 1),
 						date.Date(2022, 1, 10),
 						3,
 						day(2022, 1, 2, 1, datedTrx(2022, 1, 2)),
@@ -76,8 +77,9 @@ func TestPeriodFilter(t *testing.T) {
 				},
 			},
 			{
-				desc: "monthly, no from date",
+				desc: "monthly",
 				sut: &PeriodFilter{
+					From:     date.Date(2022, 1, 1),
 					To:       date.Date(2022, 1, 10),
 					Interval: date.Monthly,
 				},
@@ -87,7 +89,7 @@ func TestPeriodFilter(t *testing.T) {
 					day(2022, 1, 4, 300),
 				},
 				want: []*ast.Period{
-					period(date.Date(2022, 1, 2), date.Date(2022, 1, 10), 300,
+					period(date.Date(2022, 1, 1), date.Date(2022, 1, 10), 300,
 						day(2022, 1, 2, 100, datedTrx(2022, 1, 2)),
 						day(2022, 1, 3, 200),
 						day(2022, 1, 4, 300)),

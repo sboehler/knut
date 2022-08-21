@@ -21,14 +21,14 @@ type JournalSource struct {
 }
 
 // Source is a source of days.
-func (pr *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) error {
+func (js *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) error {
 	a := &ast.AST{
-		Context: pr.Context,
+		Context: js.Context,
 		Days:    make(map[time.Time]*ast.Day),
 	}
 	p := parser.RecursiveParser{
-		Context: pr.Context,
-		File:    pr.Path,
+		Context: js.Context,
+		File:    js.Path,
 	}
 
 	ch, errCh := p.Parse(ctx)
@@ -49,7 +49,7 @@ func (pr *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) erro
 			a.AddPrice(t)
 
 		case *ast.Transaction:
-			filtered := t.FilterPostings(pr.Filter)
+			filtered := t.FilterPostings(js.Filter)
 			if len(filtered) == 0 {
 				break
 			}
@@ -62,30 +62,30 @@ func (pr *JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) erro
 				for _, ts := range t.Accrual().Expand(t) {
 					a.AddTransaction(ts)
 				}
-				break
+			} else {
+				a.AddTransaction(t)
 			}
-			a.AddTransaction(t)
 
 		case *ast.Assertion:
-			if !pr.Filter.MatchAccount(t.Account) {
+			if !js.Filter.MatchAccount(t.Account) {
 				break
 			}
-			if !pr.Filter.MatchCommodity(t.Commodity) {
+			if !js.Filter.MatchCommodity(t.Commodity) {
 				break
 			}
 			a.AddAssertion(t)
 
 		case *ast.Value:
-			if !pr.Filter.MatchAccount(t.Account) {
+			if !js.Filter.MatchAccount(t.Account) {
 				break
 			}
-			if !pr.Filter.MatchCommodity(t.Commodity) {
+			if !js.Filter.MatchCommodity(t.Commodity) {
 				break
 			}
 			a.AddValue(t)
 
 		case *ast.Close:
-			if !pr.Filter.MatchAccount(t.Account) {
+			if !js.Filter.MatchAccount(t.Account) {
 				break
 			}
 			a.AddClose(t)

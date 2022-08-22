@@ -22,6 +22,8 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/sboehler/knut/lib/common/order"
 )
 
 // AccountType is the type of an account.
@@ -65,6 +67,16 @@ var accountTypes = map[string]AccountType{
 	"Equity":      EQUITY,
 	"Expenses":    EXPENSES,
 	"Income":      INCOME,
+}
+
+func CompareAccountTypes(t1, t2 AccountType) order.Ordering {
+	if t1 == t2 {
+		return order.Equal
+	}
+	if t1 < t2 {
+		return order.Smaller
+	}
+	return order.Greater
 }
 
 // Account represents an account which can be used in bookings.
@@ -120,6 +132,46 @@ func (a Account) WriteTo(w io.Writer) (int64, error) {
 
 func (a Account) String() string {
 	return a.Name()
+}
+
+func Compare(a1, a2 *Account) order.Ordering {
+	o := CompareAccountTypes(a1.accountType, a2.accountType)
+	if o != order.Equal {
+		return o
+	}
+	return order.Ordered(a1.name, a2.name)
+}
+
+func CompareWeighted(jctx Context, w map[*Account]float64) order.Compare[*Account] {
+	// compareSameType compares two accounts which are known to have the same account type.
+	var compareSameType func(a1, a2 *Account) order.Ordering
+	compareSameType = func(a1, a2 *Account) order.Ordering {
+		p1, p2 := jctx.Accounts().Parent(a1), jctx.Accounts().Parent(a2)
+		if p1 == nil {
+			if p2 == nil {
+				return order.Equal
+			}
+			return order.Smaller
+		}
+		// p1 != nil
+		if p2 == nil {
+			return order.Greater
+		}
+		// p1 != nil && p2 != nil
+		if p1 == p2 {
+			return order.Ordered(w[a1], w[a2])
+		}
+		// recurse until one is nil or both are identical
+		return compareSameType(p1, p2)
+	}
+
+	return func(a1, a2 *Account) order.Ordering {
+		if o := CompareAccountTypes(a1.accountType, a2.accountType); o != order.Equal {
+			// weights don't influence order of account types
+			return o
+		}
+		return compareSameType(a1, a2)
+	}
 }
 
 // Accounts is a thread-safe collection of accounts.

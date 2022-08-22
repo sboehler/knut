@@ -75,9 +75,10 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	}
 	var (
 		journalSource = &process.JournalSource{
-			Context: jctx,
-			Path:    args[0],
-			Expand:  true,
+			Context:  jctx,
+			Path:     args[0],
+			Expand:   true,
+			AutoLoad: true,
 		}
 		balancer = &process.Balancer{
 			Context: jctx,

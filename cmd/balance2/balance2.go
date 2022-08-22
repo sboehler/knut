@@ -153,7 +153,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 					From:     r.from.ValueOr(journalSource.Min()),
 					To:       r.to.ValueOr(date.Today()),
 					Interval: interval,
-					Last:     r.last}.Mapper(),
+					Last:     r.last,
+				}.Mapper(),
 			),
 		}
 	)

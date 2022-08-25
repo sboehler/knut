@@ -131,7 +131,7 @@ func (a Account) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (a Account) String() string {
-	return a.Name()
+	return a.name
 }
 
 func Compare(a1, a2 *Account) order.Ordering {

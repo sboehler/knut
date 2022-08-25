@@ -67,46 +67,65 @@ func (am Amounts) Index() []Key {
 	return res
 }
 
-type Mapper func(Key) Key
+type Mapper func(journal.Context, Key) Key
 
-func DefaultMapper(k Key) Key {
-	return k
+type KeyMapper struct {
+	Date                 func(time.Time) time.Time
+	Account, Other       func(journal.Context, *journal.Account) *journal.Account
+	Commodity, Valuation func(journal.Context, *journal.Commodity) *journal.Commodity
 }
 
-func Combine(ms ...Mapper) Mapper {
-	return func(k Key) Key {
-		for _, m := range ms {
-			k = m(k)
+func (km KeyMapper) Build() Mapper {
+	return func(jctx journal.Context, k Key) Key {
+		if km.Date == nil {
+			k.Date = time.Time{}
+		} else {
+			k.Date = km.Date(k.Date)
+		}
+		if km.Account == nil {
+			k.Account = nil
+		} else {
+			k.Account = km.Account(jctx, k.Account)
+		}
+		if km.Other == nil {
+			k.Other = nil
+		} else {
+			k.Other = km.Other(jctx, k.Other)
+		}
+		if km.Commodity == nil {
+			k.Commodity = nil
+		} else {
+			k.Commodity = km.Commodity(jctx, k.Commodity)
+		}
+		if km.Valuation == nil {
+			k.Valuation = nil
+		} else {
+			k.Valuation = km.Valuation(jctx, k.Valuation)
 		}
 		return k
 	}
 }
 
-func NoDate() Mapper {
-	return func(k Key) Key {
-		k.Date = time.Time{}
-		return k
-	}
+func DefaultMapper(_ journal.Context, k Key) Key {
+	return k
 }
 
-type TimePartition struct {
+type MapDate struct {
 	From, To time.Time
 	Interval date.Interval
 	Last     int
 }
 
-func (tp TimePartition) Mapper() Mapper {
+func (tp MapDate) Build() func(time.Time) time.Time {
 	part := createPartition(tp.From, tp.To, tp.Interval, tp.Last)
-	return func(k Key) Key {
+	return func(t time.Time) time.Time {
 		index := sort.Search(len(part), func(i int) bool {
-			return !part[i].Before(k.Date)
+			return !part[i].Before(t)
 		})
 		if index < len(part) {
-			k.Date = part[index]
-		} else {
-			k.Date = time.Time{}
+			return part[index]
 		}
-		return k
+		return time.Time{}
 	}
 }
 
@@ -131,45 +150,18 @@ func createPartition(t0, t1 time.Time, p date.Interval, n int) []time.Time {
 	return res
 }
 
-type Account struct {
-	Context journal.Context
-	Mapping journal.Mapping
-}
-
-func (as Account) Mapper() Mapper {
-	return func(k Key) Key {
-		k.Account = as.Context.Accounts().Map(k.Account, as.Mapping)
-		return k
+func MapAccount(m journal.Mapping) func(journal.Context, *journal.Account) *journal.Account {
+	return func(jctx journal.Context, a *journal.Account) *journal.Account {
+		return jctx.Accounts().Map(a, m)
 	}
 }
 
-type Other struct {
-	Context journal.Context
-	Mapping journal.Mapping
-}
-
-func (as Other) Mapper() Mapper {
-	return func(k Key) Key {
-		k.Account = as.Context.Accounts().Map(k.Other, as.Mapping)
-		return k
-	}
-}
-
-func NoOther(k Key) Key {
-	k.Other = nil
-	return k
-}
-
-type Commodity struct {
-	Show bool
-}
-
-func (c Commodity) Mapper() Mapper {
-	return func(k Key) Key {
-		if !c.Show {
-			k.Commodity = nil
+func ShowCommodity(t bool) func(journal.Context, *journal.Commodity) *journal.Commodity {
+	return func(jctx journal.Context, c *journal.Commodity) *journal.Commodity {
+		if t {
+			return c
 		}
-		return k
+		return nil
 	}
 }
 
@@ -192,7 +184,7 @@ func DefaultKeyFilter(_ Key) bool {
 
 func FilterCommodity(r *regexp.Regexp) KeyFilter {
 	if r == nil {
-		return func(_ Key) bool { return true }
+		return DefaultKeyFilter
 	}
 	return func(k Key) bool {
 		return r.MatchString(k.Commodity.String())
@@ -201,7 +193,7 @@ func FilterCommodity(r *regexp.Regexp) KeyFilter {
 
 func FilterAccount(r *regexp.Regexp) KeyFilter {
 	if r == nil {
-		return func(_ Key) bool { return true }
+		return DefaultKeyFilter
 	}
 	return func(k Key) bool {
 		return r.MatchString(k.Account.String())
@@ -210,7 +202,7 @@ func FilterAccount(r *regexp.Regexp) KeyFilter {
 
 func FilterOther(r *regexp.Regexp) KeyFilter {
 	if r == nil {
-		return func(_ Key) bool { return true }
+		return DefaultKeyFilter
 	}
 	return func(k Key) bool {
 		return r.MatchString(k.Other.String())

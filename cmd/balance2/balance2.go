@@ -141,26 +141,23 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		aggregator = &process.Aggregator{
 			Context:   jctx,
 			Valuation: valuation,
-			Mappers: amounts.Combine(
-				amounts.Account{
-					Context: jctx,
-					Mapping: r.mapping.Value(),
-				}.Mapper(),
-				amounts.NoOther,
-				amounts.Commodity{
-					Show: r.showCommodities,
-				}.Mapper(),
-				amounts.TimePartition{
-					From:     r.from.ValueOr(journalSource.Min()),
-					To:       r.to.ValueOr(date.Today()),
-					Interval: interval,
-					Last:     r.last,
-				}.Mapper(),
-			),
+
 			Filter: amounts.CombineKeyFilters(
 				amounts.FilterAccount(r.accounts.Value()),
 				amounts.FilterCommodity(r.commodities.Value()),
 			),
+
+			Mappers: amounts.KeyMapper{
+				Date: amounts.MapDate{
+					From:     r.from.ValueOr(journalSource.Min()),
+					To:       r.to.ValueOr(date.Today()),
+					Interval: interval,
+					Last:     r.last,
+				}.Build(),
+				Account:   amounts.MapAccount(r.mapping.Value()),
+				Commodity: amounts.ShowCommodity(r.showCommodities),
+				Valuation: amounts.ShowCommodity(valuation != nil),
+			}.Build(),
 		}
 	)
 

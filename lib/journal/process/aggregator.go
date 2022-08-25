@@ -48,7 +48,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 					Valuation: agg.Valuation,
 				}
 				if agg.Filter(kc) {
-					kc = agg.Mappers(kc)
+					kc = agg.Mappers(agg.Context, kc)
 					agg.Amounts.Add(kc, amt.Neg())
 				}
 				kd := amounts.Key{
@@ -58,7 +58,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 					Valuation: agg.Valuation,
 				}
 				if agg.Filter(kd) {
-					kd = agg.Mappers(kd)
+					kd = agg.Mappers(agg.Context, kd)
 					agg.Amounts.Add(kd, amt)
 				}
 			}

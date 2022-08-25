@@ -12,6 +12,7 @@ import (
 type Aggregator struct {
 	Context   journal.Context
 	Mappers   amounts.Mapper
+	Filter    amounts.KeyFilter
 	Valuation *journal.Commodity
 	Value     bool
 
@@ -20,6 +21,12 @@ type Aggregator struct {
 
 func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 	agg.Amounts = make(amounts.Amounts)
+	if agg.Filter == nil {
+		agg.Filter = amounts.DefaultKeyFilter
+	}
+	if agg.Mappers == nil {
+		agg.Mappers = amounts.DefaultMapper
+	}
 	for {
 		d, ok, err := cpr.Pop(ctx, inCh)
 		if err != nil {
@@ -40,16 +47,20 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 					Commodity: b.Commodity,
 					Valuation: agg.Valuation,
 				}
-				kc = agg.Mappers(kc)
-				agg.Amounts.Add(kc, amt.Neg())
+				if agg.Filter(kc) {
+					kc = agg.Mappers(kc)
+					agg.Amounts.Add(kc, amt.Neg())
+				}
 				kd := amounts.Key{
 					Date:      t.Date(),
 					Account:   b.Debit,
 					Commodity: b.Commodity,
 					Valuation: agg.Valuation,
 				}
-				kd = agg.Mappers(kd)
-				agg.Amounts.Add(kd, amt)
+				if agg.Filter(kd) {
+					kd = agg.Mappers(kd)
+					agg.Amounts.Add(kd, amt)
+				}
 			}
 		}
 	}

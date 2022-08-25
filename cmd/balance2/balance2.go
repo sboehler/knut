@@ -146,6 +146,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 					Context: jctx,
 					Mapping: r.mapping.Value(),
 				}.Mapper(),
+				amounts.NoOther,
 				amounts.Commodity{
 					Show: r.showCommodities,
 				}.Mapper(),
@@ -155,6 +156,10 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 					Interval: interval,
 					Last:     r.last,
 				}.Mapper(),
+			),
+			Filter: amounts.CombineKeyFilters(
+				amounts.FilterAccount(r.accounts.Value()),
+				amounts.FilterCommodity(r.commodities.Value()),
 			),
 		}
 	)

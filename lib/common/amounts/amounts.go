@@ -1,6 +1,7 @@
 package amounts
 
 import (
+	"regexp"
 	"sort"
 	"time"
 
@@ -11,10 +12,10 @@ import (
 
 // Key represents a position.
 type Key struct {
-	Date      time.Time
-	Account   *journal.Account
-	Commodity *journal.Commodity
-	Valuation *journal.Commodity
+	Date           time.Time
+	Account, Other *journal.Account
+	Commodity      *journal.Commodity
+	Valuation      *journal.Commodity
 }
 
 func CommodityKey(c *journal.Commodity) Key {
@@ -67,6 +68,10 @@ func (am Amounts) Index() []Key {
 }
 
 type Mapper func(Key) Key
+
+func DefaultMapper(k Key) Key {
+	return k
+}
 
 func Combine(ms ...Mapper) Mapper {
 	return func(k Key) Key {
@@ -138,6 +143,23 @@ func (as Account) Mapper() Mapper {
 	}
 }
 
+type Other struct {
+	Context journal.Context
+	Mapping journal.Mapping
+}
+
+func (as Other) Mapper() Mapper {
+	return func(k Key) Key {
+		k.Account = as.Context.Accounts().Map(k.Other, as.Mapping)
+		return k
+	}
+}
+
+func NoOther(k Key) Key {
+	k.Other = nil
+	return k
+}
+
 type Commodity struct {
 	Show bool
 }
@@ -148,5 +170,49 @@ func (c Commodity) Mapper() Mapper {
 			k.Commodity = nil
 		}
 		return k
+	}
+}
+
+type KeyFilter func(Key) bool
+
+func CombineKeyFilters(fs ...KeyFilter) KeyFilter {
+	return func(k Key) bool {
+		for _, f := range fs {
+			if !f(k) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+func DefaultKeyFilter(_ Key) bool {
+	return true
+}
+
+func FilterCommodity(r *regexp.Regexp) KeyFilter {
+	if r == nil {
+		return func(_ Key) bool { return true }
+	}
+	return func(k Key) bool {
+		return r.MatchString(k.Commodity.String())
+	}
+}
+
+func FilterAccount(r *regexp.Regexp) KeyFilter {
+	if r == nil {
+		return func(_ Key) bool { return true }
+	}
+	return func(k Key) bool {
+		return r.MatchString(k.Account.String())
+	}
+}
+
+func FilterOther(r *regexp.Regexp) KeyFilter {
+	if r == nil {
+		return func(_ Key) bool { return true }
+	}
+	return func(k Key) bool {
+		return r.MatchString(k.Other.String())
 	}
 }

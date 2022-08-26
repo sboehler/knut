@@ -16,7 +16,7 @@ const (
 
 type Compare[T any] func(t1, t2 T) Ordering
 
-func Ordered[T constraints.Ordered](t1, t2 T) Ordering {
+func CompareOrdered[T constraints.Ordered](t1, t2 T) Ordering {
 	if t1 == t2 {
 		return Equal
 	}
@@ -26,7 +26,7 @@ func Ordered[T constraints.Ordered](t1, t2 T) Ordering {
 	return Greater
 }
 
-func Time(t1, t2 time.Time) Ordering {
+func CompareTime(t1, t2 time.Time) Ordering {
 	if t1 == t2 {
 		return Equal
 	}
@@ -34,4 +34,25 @@ func Time(t1, t2 time.Time) Ordering {
 		return Smaller
 	}
 	return Greater
+}
+
+func Desc[T any](cmp Compare[T]) Compare[T] {
+	return func(t1, t2 T) Ordering {
+		return cmp(t2, t1)
+	}
+}
+
+func Asc[T any](cmp Compare[T]) Compare[T] {
+	return cmp
+}
+
+func CompareCombined[T any](cmp ...Compare[T]) Compare[T] {
+	return func(t1, t2 T) Ordering {
+		for _, c := range cmp {
+			if o := c(t1, t2); o != Equal {
+				return o
+			}
+		}
+		return Equal
+	}
 }

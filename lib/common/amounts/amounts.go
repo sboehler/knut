@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/common/order"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -207,4 +208,21 @@ func FilterOther(r *regexp.Regexp) KeyFilter {
 	return func(k Key) bool {
 		return r.MatchString(k.Other.String())
 	}
+}
+
+type KeyOrder func(Key, Key) order.Ordering
+
+func SortByDate(k1, k2 Key) order.Ordering {
+	return order.CompareTime(k1.Date, k2.Date)
+}
+
+func SortByAccount(jctx journal.Context, w map[*journal.Account]float64) KeyOrder {
+	s := journal.CompareWeighted(jctx, w)
+	return func(k1, k2 Key) order.Ordering {
+		return s(k1.Account, k2.Account)
+	}
+}
+
+func SortByCommodity(k1, k2 Key) order.Ordering {
+	return order.CompareOrdered(k1.Commodity.String(), k2.Commodity.String())
 }

@@ -159,7 +159,10 @@ func CompareWeighted(jctx Context, w map[*Account]float64) order.Compare[*Accoun
 		}
 		// p1 != nil && p2 != nil
 		if p1 == p2 {
-			return order.CompareOrdered(w[a1], w[a2])
+			if o := order.CompareOrdered(w[a1], w[a2]); o != order.Equal {
+				return o
+			}
+			return order.CompareOrdered(a1.Name(), a2.Name())
 		}
 		// recurse until one is nil or both are identical
 		return compareSameType(p1, p2)

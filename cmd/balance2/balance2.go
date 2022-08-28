@@ -25,6 +25,7 @@ import (
 	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/common/order"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
@@ -169,6 +170,16 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err := ppl.Process(ctx); err != nil {
 		return err
 	}
+	idx := aggregator.Amounts.Index(func(k1, k2 amounts.Key) bool {
+		return order.CompareCombined(
+			amounts.SortByDate,
+			amounts.SortByAccount(jctx, nil),
+		)(k1, k2) == order.Smaller
+	})
+	for _, i := range idx {
+		fmt.Println(i)
+	}
+
 	return nil
 	// out := bufio.NewWriter(cmd.OutOrStdout())
 	// defer out.Flush()

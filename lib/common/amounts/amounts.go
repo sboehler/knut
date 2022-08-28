@@ -60,10 +60,15 @@ func (am Amounts) Minus(a Amounts) Amounts {
 	return am
 }
 
-func (am Amounts) Index() []Key {
+func (am Amounts) Index(less func(k1, k2 Key) bool) []Key {
 	res := make([]Key, 0, len(am))
 	for k := range am {
 		res = append(res, k)
+	}
+	if less != nil {
+		sort.Slice(res, func(i, j int) bool {
+			return less(res[i], res[j])
+		})
 	}
 	return res
 }
@@ -210,13 +215,11 @@ func FilterOther(r *regexp.Regexp) KeyFilter {
 	}
 }
 
-type KeyOrder func(Key, Key) order.Ordering
-
 func SortByDate(k1, k2 Key) order.Ordering {
 	return order.CompareTime(k1.Date, k2.Date)
 }
 
-func SortByAccount(jctx journal.Context, w map[*journal.Account]float64) KeyOrder {
+func SortByAccount(jctx journal.Context, w map[*journal.Account]float64) order.Compare[Key] {
 	s := journal.CompareWeighted(jctx, w)
 	return func(k1, k2 Key) order.Ordering {
 		return s(k1.Account, k2.Account)

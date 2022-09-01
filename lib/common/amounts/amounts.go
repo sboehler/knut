@@ -60,14 +60,14 @@ func (am Amounts) Minus(a Amounts) Amounts {
 	return am
 }
 
-func (am Amounts) Index(less func(k1, k2 Key) bool) []Key {
+func (am Amounts) Index(cmp order.Compare[Key]) []Key {
 	res := make([]Key, 0, len(am))
 	for k := range am {
 		res = append(res, k)
 	}
-	if less != nil {
+	if cmp != nil {
 		sort.Slice(res, func(i, j int) bool {
-			return less(res[i], res[j])
+			return cmp(res[i], res[j]) == order.Smaller
 		})
 	}
 	return res

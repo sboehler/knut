@@ -170,12 +170,10 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err := ppl.Process(ctx); err != nil {
 		return err
 	}
-	idx := aggregator.Amounts.Index(func(k1, k2 amounts.Key) bool {
-		return order.CompareCombined(
-			amounts.SortByDate,
-			amounts.SortByAccount(jctx, nil),
-		)(k1, k2) == order.Smaller
-	})
+	idx := aggregator.Amounts.Index(order.CompareCombined(
+		amounts.SortByDate,
+		amounts.SortByAccount(jctx, nil),
+	))
 	for _, i := range idx {
 		fmt.Println(i)
 	}

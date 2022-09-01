@@ -124,6 +124,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err := journalSource.Load(ctx); err != nil {
 		return err
 	}
+	dates := date.CreatePartition(r.from.ValueOr(journalSource.Min()), r.to.ValueOr(date.Today()), interval, r.last)
 	var (
 		priceUpdater = &process.PriceUpdater{
 			Context:   jctx,
@@ -146,15 +147,10 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			),
 
 			Mappers: amounts.KeyMapper{
-				Date: amounts.MapDate{
-					From:     r.from.ValueOr(journalSource.Min()),
-					To:       r.to.ValueOr(date.Today()),
-					Interval: interval,
-					Last:     r.last,
-				}.Build(),
-				Account:   amounts.MapAccount(r.mapping.Value()),
-				Commodity: amounts.ShowCommodity(r.showCommodities),
-				Valuation: amounts.ShowCommodity(valuation != nil),
+				Date:      date.Map(dates),
+				Account:   journal.MapAccount(r.mapping.Value()),
+				Commodity: journal.MapCommodity(r.showCommodities),
+				Valuation: journal.MapCommodity(valuation != nil),
 			}.Build(),
 		}
 	)

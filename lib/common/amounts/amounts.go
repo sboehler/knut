@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
-	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -114,61 +113,6 @@ func (km KeyMapper) Build() Mapper {
 
 func DefaultMapper(_ journal.Context, k Key) Key {
 	return k
-}
-
-type MapDate struct {
-	From, To time.Time
-	Interval date.Interval
-	Last     int
-}
-
-func (tp MapDate) Build() func(time.Time) time.Time {
-	part := createPartition(tp.From, tp.To, tp.Interval, tp.Last)
-	return func(t time.Time) time.Time {
-		index := sort.Search(len(part), func(i int) bool {
-			return !part[i].Before(t)
-		})
-		if index < len(part) {
-			return part[index]
-		}
-		return time.Time{}
-	}
-}
-
-func createPartition(t0, t1 time.Time, p date.Interval, n int) []time.Time {
-	var res []time.Time
-	if p == date.Once {
-		if t0.Before(t1) {
-			res = append(res, t1)
-		}
-	} else {
-		for t := t0; !t.After(t1); t = date.EndOf(t, p).AddDate(0, 0, 1) {
-			ed := date.EndOf(t, p)
-			if ed.After(t1) {
-				ed = t1
-			}
-			res = append(res, ed)
-		}
-	}
-	if n > 0 && len(res) > n {
-		res = res[len(res)-n:]
-	}
-	return res
-}
-
-func MapAccount(m journal.Mapping) func(journal.Context, *journal.Account) *journal.Account {
-	return func(jctx journal.Context, a *journal.Account) *journal.Account {
-		return jctx.Accounts().Map(a, m)
-	}
-}
-
-func ShowCommodity(t bool) func(journal.Context, *journal.Commodity) *journal.Commodity {
-	return func(jctx journal.Context, c *journal.Commodity) *journal.Commodity {
-		if t {
-			return c
-		}
-		return nil
-	}
 }
 
 type KeyFilter func(Key) bool

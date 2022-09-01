@@ -15,6 +15,7 @@
 package date
 
 import (
+	"sort"
 	"time"
 )
 
@@ -54,7 +55,7 @@ func (p Interval) String() string {
 	return ""
 }
 
-// Date creates a new date.
+// Date creates a new
 func Date(year int, month time.Month, day int) time.Time {
 	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
 }
@@ -102,7 +103,7 @@ func EndOf(d time.Time, p Interval) time.Time {
 	return d
 }
 
-// Today returns today's date.
+// Today returns today's
 func Today() time.Time {
 	now := time.Now().Local()
 	return Date(now.Year(), now.Month(), now.Day())
@@ -138,7 +139,7 @@ func Periods(t0, t1 time.Time, p Interval) []Period {
 	return res
 }
 
-// Contains returns whether the period contains the given date.
+// Contains returns whether the period contains the given
 func (p Period) Contains(t time.Time) bool {
 	return !p.Start.After(t) && !p.End.Before(t)
 }
@@ -171,4 +172,37 @@ func reverse(ps []Period) {
 	for i := 0; i < len(ps)/2; i++ {
 		ps[i], ps[len(ps)-i-1] = ps[len(ps)-i-1], ps[i]
 	}
+}
+
+func Map(part []time.Time) func(time.Time) time.Time {
+	return func(t time.Time) time.Time {
+		index := sort.Search(len(part), func(i int) bool {
+			return !part[i].Before(t)
+		})
+		if index < len(part) {
+			return part[index]
+		}
+		return time.Time{}
+	}
+}
+
+func CreatePartition(t0, t1 time.Time, p Interval, n int) []time.Time {
+	var res []time.Time
+	if p == Once {
+		if t0.Before(t1) {
+			res = append(res, t1)
+		}
+	} else {
+		for t := t0; !t.After(t1); t = EndOf(t, p).AddDate(0, 0, 1) {
+			ed := EndOf(t, p)
+			if ed.After(t1) {
+				ed = t1
+			}
+			res = append(res, ed)
+		}
+	}
+	if n > 0 && len(res) > n {
+		res = res[len(res)-n:]
+	}
+	return res
 }

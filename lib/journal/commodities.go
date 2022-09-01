@@ -111,3 +111,12 @@ func isValidCommodity(s string) bool {
 	}
 	return true
 }
+
+func MapCommodity(t bool) func(Context, *Commodity) *Commodity {
+	return func(jctx Context, c *Commodity) *Commodity {
+		if t {
+			return c
+		}
+		return nil
+	}
+}

@@ -23,7 +23,7 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/sboehler/knut/lib/common/order"
+	"github.com/sboehler/knut/lib/common/compare"
 )
 
 // AccountType is the type of an account.
@@ -69,14 +69,14 @@ var accountTypes = map[string]AccountType{
 	"Income":      INCOME,
 }
 
-func CompareAccountTypes(t1, t2 AccountType) order.Ordering {
+func CompareAccountTypes(t1, t2 AccountType) compare.Order {
 	if t1 == t2 {
-		return order.Equal
+		return compare.Equal
 	}
 	if t1 < t2 {
-		return order.Smaller
+		return compare.Smaller
 	}
-	return order.Greater
+	return compare.Greater
 }
 
 // Account represents an account which can be used in bookings.
@@ -134,42 +134,42 @@ func (a Account) String() string {
 	return a.name
 }
 
-func Compare(a1, a2 *Account) order.Ordering {
+func Compare(a1, a2 *Account) compare.Order {
 	o := CompareAccountTypes(a1.accountType, a2.accountType)
-	if o != order.Equal {
+	if o != compare.Equal {
 		return o
 	}
-	return order.CompareOrdered(a1.name, a2.name)
+	return compare.Ordered(a1.name, a2.name)
 }
 
-func CompareWeighted(jctx Context, w map[*Account]float64) order.Compare[*Account] {
+func CompareWeighted(jctx Context, w map[*Account]float64) compare.Compare[*Account] {
 	// compareSameType compares two accounts which are known to have the same account type.
-	var compareSameType func(a1, a2 *Account) order.Ordering
-	compareSameType = func(a1, a2 *Account) order.Ordering {
+	var compareSameType func(a1, a2 *Account) compare.Order
+	compareSameType = func(a1, a2 *Account) compare.Order {
 		p1, p2 := jctx.Accounts().Parent(a1), jctx.Accounts().Parent(a2)
 		if p1 == nil {
 			if p2 == nil {
-				return order.Equal
+				return compare.Equal
 			}
-			return order.Smaller
+			return compare.Smaller
 		}
 		// p1 != nil
 		if p2 == nil {
-			return order.Greater
+			return compare.Greater
 		}
 		// p1 != nil && p2 != nil
 		if p1 == p2 {
-			if o := order.CompareOrdered(w[a1], w[a2]); o != order.Equal {
+			if o := compare.Ordered(w[a1], w[a2]); o != compare.Equal {
 				return o
 			}
-			return order.CompareOrdered(a1.Name(), a2.Name())
+			return compare.Ordered(a1.Name(), a2.Name())
 		}
 		// recurse until one is nil or both are identical
 		return compareSameType(p1, p2)
 	}
 
-	return func(a1, a2 *Account) order.Ordering {
-		if o := CompareAccountTypes(a1.accountType, a2.accountType); o != order.Equal {
+	return func(a1, a2 *Account) compare.Order {
+		if o := CompareAccountTypes(a1.accountType, a2.accountType); o != compare.Equal {
 			// weights don't influence order of account types
 			return o
 		}
@@ -272,7 +272,7 @@ func isValidSegment(s string) bool {
 	return true
 }
 
-// PreOrder iterates over accounts in post-order.
+// PreOrder iterates over accounts in post-compare.
 func (as *Accounts) PreOrder() []*Account {
 	as.mutex.RLock()
 	defer as.mutex.RUnlock()
@@ -283,7 +283,7 @@ func (as *Accounts) PreOrder() []*Account {
 	return res
 }
 
-// PostOrder iterates over accounts in post-order.
+// PostOrder iterates over accounts in post-compare.
 func (as *Accounts) PostOrder() []*Account {
 	as.mutex.RLock()
 	defer as.mutex.RUnlock()

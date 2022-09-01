@@ -23,9 +23,9 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/common/order"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
@@ -170,7 +170,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err := ppl.Process(ctx); err != nil {
 		return err
 	}
-	idx := aggregator.Amounts.Index(order.CompareCombined(
+	idx := aggregator.Amounts.Index(compare.Combine(
 		amounts.SortByDate,
 		amounts.SortByAccount(jctx, nil),
 	))

@@ -1,4 +1,4 @@
-package order
+package compare
 
 import (
 	"time"
@@ -6,17 +6,17 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type Ordering int
+type Order int
 
 const (
-	Smaller Ordering = iota
+	Smaller Order = iota
 	Equal
 	Greater
 )
 
-type Compare[T any] func(t1, t2 T) Ordering
+type Compare[T any] func(t1, t2 T) Order
 
-func CompareOrdered[T constraints.Ordered](t1, t2 T) Ordering {
+func Ordered[T constraints.Ordered](t1, t2 T) Order {
 	if t1 == t2 {
 		return Equal
 	}
@@ -26,7 +26,7 @@ func CompareOrdered[T constraints.Ordered](t1, t2 T) Ordering {
 	return Greater
 }
 
-func CompareTime(t1, t2 time.Time) Ordering {
+func Time(t1, t2 time.Time) Order {
 	if t1 == t2 {
 		return Equal
 	}
@@ -37,7 +37,7 @@ func CompareTime(t1, t2 time.Time) Ordering {
 }
 
 func Desc[T any](cmp Compare[T]) Compare[T] {
-	return func(t1, t2 T) Ordering {
+	return func(t1, t2 T) Order {
 		return cmp(t2, t1)
 	}
 }
@@ -46,8 +46,8 @@ func Asc[T any](cmp Compare[T]) Compare[T] {
 	return cmp
 }
 
-func CompareCombined[T any](cmp ...Compare[T]) Compare[T] {
-	return func(t1, t2 T) Ordering {
+func Combine[T any](cmp ...Compare[T]) Compare[T] {
+	return func(t1, t2 T) Order {
 		for _, c := range cmp {
 			if o := c(t1, t2); o != Equal {
 				return o

@@ -5,8 +5,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/common/order"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -60,14 +60,14 @@ func (am Amounts) Minus(a Amounts) Amounts {
 	return am
 }
 
-func (am Amounts) Index(cmp order.Compare[Key]) []Key {
+func (am Amounts) Index(cmp compare.Compare[Key]) []Key {
 	res := make([]Key, 0, len(am))
 	for k := range am {
 		res = append(res, k)
 	}
 	if cmp != nil {
 		sort.Slice(res, func(i, j int) bool {
-			return cmp(res[i], res[j]) == order.Smaller
+			return cmp(res[i], res[j]) == compare.Smaller
 		})
 	}
 	return res
@@ -215,17 +215,17 @@ func FilterOther(r *regexp.Regexp) KeyFilter {
 	}
 }
 
-func SortByDate(k1, k2 Key) order.Ordering {
-	return order.CompareTime(k1.Date, k2.Date)
+func SortByDate(k1, k2 Key) compare.Order {
+	return compare.Time(k1.Date, k2.Date)
 }
 
-func SortByAccount(jctx journal.Context, w map[*journal.Account]float64) order.Compare[Key] {
+func SortByAccount(jctx journal.Context, w map[*journal.Account]float64) compare.Compare[Key] {
 	s := journal.CompareWeighted(jctx, w)
-	return func(k1, k2 Key) order.Ordering {
+	return func(k1, k2 Key) compare.Order {
 		return s(k1.Account, k2.Account)
 	}
 }
 
-func SortByCommodity(k1, k2 Key) order.Ordering {
-	return order.CompareOrdered(k1.Commodity.String(), k2.Commodity.String())
+func SortByCommodity(k1, k2 Key) compare.Order {
+	return compare.Ordered(k1.Commodity.String(), k2.Commodity.String())
 }

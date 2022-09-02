@@ -177,6 +177,7 @@ func reverse(ps []Period) {
 func Map(part []time.Time) func(time.Time) time.Time {
 	return func(t time.Time) time.Time {
 		index := sort.Search(len(part), func(i int) bool {
+			// t <= part[i]
 			return !part[i].Before(t)
 		})
 		if index < len(part) {

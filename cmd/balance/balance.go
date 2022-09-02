@@ -128,7 +128,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 	var (
 		priceUpdater = &process.PriceUpdater{
-			Context:   jctx,
 			Valuation: valuation,
 		}
 		balancer = &process.Balancer{

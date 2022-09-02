@@ -100,7 +100,6 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 			Context: jctx,
 		}
 		priceUpdater = &process.PriceUpdater{
-			Context:   jctx,
 			Valuation: valuation,
 		}
 		valuator = &process.Valuator{

@@ -127,7 +127,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	dates := date.CreatePartition(r.from.ValueOr(journalSource.Min()), r.to.ValueOr(date.Today()), interval, r.last)
 	var (
 		priceUpdater = &process.PriceUpdater{
-			Context:   jctx,
 			Valuation: valuation,
 		}
 		balancer = &process.Balancer{

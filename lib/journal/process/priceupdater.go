@@ -10,7 +10,6 @@ import (
 
 // PriceUpdater updates the prices in a stream of days.
 type PriceUpdater struct {
-	Context   journal.Context
 	Valuation *journal.Commodity
 }
 

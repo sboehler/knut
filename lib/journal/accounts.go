@@ -328,6 +328,16 @@ func (as *Accounts) Children(a *Account) []*Account {
 	return res
 }
 
+func (as *Accounts) Densify(m map[*Account]struct{}) map[*Account]struct{} {
+	res := make(map[*Account]struct{})
+	for a := range m {
+		for ; a != nil; a = as.parents[a] {
+			res[a] = struct{}{}
+		}
+	}
+	return res
+}
+
 // Descendents returns all the descendents of this account, not including
 // the account itself.
 func (as *Accounts) Descendents(a *Account) []*Account {

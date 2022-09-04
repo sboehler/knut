@@ -73,7 +73,7 @@ func (am Amounts) Index(cmp compare.Compare[Key]) []Key {
 	return res
 }
 
-type Mapper func(journal.Context, Key) Key
+type Mapper func(Key) Key
 
 type KeyMapper struct {
 	Date                 func(time.Time) time.Time
@@ -81,8 +81,8 @@ type KeyMapper struct {
 	Commodity, Valuation func(journal.Context, *journal.Commodity) *journal.Commodity
 }
 
-func (km KeyMapper) Build() Mapper {
-	return func(jctx journal.Context, k Key) Key {
+func (km KeyMapper) Build(jctx journal.Context) Mapper {
+	return func(k Key) Key {
 		if km.Date == nil {
 			k.Date = time.Time{}
 		} else {
@@ -112,7 +112,7 @@ func (km KeyMapper) Build() Mapper {
 	}
 }
 
-func DefaultMapper(_ journal.Context, k Key) Key {
+func DefaultMapper(k Key) Key {
 	return k
 }
 

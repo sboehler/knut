@@ -138,7 +138,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Valuation: valuation,
 		}
 		aggregator = &process.Aggregator{
-			Context:   jctx,
 			Valuation: valuation,
 
 			Filter: filter.Combine(

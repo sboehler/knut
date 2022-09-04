@@ -11,7 +11,6 @@ import (
 )
 
 type Aggregator struct {
-	Context   journal.Context
 	Mappers   amounts.Mapper
 	Filter    filter.Filter[amounts.Key]
 	Valuation *journal.Commodity

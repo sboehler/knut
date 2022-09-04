@@ -150,7 +150,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				Account:   journal.MapAccount(jctx, r.mapping.Value()),
 				Commodity: journal.MapCommodity(r.showCommodities),
 				Valuation: journal.MapCommodity(valuation != nil),
-			}.Build(jctx),
+			}.Build(),
 		}
 	)
 

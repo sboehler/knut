@@ -81,7 +81,7 @@ type KeyMapper struct {
 	Commodity, Valuation func(*journal.Commodity) *journal.Commodity
 }
 
-func (km KeyMapper) Build(jctx journal.Context) Mapper {
+func (km KeyMapper) Build() Mapper {
 	return func(k Key) Key {
 		if km.Date == nil {
 			k.Date = time.Time{}

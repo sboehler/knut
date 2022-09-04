@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -115,44 +116,27 @@ func DefaultMapper(_ journal.Context, k Key) Key {
 	return k
 }
 
-type KeyFilter func(Key) bool
-
-func CombineKeyFilters(fs ...KeyFilter) KeyFilter {
-	return func(k Key) bool {
-		for _, f := range fs {
-			if !f(k) {
-				return false
-			}
-		}
-		return true
-	}
-}
-
-func DefaultKeyFilter(_ Key) bool {
-	return true
-}
-
-func FilterCommodity(r *regexp.Regexp) KeyFilter {
+func FilterCommodity(r *regexp.Regexp) filter.Filter[Key] {
 	if r == nil {
-		return DefaultKeyFilter
+		return filter.Default[Key]
 	}
 	return func(k Key) bool {
 		return r.MatchString(k.Commodity.String())
 	}
 }
 
-func FilterAccount(r *regexp.Regexp) KeyFilter {
+func FilterAccount(r *regexp.Regexp) filter.Filter[Key] {
 	if r == nil {
-		return DefaultKeyFilter
+		return filter.Default[Key]
 	}
 	return func(k Key) bool {
 		return r.MatchString(k.Account.String())
 	}
 }
 
-func FilterOther(r *regexp.Regexp) KeyFilter {
+func FilterOther(r *regexp.Regexp) filter.Filter[Key] {
 	if r == nil {
-		return DefaultKeyFilter
+		return filter.Default[Key]
 	}
 	return func(k Key) bool {
 		return r.MatchString(k.Other.String())

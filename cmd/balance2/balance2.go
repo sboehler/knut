@@ -26,6 +26,7 @@ import (
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
@@ -140,7 +141,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context:   jctx,
 			Valuation: valuation,
 
-			Filter: amounts.CombineKeyFilters(
+			Filter: filter.Combine(
 				amounts.FilterAccount(r.accounts.Value()),
 				amounts.FilterCommodity(r.commodities.Value()),
 			),

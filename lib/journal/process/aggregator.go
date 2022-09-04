@@ -5,6 +5,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
+	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 )
@@ -12,7 +13,7 @@ import (
 type Aggregator struct {
 	Context   journal.Context
 	Mappers   amounts.Mapper
-	Filter    amounts.KeyFilter
+	Filter    filter.Filter[amounts.Key]
 	Valuation *journal.Commodity
 	Value     bool
 
@@ -22,7 +23,7 @@ type Aggregator struct {
 func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 	agg.Amounts = make(amounts.Amounts)
 	if agg.Filter == nil {
-		agg.Filter = amounts.DefaultKeyFilter
+		agg.Filter = filter.Default[amounts.Key]
 	}
 	if agg.Mappers == nil {
 		agg.Mappers = amounts.DefaultMapper

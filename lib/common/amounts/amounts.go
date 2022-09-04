@@ -77,8 +77,8 @@ type Mapper func(Key) Key
 
 type KeyMapper struct {
 	Date                 func(time.Time) time.Time
-	Account, Other       func(journal.Context, *journal.Account) *journal.Account
-	Commodity, Valuation func(journal.Context, *journal.Commodity) *journal.Commodity
+	Account, Other       func(*journal.Account) *journal.Account
+	Commodity, Valuation func(*journal.Commodity) *journal.Commodity
 }
 
 func (km KeyMapper) Build(jctx journal.Context) Mapper {
@@ -91,22 +91,22 @@ func (km KeyMapper) Build(jctx journal.Context) Mapper {
 		if km.Account == nil {
 			k.Account = nil
 		} else {
-			k.Account = km.Account(jctx, k.Account)
+			k.Account = km.Account(k.Account)
 		}
 		if km.Other == nil {
 			k.Other = nil
 		} else {
-			k.Other = km.Other(jctx, k.Other)
+			k.Other = km.Other(k.Other)
 		}
 		if km.Commodity == nil {
 			k.Commodity = nil
 		} else {
-			k.Commodity = km.Commodity(jctx, k.Commodity)
+			k.Commodity = km.Commodity(k.Commodity)
 		}
 		if km.Valuation == nil {
 			k.Valuation = nil
 		} else {
-			k.Valuation = km.Valuation(jctx, k.Valuation)
+			k.Valuation = km.Valuation(k.Valuation)
 		}
 		return k
 	}

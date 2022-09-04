@@ -448,8 +448,8 @@ func (m Mapping) level(a *Account) int {
 	return level
 }
 
-func MapAccount(m Mapping) func(Context, *Account) *Account {
-	return func(jctx Context, a *Account) *Account {
+func MapAccount(jctx Context, m Mapping) func(*Account) *Account {
+	return func(a *Account) *Account {
 		return jctx.Accounts().Map(a, m)
 	}
 }

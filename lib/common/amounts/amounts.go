@@ -116,6 +116,12 @@ func DefaultMapper(k Key) Key {
 	return k
 }
 
+func FilterDates(t time.Time) filter.Filter[Key] {
+	return func(k Key) bool {
+		return !k.Date.After(t)
+	}
+}
+
 func FilterCommodity(r *regexp.Regexp) filter.Filter[Key] {
 	if r == nil {
 		return filter.Default[Key]

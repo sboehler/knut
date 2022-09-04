@@ -141,6 +141,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Valuation: valuation,
 
 			Filter: filter.Combine(
+				amounts.FilterDates(dates[len(dates)-1]),
 				amounts.FilterAccount(r.accounts.Value()),
 				amounts.FilterCommodity(r.commodities.Value()),
 			),

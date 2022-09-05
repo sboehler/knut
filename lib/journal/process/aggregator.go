@@ -8,7 +8,12 @@ import (
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
+	"github.com/shopspring/decimal"
 )
+
+type Collection interface {
+	Insert(k amounts.Key, v decimal.Decimal)
+}
 
 type Aggregator struct {
 	Mappers   amounts.Mapper
@@ -16,11 +21,10 @@ type Aggregator struct {
 	Valuation *journal.Commodity
 	Value     bool
 
-	Amounts amounts.Amounts
+	Collection Collection
 }
 
 func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
-	agg.Amounts = make(amounts.Amounts)
 	if agg.Filter == nil {
 		agg.Filter = filter.Default[amounts.Key]
 	}
@@ -49,7 +53,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 				}
 				if agg.Filter(kc) {
 					kc = agg.Mappers(kc)
-					agg.Amounts.Add(kc, amt.Neg())
+					agg.Collection.Insert(kc, amt.Neg())
 				}
 				kd := amounts.Key{
 					Date:      t.Date(),
@@ -59,7 +63,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 				}
 				if agg.Filter(kd) {
 					kd = agg.Mappers(kd)
-					agg.Amounts.Add(kd, amt)
+					agg.Collection.Insert(kd, amt)
 				}
 			}
 		}

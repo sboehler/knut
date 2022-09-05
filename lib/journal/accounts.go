@@ -313,6 +313,21 @@ func (as *Accounts) Parent(a *Account) *Account {
 	return as.parents[a]
 }
 
+// Ancestors returns the chain of ancestors of a, including a.
+func (as *Accounts) Ancestors(a *Account) []*Account {
+	as.mutex.RLock()
+	defer as.mutex.RUnlock()
+	return as.ancestors(a)
+}
+
+func (as *Accounts) ancestors(a *Account) []*Account {
+	var res []*Account
+	if p := as.parents[a]; p != nil {
+		res = as.ancestors(p)
+	}
+	return append(res, a)
+}
+
 // Children returns the children of this account.
 func (as *Accounts) Children(a *Account) []*Account {
 	as.mutex.RLock()

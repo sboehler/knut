@@ -23,13 +23,13 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/amounts"
-	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
+	"github.com/sboehler/knut/lib/journal/report2"
 
 	"github.com/spf13/cobra"
 )
@@ -137,8 +137,11 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context:   jctx,
 			Valuation: valuation,
 		}
+		report = report2.NewReport(jctx)
+
 		aggregator = &process.Aggregator{
-			Valuation: valuation,
+			Valuation:  valuation,
+			Collection: report,
 
 			Filter: filter.Combine(
 				amounts.FilterDates(dates[len(dates)-1]),
@@ -149,7 +152,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Mappers: amounts.KeyMapper{
 				Date:      date.Map(dates),
 				Account:   journal.MapAccount(jctx, r.mapping.Value()),
-				Commodity: journal.MapCommodity(r.showCommodities),
+				Commodity: journal.MapCommodity(r.showCommodities || valuation == nil),
 				Valuation: journal.MapCommodity(valuation != nil),
 			}.Build(),
 		}
@@ -163,12 +166,9 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err := ppl.Process(ctx); err != nil {
 		return err
 	}
-	idx := aggregator.Amounts.Index(compare.Combine(
-		amounts.SortByDate,
-		amounts.SortByAccount(jctx, nil),
-	))
-	for _, i := range idx {
-		fmt.Println(i)
+	fmt.Println(report)
+	for _, n := range report.AL.Nodes {
+		fmt.Println(n.Account.Name())
 	}
 
 	return nil

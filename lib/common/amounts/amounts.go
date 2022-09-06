@@ -112,6 +112,17 @@ func (am Amounts) SumBy(f func(k Key) bool, m func(k Key) Key) Amounts {
 	return res
 }
 
+func (am Amounts) SumOver(f func(k Key) bool) decimal.Decimal {
+	var res decimal.Decimal
+	for k, v := range am {
+		if !f(k) {
+			continue
+		}
+		res = res.Add(v)
+	}
+	return res
+}
+
 type Mapper func(Key) Key
 
 type KeyMapper struct {

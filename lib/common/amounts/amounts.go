@@ -7,6 +7,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/filter"
+	"github.com/sboehler/knut/lib/common/maputils"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -73,6 +74,44 @@ func (am Amounts) Index(cmp compare.Compare[Key]) []Key {
 	return res
 }
 
+func (am Amounts) Commodities() map[*journal.Commodity]struct{} {
+	cs := make(map[*journal.Commodity]struct{})
+	for k := range am {
+		cs[k.Commodity] = struct{}{}
+	}
+	return cs
+}
+
+func (am Amounts) CommoditiesSorted() []*journal.Commodity {
+	cs := am.Commodities()
+	return maputils.SortedKeys(cs, journal.CompareCommodities)
+}
+
+func (am Amounts) Dates() map[time.Time]struct{} {
+	cs := make(map[time.Time]struct{})
+	for k := range am {
+		cs[k.Date] = struct{}{}
+	}
+	return cs
+}
+
+func (am Amounts) DatesSorted() []time.Time {
+	cs := am.Dates()
+	return maputils.SortedKeys(cs, compare.Time)
+}
+
+func (am Amounts) SumBy(f func(k Key) bool, m func(k Key) Key) Amounts {
+	res := make(Amounts)
+	for k, v := range am {
+		if !f(k) {
+			continue
+		}
+		kn := m(k)
+		res[kn] = res[kn].Add(v)
+	}
+	return res
+}
+
 type Mapper func(Key) Key
 
 type KeyMapper struct {
@@ -83,37 +122,28 @@ type KeyMapper struct {
 
 func (km KeyMapper) Build() Mapper {
 	return func(k Key) Key {
-		if km.Date == nil {
-			k.Date = time.Time{}
-		} else {
-			k.Date = km.Date(k.Date)
+		var res Key
+		if km.Date != nil {
+			res.Date = km.Date(k.Date)
 		}
-		if km.Account == nil {
-			k.Account = nil
-		} else {
-			k.Account = km.Account(k.Account)
+		if km.Account != nil {
+			res.Account = km.Account(k.Account)
 		}
-		if km.Other == nil {
-			k.Other = nil
-		} else {
-			k.Other = km.Other(k.Other)
+		if km.Other != nil {
+			res.Other = km.Other(k.Other)
 		}
-		if km.Commodity == nil {
-			k.Commodity = nil
-		} else {
-			k.Commodity = km.Commodity(k.Commodity)
+		if km.Commodity != nil {
+			res.Commodity = km.Commodity(k.Commodity)
 		}
-		if km.Valuation == nil {
-			k.Valuation = nil
-		} else {
-			k.Valuation = km.Valuation(k.Valuation)
+		if km.Valuation != nil {
+			res.Valuation = km.Valuation(k.Valuation)
 		}
-		return k
+		return res
 	}
 }
 
-func DefaultMapper(k Key) Key {
-	return k
+func Identity[T any](t T) T {
+	return t
 }
 
 func FilterDates(t time.Time) filter.Filter[Key] {

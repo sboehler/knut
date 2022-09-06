@@ -19,6 +19,8 @@ import (
 	"sort"
 	"sync"
 	"unicode"
+
+	"github.com/sboehler/knut/lib/common/compare"
 )
 
 // Commodity represents a currency or security.
@@ -119,4 +121,8 @@ func MapCommodity(t bool) func(*Commodity) *Commodity {
 		}
 		return nil
 	}
+}
+
+func CompareCommodities(c1, c2 *Commodity) compare.Order {
+	return compare.Ordered(c1.String(), c2.String())
 }

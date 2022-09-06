@@ -29,7 +29,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 		agg.Filter = filter.Default[amounts.Key]
 	}
 	if agg.Mappers == nil {
-		agg.Mappers = amounts.DefaultMapper
+		agg.Mappers = amounts.Identity[amounts.Key]
 	}
 	for {
 		d, ok, err := cpr.Pop(ctx, inCh)

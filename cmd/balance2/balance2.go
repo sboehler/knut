@@ -152,6 +152,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Mappers: amounts.KeyMapper{
 				Date:      date.Map(dates),
 				Account:   journal.MapAccount(jctx, r.mapping.Value()),
+				Other:     amounts.Identity[*journal.Account],
 				Commodity: journal.MapCommodity(r.showCommodities || valuation == nil),
 				Valuation: journal.MapCommodity(valuation != nil),
 			}.Build(),

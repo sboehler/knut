@@ -2,6 +2,7 @@ package report2
 
 import (
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/maputils"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -41,12 +42,9 @@ type Section struct {
 func (s *Section) Insert(jctx journal.Context, k amounts.Key, v decimal.Decimal) {
 	ancestors := jctx.Accounts().Ancestors(k.Account)
 	root := ancestors[0]
-	n, ok := s.Nodes[root.Type()]
-	if !ok {
-		n = newNode(root)
-		s.Nodes[root.Type()] = n
-	}
-	n.Insert(ancestors, k, v)
+	maputils.
+		GetDefault(s.Nodes, root.Type(), func() *Node { return newNode(root) }).
+		Insert(ancestors, k, v)
 }
 
 type Node struct {
@@ -61,19 +59,15 @@ func newNode(a *journal.Account) *Node {
 		Children: make(map[*journal.Account]*Node),
 		Amounts:  make(amounts.Amounts),
 	}
-
 }
 
 func (n *Node) Insert(as []*journal.Account, k amounts.Key, v decimal.Decimal) {
 	if len(as) == 0 {
 		n.Amounts.Add(k, v)
-		return
+	} else {
+		head, tail := as[0], as[1:]
+		maputils.
+			GetDefault(n.Children, head, func() *Node { return newNode(head) }).
+			Insert(tail, k, v)
 	}
-	head, tail := as[0], as[1:]
-	ch, ok := n.Children[head]
-	if !ok {
-		ch = newNode(head)
-		n.Children[head] = ch
-	}
-	ch.Insert(tail, k, v)
 }

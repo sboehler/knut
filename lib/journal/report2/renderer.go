@@ -74,10 +74,6 @@ func (rn *Renderer) renderNode(indent int, n *Node) {
 	}
 }
 
-func (rn *Renderer) renderTotals(neg bool, vals amounts.Amounts) {
-	rn.render(0, "Total", neg, vals)
-}
-
 func (rn *Renderer) render(indent int, name string, neg bool, vals amounts.Amounts) {
 	row := rn.table.AddRow().AddIndented(name, indent)
 	for i, c := range vals.CommoditiesSorted() {

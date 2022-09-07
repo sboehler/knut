@@ -17,11 +17,11 @@ const (
 type Compare[T any] func(t1, t2 T) Order
 
 func Ordered[T constraints.Ordered](t1, t2 T) Order {
-	if t1 == t2 {
-		return Equal
-	}
 	if t1 < t2 {
 		return Smaller
+	}
+	if t1 == t2 {
+		return Equal
 	}
 	return Greater
 }

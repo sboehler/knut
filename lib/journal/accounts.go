@@ -272,17 +272,6 @@ func isValidSegment(s string) bool {
 	return true
 }
 
-// PreOrder iterates over accounts in post-compare.
-func (as *Accounts) PreOrder() []*Account {
-	as.mutex.RLock()
-	defer as.mutex.RUnlock()
-	var res []*Account
-	for _, at := range AccountTypes {
-		res = as.pre(as.accounts[at], res)
-	}
-	return res
-}
-
 // PostOrder iterates over accounts in post-compare.
 func (as *Accounts) PostOrder() []*Account {
 	as.mutex.RLock()
@@ -343,34 +332,6 @@ func (as *Accounts) Children(a *Account) []*Account {
 	return res
 }
 
-func (as *Accounts) Densify(m map[*Account]struct{}) map[*Account]struct{} {
-	res := make(map[*Account]struct{})
-	for a := range m {
-		for ; a != nil; a = as.parents[a] {
-			res[a] = struct{}{}
-		}
-	}
-	return res
-}
-
-// Descendents returns all the descendents of this account, not including
-// the account itself.
-func (as *Accounts) Descendents(a *Account) []*Account {
-	as.mutex.RLock()
-	defer as.mutex.RUnlock()
-	return as.descendents(a, nil)
-}
-
-// Descendents returns all the descendents of this account, not including
-// the account itself.
-func (as *Accounts) descendents(a *Account, res []*Account) []*Account {
-	for ch := range as.children[a] {
-		res = append(res, ch)
-		res = as.descendents(ch, res)
-	}
-	return res
-}
-
 // Map maps an account to itself or to one of its ancestors.
 func (as *Accounts) Map(a *Account, m Mapping) *Account {
 	as.mutex.RLock()
@@ -394,14 +355,6 @@ func (as *Accounts) nthParent(a *Account, n int) *Account {
 		return nil
 	}
 	return as.nthParent(p, n-1)
-}
-
-func (as *Accounts) pre(a *Account, acc []*Account) []*Account {
-	acc = append(acc, a)
-	for c := range as.children[a] {
-		acc = as.pre(c, acc)
-	}
-	return acc
 }
 
 func (as *Accounts) post(a *Account, acc []*Account) []*Account {

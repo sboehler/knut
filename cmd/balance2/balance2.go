@@ -44,7 +44,7 @@ func CreateCmd() *cobra.Command {
 	// Cmd is the balance command.
 	var c = &cobra.Command{
 		Use:    "balance2",
-		Short:  "create a balance sheet (experimental)",
+		Short:  "create a balance sheet (using the experimental pipeline)",
 		Long:   `Compute a balance for a date or set of dates.`,
 		Args:   cobra.ExactValidArgs(1),
 		Run:    r.run,

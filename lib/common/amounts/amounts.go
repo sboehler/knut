@@ -24,6 +24,10 @@ func DateKey(d time.Time) Key {
 	return Key{Date: d}
 }
 
+func DateCommodityKey(d time.Time, c *journal.Commodity) Key {
+	return Key{Date: d, Commodity: c}
+}
+
 func CommodityKey(c *journal.Commodity) Key {
 	return Key{Commodity: c}
 }

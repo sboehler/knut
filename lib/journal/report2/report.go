@@ -29,6 +29,9 @@ func NewReport(jctx journal.Context) *Report {
 }
 
 func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
+	if k.Account == nil {
+		return
+	}
 	n, ok := r.cache[k.Account]
 	if !ok {
 		ancestors := r.Context.Accounts().Ancestors(k.Account)

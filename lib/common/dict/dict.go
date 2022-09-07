@@ -1,4 +1,4 @@
-package maputils
+package dict
 
 import (
 	"sort"

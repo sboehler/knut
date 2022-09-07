@@ -14,73 +14,69 @@
 
 package report2
 
-// import (
-// 	"sort"
-// 	"time"
+import (
+	"time"
 
-// 	"github.com/sboehler/knut/lib/common/amounts"
-// 	"github.com/sboehler/knut/lib/common/compare"
-// 	"github.com/sboehler/knut/lib/common/date"
-// 	"github.com/sboehler/knut/lib/common/table"
-// 	"github.com/sboehler/knut/lib/journal"
-// )
+	"github.com/sboehler/knut/lib/common/table"
+	"github.com/sboehler/knut/lib/journal"
+)
 
-// // Renderer renders a report.
-// type Renderer struct {
-// 	Context            journal.Context
-// 	ShowCommodities    bool
-// 	SortAlphabetically bool
-// 	Dates              []time.Time
+// Renderer renders a report.
+type Renderer struct {
+	Context            journal.Context
+	ShowCommodities    bool
+	SortAlphabetically bool
+	Dates              []time.Time
 
-// 	report amounts.Amounts
-// 	table  *table.Table
-// 	dates  []date.Period
-// }
+	report *Report
+	table  *table.Table
+}
 
-// // Render renders a report.
-// func (rn *Renderer) Render(r amounts.Amounts) *table.Table {
-// 	rn.report = r
+// Render renders a report.
+func (rn *Renderer) Render(r *Report) *table.Table {
+	rn.report = r
+	r.ComputeWeights()
 
-// 	rn.table = table.New(1, len(rn.dates))
-// 	rn.table.AddSeparatorRow()
+	rn.table = table.New(1, len(rn.Dates))
+	rn.table.AddSeparatorRow()
 
-// 	accs, weights := rn.accountWeights(rn.report)
+	// 	accs, weights := rn.accountWeights(rn.report)
 
-// 	idx := rn.report.Index(compare.Combine(
-// 		amounts.SortByAccount(rn.Context, weights),
-// 		amounts.SortByCommodity,
-// 		amounts.SortByDate,
-// 	))
+	// 	idx := rn.report.Index(compare.Combine(
+	// 		amounts.SortByAccount(rn.Context, weights),
+	// 		amounts.SortByCommodity,
+	// 		amounts.SortByDate,
+	// 	))
 
-// 	header := rn.table.AddRow().AddText("Account", table.Center)
-// 	for _, d := range rn.dates {
-// 		header.AddText(d.End.Format("2006-01-02"), table.Center)
-// 	}
-// 	rn.table.AddSeparatorRow()
+	// 	header := rn.table.AddRow().AddText("Account", table.Center)
+	// 	for _, d := range rn.dates {
+	// 		header.AddText(d.End.Format("2006-01-02"), table.Center)
+	// 	}
+	// 	rn.table.AddSeparatorRow()
 
-// 	var (
-// 		subtree = rn.report.Subtree()
-// 		al, eie []*journal.Account
-// 	)
-// 	for _, acc := range rn.Context.Accounts().SortedPreOrder(weights) {
-// 		if _, ok := subtree[acc]; !ok {
-// 			continue
-// 		}
-// 		if acc.IsAL() {
-// 			al = append(al, acc)
-// 		} else {
-// 			eie = append(eie, acc)
-// 		}
-// 	}
+	// 	var (
+	// 		subtree = rn.report.Subtree()
+	// 		al, eie []*journal.Account
+	// 	)
+	// 	for _, acc := range rn.Context.Accounts().SortedPreOrder(weights) {
+	// 		if _, ok := subtree[acc]; !ok {
+	// 			continue
+	// 		}
+	// 		if acc.IsAL() {
+	// 			al = append(al, acc)
+	// 		} else {
+	// 			eie = append(eie, acc)
+	// 		}
+	// 	}
 
-// 	alTotals := rn.renderSection(al, false)
-// 	eieTotals := rn.renderSection(eie, true)
-// 	alTotals.AddFrom(eieTotals)
-// 	alTotals.Normalize()
-// 	rn.render(0, "Delta", false, alTotals)
-// 	rn.table.AddSeparatorRow()
-// 	return rn.table
-// }
+	// 	alTotals := rn.renderSection(al, false)
+	// 	eieTotals := rn.renderSection(eie, true)
+	// 	alTotals.AddFrom(eieTotals)
+	// 	alTotals.Normalize()
+	// 	rn.render(0, "Delta", false, alTotals)
+	// 	rn.table.AddSeparatorRow()
+	return rn.table
+}
 
 // func (rn *Renderer) accountWeights(as amounts.Amounts) ([]*journal.Account, map[*journal.Account]float64) {
 // 	weights := make(map[*journal.Account]float64)

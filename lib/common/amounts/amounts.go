@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/filter"
-	"github.com/sboehler/knut/lib/common/maputils"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -84,7 +84,7 @@ func (am Amounts) Commodities() map[*journal.Commodity]struct{} {
 
 func (am Amounts) CommoditiesSorted() []*journal.Commodity {
 	cs := am.Commodities()
-	return maputils.SortedKeys(cs, journal.CompareCommodities)
+	return dict.SortedKeys(cs, journal.CompareCommodities)
 }
 
 func (am Amounts) Dates() map[time.Time]struct{} {
@@ -97,7 +97,7 @@ func (am Amounts) Dates() map[time.Time]struct{} {
 
 func (am Amounts) DatesSorted() []time.Time {
 	cs := am.Dates()
-	return maputils.SortedKeys(cs, compare.Time)
+	return dict.SortedKeys(cs, compare.Time)
 }
 
 func (am Amounts) SumBy(f func(k Key) bool, m func(k Key) Key) Amounts {

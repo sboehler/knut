@@ -5,7 +5,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
-	"github.com/sboehler/knut/lib/common/maputils"
+	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -67,14 +67,14 @@ func (n *Node) Insert(as []*journal.Account, k amounts.Key, v decimal.Decimal) {
 		n.Amounts.Add(k, v)
 	} else {
 		head, tail := as[0], as[1:]
-		maputils.
+		dict.
 			GetDefault(n.children, head, func() *Node { return newNode(head) }).
 			Insert(tail, k, v)
 	}
 }
 
 func (n *Node) Children() []*Node {
-	return maputils.SortedValues(n.children, compareNodes)
+	return dict.SortedValues(n.children, compareNodes)
 }
 
 func compareNodes(n1, n2 *Node) compare.Order {

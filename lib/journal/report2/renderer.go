@@ -17,6 +17,7 @@ package report2
 import (
 	"time"
 
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 )
@@ -39,7 +40,18 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 
 	rn.table = table.New(1, len(rn.Dates))
 	rn.table.AddSeparatorRow()
+	header := rn.table.AddRow().AddText("Account", table.Center)
+	for _, d := range rn.Dates {
+		header.AddText(d.Format("2006-01-02"), table.Center)
+	}
+	rn.table.AddSeparatorRow()
 
+	for _, n := range rn.report.AL.children {
+		rn.render(0, n)
+	}
+	for _, n := range rn.report.EIE.children {
+		rn.render(0, n)
+	}
 	// 	accs, weights := rn.accountWeights(rn.report)
 
 	// 	idx := rn.report.Index(compare.Combine(
@@ -123,13 +135,27 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 // 	return res
 // }
 
-// func (rn *Renderer) render(indent int, key string, negate bool, byCommodity indexByCommodity) {
-// 	if rn.ShowCommodities {
-// 		rn.renderByCommodity(indent, key, negate, byCommodity)
-// 	} else {
-// 		rn.renderAmounts(indent, key, negate, byCommodity.Sum())
-// 	}
-// }
+func (rn *Renderer) render(indent int, n *Node) {
+	vals := n.Amounts.SumBy(nil, amounts.KeyMapper{
+		Date:      amounts.Identity[time.Time],
+		Commodity: amounts.Identity[*journal.Commodity],
+	}.Build())
+	row := rn.table.AddRow().AddIndented(n.Account.Segment(), indent)
+	for _, d := range rn.Dates {
+		v := vals[amounts.DateKey(d)]
+		if !n.Account.IsAL() {
+			v = v.Neg()
+		}
+		if v.IsZero() {
+			row.AddEmpty()
+		} else {
+			row.AddNumber(v)
+		}
+	}
+	for _, ch := range n.Children() {
+		rn.render(indent+2, ch)
+	}
+}
 
 // func (rn *Renderer) renderByCommodity(indent int, key string, negate bool, byCommodity indexByCommodity) {
 // 	rn.table.AddRow().AddIndented(key, indent).FillEmpty()

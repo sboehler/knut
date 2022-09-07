@@ -15,6 +15,7 @@
 package balance2
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -26,6 +27,7 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
+	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
@@ -157,6 +159,17 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				Valuation: journal.MapCommodity(valuation != nil),
 			}.Build(),
 		}
+		reportRenderer = report2.Renderer{
+			Context:            jctx,
+			ShowCommodities:    r.showCommodities || valuation == nil,
+			SortAlphabetically: r.sortAlphabetically,
+			Dates:              dates,
+		}
+		tableRenderer = table.TextRenderer{
+			Color:     r.color,
+			Thousands: r.thousands,
+			Round:     r.digits,
+		}
 	)
 
 	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
@@ -167,13 +180,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err := ppl.Process(ctx); err != nil {
 		return err
 	}
-	fmt.Println(report)
-	for _, n := range report.AL.Children() {
-		fmt.Println(n.Account.Name())
-	}
 
-	return nil
-	// out := bufio.NewWriter(cmd.OutOrStdout())
-	// defer out.Flush()
-	// return tableRenderer.Render(reportRenderer.Render(reportBuilder.Result), out)
+	out := bufio.NewWriter(cmd.OutOrStdout())
+	defer out.Flush()
+	return tableRenderer.Render(reportRenderer.Render(report), out)
 }

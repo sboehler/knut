@@ -20,6 +20,10 @@ type Key struct {
 	Valuation      *journal.Commodity
 }
 
+func DateKey(d time.Time) Key {
+	return Key{Date: d}
+}
+
 func CommodityKey(c *journal.Commodity) Key {
 	return Key{Commodity: c}
 }
@@ -102,6 +106,12 @@ func (am Amounts) DatesSorted() []time.Time {
 
 func (am Amounts) SumBy(f func(k Key) bool, m func(k Key) Key) Amounts {
 	res := make(Amounts)
+	if f == nil {
+		f = filter.Default[Key]
+	}
+	if m == nil {
+		m = Identity[Key]
+	}
 	for k, v := range am {
 		if !f(k) {
 			continue

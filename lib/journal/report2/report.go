@@ -36,6 +36,7 @@ func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
 		} else {
 			n = r.EIE.Leaf(ancestors)
 		}
+		r.cache[k.Account] = n
 	}
 	n.Insert(k, v)
 }
@@ -88,6 +89,10 @@ func (n *Node) Children() []*Node {
 	return dict.SortedValues(n.children, compareNodes)
 }
 
+func (n *Node) Segment() string {
+	return n.Account.Segment()
+}
+
 func compareNodes(n1, n2 *Node) compare.Order {
 	if n1.Account.Type() != n2.Account.Type() {
 		return compare.Ordered(n1.Account.Type(), n2.Account.Type())
@@ -110,8 +115,8 @@ func (n *Node) computeWeights() {
 	n.weight = 0
 	keysWithVal := func(k amounts.Key) bool { return k.Valuation != nil }
 	w := n.Amounts.SumOver(keysWithVal)
-	f, _ := w.Float64()
-	n.weight += f
+	f, _ := w.Abs().Float64()
+	n.weight -= f
 	wg.Wait()
 	for _, sn := range n.children {
 		n.weight += sn.weight

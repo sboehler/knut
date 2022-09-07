@@ -49,13 +49,16 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 		rn.renderNode(0, n)
 		rn.table.AddEmptyRow()
 	}
-	rn.render(0, "Total A+L", false, totalAL)
+	rn.render(0, "Total (A+L)", false, totalAL)
 	rn.table.AddSeparatorRow()
 	for _, n := range r.EIE.Children() {
 		rn.renderNode(0, n)
 		rn.table.AddEmptyRow()
 	}
-	rn.render(0, "Total E+I+E", true, totalEIE)
+	rn.render(0, "Total (E+I+E)", true, totalEIE)
+	rn.table.AddSeparatorRow()
+	totalAL.Plus(totalEIE)
+	rn.render(0, "Delta", false, totalAL)
 	rn.table.AddSeparatorRow()
 
 	return rn.table

@@ -69,6 +69,14 @@ func (am Amounts) Minus(a Amounts) Amounts {
 	return am
 }
 
+// Plus mutably adds.
+func (am Amounts) Plus(a Amounts) Amounts {
+	for ca, v := range a {
+		am[ca] = am[ca].Add(v)
+	}
+	return am
+}
+
 func (am Amounts) Index(cmp compare.Compare[Key]) []Key {
 	res := make([]Key, 0, len(am))
 	for k := range am {

@@ -48,6 +48,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 				kc := amounts.Key{
 					Date:      t.Date(),
 					Account:   b.Credit,
+					Other:     b.Debit,
 					Commodity: b.Commodity,
 					Valuation: agg.Valuation,
 				}
@@ -58,6 +59,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 				kd := amounts.Key{
 					Date:      t.Date(),
 					Account:   b.Debit,
+					Other:     b.Credit,
 					Commodity: b.Commodity,
 					Valuation: agg.Valuation,
 				}

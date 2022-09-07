@@ -195,7 +195,7 @@ func FilterAccount(r *regexp.Regexp) filter.Filter[Key] {
 		return filter.Default[Key]
 	}
 	return func(k Key) bool {
-		return r.MatchString(k.Account.String())
+		return r.MatchString(k.Account.Name()) || r.MatchString(k.Other.Name())
 	}
 }
 

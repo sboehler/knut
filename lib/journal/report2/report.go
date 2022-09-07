@@ -1,11 +1,11 @@
 package report2
 
 import (
-	"sync"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
@@ -46,32 +46,18 @@ func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
 }
 
 func (r *Report) ComputeWeights() {
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		r.AL.computeWeights()
-		wg.Done()
-	}()
-	go func() {
-		r.EIE.computeWeights()
-		wg.Done()
-	}()
-	wg.Wait()
+	cpr.Parallel(
+		func() { r.AL.computeWeights() },
+		func() { r.EIE.computeWeights() },
+	)()
 }
 
 func (r *Report) Totals() (amounts.Amounts, amounts.Amounts) {
 	res1, res2 := make(amounts.Amounts), make(amounts.Amounts)
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		r.AL.computeTotals(res1)
-		wg.Done()
-	}()
-	go func() {
-		r.EIE.computeTotals(res2)
-		wg.Done()
-	}()
-	wg.Wait()
+	cpr.Parallel(
+		func() { r.AL.computeTotals(res1) },
+		func() { r.EIE.computeTotals(res2) },
+	)()
 	return res1, res2
 }
 
@@ -124,20 +110,15 @@ func compareNodes(n1, n2 *Node) compare.Order {
 }
 
 func (n *Node) computeWeights() {
-	var wg sync.WaitGroup
-	wg.Add(len(n.children))
-	for _, sn := range n.children {
-		go func(sn *Node) {
-			sn.computeWeights()
-			wg.Done()
-		}(sn)
-	}
+	wait := cpr.ForAll(n.Children(), func(sn *Node) {
+		sn.computeWeights()
+	})
 	n.weight = 0
 	keysWithVal := func(k amounts.Key) bool { return k.Valuation != nil }
 	w := n.Amounts.SumOver(keysWithVal)
 	f, _ := w.Abs().Float64()
 	n.weight -= f
-	wg.Wait()
+	wait()
 	for _, sn := range n.children {
 		n.weight += sn.weight
 	}

@@ -72,3 +72,28 @@ func Demultiplex[T any](inChs ...<-chan T) chan T {
 	}()
 	return resCh
 }
+
+func Parallel(fs ...func()) func() {
+	var wg sync.WaitGroup
+	wg.Add(len(fs))
+	for _, f := range fs {
+		f := f
+		go func() {
+			f()
+			wg.Done()
+		}()
+	}
+	return wg.Wait
+}
+
+func ForAll[T any](ts []T, f func(T)) func() {
+	var wg sync.WaitGroup
+	wg.Add(len(ts))
+	for _, t := range ts {
+		go func(t T) {
+			f(t)
+			wg.Done()
+		}(t)
+	}
+	return wg.Wait
+}

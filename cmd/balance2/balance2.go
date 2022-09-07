@@ -168,7 +168,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	fmt.Println(report)
-	for _, n := range report.AL.Nodes {
+	for _, n := range report.AL.Children() {
 		fmt.Println(n.Account.Name())
 	}
 

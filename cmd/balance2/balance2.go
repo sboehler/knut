@@ -163,6 +163,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			ShowCommodities:    r.showCommodities || valuation == nil,
 			SortAlphabetically: r.sortAlphabetically,
 			Dates:              dates,
+			Diff:               r.diff,
 		}
 		tableRenderer = table.TextRenderer{
 			Color:     r.color,

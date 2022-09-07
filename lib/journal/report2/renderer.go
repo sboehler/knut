@@ -20,6 +20,7 @@ import (
 	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
+	"github.com/shopspring/decimal"
 )
 
 // Renderer renders a report.
@@ -27,6 +28,7 @@ type Renderer struct {
 	ShowCommodities    bool
 	SortAlphabetically bool
 	Dates              []time.Time
+	Diff               bool
 
 	table *table.Table
 }
@@ -90,8 +92,13 @@ func (rn *Renderer) render(indent int, name string, neg bool, vals amounts.Amoun
 			}
 			row = rn.table.AddRow().AddIndented(c.String(), indent+2)
 		}
+		var total decimal.Decimal
 		for _, d := range rn.Dates {
 			v := vals[amounts.DateCommodityKey(d, c)]
+			if !rn.Diff {
+				total = total.Add(v)
+				v = total
+			}
 			if neg {
 				v = v.Neg()
 			}

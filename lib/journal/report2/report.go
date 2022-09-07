@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/maputils"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
@@ -62,7 +63,7 @@ func (s *Section) ComputeWeights() {
 
 type Node struct {
 	Account  *journal.Account
-	Children map[*journal.Account]*Node
+	children map[*journal.Account]*Node
 	Amounts  amounts.Amounts
 
 	weight float64
@@ -71,7 +72,7 @@ type Node struct {
 func newNode(a *journal.Account) *Node {
 	return &Node{
 		Account:  a,
-		Children: make(map[*journal.Account]*Node),
+		children: make(map[*journal.Account]*Node),
 		Amounts:  make(amounts.Amounts),
 	}
 }
@@ -82,15 +83,21 @@ func (n *Node) Insert(as []*journal.Account, k amounts.Key, v decimal.Decimal) {
 	} else {
 		head, tail := as[0], as[1:]
 		maputils.
-			GetDefault(n.Children, head, func() *Node { return newNode(head) }).
+			GetDefault(n.children, head, func() *Node { return newNode(head) }).
 			Insert(tail, k, v)
 	}
 }
 
+func (n *Node) Children() []*Node {
+	return maputils.SortedValues(n.children, func(c1, c2 *Node) compare.Order {
+		return compare.Ordered(c1.weight, c2.weight)
+	})
+}
+
 func (n *Node) computeWeights() {
 	var wg sync.WaitGroup
-	wg.Add(len(n.Children))
-	for _, sn := range n.Children {
+	wg.Add(len(n.children))
+	for _, sn := range n.children {
 		go func(sn *Node) {
 			sn.computeWeights()
 			wg.Done()
@@ -102,7 +109,7 @@ func (n *Node) computeWeights() {
 	f, _ := w.Float64()
 	n.weight += f
 	wg.Wait()
-	for _, sn := range n.Children {
+	for _, sn := range n.children {
 		n.weight += sn.weight
 	}
 }

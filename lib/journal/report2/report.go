@@ -12,53 +12,38 @@ import (
 
 type Report struct {
 	Context journal.Context
-	AL, EIE Section
+	AL, EIE *Node
 }
 
 func NewReport(jctx journal.Context) *Report {
 	return &Report{
 		Context: jctx,
-		AL: Section{
-			Nodes: make(map[journal.AccountType]*Node),
-		},
-		EIE: Section{
-			Nodes: make(map[journal.AccountType]*Node),
-		},
+		AL:      newNode(nil),
+		EIE:     newNode(nil),
 	}
 }
 
 func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
+	ancestors := r.Context.Accounts().Ancestors(k.Account)
 	if k.Account.Type() == journal.ASSETS || k.Account.Type() == journal.LIABILITIES {
-		r.AL.Insert(r.Context, k, v)
+		r.AL.Insert(ancestors, k, v)
 	} else {
-		r.EIE.Insert(r.Context, k, v)
+		r.EIE.Insert(ancestors, k, v)
 	}
 }
 
-type Section struct {
-	Nodes map[journal.AccountType]*Node
-
-	// Date [* Commodity]
-	Totals map[amounts.Key]decimal.Decimal
-}
-
-func (s *Section) Insert(jctx journal.Context, k amounts.Key, v decimal.Decimal) {
-	ancestors := jctx.Accounts().Ancestors(k.Account)
-	root := ancestors[0]
-	maputils.
-		GetDefault(s.Nodes, root.Type(), func() *Node { return newNode(root) }).
-		Insert(ancestors, k, v)
-}
-
-func (s *Section) ComputeWeights() {
+func (r *Report) ComputeWeights() {
 	var wg sync.WaitGroup
-	wg.Add(len(s.Nodes))
-	for _, sn := range s.Nodes {
-		go func(sn *Node) {
-			sn.computeWeights()
-			wg.Done()
-		}(sn)
-	}
+	wg.Add(2)
+	go func() {
+		r.AL.computeWeights()
+		wg.Done()
+	}()
+	go func() {
+		r.EIE.computeWeights()
+		wg.Done()
+	}()
+	wg.Wait()
 }
 
 type Node struct {
@@ -89,9 +74,17 @@ func (n *Node) Insert(as []*journal.Account, k amounts.Key, v decimal.Decimal) {
 }
 
 func (n *Node) Children() []*Node {
-	return maputils.SortedValues(n.children, func(c1, c2 *Node) compare.Order {
-		return compare.Ordered(c1.weight, c2.weight)
-	})
+	return maputils.SortedValues(n.children, compareNodes)
+}
+
+func compareNodes(n1, n2 *Node) compare.Order {
+	if n1.Account.Type() != n2.Account.Type() {
+		return compare.Ordered(n1.Account.Type(), n2.Account.Type())
+	}
+	if n1.weight != n2.weight {
+		return compare.Ordered(n1.weight, n2.weight)
+	}
+	return compare.Ordered(n1.Account.Name(), n2.Account.Name())
 }
 
 func (n *Node) computeWeights() {

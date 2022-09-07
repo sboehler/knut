@@ -160,7 +160,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			}.Build(),
 		}
 		reportRenderer = report2.Renderer{
-			Context:            jctx,
 			ShowCommodities:    r.showCommodities || valuation == nil,
 			SortAlphabetically: r.sortAlphabetically,
 			Dates:              dates,

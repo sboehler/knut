@@ -58,8 +58,17 @@ func (r *Report) ComputeWeights() {
 
 func (r *Report) Totals() (amounts.Amounts, amounts.Amounts) {
 	res1, res2 := make(amounts.Amounts), make(amounts.Amounts)
-	r.AL.computeTotals(res1)
-	r.EIE.computeTotals(res2)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		r.AL.computeTotals(res1)
+		wg.Done()
+	}()
+	go func() {
+		r.EIE.computeTotals(res2)
+		wg.Done()
+	}()
+	wg.Wait()
 	return res1, res2
 }
 

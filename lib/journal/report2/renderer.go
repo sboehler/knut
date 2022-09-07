@@ -24,18 +24,15 @@ import (
 
 // Renderer renders a report.
 type Renderer struct {
-	Context            journal.Context
 	ShowCommodities    bool
 	SortAlphabetically bool
 	Dates              []time.Time
 
-	report *Report
-	table  *table.Table
+	table *table.Table
 }
 
 // Render renders a report.
 func (rn *Renderer) Render(r *Report) *table.Table {
-	rn.report = r
 	r.ComputeWeights()
 
 	rn.table = table.New(1, len(rn.Dates))
@@ -46,25 +43,43 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	}
 	rn.table.AddSeparatorRow()
 
-	for _, n := range rn.report.AL.children {
+	totalAL, totalEIE := r.Totals()
+
+	for _, n := range r.AL.Children() {
+		rn.renderNode(0, n)
 		rn.table.AddEmptyRow()
-		rn.render(0, n)
 	}
-	for _, n := range rn.report.EIE.children {
+	rn.render(0, "Total A+L", false, totalAL)
+	rn.table.AddSeparatorRow()
+	for _, n := range r.EIE.Children() {
+		rn.renderNode(0, n)
 		rn.table.AddEmptyRow()
-		rn.render(0, n)
 	}
+	rn.render(0, "Total E+I+E", true, totalEIE)
 	rn.table.AddSeparatorRow()
 
 	return rn.table
 }
 
-func (rn *Renderer) render(indent int, n *Node) {
-	vals := n.Amounts.SumBy(nil, amounts.KeyMapper{
-		Date:      amounts.Identity[time.Time],
-		Commodity: amounts.Identity[*journal.Commodity],
-	}.Build())
-	row := rn.table.AddRow().AddIndented(n.Account.Segment(), indent)
+func (rn *Renderer) renderNode(indent int, n *Node) {
+	if n.Account != nil {
+		vals := n.Amounts.SumBy(nil, amounts.KeyMapper{
+			Date:      amounts.Identity[time.Time],
+			Commodity: amounts.Identity[*journal.Commodity],
+		}.Build())
+		rn.render(indent, n.Account.Segment(), !n.Account.IsAL(), vals)
+	}
+	for _, ch := range n.Children() {
+		rn.renderNode(indent+2, ch)
+	}
+}
+
+func (rn *Renderer) renderTotals(neg bool, vals amounts.Amounts) {
+	rn.render(0, "Total", neg, vals)
+}
+
+func (rn *Renderer) render(indent int, name string, neg bool, vals amounts.Amounts) {
+	row := rn.table.AddRow().AddIndented(name, indent)
 	for i, c := range vals.CommoditiesSorted() {
 		if c != nil {
 			if i == 0 {
@@ -74,7 +89,7 @@ func (rn *Renderer) render(indent int, n *Node) {
 		}
 		for _, d := range rn.Dates {
 			v := vals[amounts.DateCommodityKey(d, c)]
-			if !n.Account.IsAL() {
+			if neg {
 				v = v.Neg()
 			}
 			if v.IsZero() {
@@ -83,8 +98,5 @@ func (rn *Renderer) render(indent int, n *Node) {
 				row.AddNumber(v)
 			}
 		}
-	}
-	for _, ch := range n.Children() {
-		rn.render(indent+2, ch)
 	}
 }

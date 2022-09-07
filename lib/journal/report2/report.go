@@ -2,6 +2,7 @@ package report2
 
 import (
 	"sync"
+	"time"
 
 	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
@@ -53,6 +54,13 @@ func (r *Report) ComputeWeights() {
 		wg.Done()
 	}()
 	wg.Wait()
+}
+
+func (r *Report) Totals() (amounts.Amounts, amounts.Amounts) {
+	res1, res2 := make(amounts.Amounts), make(amounts.Amounts)
+	r.AL.computeTotals(res1)
+	r.EIE.computeTotals(res2)
+	return res1, res2
 }
 
 type Node struct {
@@ -121,4 +129,14 @@ func (n *Node) computeWeights() {
 	for _, sn := range n.children {
 		n.weight += sn.weight
 	}
+}
+
+func (n *Node) computeTotals(m amounts.Amounts) {
+	for _, ch := range n.children {
+		ch.computeTotals(m)
+	}
+	n.Amounts.SumIntoBy(m, nil, amounts.KeyMapper{
+		Date:      amounts.Identity[time.Time],
+		Commodity: amounts.Identity[*journal.Commodity],
+	}.Build())
 }

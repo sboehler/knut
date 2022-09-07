@@ -88,27 +88,3 @@ func (rn *Renderer) render(indent int, n *Node) {
 		rn.render(indent+2, ch)
 	}
 }
-
-// func (rn *Renderer) renderByCommodity(indent int, key string, negate bool, byCommodity indexByCommodity) {
-// 	rn.table.AddRow().AddIndented(key, indent).FillEmpty()
-// 	for _, commodity := range rn.Context.Commodities().All() {
-// 		if byDate, ok := byCommodity[commodity]; ok {
-// 			rn.renderAmounts(indent+2, commodity.String(), negate, byDate)
-// 		}
-// 	}
-// }
-
-// func (rn Renderer) renderAmounts(indent int, key string, negate bool, byDate indexByDate) {
-// 	row := rn.table.AddRow().AddIndented(key, indent)
-// 	for _, date := range rn.dates {
-// 		amount, ok := byDate[date.End]
-// 		if !ok || amount.IsZero() {
-// 			row.AddEmpty()
-// 			continue
-// 		}
-// 		if negate {
-// 			amount = amount.Neg()
-// 		}
-// 		row.AddNumber(amount)
-// 	}
-// }

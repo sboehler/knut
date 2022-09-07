@@ -110,6 +110,11 @@ func (am Amounts) DatesSorted() []time.Time {
 
 func (am Amounts) SumBy(f func(k Key) bool, m func(k Key) Key) Amounts {
 	res := make(Amounts)
+	am.SumIntoBy(res, f, m)
+	return res
+}
+
+func (am Amounts) SumIntoBy(as Amounts, f func(k Key) bool, m func(k Key) Key) {
 	if f == nil {
 		f = filter.Default[Key]
 	}
@@ -121,9 +126,8 @@ func (am Amounts) SumBy(f func(k Key) bool, m func(k Key) Key) Amounts {
 			continue
 		}
 		kn := m(k)
-		res[kn] = res[kn].Add(v)
+		as[kn] = as[kn].Add(v)
 	}
-	return res
 }
 
 func (am Amounts) SumOver(f func(k Key) bool) decimal.Decimal {

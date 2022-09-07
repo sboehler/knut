@@ -79,6 +79,10 @@ func (rn *Renderer) renderNode(indent int, n *Node) {
 
 func (rn *Renderer) render(indent int, name string, neg bool, vals amounts.Amounts) {
 	row := rn.table.AddRow().AddIndented(name, indent)
+	if len(vals) == 0 {
+		row.FillEmpty()
+		return
+	}
 	for i, c := range vals.CommoditiesSorted() {
 		if c != nil {
 			if i == 0 {

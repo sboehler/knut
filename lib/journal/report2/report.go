@@ -13,23 +13,31 @@ import (
 type Report struct {
 	Context journal.Context
 	AL, EIE *Node
+	cache   nodeCache
 }
+
+type nodeCache map[*journal.Account]*Node
 
 func NewReport(jctx journal.Context) *Report {
 	return &Report{
 		Context: jctx,
 		AL:      newNode(nil),
 		EIE:     newNode(nil),
+		cache:   make(nodeCache),
 	}
 }
 
 func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
-	ancestors := r.Context.Accounts().Ancestors(k.Account)
-	if k.Account.Type() == journal.ASSETS || k.Account.Type() == journal.LIABILITIES {
-		r.AL.Insert(ancestors, k, v)
-	} else {
-		r.EIE.Insert(ancestors, k, v)
+	n, ok := r.cache[k.Account]
+	if !ok {
+		ancestors := r.Context.Accounts().Ancestors(k.Account)
+		if k.Account.Type() == journal.ASSETS || k.Account.Type() == journal.LIABILITIES {
+			n = r.AL.Leaf(ancestors)
+		} else {
+			n = r.EIE.Leaf(ancestors)
+		}
 	}
+	n.Insert(k, v)
 }
 
 func (r *Report) ComputeWeights() {
@@ -62,15 +70,18 @@ func newNode(a *journal.Account) *Node {
 	}
 }
 
-func (n *Node) Insert(as []*journal.Account, k amounts.Key, v decimal.Decimal) {
+func (n *Node) Insert(k amounts.Key, v decimal.Decimal) {
+	n.Amounts.Add(k, v)
+}
+
+func (n *Node) Leaf(as []*journal.Account) *Node {
 	if len(as) == 0 {
-		n.Amounts.Add(k, v)
-	} else {
-		head, tail := as[0], as[1:]
-		dict.
-			GetDefault(n.children, head, func() *Node { return newNode(head) }).
-			Insert(tail, k, v)
+		return n
 	}
+	head, tail := as[0], as[1:]
+	return dict.
+		GetDefault(n.children, head, func() *Node { return newNode(head) }).
+		Leaf(tail)
 }
 
 func (n *Node) Children() []*Node {

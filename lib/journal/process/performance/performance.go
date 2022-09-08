@@ -60,8 +60,7 @@ func (calc Calculator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 func (calc *Calculator) valueByCommodity(d *ast.Day) pcv {
 	res := make(pcv)
 	for pos, val := range d.Value {
-		t := pos.Account.Type()
-		if t != journal.ASSETS && t != journal.LIABILITIES {
+		if !pos.Account.IsAL() {
 			continue
 		}
 		if !calc.Filter.MatchAccount(pos.Account) || !calc.Filter.MatchCommodity(pos.Commodity) {
@@ -76,14 +75,14 @@ func (calc *Calculator) valueByCommodity(d *ast.Day) pcv {
 // pcv is a per-commodity value.
 type pcv map[*journal.Commodity]float64
 
-func (calc *Calculator) computeFlows(step *ast.Day) *ast.Performance {
+func (calc *Calculator) computeFlows(day *ast.Day) *ast.Performance {
 
 	var (
 		internalInflows, internalOutflows, inflows, outflows pcv
 		portfolioFlows                                       float64
 	)
 
-	for _, trx := range step.Transactions {
+	for _, trx := range day.Transactions {
 
 		// We make the convention that flows per transaction and commodity are
 		// either positive or negative, but not both.

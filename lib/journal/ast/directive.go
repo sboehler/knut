@@ -317,13 +317,13 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 		crAccountSingle, drAccountSingle, crAccountMulti, drAccountMulti = a.Account, a.Account, a.Account, a.Account
 	)
 	switch {
-	case isAL(posting.Credit) && isIE(posting.Debit):
+	case posting.Credit.IsAL() && posting.Debit.IsIE():
 		crAccountSingle = posting.Credit
 		drAccountMulti = posting.Debit
-	case isIE(posting.Credit) && isAL(posting.Debit):
+	case posting.Credit.IsIE() && posting.Debit.IsAL():
 		crAccountMulti = posting.Credit
 		drAccountSingle = posting.Debit
-	case isIE(posting.Credit) && isIE(posting.Debit):
+	case posting.Credit.IsIE() && posting.Debit.IsIE():
 		crAccountMulti = posting.Credit
 		drAccountMulti = posting.Debit
 	default:
@@ -366,14 +366,6 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 
 	}
 	return result
-}
-
-func isAL(a *journal.Account) bool {
-	return a.Type() == journal.ASSETS || a.Type() == journal.LIABILITIES
-}
-
-func isIE(a *journal.Account) bool {
-	return a.Type() == journal.INCOME || a.Type() == journal.EXPENSES
 }
 
 // Currency declares that a commodity is a currency.

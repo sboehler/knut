@@ -124,6 +124,11 @@ func (a Account) IsAL() bool {
 	return a.accountType == ASSETS || a.accountType == LIABILITIES
 }
 
+// IsIE returns whether this account is an income or expense account.
+func (a Account) IsIE() bool {
+	return a.accountType == EXPENSES || a.accountType == INCOME
+}
+
 // WriteTo writes the account to the writer.
 func (a Account) WriteTo(w io.Writer) (int64, error) {
 	n, err := fmt.Fprint(w, a.Name())

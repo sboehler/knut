@@ -272,29 +272,6 @@ func isValidSegment(s string) bool {
 	return true
 }
 
-// PostOrder iterates over accounts in post-compare.
-func (as *Accounts) PostOrder() []*Account {
-	as.mutex.RLock()
-	defer as.mutex.RUnlock()
-	var res []*Account
-	for _, at := range AccountTypes {
-		res = as.post(as.accounts[at], res)
-	}
-	return res
-}
-
-// SortedPreOrder sorts every level according to the weights supplied. The
-// given weights must be dense.
-func (as *Accounts) SortedPreOrder(weights map[*Account]float64) []*Account {
-	as.mutex.RLock()
-	defer as.mutex.RUnlock()
-	var res []*Account
-	for _, at := range AccountTypes {
-		res = as.sorted(as.accounts[at], res, weights)
-	}
-	return res
-}
-
 // Parent returns the parent of this account.
 func (as *Accounts) Parent(a *Account) *Account {
 	as.mutex.RLock()

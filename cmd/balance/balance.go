@@ -20,15 +20,18 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
+	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
-	"github.com/sboehler/knut/lib/journal/report"
+	"github.com/sboehler/knut/lib/journal/report2"
 
 	"github.com/spf13/cobra"
 )
@@ -40,11 +43,12 @@ func CreateCmd() *cobra.Command {
 
 	// Cmd is the balance command.
 	var c = &cobra.Command{
-		Use:   "balance",
-		Short: "create a balance sheet",
-		Long:  `Compute a balance for a date or set of dates.`,
-		Args:  cobra.ExactValidArgs(1),
-		Run:   r.run,
+		Use:    "balance",
+		Short:  "create a balance sheet",
+		Long:   `Compute a balance for a date or set of dates.`,
+		Args:   cobra.ExactValidArgs(1),
+		Run:    r.run,
+		Hidden: true,
 	}
 	r.setupFlags(c)
 	return c
@@ -99,33 +103,31 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
 	var (
-		ctx  = cmd.Context()
-		jctx = journal.NewContext()
-
+		ctx       = cmd.Context()
+		jctx      = journal.NewContext()
 		valuation *journal.Commodity
 		interval  date.Interval
-
-		err error
+		err       error
 	)
+	if time.Time(r.to).IsZero() {
+		r.to = flags.DateFlag(date.Today())
+	}
 	if valuation, err = r.valuation.Value(jctx); err != nil {
 		return err
 	}
 	if interval, err = r.interval.Value(); err != nil {
 		return err
 	}
-
 	journalSource := &process.JournalSource{
 		Context: jctx,
 		Path:    args[0],
-		Filter: journal.Filter{
-			Accounts:    r.accounts.Value(),
-			Commodities: r.commodities.Value(),
-		},
-		Expand: true,
+		Filter:  journal.Filter{},
+		Expand:  true,
 	}
 	if err := journalSource.Load(ctx); err != nil {
 		return err
 	}
+	dates := date.CreatePartition(r.from.ValueOr(journalSource.Min()), r.to.ValueOr(date.Today()), interval, r.last)
 	var (
 		priceUpdater = &process.PriceUpdater{
 			Valuation: valuation,
@@ -137,25 +139,31 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		periodFilter = &process.PeriodFilter{
-			From:     r.from.ValueOr(journalSource.Min()),
-			To:       r.to.ValueOr(date.Today()),
-			Interval: interval,
-			Last:     r.last,
+		report = report2.NewReport(jctx)
+
+		aggregator = &process.Aggregator{
+			Valuation:  valuation,
+			Collection: report,
+
+			Filter: filter.Combine(
+				amounts.FilterDates(dates[len(dates)-1]),
+				amounts.FilterAccount(r.accounts.Value()),
+				amounts.FilterCommodity(r.commodities.Value()),
+			),
+
+			Mappers: amounts.KeyMapper{
+				Date:      date.Map(dates),
+				Account:   journal.MapAccount(jctx, r.mapping.Value()),
+				Other:     amounts.Identity[*journal.Account],
+				Commodity: journal.MapCommodity(r.showCommodities || valuation == nil),
+				Valuation: journal.MapCommodity(valuation != nil),
+			}.Build(),
 		}
-		periodDiffer = &process.PeriodDiffer{
-			Valuation: valuation,
-		}
-		reportBuilder = &report.BalanceBuilder{
-			Context:   jctx,
-			Mapping:   r.mapping.Value(),
-			Valuation: valuation != nil,
-			Diff:      r.diff,
-		}
-		reportRenderer = report.Renderer{
-			Context:            jctx,
+		reportRenderer = report2.Renderer{
 			ShowCommodities:    r.showCommodities || valuation == nil,
 			SortAlphabetically: r.sortAlphabetically,
+			Dates:              dates,
+			Diff:               r.diff,
 		}
 		tableRenderer = table.TextRenderer{
 			Color:     r.color,
@@ -167,16 +175,13 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, balancer)
 	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
-	s2 := cpr.Compose[*ast.Day, *ast.Period](s, periodFilter)
-	if r.diff {
-		s2 = cpr.Compose[*ast.Period, *ast.Period](s2, periodDiffer)
-	}
-	ppl := cpr.Connect[*ast.Period](s2, reportBuilder)
+	ppl := cpr.Connect[*ast.Day](s, aggregator)
 
 	if err := ppl.Process(ctx); err != nil {
 		return err
 	}
+
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return tableRenderer.Render(reportRenderer.Render(reportBuilder.Result), out)
+	return tableRenderer.Render(reportRenderer.Render(report), out)
 }

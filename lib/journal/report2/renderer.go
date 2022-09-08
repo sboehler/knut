@@ -36,10 +36,16 @@ type Renderer struct {
 // Render renders a report.
 func (rn *Renderer) Render(r *Report) *table.Table {
 	r.ComputeWeights()
-
-	rn.table = table.New(1, len(rn.Dates))
+	if rn.ShowCommodities {
+		rn.table = table.New(1, 1, len(rn.Dates))
+	} else {
+		rn.table = table.New(1, len(rn.Dates))
+	}
 	rn.table.AddSeparatorRow()
 	header := rn.table.AddRow().AddText("Account", table.Center)
+	if rn.ShowCommodities {
+		header.AddText("Comm", table.Center)
+	}
 	for _, d := range rn.Dates {
 		header.AddText(d.Format("2006-01-02"), table.Center)
 	}
@@ -80,17 +86,19 @@ func (rn *Renderer) renderNode(indent int, n *Node) {
 }
 
 func (rn *Renderer) render(indent int, name string, neg bool, vals amounts.Amounts) {
-	row := rn.table.AddRow().AddIndented(name, indent)
 	if len(vals) == 0 {
-		row.FillEmpty()
+		rn.table.AddRow().AddIndented(name, indent).FillEmpty()
 		return
 	}
 	for i, c := range vals.CommoditiesSorted() {
-		if c != nil {
-			if i == 0 {
-				row.FillEmpty()
-			}
-			row = rn.table.AddRow().AddIndented(c.String(), indent+2)
+		row := rn.table.AddRow()
+		if i == 0 {
+			row.AddIndented(name, indent)
+		} else {
+			row.AddEmpty()
+		}
+		if rn.ShowCommodities {
+			row.AddText(c.String(), table.Left)
 		}
 		var total decimal.Decimal
 		for _, d := range rn.Dates {

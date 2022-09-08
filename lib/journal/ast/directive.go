@@ -231,22 +231,6 @@ func (t *Transaction) Less(t2 *Transaction) bool {
 	return len(t.postings) < len(t2.postings)
 }
 
-// FilterPostings returns a list of postings matching the supplied filter.
-func (t *Transaction) FilterPostings(f journal.Filter) []Posting {
-	var filtered []Posting
-	for _, p := range t.postings {
-		if !f.MatchAccount(p.Credit) && !f.MatchAccount(p.Debit) {
-			continue
-		}
-		if !f.MatchCommodity(p.Commodity) {
-			continue
-		}
-		filtered = append(filtered, p)
-
-	}
-	return filtered
-}
-
 // TransactionBuilder builds transactions.
 type TransactionBuilder struct {
 	Range       Range

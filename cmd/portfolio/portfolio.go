@@ -24,6 +24,7 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/cpr"
+	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
@@ -107,12 +108,10 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 			Valuation: valuation,
 		}
 		calculator = &performance.Calculator{
-			Context:   jctx,
-			Valuation: valuation,
-			Filter: journal.Filter{
-				Accounts:    r.accounts.Value(),
-				Commodities: r.commodities.Value(),
-			},
+			Context:         jctx,
+			Valuation:       valuation,
+			AccountFilter:   filter.ByName[*journal.Account](r.accounts.Value()),
+			CommodityFilter: filter.ByName[*journal.Commodity](r.commodities.Value()),
 		}
 	)
 

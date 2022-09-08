@@ -17,7 +17,6 @@ type JournalSource struct {
 
 	Path     string
 	Expand   bool
-	Filter   journal.Filter
 	AutoLoad bool
 
 	ast *ast.AST
@@ -47,15 +46,6 @@ func (js *JournalSource) Load(ctx context.Context) error {
 			js.ast.AddPrice(t)
 
 		case *ast.Transaction:
-			filtered := t.FilterPostings(js.Filter)
-			if len(filtered) == 0 {
-				break
-			}
-			if len(filtered) < len(t.Postings()) {
-				tb := t.ToBuilder()
-				tb.Postings = filtered
-				t = tb.Build()
-			}
 			if t.Accrual() != nil {
 				for _, ts := range t.Accrual().Expand(t) {
 					js.ast.AddTransaction(ts)
@@ -65,27 +55,12 @@ func (js *JournalSource) Load(ctx context.Context) error {
 			}
 
 		case *ast.Assertion:
-			if !js.Filter.MatchAccount(t.Account) {
-				break
-			}
-			if !js.Filter.MatchCommodity(t.Commodity) {
-				break
-			}
 			js.ast.AddAssertion(t)
 
 		case *ast.Value:
-			if !js.Filter.MatchAccount(t.Account) {
-				break
-			}
-			if !js.Filter.MatchCommodity(t.Commodity) {
-				break
-			}
 			js.ast.AddValue(t)
 
 		case *ast.Close:
-			if !js.Filter.MatchAccount(t.Account) {
-				break
-			}
 			js.ast.AddClose(t)
 
 		default:

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/shopspring/decimal"
@@ -300,8 +301,8 @@ func TestComputeFlows(t *testing.T) {
 				}
 
 				fc = Calculator{
-					Filter:    journal.Filter{Accounts: regexp.MustCompile("Assets:Portfolio")},
-					Valuation: chf,
+					AccountFilter: filter.ByName[*journal.Account](regexp.MustCompile("Assets:Portfolio")),
+					Valuation:     chf,
 				}
 			)
 

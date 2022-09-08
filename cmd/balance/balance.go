@@ -122,7 +122,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	journalSource := &process.JournalSource{
 		Context: jctx,
 		Path:    args[0],
-		Filter:  journal.Filter{},
 		Expand:  true,
 	}
 	if err := journalSource.Load(ctx); err != nil {

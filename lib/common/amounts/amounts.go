@@ -162,7 +162,7 @@ func (am Amounts) SumBy(f func(k Key) bool, m func(k Key) Key) Amounts {
 
 func (am Amounts) SumIntoBy(as Amounts, f func(k Key) bool, m func(k Key) Key) {
 	if f == nil {
-		f = filter.Default[Key]
+		f = filter.AllowAll[Key]
 	}
 	if m == nil {
 		m = mapper.Identity[Key]
@@ -223,7 +223,7 @@ func FilterDates(t time.Time) filter.Filter[Key] {
 
 func FilterCommodity(r *regexp.Regexp) filter.Filter[Key] {
 	if r == nil {
-		return filter.Default[Key]
+		return filter.AllowAll[Key]
 	}
 	return func(k Key) bool {
 		return r.MatchString(k.Commodity.String())
@@ -232,7 +232,7 @@ func FilterCommodity(r *regexp.Regexp) filter.Filter[Key] {
 
 func FilterAccount(r *regexp.Regexp) filter.Filter[Key] {
 	if r == nil {
-		return filter.Default[Key]
+		return filter.AllowAll[Key]
 	}
 	return func(k Key) bool {
 		return r.MatchString(k.Account.Name()) || r.MatchString(k.Other.Name())

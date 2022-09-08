@@ -1,5 +1,9 @@
 package filter
 
+import (
+	"regexp"
+)
+
 type Filter[T any] func(T) bool
 
 func Combine[T any](fs ...Filter[T]) Filter[T] {
@@ -13,6 +17,19 @@ func Combine[T any](fs ...Filter[T]) Filter[T] {
 	}
 }
 
-func Default[T any](_ T) bool {
+func AllowAll[T any](_ T) bool {
 	return true
+}
+
+type Named interface {
+	Name() string
+}
+
+func ByName[T Named](r *regexp.Regexp) Filter[T] {
+	if r == nil {
+		return AllowAll[T]
+	}
+	return func(n T) bool {
+		return r.MatchString(n.Name())
+	}
 }

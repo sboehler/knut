@@ -6,15 +6,17 @@ import (
 	"math"
 
 	"github.com/sboehler/knut/lib/common/cpr"
+	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 )
 
 // Calculator calculates portfolio performance
 type Calculator struct {
-	Context   journal.Context
-	Valuation *journal.Commodity
-	Filter    journal.Filter
+	Context         journal.Context
+	Valuation       *journal.Commodity
+	AccountFilter   filter.Filter[*journal.Account]
+	CommodityFilter filter.Filter[*journal.Commodity]
 }
 
 // Process computes portfolio performance.
@@ -63,7 +65,7 @@ func (calc *Calculator) valueByCommodity(d *ast.Day) pcv {
 		if !pos.Account.IsAL() {
 			continue
 		}
-		if !calc.Filter.MatchAccount(pos.Account) || !calc.Filter.MatchCommodity(pos.Commodity) {
+		if !calc.AccountFilter(pos.Account) || !calc.CommodityFilter(pos.Commodity) {
 			continue
 		}
 		valF, _ := val.Float64()
@@ -194,7 +196,7 @@ func (calc Calculator) determineStructure(tgts []*journal.Commodity) []*journal.
 }
 
 func (calc Calculator) isPortfolioAccount(a *journal.Account) bool {
-	return (a.Type() == journal.ASSETS || a.Type() == journal.LIABILITIES) && calc.Filter.MatchAccount(a)
+	return a.IsAL() && calc.AccountFilter(a)
 }
 
 // perf = ( V1 - Outflow ) / ( V0 + Inflow )

@@ -33,6 +33,10 @@ func (c Commodity) String() string {
 	return c.name
 }
 
+func (c Commodity) Name() string {
+	return c.name
+}
+
 // Commodities is a thread-safe collection of commodities.
 type Commodities struct {
 	index       map[string]*Commodity

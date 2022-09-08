@@ -27,7 +27,7 @@ type Aggregator struct {
 
 func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 	if agg.Filter == nil {
-		agg.Filter = filter.Default[amounts.Key]
+		agg.Filter = filter.AllowAll[amounts.Key]
 	}
 	if agg.Mapper == nil {
 		agg.Mapper = mapper.Identity[amounts.Key]

@@ -52,17 +52,17 @@ func (ast *AST) Day(d time.Time) *Day {
 
 // SortedDays returns all days ordered by date.
 func (ast *AST) SortedDays() []*Day {
-	var sorted []*Day
+	var res []*Day
 	for _, day := range ast.Days {
 		sort.Slice(day.Transactions, func(i, j int) bool {
 			return day.Transactions[i].Less(day.Transactions[j])
 		})
-		sorted = append(sorted, day)
+		res = append(res, day)
 	}
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i].Less(sorted[j])
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Less(res[j])
 	})
-	return sorted
+	return res
 }
 
 // AddOpen adds an Open directive.

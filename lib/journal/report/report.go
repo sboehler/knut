@@ -7,6 +7,7 @@ import (
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/dict"
+	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -129,7 +130,7 @@ func (n *Node) computeTotals(m amounts.Amounts) {
 		ch.computeTotals(m)
 	}
 	n.Amounts.SumIntoBy(m, nil, amounts.KeyMapper{
-		Date:      amounts.Identity[time.Time],
-		Commodity: amounts.Identity[*journal.Commodity],
+		Date:      mapper.Identity[time.Time],
+		Commodity: mapper.Identity[*journal.Commodity],
 	}.Build())
 }

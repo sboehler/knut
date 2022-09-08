@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
@@ -75,8 +76,8 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 func (rn *Renderer) renderNode(indent int, n *Node) {
 	if n.Account != nil {
 		vals := n.Amounts.SumBy(nil, amounts.KeyMapper{
-			Date:      amounts.Identity[time.Time],
-			Commodity: amounts.Identity[*journal.Commodity],
+			Date:      mapper.Identity[time.Time],
+			Commodity: mapper.Identity[*journal.Commodity],
 		}.Build())
 		rn.render(indent, n.Account.Segment(), !n.Account.IsAL(), vals)
 	}

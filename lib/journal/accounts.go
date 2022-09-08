@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"sort"
 	"strings"
 	"sync"
 	"unicode"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/mapper"
 )
 
 // AccountType is the type of an account.
@@ -309,21 +309,9 @@ func (as *Accounts) Children(a *Account) []*Account {
 	return res
 }
 
-// Map maps an account to itself or to one of its ancestors.
-func (as *Accounts) Map(a *Account, m Mapping) *Account {
+func (as *Accounts) NthParent(a *Account, n int) *Account {
 	as.mutex.RLock()
 	defer as.mutex.RUnlock()
-	if len(m) == 0 {
-		return a
-	}
-	level := m.level(a)
-	if level >= a.level {
-		return a
-	}
-	return as.nthParent(a, a.level-level)
-}
-
-func (as *Accounts) nthParent(a *Account, n int) *Account {
 	if n <= 0 {
 		return a
 	}
@@ -331,31 +319,7 @@ func (as *Accounts) nthParent(a *Account, n int) *Account {
 	if !ok {
 		return nil
 	}
-	return as.nthParent(p, n-1)
-}
-
-func (as *Accounts) post(a *Account, acc []*Account) []*Account {
-	for c := range as.children[a] {
-		acc = as.post(c, acc)
-	}
-	acc = append(acc, a)
-	return acc
-}
-
-func (as *Accounts) sorted(a *Account, in []*Account, weights map[*Account]float64) []*Account {
-	childMap := as.children[a]
-	children := make([]*Account, 0, len(childMap))
-	for ch := range childMap {
-		children = append(children, ch)
-	}
-	sort.Slice(children, func(i int, j int) bool {
-		return weights[children[i]] > weights[children[j]]
-	})
-	in = append(in, a)
-	for _, ch := range children {
-		in = as.sorted(ch, in, weights)
-	}
-	return in
+	return as.NthParent(p, n-1)
 }
 
 // Rule is a rule to shorten accounts which match the given regex.
@@ -368,10 +332,10 @@ func (r Rule) String() string {
 	return fmt.Sprintf("%d,%v", r.Level, r.Regex)
 }
 
-// Mapping is a set of mapping rules.
-type Mapping []Rule
+// AccountMapping is a set of mapping rules.
+type AccountMapping []Rule
 
-func (m Mapping) String() string {
+func (m AccountMapping) String() string {
 	var s []string
 	for _, r := range m {
 		s = append(s, r.String())
@@ -380,21 +344,25 @@ func (m Mapping) String() string {
 }
 
 // level returns the level to which an account should be shortened.
-func (m Mapping) level(a *Account) int {
-	var (
-		name  = a.Name()
-		level = a.level
-	)
+func (m AccountMapping) level(a *Account) int {
+	level := a.level
 	for _, c := range m {
-		if (c.Regex == nil || c.Regex.MatchString(name)) && c.Level < level {
+		if (c.Regex == nil || c.Regex.MatchString(a.name)) && c.Level < level {
 			level = c.Level
 		}
 	}
 	return level
 }
 
-func MapAccount(jctx Context, m Mapping) func(*Account) *Account {
+func (m AccountMapping) Map(jctx Context) mapper.Mapper[*Account] {
 	return func(a *Account) *Account {
-		return jctx.Accounts().Map(a, m)
+		if len(m) == 0 {
+			return a
+		}
+		level := m.level(a)
+		if level >= a.level {
+			return a
+		}
+		return jctx.Accounts().NthParent(a, a.level-level)
 	}
 }

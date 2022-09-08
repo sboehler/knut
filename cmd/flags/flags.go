@@ -133,7 +133,7 @@ func (pf IntervalFlags) Value() (date.Interval, error) {
 
 // MappingFlag manages a flag of type -c1,<regex>.
 type MappingFlag struct {
-	m journal.Mapping
+	m journal.AccountMapping
 }
 
 var _ pflag.Value = (*MappingFlag)(nil)
@@ -165,7 +165,7 @@ func (cf *MappingFlag) Set(v string) error {
 }
 
 // Value returns the value of this flag.
-func (cf *MappingFlag) Value() journal.Mapping {
+func (cf *MappingFlag) Value() journal.AccountMapping {
 	return cf.m
 }
 

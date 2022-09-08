@@ -27,6 +27,7 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
+	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
@@ -151,10 +152,10 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				amounts.FilterCommodity(r.commodities.Value()),
 			),
 
-			Mappers: amounts.KeyMapper{
+			Mapper: amounts.KeyMapper{
 				Date:      date.Map(dates),
-				Account:   journal.MapAccount(jctx, r.mapping.Value()),
-				Other:     amounts.Identity[*journal.Account],
+				Account:   r.mapping.Value().Map(jctx),
+				Other:     mapper.Identity[*journal.Account],
 				Commodity: journal.MapCommodity(r.showCommodities || valuation == nil),
 				Valuation: journal.MapCommodity(valuation != nil),
 			}.Build(),

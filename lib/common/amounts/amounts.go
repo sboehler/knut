@@ -8,6 +8,7 @@ import (
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/filter"
+	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -164,7 +165,7 @@ func (am Amounts) SumIntoBy(as Amounts, f func(k Key) bool, m func(k Key) Key) {
 		f = filter.Default[Key]
 	}
 	if m == nil {
-		m = Identity[Key]
+		m = mapper.Identity[Key]
 	}
 	for k, v := range am {
 		if !f(k) {
@@ -186,15 +187,13 @@ func (am Amounts) SumOver(f func(k Key) bool) decimal.Decimal {
 	return res
 }
 
-type Mapper func(Key) Key
-
 type KeyMapper struct {
 	Date                 func(time.Time) time.Time
 	Account, Other       func(*journal.Account) *journal.Account
 	Commodity, Valuation func(*journal.Commodity) *journal.Commodity
 }
 
-func (km KeyMapper) Build() Mapper {
+func (km KeyMapper) Build() mapper.Mapper[Key] {
 	return func(k Key) Key {
 		var res Key
 		if km.Date != nil {
@@ -214,10 +213,6 @@ func (km KeyMapper) Build() Mapper {
 		}
 		return res
 	}
-}
-
-func Identity[T any](t T) T {
-	return t
 }
 
 func FilterDates(t time.Time) filter.Filter[Key] {
@@ -242,28 +237,4 @@ func FilterAccount(r *regexp.Regexp) filter.Filter[Key] {
 	return func(k Key) bool {
 		return r.MatchString(k.Account.Name()) || r.MatchString(k.Other.Name())
 	}
-}
-
-func FilterOther(r *regexp.Regexp) filter.Filter[Key] {
-	if r == nil {
-		return filter.Default[Key]
-	}
-	return func(k Key) bool {
-		return r.MatchString(k.Other.String())
-	}
-}
-
-func SortByDate(k1, k2 Key) compare.Order {
-	return compare.Time(k1.Date, k2.Date)
-}
-
-func SortByAccount(jctx journal.Context, w map[*journal.Account]float64) compare.Compare[Key] {
-	s := journal.CompareWeighted(jctx, w)
-	return func(k1, k2 Key) compare.Order {
-		return s(k1.Account, k2.Account)
-	}
-}
-
-func SortByCommodity(k1, k2 Key) compare.Order {
-	return compare.Ordered(k1.Commodity.String(), k2.Commodity.String())
 }

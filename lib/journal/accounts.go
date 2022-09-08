@@ -320,11 +320,14 @@ func (as *Accounts) NthParent(a *Account, n int) *Account {
 	if n <= 0 {
 		return a
 	}
-	p, ok := as.parents[a]
-	if !ok {
-		return nil
+	var ok bool
+	for i := 0; i < n; i++ {
+		a, ok = as.parents[a]
+		if !ok {
+			return nil
+		}
 	}
-	return as.NthParent(p, n-1)
+	return a
 }
 
 // Rule is a rule to shorten accounts which match the given regex.

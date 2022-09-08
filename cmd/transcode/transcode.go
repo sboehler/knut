@@ -93,9 +93,9 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 		c = new(cpr.Collector[*ast.Day])
 	)
 
-	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
-	s = cpr.Compose[*ast.Day, *ast.Day](s, balancer)
-	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
+	s := cpr.Compose[*ast.Day](journalSource, priceUpdater)
+	s = cpr.Compose[*ast.Day](s, balancer)
+	s = cpr.Compose[*ast.Day](s, valuator)
 	ppl := cpr.Connect[*ast.Day](s, c)
 
 	if err := ppl.Process(cmd.Context()); err != nil {

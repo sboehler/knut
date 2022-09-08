@@ -12,8 +12,8 @@ type Source[T any] interface {
 }
 
 // Processor processes elements.
-type Processor[T any, U any] interface {
-	Process(context.Context, <-chan T, chan<- U) error
+type Processor[T any] interface {
+	Process(context.Context, <-chan T, chan<- T) error
 }
 
 // Sink consumes elements.
@@ -59,9 +59,9 @@ func (c *Producer[T]) Source(ctx context.Context, outCh chan<- T) error {
 }
 
 // RunTestEngine runs the processor in a test engine.
-func RunTestEngine[T any, U any](ctx context.Context, ps Processor[T, U], ts ...T) ([]U, error) {
-	sink := new(Collector[U])
-	ppl := Connect[U](Compose[T](&Producer[T]{ts}, ps), sink)
+func RunTestEngine[T any](ctx context.Context, ps Processor[T], ts ...T) ([]T, error) {
+	sink := new(Collector[T])
+	ppl := Connect[T](Compose[T](&Producer[T]{ts}, ps), sink)
 	if err := ppl.Process(ctx); err != nil {
 		return nil, err
 	}
@@ -73,12 +73,12 @@ type Pipeline interface {
 	Process(context.Context) error
 }
 
-type source[T any, U any] struct {
+type source[T any] struct {
 	source Source[T]
-	proc   Processor[T, U]
+	proc   Processor[T]
 }
 
-func (c source[T, U]) Source(ctx context.Context, oCh chan<- U) error {
+func (c source[T]) Source(ctx context.Context, oCh chan<- T) error {
 	g, ctx := errgroup.WithContext(ctx)
 	ch := make(chan T, bufSize)
 	g.Go(func() error {
@@ -111,8 +111,8 @@ func (c pipeline[T]) Process(ctx context.Context) error {
 }
 
 // Compose composes a source and a processor.
-func Compose[T any, U any](s Source[T], p Processor[T, U]) Source[U] {
-	return source[T, U]{s, p}
+func Compose[T any](s Source[T], p Processor[T]) Source[T] {
+	return source[T]{s, p}
 }
 
 // Connect connects a source and a sink.

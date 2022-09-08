@@ -31,7 +31,7 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
-	"github.com/sboehler/knut/lib/journal/report2"
+	"github.com/sboehler/knut/lib/journal/report"
 
 	"github.com/spf13/cobra"
 )
@@ -139,11 +139,11 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		report = report2.NewReport(jctx)
+		rep = report.NewReport(jctx)
 
 		aggregator = &process.Aggregator{
 			Valuation:  valuation,
-			Collection: report,
+			Collection: rep,
 
 			Filter: filter.Combine(
 				amounts.FilterDates(dates[len(dates)-1]),
@@ -159,7 +159,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				Valuation: journal.MapCommodity(valuation != nil),
 			}.Build(),
 		}
-		reportRenderer = report2.Renderer{
+		reportRenderer = report.Renderer{
 			ShowCommodities:    r.showCommodities || valuation == nil,
 			SortAlphabetically: r.sortAlphabetically,
 			Dates:              dates,
@@ -172,9 +172,9 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		}
 	)
 
-	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, priceUpdater)
-	s = cpr.Compose[*ast.Day, *ast.Day](s, balancer)
-	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
+	s := cpr.Compose[*ast.Day](journalSource, priceUpdater)
+	s = cpr.Compose[*ast.Day](s, balancer)
+	s = cpr.Compose[*ast.Day](s, valuator)
 	ppl := cpr.Connect[*ast.Day](s, aggregator)
 
 	if err := ppl.Process(ctx); err != nil {
@@ -183,5 +183,5 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return tableRenderer.Render(reportRenderer.Render(report), out)
+	return tableRenderer.Render(reportRenderer.Render(rep), out)
 }

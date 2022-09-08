@@ -54,7 +54,7 @@ func TestBalancerHappyCase(t *testing.T) {
 		}
 	)
 
-	got, err := cpr.RunTestEngine[*ast.Day, *ast.Day](ctx, &balancer, input...)
+	got, err := cpr.RunTestEngine[*ast.Day](ctx, &balancer, input...)
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

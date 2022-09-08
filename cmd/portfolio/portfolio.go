@@ -116,10 +116,10 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 		}
 	)
 
-	s := cpr.Compose[*ast.Day, *ast.Day](journalSource, balancer)
-	s = cpr.Compose[*ast.Day, *ast.Day](s, priceUpdater)
-	s = cpr.Compose[*ast.Day, *ast.Day](s, valuator)
-	s = cpr.Compose[*ast.Day, *ast.Day](s, calculator)
+	s := cpr.Compose[*ast.Day](journalSource, balancer)
+	s = cpr.Compose[*ast.Day](s, priceUpdater)
+	s = cpr.Compose[*ast.Day](s, valuator)
+	s = cpr.Compose[*ast.Day](s, calculator)
 	ppl := cpr.Connect[*ast.Day](s, calculator)
 
 	return ppl.Process(ctx)

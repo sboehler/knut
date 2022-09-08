@@ -1,4 +1,4 @@
-package report2
+package report
 
 import (
 	"time"

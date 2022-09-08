@@ -143,14 +143,3 @@ type Performance struct {
 	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow map[*journal.Commodity]float64
 	PortfolioInflow, PortfolioOutflow                        float64
 }
-
-// Period represents a period.
-type Period struct {
-	Period date.Period
-
-	Amounts, Values           amounts.Amounts
-	DeltaAmounts, DeltaValues amounts.Amounts
-	PrevAmounts, PrevValues   amounts.Amounts
-
-	Days []*Day
-}

@@ -18,6 +18,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 )
@@ -59,11 +60,7 @@ func (m *Model) Update(t *ast.Transaction) {
 			m.accounts++
 			m.accountCounts[p.Debit]++
 			for token := range tokenize(t.Description(), &p, p.Debit) {
-				tc, ok := m.tokenCounts[token]
-				if !ok {
-					tc = make(map[*journal.Account]int)
-					m.tokenCounts[token] = tc
-				}
+				tc := dict.GetDefault(m.tokenCounts, token, func() map[*journal.Account]int { return make(map[*journal.Account]int) })
 				tc[p.Debit]++
 			}
 		}

@@ -32,14 +32,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 	if agg.Mapper == nil {
 		agg.Mapper = mapper.Identity[amounts.Key]
 	}
-	for {
-		d, ok, err := cpr.Pop(ctx, inCh)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			break
-		}
+	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
 		for _, t := range d.Transactions {
 			for _, b := range t.Postings() {
 				amt := b.Amount
@@ -70,6 +63,6 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 				}
 			}
 		}
-	}
-	return nil
+		return nil
+	})
 }

@@ -19,29 +19,19 @@ type Valuator struct {
 // Process computes prices.
 func (pr *Valuator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
 	values := make(amounts.Amounts)
-	for {
-		day, ok, err := cpr.Pop(ctx, inCh)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			break
-		}
+	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
 		if pr.Valuation != nil {
-			day.Value = values
-			if err := pr.valuateTransactions(day); err != nil {
+			d.Value = values
+			if err := pr.valuateTransactions(d); err != nil {
 				return err
 			}
-			if err := pr.computeValuationTransactions(day); err != nil {
+			if err := pr.computeValuationTransactions(d); err != nil {
 				return err
 			}
 			values = values.Clone()
 		}
-		if err := cpr.Push(ctx, outCh, day); err != nil {
-			return err
-		}
-	}
-	return nil
+		return cpr.Push(ctx, outCh, d)
+	})
 }
 
 func (pr Valuator) valuateTransactions(d *ast.Day) error {

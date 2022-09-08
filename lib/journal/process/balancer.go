@@ -21,15 +21,9 @@ func (pr *Balancer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh cha
 	amounts := make(amounts.Amounts)
 	accounts := make(accounts)
 
-	for {
-		d, ok, err := cpr.Pop(ctx, inCh)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			break
-		}
+	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
 		var transactions []*ast.Transaction
+		var err error
 		if err := pr.processOpenings(ctx, accounts, d); err != nil {
 			return err
 		}
@@ -52,11 +46,8 @@ func (pr *Balancer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh cha
 		})
 		d.Amounts = amounts.Clone()
 
-		if err := cpr.Push(ctx, outCh, d); err != nil {
-			return err
-		}
-	}
-	return nil
+		return cpr.Push(ctx, outCh, d)
+	})
 }
 
 func (pr *Balancer) processOpenings(ctx context.Context, accounts accounts, d *ast.Day) error {

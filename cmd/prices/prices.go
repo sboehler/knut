@@ -132,7 +132,7 @@ func readFile(ctx2 context.Context, ctx journal.Context, filepath string) (res m
 		return nil, err
 	}
 	defer func() { err = multierr.Append(err, cls()) }()
-	var prices = make(map[time.Time]*ast.Price)
+	prices := make(map[time.Time]*ast.Price)
 	resCh, errCh := p.Parse(ctx2)
 	for {
 		d, ok, err := cpr.Get(resCh, errCh)

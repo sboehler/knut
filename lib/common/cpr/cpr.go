@@ -97,3 +97,15 @@ func ForAll[T any](ts []T, f func(T)) func() {
 	}
 	return wg.Wait
 }
+
+func Consume[T any](ctx context.Context, ch <-chan T, f func(T) error) error {
+	for {
+		t, ok, err := Pop(ctx, ch)
+		if err != nil || !ok {
+			return err
+		}
+		if err := f(t); err != nil {
+			return err
+		}
+	}
+}

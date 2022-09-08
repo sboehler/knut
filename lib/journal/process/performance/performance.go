@@ -22,41 +22,23 @@ type Calculator struct {
 // Process computes portfolio performance.
 func (calc Calculator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
 	var prev pcv
-	for {
-		d, ok, err := cpr.Pop(ctx, inCh)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			break
-		}
-
+	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
 		dpr := calc.computeFlows(d)
 		dpr.V0 = prev
 		dpr.V1 = calc.valueByCommodity(d)
 		prev = dpr.V1
 		d.Performance = dpr
 
-		if err := cpr.Push(ctx, outCh, d); err != nil {
-			return err
-		}
-	}
-	return nil
+		return cpr.Push(ctx, outCh, d)
+	})
 }
 
 // Sink implements Sink.
 func (calc Calculator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
-	for {
-		p, ok, err := cpr.Pop(ctx, inCh)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			break
-		}
+	return cpr.Consume(ctx, inCh, func(p *ast.Day) error {
 		fmt.Printf("%v: %.1f%%\n", p.Date.Format("2006-01-02"), 100*(Performance(p.Performance)-1))
-	}
-	return nil
+		return nil
+	})
 }
 
 func (calc *Calculator) valueByCommodity(d *ast.Day) pcv {

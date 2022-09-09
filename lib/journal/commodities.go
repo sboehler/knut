@@ -16,7 +16,6 @@ package journal
 
 import (
 	"fmt"
-	"sort"
 	"sync"
 	"unicode"
 
@@ -40,9 +39,8 @@ func (c Commodity) Name() string {
 
 // Commodities is a thread-safe collection of commodities.
 type Commodities struct {
-	index       map[string]*Commodity
-	commodities []*Commodity
-	mutex       sync.RWMutex
+	index map[string]*Commodity
+	mutex sync.RWMutex
 }
 
 // NewCommodities creates a new thread-safe collection of commodities.
@@ -76,23 +74,7 @@ func (cs *Commodities) Get(name string) (*Commodity, error) {
 }
 
 func (cs *Commodities) insert(c *Commodity) {
-	index := sort.Search(len(cs.commodities), func(i int) bool { return cs.commodities[i].name >= c.name })
-	if index != len(cs.commodities) && cs.commodities[index].name == c.name {
-		return
-	}
-	cs.commodities = append(cs.commodities, nil)
-	copy(cs.commodities[index+1:], cs.commodities[index:])
-	cs.commodities[index] = c
 	cs.index[c.name] = c
-}
-
-// All enumerates the commodities.
-func (cs *Commodities) All() []*Commodity {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
-	res := make([]*Commodity, len(cs.commodities))
-	copy(res, cs.commodities)
-	return res
 }
 
 // TagCurrency tags the commodity as a currency.

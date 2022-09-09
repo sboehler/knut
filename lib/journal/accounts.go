@@ -353,13 +353,12 @@ func (m AccountMapping) String() string {
 
 // level returns the level to which an account should be shortened.
 func (m AccountMapping) level(a *Account) int {
-	level := a.level
 	for _, c := range m {
-		if (c.Regex == nil || c.Regex.MatchString(a.name)) && c.Level < level {
-			level = c.Level
+		if c.Regex == nil || c.Regex.MatchString(a.name) {
+			return c.Level
 		}
 	}
-	return level
+	return a.level
 }
 
 func (m AccountMapping) Map(jctx Context) mapper.Mapper[*Account] {

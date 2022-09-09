@@ -99,7 +99,7 @@ func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, am
 		}
 		position := amounts.AccountCommodityKey(a.Account, a.Commodity)
 		if va, ok := amts[position]; !ok || !va.Equal(a.Amount) {
-			return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account, va, position.Commodity)}
+			return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account.Name(), va, position.Commodity.Name())}
 		}
 	}
 	return nil

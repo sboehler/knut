@@ -29,10 +29,6 @@ type Commodity struct {
 	IsCurrency bool
 }
 
-func (c Commodity) String() string {
-	return c.name
-}
-
 func (c Commodity) Name() string {
 	return c.name
 }
@@ -109,5 +105,5 @@ func MapCommodity(t bool) func(*Commodity) *Commodity {
 }
 
 func CompareCommodities(c1, c2 *Commodity) compare.Order {
-	return compare.Ordered(c1.String(), c2.String())
+	return compare.Ordered(c1.Name(), c2.Name())
 }

@@ -69,7 +69,7 @@ func (pr *Valuator) computeValuationTransactions(d *ast.Day) error {
 		}
 		value, err := d.Normalized.Valuate(pos.Commodity, va)
 		if err != nil {
-			return fmt.Errorf("no valuation found for commodity %s", pos.Commodity)
+			return fmt.Errorf("no valuation found for commodity %s", pos.Commodity.Name())
 		}
 		diff := value.Sub(d.Value[pos])
 		if diff.IsZero() {

@@ -101,7 +101,7 @@ func (p Printer) printAccrual(w io.Writer, a *ast.Accrual) (n int, err error) {
 
 func (p Printer) printPosting(w io.Writer, t ast.Posting) (int, error) {
 	var n int
-	c, err := fmt.Fprintf(w, "%s %s %s %s", p.rightPad(t.Credit), p.rightPad(t.Debit), leftPad(10, t.Amount.String()), t.Commodity)
+	c, err := fmt.Fprintf(w, "%s %s %s %s", p.rightPad(t.Credit), p.rightPad(t.Debit), leftPad(10, t.Amount.String()), t.Commodity.Name())
 	n += c
 	if err != nil {
 		return n, err
@@ -109,7 +109,7 @@ func (p Printer) printPosting(w io.Writer, t ast.Posting) (int, error) {
 	if t.Targets != nil {
 		var s []string
 		for _, t := range t.Targets {
-			s = append(s, t.String())
+			s = append(s, t.Name())
 		}
 		c, err = fmt.Fprintf(w, " (%s)", strings.Join(s, ","))
 		n += c
@@ -134,7 +134,7 @@ func (p Printer) printPosting(w io.Writer, t ast.Posting) (int, error) {
 
 func (p Printer) printLot(w io.Writer, l *ast.Lot) (int, error) {
 	var n int
-	c, err := fmt.Fprintf(w, "{ %g %s, %s ", l.Price, l.Commodity, l.Date.Format("2006-01-02"))
+	c, err := fmt.Fprintf(w, "{ %g %s, %s ", l.Price, l.Commodity.Name(), l.Date.Format("2006-01-02"))
 	n += c
 	if err != nil {
 		return n, err
@@ -163,7 +163,7 @@ func (p Printer) printClose(w io.Writer, c *ast.Close) (int, error) {
 }
 
 func (p Printer) printPrice(w io.Writer, pr *ast.Price) (int, error) {
-	return fmt.Fprintf(w, "%s price %s %s %s", pr.Date.Format("2006-01-02"), pr.Commodity, pr.Price, pr.Target)
+	return fmt.Fprintf(w, "%s price %s %s %s", pr.Date.Format("2006-01-02"), pr.Commodity.Name(), pr.Price, pr.Target.Name())
 }
 
 func (p Printer) printInclude(w io.Writer, i *ast.Include) (int, error) {
@@ -171,11 +171,11 @@ func (p Printer) printInclude(w io.Writer, i *ast.Include) (int, error) {
 }
 
 func (p Printer) printAssertion(w io.Writer, a *ast.Assertion) (int, error) {
-	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity)
+	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity.Name())
 }
 
 func (p Printer) printValue(w io.Writer, v *ast.Value) (int, error) {
-	return fmt.Fprintf(w, "%s value %s %s %s", v.Date.Format("2006-01-02"), v.Account, v.Amount, v.Commodity)
+	return fmt.Fprintf(w, "%s value %s %s %s", v.Date.Format("2006-01-02"), v.Account, v.Amount, v.Commodity.Name())
 }
 
 // PrintLedger prints a Ledger.

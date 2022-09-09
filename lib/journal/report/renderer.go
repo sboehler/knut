@@ -99,7 +99,7 @@ func (rn *Renderer) render(indent int, name string, neg bool, vals amounts.Amoun
 			row.AddEmpty()
 		}
 		if rn.ShowCommodities {
-			row.AddText(c.String(), table.Left)
+			row.AddText(c.Name(), table.Left)
 		}
 		var total decimal.Decimal
 		for _, d := range rn.Dates {

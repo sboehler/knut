@@ -29,7 +29,7 @@ import (
 
 // Transcode transcodes the given ledger to beancount.
 func Transcode(w io.Writer, l []*ast.Day, c *journal.Commodity) error {
-	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c); err != nil {
+	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c.Name()); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -135,5 +135,5 @@ func writePosting(w io.Writer, p ast.Posting, c *journal.Commodity) error {
 var regex = regexp.MustCompile("[^a-zA-Z]")
 
 func stripNonAlphanum(c *journal.Commodity) string {
-	return regex.ReplaceAllString(c.String(), "X")
+	return regex.ReplaceAllString(c.Name(), "X")
 }

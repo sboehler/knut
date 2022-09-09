@@ -113,7 +113,6 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 type parser struct {
 	reader  *csv.Reader
-	options runner
 	builder *ast.AST
 	last    *record
 
@@ -255,7 +254,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 		proceeds = r.netAmount.Add(r.fee)
 		fee      = r.fee.Neg()
 		qty      = r.quantity
-		desc     = fmt.Sprintf("%s %s %s x %s %s %s @ %s %s", r.orderNo, r.trxType, r.quantity, r.symbol, r.name, r.isin, r.price, r.currency)
+		desc     = fmt.Sprintf("%s %s %s x %s %s %s @ %s %s", r.orderNo, r.trxType, r.quantity, r.symbol.Name(), r.name, r.isin, r.price, r.currency.Name())
 	)
 	if proceeds.IsPositive() {
 		qty = qty.Neg()
@@ -289,7 +288,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		p.last = r
 		return true, nil
 	}
-	var desc = fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency, r.trxType, r.netAmount, r.currency)
+	var desc = fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency.Name(), r.trxType, r.netAmount, r.currency.Name())
 	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
@@ -319,7 +318,7 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 	}
 	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        r.date,
-		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol, r.name, r.isin),
+		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol.Name(), r.name, r.isin),
 		Postings:    postings,
 	}.Build())
 	return true, nil

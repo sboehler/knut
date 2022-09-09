@@ -122,7 +122,7 @@ func (m *Model) Infer(t *ast.Transaction, tbd *journal.Account) *ast.Transaction
 }
 
 func tokenize(desc string, posting *ast.Posting, account *journal.Account) map[string]struct{} {
-	tokens := append(strings.Fields(desc), posting.Commodity.String(), posting.Amount.String())
+	tokens := append(strings.Fields(desc), posting.Commodity.Name(), posting.Amount.String())
 	if account == posting.Credit {
 		tokens = append(tokens, "credit", posting.Debit.String())
 	}

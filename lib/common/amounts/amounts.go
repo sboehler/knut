@@ -223,7 +223,7 @@ func FilterCommodity(r *regexp.Regexp) filter.Filter[Key] {
 		return filter.AllowAll[Key]
 	}
 	return func(k Key) bool {
-		return r.MatchString(k.Commodity.String())
+		return r.MatchString(k.Commodity.Name())
 	}
 }
 

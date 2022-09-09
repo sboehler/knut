@@ -30,17 +30,10 @@ type Collector[T any] struct {
 
 // Sink implements Sink.
 func (c *Collector[T]) Sink(ctx context.Context, inCh <-chan T) error {
-	for {
-		d, ok, err := Pop(ctx, inCh)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			break
-		}
+	return Consume(ctx, inCh, func(d T) error {
 		c.Result = append(c.Result, d)
-	}
-	return nil
+		return nil
+	})
 }
 
 // Producer produces values.

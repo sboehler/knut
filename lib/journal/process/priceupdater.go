@@ -15,35 +15,20 @@ type PriceUpdater struct {
 
 // Process computes prices.
 func (pu PriceUpdater) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
-	var (
-		prc      = make(journal.Prices)
-		previous *ast.Day
-	)
-	for {
-		day, ok, err := cpr.Pop(ctx, inCh)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			break
-		}
+	previous := new(ast.Day)
+	prc := make(journal.Prices)
+	return cpr.Consume(ctx, inCh, func(day *ast.Day) error {
 		if pu.Valuation != nil {
-			if len(day.Prices) > 0 {
+			if len(day.Prices) == 0 {
+				day.Normalized = previous.Normalized
+			} else {
 				for _, p := range day.Prices {
 					prc.Insert(p.Commodity, p.Price, p.Target)
 				}
 				day.Normalized = prc.Normalize(pu.Valuation)
-			} else if previous == nil {
-				day.Normalized = prc.Normalize(pu.Valuation)
-			} else {
-				day.Normalized = previous.Normalized
 			}
 		}
 		previous = day
-		if err := cpr.Push(ctx, outCh, day); err != nil {
-			return err
-		}
-	}
-	return nil
-
+		return cpr.Push(ctx, outCh, day)
+	})
 }

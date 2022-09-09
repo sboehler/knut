@@ -64,8 +64,7 @@ func (pr *Valuator) computeValuationTransactions(d *ast.Day) error {
 		if pos.Commodity == pr.Valuation {
 			continue
 		}
-		at := pos.Account.Type()
-		if at != journal.ASSETS && at != journal.LIABILITIES {
+		if !pos.Account.IsAL() {
 			continue
 		}
 		value, err := d.Normalized.Valuate(pos.Commodity, va)
@@ -76,19 +75,17 @@ func (pr *Valuator) computeValuationTransactions(d *ast.Day) error {
 		if diff.IsZero() {
 			continue
 		}
-		if !diff.IsZero() {
-			credit := pr.Context.ValuationAccountFor(pos.Account)
-			t := ast.TransactionBuilder{
-				Date:        d.Date,
-				Description: fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account),
-				Postings: []ast.Posting{
-					ast.NewValuePosting(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
-				},
-			}.Build()
-			d.Value.Add(amounts.AccountCommodityKey(credit, pos.Commodity), diff.Neg())
-			d.Value.Add(amounts.AccountCommodityKey(pos.Account, pos.Commodity), diff)
-			d.Transactions = append(d.Transactions, t)
-		}
+		credit := pr.Context.ValuationAccountFor(pos.Account)
+		t := ast.TransactionBuilder{
+			Date:        d.Date,
+			Description: fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account),
+			Postings: []ast.Posting{
+				ast.NewValuePosting(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
+			},
+		}.Build()
+		d.Value.Add(amounts.AccountCommodityKey(credit, pos.Commodity), diff.Neg())
+		d.Value.Add(amounts.AccountCommodityKey(pos.Account, pos.Commodity), diff)
+		d.Transactions = append(d.Transactions, t)
 	}
 	return nil
 

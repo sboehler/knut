@@ -293,9 +293,9 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
-			ast.NewPostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
-			ast.NewPostingWithTargets(p.fee, p.account, currency, fee, []*journal.Commodity{stock, currency}),
+			ast.PostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
+			ast.PostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
+			ast.PostingWithTargets(p.fee, p.account, currency, fee, []*journal.Commodity{stock, currency}),
 		},
 	}.Build())
 	return true, nil
@@ -345,11 +345,11 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
 	}
 	var postings = []ast.Posting{
-		ast.NewPostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
-		ast.NewPostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
+		ast.PostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
+		ast.PostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
 	}
 	if !fee.IsZero() {
-		postings = append(postings, ast.NewPostingWithTargets(p.fee, p.account, p.baseCurrency, fee, []*journal.Commodity{stock, currency}))
+		postings = append(postings, ast.PostingWithTargets(p.fee, p.account, p.baseCurrency, fee, []*journal.Commodity{stock, currency}))
 	}
 	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        date,
@@ -453,7 +453,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPostingWithTargets(p.dividend, p.account, currency, amount, []*journal.Commodity{security}),
+			ast.PostingWithTargets(p.dividend, p.account, currency, amount, []*journal.Commodity{security}),
 		},
 	}.Build())
 	return true, nil
@@ -514,13 +514,13 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPostingWithTargets(p.tax, p.account, currency, amount, []*journal.Commodity{security}),
+			ast.PostingWithTargets(p.tax, p.account, currency, amount, []*journal.Commodity{security}),
 		},
 	}.Build())
 	return true, nil
 }
 
-//Interest,Data,USD,2020-07-06,USD Debit Interest for Jun-2020,-0.73
+// Interest,Data,USD,2020-07-06,USD Debit Interest for Jun-2020,-0.73
 func (p *parser) parseInterest(r []string) (bool, error) {
 	if !(r[dfDividends] == "Interest" && r[dfHeader] == "Data" && !strings.HasPrefix(r[dfCurrency], "Total") && len(r) == 6) {
 		return false, nil
@@ -545,7 +545,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPostingWithTargets(p.interest, p.account, currency, amount, []*journal.Commodity{currency})},
+			ast.PostingWithTargets(p.interest, p.account, currency, amount, []*journal.Commodity{currency})},
 	}.Build())
 	return true, nil
 }

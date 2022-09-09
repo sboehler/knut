@@ -80,7 +80,7 @@ func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts a
 			return nil, Error{v, "account is not open"}
 		}
 		valAcc := pr.Context.ValuationAccountFor(v.Account)
-		p := ast.NewPostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amts.Amount(amounts.AccountCommodityKey(v.Account, v.Commodity))), []*journal.Commodity{v.Commodity})
+		p := ast.PostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amts.Amount(amounts.AccountCommodityKey(v.Account, v.Commodity))), []*journal.Commodity{v.Commodity})
 		amts.Add(amounts.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
 		amts.Add(amounts.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
 		transactions = append(transactions, ast.TransactionBuilder{

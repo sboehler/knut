@@ -264,9 +264,9 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 		Date:        r.date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPostingWithTargets(p.trading, p.account, r.symbol, qty, []*journal.Commodity{r.symbol, r.currency}),
-			ast.NewPostingWithTargets(p.trading, p.account, r.currency, proceeds, []*journal.Commodity{r.symbol, r.currency}),
-			ast.NewPostingWithTargets(p.fee, p.account, r.currency, fee, []*journal.Commodity{r.symbol, r.currency}),
+			ast.PostingWithTargets(p.trading, p.account, r.symbol, qty, []*journal.Commodity{r.symbol, r.currency}),
+			ast.PostingWithTargets(p.trading, p.account, r.currency, proceeds, []*journal.Commodity{r.symbol, r.currency}),
+			ast.PostingWithTargets(p.fee, p.account, r.currency, fee, []*journal.Commodity{r.symbol, r.currency}),
 		},
 	}.Build())
 	return true, nil
@@ -294,8 +294,8 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		Date:        r.date,
 		Description: desc,
 		Postings: []ast.Posting{
-			ast.NewPostingWithTargets(p.trading, p.account, p.last.currency, p.last.netAmount, []*journal.Commodity{p.last.currency, r.currency}),
-			ast.NewPostingWithTargets(p.trading, p.account, r.currency, r.netAmount, []*journal.Commodity{p.last.currency, r.currency}),
+			ast.PostingWithTargets(p.trading, p.account, p.last.currency, p.last.netAmount, []*journal.Commodity{p.last.currency, r.currency}),
+			ast.PostingWithTargets(p.trading, p.account, r.currency, r.netAmount, []*journal.Commodity{p.last.currency, r.currency}),
 		},
 	}.Build())
 	p.last = nil
@@ -312,10 +312,10 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 		return false, nil
 	}
 	var postings = []ast.Posting{
-		ast.NewPostingWithTargets(p.dividend, p.account, r.currency, r.price, []*journal.Commodity{r.symbol}),
+		ast.PostingWithTargets(p.dividend, p.account, r.currency, r.price, []*journal.Commodity{r.symbol}),
 	}
 	if !r.fee.IsZero() {
-		postings = append(postings, ast.NewPostingWithTargets(p.account, p.tax, r.currency, r.fee, []*journal.Commodity{r.symbol}))
+		postings = append(postings, ast.PostingWithTargets(p.account, p.tax, r.currency, r.fee, []*journal.Commodity{r.symbol}))
 	}
 	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        r.date,
@@ -333,7 +333,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ast.Posting{
-			ast.NewPostingWithTargets(p.fee, p.account, r.currency, r.netAmount, make([]*journal.Commodity, 0)),
+			ast.PostingWithTargets(p.fee, p.account, r.currency, r.netAmount, make([]*journal.Commodity, 0)),
 		},
 	}.Build())
 	return true, nil
@@ -367,7 +367,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: []ast.Posting{
-			ast.NewPostingWithTargets(p.interest, p.account, r.currency, r.netAmount, []*journal.Commodity{r.currency}),
+			ast.PostingWithTargets(p.interest, p.account, r.currency, r.netAmount, []*journal.Commodity{r.currency}),
 		},
 	}.Build())
 	return true, nil

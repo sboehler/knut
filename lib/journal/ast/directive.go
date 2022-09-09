@@ -76,9 +76,9 @@ func NewPosting(crAccount, drAccount *journal.Account, commodity *journal.Commod
 	}
 }
 
-// NewPostingWithTargets creates a new posting from the given parameters. If amount is negative, it
+// PostingWithTargets creates a new posting from the given parameters. If amount is negative, it
 // will be inverted and the accounts reversed.
-func NewPostingWithTargets(crAccount, drAccount *journal.Account, commodity *journal.Commodity, amt decimal.Decimal, targets []*journal.Commodity) Posting {
+func PostingWithTargets(crAccount, drAccount *journal.Account, commodity *journal.Commodity, amt decimal.Decimal, targets []*journal.Commodity) Posting {
 	p := NewPosting(crAccount, drAccount, commodity, amt)
 	p.Targets = targets
 	return p

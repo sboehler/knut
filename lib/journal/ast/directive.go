@@ -2,9 +2,9 @@ package ast
 
 import (
 	"fmt"
-	"sort"
 	"time"
 
+	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast/scanner"
@@ -100,40 +100,28 @@ func NewValuePosting(crAccount, drAccount *journal.Account, commodity *journal.C
 }
 
 // Less determines an order on postings.
-func (p Posting) Less(p2 Posting) bool {
-	if p.Credit.Name() != p2.Credit.Name() {
-		return p.Credit.Name() < p2.Credit.Name()
+func ComparePostings(p Posting, p2 Posting) compare.Order {
+	if o := journal.CompareAccounts(p.Credit, p2.Credit); o != compare.Equal {
+		return o
 	}
-	if p.Debit.Name() != p2.Debit.Name() {
-		return p.Debit.Name() < p2.Debit.Name()
+	if o := journal.CompareAccounts(p.Debit, p2.Debit); o != compare.Equal {
+		return o
 	}
-	if !p.Amount.Equal(p2.Amount) {
-		return p.Amount.LessThan(p2.Amount)
+	if o := compare.Decimal(p.Amount, p2.Amount); o != compare.Equal {
+		return o
 	}
-	if !p.Value.Equal(p2.Value) {
-		return p.Value.LessThan(p2.Value)
+	if o := compare.Decimal(p.Value, p2.Value); o != compare.Equal {
+		return o
 	}
-	if p.Commodity.String() != p2.Commodity.String() {
-		return p.Commodity.String() != p2.Commodity.String()
+	if o := compare.Ordered(p.Commodity.Name(), p2.Commodity.Name()); o != compare.Equal {
+		return o
 	}
-	return len(p.Targets) < len(p2.Targets)
-}
-
-// Equal determines a measure of equality.
-func (p Posting) Equal(p2 Posting) bool {
-	return p.Credit == p2.Credit &&
-		p.Debit == p2.Debit &&
-		p.Amount.Equals(p2.Amount) &&
-		p.Value.Equals(p2.Value) &&
-		p.Commodity == p2.Commodity &&
-		len(p.Targets) == len(p2.Targets)
+	return compare.Ordered(len(p.Targets), len(p2.Targets))
 }
 
 // sortPostings sorts the given postings.
 func sortPostings(ps []Posting) []Posting {
-	sort.Slice(ps, func(i, j int) bool {
-		return ps[i].Less(ps[j])
-	})
+	compare.Sort(ps, ComparePostings)
 	return ps
 }
 
@@ -216,19 +204,19 @@ func (t Transaction) Commodities() map[*journal.Commodity]bool {
 }
 
 // Less defines an order on transactions.
-func (t *Transaction) Less(t2 *Transaction) bool {
-	if !t.date.Equal(t2.date) {
-		return t.date.Before(t2.date)
+func CompareTransactions(t *Transaction, t2 *Transaction) compare.Order {
+	if o := compare.Time(t.date, t2.date); o != compare.Equal {
+		return o
 	}
-	if t.description != t2.description {
-		return t.description < t2.description
+	if o := compare.Ordered(t.description, t2.description); o != compare.Equal {
+		return o
 	}
 	for i := 0; i < len(t.postings) && i < len(t2.postings); i++ {
-		if !t.postings[i].Equal(t2.postings[i]) {
-			return t.postings[i].Less(t2.postings[i])
+		if o := ComparePostings(t.postings[i], t2.postings[i]); o != compare.Equal {
+			return o
 		}
 	}
-	return len(t.postings) < len(t2.postings)
+	return compare.Ordered(len(t.postings), len(t2.postings))
 }
 
 // TransactionBuilder builds transactions.

@@ -1,8 +1,10 @@
 package compare
 
 import (
+	"sort"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"golang.org/x/exp/constraints"
 )
 
@@ -36,6 +38,16 @@ func Time(t1, t2 time.Time) Order {
 	return Greater
 }
 
+func Decimal(t1, t2 decimal.Decimal) Order {
+	if t1.Equal(t2) {
+		return Equal
+	}
+	if t1.LessThan(t2) {
+		return Smaller
+	}
+	return Greater
+}
+
 func Desc[T any](cmp Compare[T]) Compare[T] {
 	return func(t1, t2 T) Order {
 		return cmp(t2, t1)
@@ -55,4 +67,10 @@ func Combine[T any](cmp ...Compare[T]) Compare[T] {
 		}
 		return Equal
 	}
+}
+
+func Sort[T any](ts []T, cmp func(T, T) Order) {
+	sort.Slice(ts, func(i, j int) bool {
+		return cmp(ts[i], ts[j]) == Smaller
+	})
 }

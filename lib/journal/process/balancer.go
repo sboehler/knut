@@ -3,9 +3,9 @@ package process
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
@@ -41,9 +41,7 @@ func (pr *Balancer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh cha
 		}
 
 		d.Transactions = append(d.Transactions, transactions...)
-		sort.Slice(d.Transactions, func(i, j int) bool {
-			return d.Transactions[i].Less(d.Transactions[j])
-		})
+		compare.Sort(d.Transactions, ast.CompareTransactions)
 		d.Amounts = amounts.Clone()
 
 		return cpr.Push(ctx, outCh, d)

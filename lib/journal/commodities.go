@@ -21,6 +21,7 @@ import (
 	"unicode"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/mapper"
 )
 
 // Commodity represents a currency or security.
@@ -119,12 +120,10 @@ func isValidCommodity(s string) bool {
 }
 
 func MapCommodity(t bool) func(*Commodity) *Commodity {
-	return func(c *Commodity) *Commodity {
-		if t {
-			return c
-		}
-		return nil
+	if t {
+		return mapper.Identity[*Commodity]
 	}
+	return mapper.Nil[*Commodity]
 }
 
 func CompareCommodities(c1, c2 *Commodity) compare.Order {

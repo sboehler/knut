@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"sort"
 	"strings"
 
+	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
@@ -46,9 +46,7 @@ func Transcode(w io.Writer, l []*ast.Day, c *journal.Commodity) error {
 				return err
 			}
 		}
-		sort.Slice(day.Transactions, func(i, j int) bool {
-			return day.Transactions[i].Less(day.Transactions[j])
-		})
+		compare.Sort(day.Transactions, ast.CompareTransactions)
 
 		for _, trx := range day.Transactions {
 			for _, pst := range trx.Postings() {

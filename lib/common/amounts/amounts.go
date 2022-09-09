@@ -2,7 +2,6 @@ package amounts
 
 import (
 	"regexp"
-	"sort"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
@@ -84,9 +83,7 @@ func (am Amounts) Index(cmp compare.Compare[Key]) []Key {
 		res = append(res, k)
 	}
 	if cmp != nil {
-		sort.Slice(res, func(i, j int) bool {
-			return cmp(res[i], res[j]) == compare.Smaller
-		})
+		compare.Sort(res, cmp)
 	}
 	return res
 }

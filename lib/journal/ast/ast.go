@@ -15,10 +15,10 @@
 package ast
 
 import (
-	"sort"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 )
@@ -54,14 +54,10 @@ func (ast *AST) Day(d time.Time) *Day {
 func (ast *AST) SortedDays() []*Day {
 	var res []*Day
 	for _, day := range ast.Days {
-		sort.Slice(day.Transactions, func(i, j int) bool {
-			return day.Transactions[i].Less(day.Transactions[j])
-		})
+		compare.Sort(day.Transactions, CompareTransactions)
 		res = append(res, day)
 	}
-	sort.Slice(res, func(i, j int) bool {
-		return res[i].Less(res[j])
-	})
+	compare.Sort(res, CompareDays)
 	return res
 }
 
@@ -133,8 +129,8 @@ type Day struct {
 }
 
 // Less establishes an ordering on Day.
-func (d *Day) Less(d2 *Day) bool {
-	return d.Date.Before(d2.Date)
+func CompareDays(d *Day, d2 *Day) compare.Order {
+	return compare.Time(d.Date, d2.Date)
 }
 
 // Performance holds aggregate information used to compute

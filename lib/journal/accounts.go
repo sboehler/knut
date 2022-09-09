@@ -16,7 +16,6 @@ package journal
 
 import (
 	"fmt"
-	"io"
 	"regexp"
 	"strings"
 	"sync"
@@ -112,13 +111,6 @@ func (a Account) Type() AccountType {
 	return a.accountType
 }
 
-func (a *Account) Less(a2 *Account) bool {
-	if a.accountType != a2.accountType {
-		return a.accountType < a2.accountType
-	}
-	return a.name < a2.name
-}
-
 // IsAL returns whether this account is an asset or liability account.
 func (a Account) IsAL() bool {
 	return a.accountType == ASSETS || a.accountType == LIABILITIES
@@ -129,17 +121,11 @@ func (a Account) IsIE() bool {
 	return a.accountType == EXPENSES || a.accountType == INCOME
 }
 
-// WriteTo writes the account to the writer.
-func (a Account) WriteTo(w io.Writer) (int64, error) {
-	n, err := fmt.Fprint(w, a.Name())
-	return int64(n), err
-}
-
 func (a Account) String() string {
 	return a.name
 }
 
-func Compare(a1, a2 *Account) compare.Order {
+func CompareAccounts(a1, a2 *Account) compare.Order {
 	o := CompareAccountTypes(a1.accountType, a2.accountType)
 	if o != compare.Equal {
 		return o

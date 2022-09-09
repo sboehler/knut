@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -130,11 +129,10 @@ func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model 
 	}
 	defer cls()
 	var directives []ast.Directive
-	resCh, errCh := p.Parse(ctx)
 	for {
-		d, ok, err := cpr.Get(resCh, errCh)
-		if !ok {
-			break
+		d, err := p.Next()
+		if err == io.EOF {
+			return directives, nil
 		}
 		if err != nil {
 			return nil, err
@@ -147,11 +145,10 @@ func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model 
 			directives = append(directives, d)
 		}
 	}
-	return directives, nil
 }
 
 func (r *runner) writeToTmp(directives []ast.Directive, targetFile string) (string, error) {
-	tmpfile, err := ioutil.TempFile(path.Dir(targetFile), "infer-")
+	tmpfile, err := os.CreateTemp(path.Dir(targetFile), "infer-")
 	if err != nil {
 		return "", err
 	}

@@ -15,14 +15,12 @@
 package prices
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
@@ -78,7 +76,7 @@ func execute(cmd *cobra.Command, args []string) error {
 		for _, cfg := range configs {
 			sema <- true
 			go func(c config) {
-				if err := fetch(cmd.Context(), ctx, args[0], c); err != nil {
+				if err := fetch(ctx, args[0], c); err != nil {
 					errCh <- err
 				}
 				bar.Increment()
@@ -96,9 +94,9 @@ func execute(cmd *cobra.Command, args []string) error {
 	return errors
 }
 
-func fetch(ctx context.Context, jctx journal.Context, f string, cfg config) error {
+func fetch(jctx journal.Context, f string, cfg config) error {
 	var absPath = filepath.Join(filepath.Dir(f), cfg.File)
-	l, err := readFile(ctx, jctx, absPath)
+	l, err := readFile(jctx, absPath)
 	if err != nil {
 		return err
 	}
@@ -126,18 +124,17 @@ func readConfig(path string) ([]config, error) {
 	return t, nil
 }
 
-func readFile(ctx2 context.Context, ctx journal.Context, filepath string) (res map[time.Time]*ast.Price, err error) {
+func readFile(ctx journal.Context, filepath string) (res map[time.Time]*ast.Price, err error) {
 	p, cls, err := parser.FromPath(ctx, filepath)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { err = multierr.Append(err, cls()) }()
 	prices := make(map[time.Time]*ast.Price)
-	resCh, errCh := p.Parse(ctx2)
 	for {
-		d, ok, err := cpr.Get(resCh, errCh)
-		if !ok {
-			break
+		d, err := p.Next()
+		if err == io.EOF {
+			return prices, nil
 		}
 		if err != nil {
 			return nil, err
@@ -148,7 +145,6 @@ func readFile(ctx2 context.Context, ctx journal.Context, filepath string) (res m
 			return nil, fmt.Errorf("unexpected directive in prices file: %v", d)
 		}
 	}
-	return prices, nil
 }
 
 func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[time.Time]*ast.Price) error {

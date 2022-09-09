@@ -16,9 +16,8 @@ package format
 
 import (
 	"bufio"
-	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path"
 
@@ -60,28 +59,21 @@ func execute(cmd *cobra.Command, args []string) error {
 	)
 	go func() {
 		defer close(errCh)
-
 		sema := make(chan bool, concurrency)
 		defer close(sema)
-
 		for _, arg := range args {
-			if cpr.Push(ctx, sema, true) != nil {
-			}
+			sema <- true
 			go func(arg string) {
-				if err := formatFile(ctx, arg); err != nil {
+				defer func() { <-sema }()
+				if err := formatFile(arg); err != nil {
 					if cpr.Push(ctx, errCh, err) != nil {
 						return
 					}
 				}
-				if _, _, err := cpr.Pop(ctx, sema); err != nil {
-					return
-				}
 			}(arg)
 		}
 		for i := 0; i < concurrency; i++ {
-			if cpr.Push(ctx, sema, true) != nil {
-				return
-			}
+			sema <- true
 		}
 	}()
 
@@ -92,19 +84,19 @@ func execute(cmd *cobra.Command, args []string) error {
 	return errors
 }
 
-func formatFile(ctx context.Context, target string) error {
+func formatFile(target string) error {
 	var (
 		directives           []ast.Directive
 		err                  error
 		srcFile, tmpDestFile *os.File
 	)
-	if directives, err = readDirectives(ctx, target); err != nil {
+	if directives, err = readDirectives(target); err != nil {
 		return err
 	}
 	if srcFile, err = os.Open(target); err != nil {
 		return err
 	}
-	if tmpDestFile, err = ioutil.TempFile(path.Dir(target), "format-"); err != nil {
+	if tmpDestFile, err = os.CreateTemp(path.Dir(target), "format-"); err != nil {
 		return multierr.Append(err, srcFile.Close())
 	}
 	var dest = bufio.NewWriter(tmpDestFile)
@@ -116,26 +108,23 @@ func formatFile(ctx context.Context, target string) error {
 	return multierr.Append(err, atomic.ReplaceFile(tmpDestFile.Name(), target))
 }
 
-func readDirectives(ctx context.Context, target string) ([]ast.Directive, error) {
+func readDirectives(target string) ([]ast.Directive, error) {
 	p, close, err := parser.FromPath(journal.NewContext(), target)
 	if err != nil {
 		return nil, err
 	}
 	defer close()
 
-	resCh, errCh := p.Parse(ctx)
-
 	var directives []ast.Directive
 
 	for {
-		d, ok, err := cpr.Get(resCh, errCh)
-		if !ok {
-			break
+		d, err := p.Next()
+		if err == io.EOF {
+			return directives, nil
 		}
 		if err != nil {
 			return nil, err
 		}
 		directives = append(directives, d)
 	}
-	return directives, nil
 }

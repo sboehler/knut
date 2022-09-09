@@ -65,7 +65,7 @@ func (rp *RecursiveParser) parseRecursively(ctx context.Context, file string) er
 	defer cls()
 
 	for {
-		d, err := p.next()
+		d, err := p.Next()
 		if err == io.EOF {
 			return nil
 		}

@@ -16,7 +16,6 @@ package parser
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -25,7 +24,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
@@ -82,8 +80,8 @@ func (p *Parser) current() rune {
 	return p.scanner.Current()
 }
 
-// next returns the next directive
-func (p *Parser) next() (ast.Directive, error) {
+// Next returns the Next directive
+func (p *Parser) Next() (ast.Directive, error) {
 	for p.current() != scanner.EOF {
 		if err := p.scanner.ConsumeWhile(isWhitespaceOrNewline); err != nil {
 			return nil, p.scanner.ParseError(err)
@@ -126,30 +124,6 @@ func (p *Parser) next() (ast.Directive, error) {
 		}
 	}
 	return nil, io.EOF
-}
-
-// Parse parses the entire stream asynchronously.
-func (p *Parser) Parse(ctx context.Context) (<-chan ast.Directive, <-chan error) {
-	resCh := make(chan ast.Directive, 10)
-	errCh := make(chan error)
-	go func() {
-		defer close(resCh)
-		defer close(errCh)
-		for {
-			d, err := p.next()
-			if err == io.EOF {
-				return
-			}
-			if err != nil {
-				cpr.Push(ctx, errCh, err)
-				return
-			}
-			if cpr.Push(ctx, resCh, d) != nil {
-				return
-			}
-		}
-	}()
-	return resCh, errCh
 }
 
 func (p *Parser) consumeComment() error {

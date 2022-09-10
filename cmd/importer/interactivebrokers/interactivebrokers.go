@@ -285,9 +285,9 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		return false, err
 	}
 	if qty.IsPositive() {
-		desc = fmt.Sprintf("Buy %s %s @ %s %s", qty, stock, price, currency)
+		desc = fmt.Sprintf("Buy %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	} else {
-		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
+		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
 	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        date,
@@ -340,9 +340,9 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		return false, err
 	}
 	if qty.IsPositive() {
-		desc = fmt.Sprintf("Buy %s %s @ %s %s", qty, stock, price, currency)
+		desc = fmt.Sprintf("Buy %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	} else {
-		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock, price, currency)
+		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
 	var postings = []ast.Posting{
 		ast.PostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
@@ -394,9 +394,9 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 		return false, err
 	}
 	if amount.IsPositive() {
-		desc = fmt.Sprintf("Deposit %s %s", amount, currency)
+		desc = fmt.Sprintf("Deposit %s %s", amount, currency.Name())
 	} else {
-		desc = fmt.Sprintf("Withdraw %s %s", amount, currency)
+		desc = fmt.Sprintf("Withdraw %s %s", amount, currency.Name())
 	}
 	p.builder.AddTransaction(ast.TransactionBuilder{
 		Date:        date,

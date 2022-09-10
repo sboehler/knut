@@ -116,14 +116,14 @@ func writePosting(w io.Writer, p ast.Posting, c *journal.Commodity) error {
 	} else {
 		amt = p.Value
 	}
-	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit, amt.Neg(), stripNonAlphanum(c)); err != nil {
+	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit.Name(), amt.Neg(), stripNonAlphanum(c)); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n"); err != nil {
 		return err
 	}
 
-	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Debit, amt, stripNonAlphanum(c)); err != nil {
+	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Debit.Name(), amt, stripNonAlphanum(c)); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n"); err != nil {

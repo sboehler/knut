@@ -78,7 +78,7 @@ func (pr *Valuator) computeValuationTransactions(d *ast.Day) error {
 		credit := pr.Context.ValuationAccountFor(pos.Account)
 		t := ast.TransactionBuilder{
 			Date:        d.Date,
-			Description: fmt.Sprintf("Adjust value of %v in account %v", pos.Commodity, pos.Account),
+			Description: fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity.Name(), pos.Account.Name()),
 			Postings: []ast.Posting{
 				ast.NewValuePosting(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
 			},

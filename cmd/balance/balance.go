@@ -101,7 +101,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().Var(&r.commodities, "commodity", "filter commodities with a regex")
 	c.Flags().Int32Var(&r.digits, "digits", 0, "round to number of digits")
 	c.Flags().BoolVarP(&r.thousands, "thousands", "k", false, "show numbers in units of 1000")
-	c.Flags().BoolVar(&r.color, "color", false, "print output in color")
+	c.Flags().BoolVar(&r.color, "color", true, "print output in color")
 }
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {

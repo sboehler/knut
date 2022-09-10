@@ -1,7 +1,7 @@
 package filter
 
 import (
-	"regexp"
+	"github.com/sboehler/knut/lib/common/regex"
 )
 
 type Filter[T any] func(T) bool
@@ -25,11 +25,8 @@ type Named interface {
 	Name() string
 }
 
-func ByName[T Named](r *regexp.Regexp) Filter[T] {
-	if r == nil {
-		return AllowAll[T]
-	}
-	return func(n T) bool {
-		return r.MatchString(n.Name())
+func ByName[T Named](rxs regex.Regexes) Filter[T] {
+	return func(t T) bool {
+		return rxs.MatchString(t.Name())
 	}
 }

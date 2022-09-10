@@ -218,20 +218,22 @@ func FilterDates(t time.Time) filter.Filter[Key] {
 	}
 }
 
-func FilterCommodity(r *regexp.Regexp) filter.Filter[Key] {
-	if r == nil {
+func FilterCommodity(rx []*regexp.Regexp) filter.Filter[Key] {
+	if len(rx) == 0 {
 		return filter.AllowAll[Key]
 	}
+	f := filter.ByName[*journal.Commodity](rx)
 	return func(k Key) bool {
-		return r.MatchString(k.Commodity.Name())
+		return f(k.Commodity)
 	}
 }
 
-func FilterAccount(r *regexp.Regexp) filter.Filter[Key] {
+func FilterAccount(r []*regexp.Regexp) filter.Filter[Key] {
 	if r == nil {
 		return filter.AllowAll[Key]
 	}
+	f := filter.ByName[*journal.Account](r)
 	return func(k Key) bool {
-		return r.MatchString(k.Account.Name()) || r.MatchString(k.Other.Name())
+		return f(k.Account) || f(k.Other)
 	}
 }

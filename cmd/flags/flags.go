@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/common/regex"
 	"github.com/sboehler/knut/lib/journal"
 )
 
@@ -68,38 +69,36 @@ func (tf DateFlag) ValueOr(t time.Time) time.Time {
 
 // RegexFlag manages a flag to get a regex.
 type RegexFlag struct {
-	regex *regexp.Regexp
+	rxs regex.Regexes
 }
-
-var _ pflag.Value = (*RegexFlag)(nil)
 
 var _ pflag.Value = (*RegexFlag)(nil)
 
 func (rf RegexFlag) String() string {
-	if rf.regex != nil {
-		return rf.regex.String()
+	var ss []string
+	for _, r := range rf.rxs {
+		ss = append(ss, r.String())
 	}
-	return ""
+	return strings.Join(ss, ",")
 }
 
-// Set implements pflag.Value.
+// Set implements pflag.Set.
 func (rf *RegexFlag) Set(v string) error {
 	t, err := regexp.Compile(v)
 	if err != nil {
 		return err
 	}
-	rf.regex = t
+	rf.rxs.Add(t)
 	return nil
 }
 
-// Type implements pflag.Value.
+// Type implements pflag.Type.
 func (rf RegexFlag) Type() string {
 	return "<regex>"
 }
 
-// Value returns the flag value.
-func (rf *RegexFlag) Value() *regexp.Regexp {
-	return rf.regex
+func (rf *RegexFlag) Value() regex.Regexes {
+	return rf.rxs
 }
 
 // IntervalFlags manages multiple flags to determine a time period.

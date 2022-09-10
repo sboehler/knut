@@ -301,8 +301,9 @@ func TestComputeFlows(t *testing.T) {
 				}
 
 				fc = Calculator{
-					AccountFilter: filter.ByName[*journal.Account](regexp.MustCompile("Assets:Portfolio")),
-					Valuation:     chf,
+					AccountFilter: filter.ByName[*journal.Account]([]*regexp.Regexp{
+						regexp.MustCompile("Assets:Portfolio")}),
+					Valuation: chf,
 				}
 			)
 

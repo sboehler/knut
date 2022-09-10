@@ -119,13 +119,13 @@ func (pf *IntervalFlags) Setup(cmd *cobra.Command) {
 }
 
 // Value returns the period.
-func (pf IntervalFlags) Value() (date.Interval, error) {
+func (pf IntervalFlags) Value() date.Interval {
 	for i, val := range pf.flags {
 		if val {
-			return date.Interval(i), nil
+			return date.Interval(i)
 		}
 	}
-	return date.Once, nil
+	return date.Once
 }
 
 // MappingFlag manages a flag of type -c1,<regex>.

@@ -109,16 +109,12 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		ctx       = cmd.Context()
 		jctx      = journal.NewContext()
 		valuation *journal.Commodity
-		interval  date.Interval
 		err       error
 	)
 	if time.Time(r.to).IsZero() {
 		r.to = flags.DateFlag(date.Today())
 	}
 	if valuation, err = r.valuation.Value(jctx); err != nil {
-		return err
-	}
-	if interval, err = r.interval.Value(); err != nil {
 		return err
 	}
 	journalSource := &process.JournalSource{
@@ -129,7 +125,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err := journalSource.Load(ctx); err != nil {
 		return err
 	}
-	dates := date.CreatePartition(r.from.ValueOr(journalSource.Min()), r.to.ValueOr(date.Today()), interval, r.last)
+	dates := date.CreatePartition(r.from.ValueOr(journalSource.Min()), r.to.ValueOr(date.Today()), r.interval.Value(), r.last)
 	var (
 		priceUpdater = &process.PriceUpdater{
 			Valuation: valuation,

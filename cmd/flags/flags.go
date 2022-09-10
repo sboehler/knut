@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"github.com/sboehler/knut/lib/common/date"
@@ -107,27 +108,24 @@ type IntervalFlags struct {
 }
 
 // Setup configures the flags.
-func (pf *IntervalFlags) Setup(s *pflag.FlagSet) {
-	s.BoolVar(&pf.flags[date.Daily], "days", false, "days")
-	s.BoolVar(&pf.flags[date.Weekly], "weeks", false, "weeks")
-	s.BoolVar(&pf.flags[date.Monthly], "months", false, "months")
-	s.BoolVar(&pf.flags[date.Quarterly], "quarters", false, "quarters")
-	s.BoolVar(&pf.flags[date.Yearly], "years", false, "years")
+func (pf *IntervalFlags) Setup(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&pf.flags[date.Daily], "days", false, "days")
+	cmd.Flags().BoolVar(&pf.flags[date.Weekly], "weeks", false, "weeks")
+	cmd.Flags().BoolVar(&pf.flags[date.Monthly], "months", false, "months")
+	cmd.Flags().BoolVar(&pf.flags[date.Quarterly], "quarters", false, "quarters")
+	cmd.Flags().BoolVar(&pf.flags[date.Yearly], "years", false, "years")
+	cmd.MarkFlagsMutuallyExclusive("days", "weeks", "months", "quarters", "years")
+
 }
 
 // Value returns the period.
 func (pf IntervalFlags) Value() (date.Interval, error) {
-	var index, counter int
 	for i, val := range pf.flags {
 		if val {
-			counter++
-			index = i
+			return date.Interval(i), nil
 		}
 	}
-	if counter > 1 {
-		return date.Once, fmt.Errorf("multiple incompatible intervals")
-	}
-	return (date.Interval)(index), nil
+	return date.Once, nil
 }
 
 // MappingFlag manages a flag of type -c1,<regex>.

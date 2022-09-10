@@ -92,7 +92,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().BoolVarP(&r.diff, "diff", "d", false, "diff")
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "s", false, "Show commodities on their own rows")
-	r.interval.Setup(c.Flags())
+	r.interval.Setup(c)
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	c.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
 	c.Flags().Var(&r.accounts, "account", "filter accounts with a regex")

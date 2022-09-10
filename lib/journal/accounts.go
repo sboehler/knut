@@ -23,6 +23,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/mapper"
+	"github.com/sboehler/knut/lib/common/regex"
 )
 
 // AccountType is the type of an account.
@@ -175,6 +176,7 @@ type Accounts struct {
 	accounts map[AccountType]*Account
 	children map[*Account]map[*Account]bool
 	parents  map[*Account]*Account
+	swaps    map[*Account]*Account
 }
 
 // NewAccounts creates a new thread-safe collection of accounts.
@@ -195,6 +197,7 @@ func NewAccounts() *Accounts {
 		index:    index,
 		parents:  make(map[*Account]*Account),
 		children: make(map[*Account]map[*Account]bool),
+		swaps:    make(map[*Account]*Account),
 	}
 }
 
@@ -316,6 +319,35 @@ func (as *Accounts) NthParent(a *Account, n int) *Account {
 	return a
 }
 
+func (as *Accounts) SwapType(a *Account) *Account {
+	as.mutex.RLock()
+	sw, ok := as.swaps[a]
+	as.mutex.RUnlock()
+	if ok {
+		return sw
+	}
+	n := a.name
+	switch a.Type() {
+	case ASSETS:
+		n = as.accounts[LIABILITIES].name + strings.TrimPrefix(n, as.accounts[ASSETS].name)
+	case LIABILITIES:
+		n = as.accounts[ASSETS].name + strings.TrimPrefix(n, as.accounts[LIABILITIES].name)
+	case INCOME:
+		n = as.accounts[EXPENSES].name + strings.TrimPrefix(n, as.accounts[INCOME].name)
+	case EXPENSES:
+		n = as.accounts[INCOME].name + strings.TrimPrefix(n, as.accounts[EXPENSES].name)
+	}
+	sw, err := as.Get(n)
+	if err != nil {
+		panic(err)
+	}
+	as.mutex.Lock()
+	defer as.mutex.Unlock()
+	as.swaps[a] = sw
+	return sw
+
+}
+
 // Rule is a rule to shorten accounts which match the given regex.
 type Rule struct {
 	Level int
@@ -348,14 +380,23 @@ func (m AccountMapping) level(a *Account) int {
 }
 
 func (m AccountMapping) Map(jctx Context) mapper.Mapper[*Account] {
+	if len(m) == 0 {
+		return mapper.Identity[*Account]
+	}
 	return func(a *Account) *Account {
-		if len(m) == 0 {
-			return a
-		}
 		level := m.level(a)
 		if level >= a.level {
 			return a
 		}
 		return jctx.Accounts().NthParent(a, a.level-level)
+	}
+}
+
+func RemapAccount(jctx Context, rs regex.Regexes) mapper.Mapper[*Account] {
+	return func(a *Account) *Account {
+		if rs.MatchString(a.name) {
+			return jctx.Accounts().SwapType(a)
+		}
+		return a
 	}
 }

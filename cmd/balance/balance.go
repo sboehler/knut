@@ -65,6 +65,7 @@ type runner struct {
 	accounts, commodities                   flags.RegexFlag
 	interval                                flags.IntervalFlags
 	mapping                                 flags.MappingFlag
+	remap                                   flags.RegexFlag
 	valuation                               flags.CommodityFlag
 }
 
@@ -95,6 +96,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	r.interval.Setup(c)
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	c.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
+	c.Flags().VarP(&r.remap, "remap", "r", "<regex>")
 	c.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
 	c.Flags().Var(&r.commodities, "commodity", "filter commodities with a regex")
 	c.Flags().Int32Var(&r.digits, "digits", 0, "round to number of digits")
@@ -152,8 +154,11 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			),
 
 			Mapper: amounts.KeyMapper{
-				Date:      date.Map(dates),
-				Account:   r.mapping.Value().Map(jctx),
+				Date: date.Map(dates),
+				Account: mapper.Combine(
+					journal.RemapAccount(jctx, r.remap.Value()),
+					r.mapping.Value().Map(jctx),
+				),
 				Other:     mapper.Identity[*journal.Account],
 				Commodity: journal.MapCommodity(r.showCommodities || valuation == nil),
 				Valuation: journal.MapCommodity(valuation != nil),

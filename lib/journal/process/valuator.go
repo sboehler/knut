@@ -59,14 +59,14 @@ func (val Valuator) valuateTransactions(d *ast.Day, values amounts.Amounts) erro
 }
 
 func (val Valuator) computeValuationTransactions(d *ast.Day, values amounts.Amounts) error {
-	for pos, va := range d.Amounts {
+	for pos, amt := range d.Amounts {
 		if pos.Commodity == val.Valuation {
 			continue
 		}
 		if !pos.Account.IsAL() {
 			continue
 		}
-		value, err := d.Normalized.Valuate(pos.Commodity, va)
+		value, err := d.Normalized.Valuate(pos.Commodity, amt)
 		if err != nil {
 			return fmt.Errorf("no valuation found for commodity %s", pos.Commodity.Name())
 		}

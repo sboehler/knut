@@ -17,24 +17,23 @@ type Valuator struct {
 }
 
 // Process computes prices.
-func (pr *Valuator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
+func (val Valuator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
 	values := make(amounts.Amounts)
 	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
-		if pr.Valuation != nil {
-			d.Value = values
-			if err := pr.valuateTransactions(d); err != nil {
+		if val.Valuation != nil {
+			if err := val.valuateTransactions(d, values); err != nil {
 				return err
 			}
-			if err := pr.computeValuationTransactions(d); err != nil {
+			if err := val.computeValuationTransactions(d, values); err != nil {
 				return err
 			}
-			values = values.Clone()
+			d.Value = values.Clone()
 		}
 		return cpr.Push(ctx, outCh, d)
 	})
 }
 
-func (pr Valuator) valuateTransactions(d *ast.Day) error {
+func (val Valuator) valuateTransactions(d *ast.Day, values amounts.Amounts) error {
 	var (
 		err error
 		res []*ast.Transaction
@@ -43,15 +42,15 @@ func (pr Valuator) valuateTransactions(d *ast.Day) error {
 		tb := t.ToBuilder()
 		for i := range tb.Postings {
 			posting := &tb.Postings[i]
-			if pr.Valuation != posting.Commodity {
+			if val.Valuation != posting.Commodity {
 				if posting.Value, err = d.Normalized.Valuate(posting.Commodity, posting.Amount); err != nil {
 					return err
 				}
 			} else {
 				posting.Value = posting.Amount
 			}
-			d.Value.Add(amounts.AccountCommodityKey(posting.Credit, posting.Commodity), posting.Value.Neg())
-			d.Value.Add(amounts.AccountCommodityKey(posting.Debit, posting.Commodity), posting.Value)
+			values.Add(amounts.AccountCommodityKey(posting.Credit, posting.Commodity), posting.Value.Neg())
+			values.Add(amounts.AccountCommodityKey(posting.Debit, posting.Commodity), posting.Value)
 		}
 		res = append(res, tb.Build())
 	}
@@ -59,9 +58,9 @@ func (pr Valuator) valuateTransactions(d *ast.Day) error {
 	return nil
 }
 
-func (pr *Valuator) computeValuationTransactions(d *ast.Day) error {
+func (val Valuator) computeValuationTransactions(d *ast.Day, values amounts.Amounts) error {
 	for pos, va := range d.Amounts {
-		if pos.Commodity == pr.Valuation {
+		if pos.Commodity == val.Valuation {
 			continue
 		}
 		if !pos.Account.IsAL() {
@@ -71,11 +70,11 @@ func (pr *Valuator) computeValuationTransactions(d *ast.Day) error {
 		if err != nil {
 			return fmt.Errorf("no valuation found for commodity %s", pos.Commodity.Name())
 		}
-		diff := value.Sub(d.Value[pos])
+		diff := value.Sub(values[pos])
 		if diff.IsZero() {
 			continue
 		}
-		credit := pr.Context.ValuationAccountFor(pos.Account)
+		credit := val.Context.ValuationAccountFor(pos.Account)
 		t := ast.TransactionBuilder{
 			Date:        d.Date,
 			Description: fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity.Name(), pos.Account.Name()),
@@ -83,8 +82,8 @@ func (pr *Valuator) computeValuationTransactions(d *ast.Day) error {
 				ast.NewValuePosting(credit, pos.Account, pos.Commodity, diff, []*journal.Commodity{pos.Commodity}),
 			},
 		}.Build()
-		d.Value.Add(amounts.AccountCommodityKey(credit, pos.Commodity), diff.Neg())
-		d.Value.Add(amounts.AccountCommodityKey(pos.Account, pos.Commodity), diff)
+		values.Add(amounts.AccountCommodityKey(credit, pos.Commodity), diff.Neg())
+		values.Add(amounts.AccountCommodityKey(pos.Account, pos.Commodity), diff)
 		d.Transactions = append(d.Transactions, t)
 	}
 	return nil

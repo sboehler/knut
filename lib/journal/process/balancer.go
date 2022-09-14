@@ -111,7 +111,7 @@ func (pr *Balancer) processClosings(ctx context.Context, accounts accounts, amou
 			delete(amounts, pos)
 		}
 		if ok := accounts.Close(c.Account); !ok {
-			return Error{c, fmt.Sprintf("account is not open")}
+			return Error{c, "account is not open"}
 		}
 	}
 	return nil

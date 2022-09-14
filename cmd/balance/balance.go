@@ -117,6 +117,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if valuation, err = r.valuation.Value(jctx); err != nil {
 		return err
 	}
+	r.showCommodities = r.showCommodities || valuation == nil
 	journalSource := &process.JournalSource{
 		Context: jctx,
 		Path:    args[0],
@@ -156,12 +157,12 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 					r.mapping.Value().Map(jctx),
 				),
 				Other:     mapper.Identity[*journal.Account],
-				Commodity: journal.MapCommodity(r.showCommodities || valuation == nil),
+				Commodity: journal.MapCommodity(r.showCommodities),
 				Valuation: journal.MapCommodity(valuation != nil),
 			}.Build(),
 		}
 		reportRenderer = report.Renderer{
-			ShowCommodities:    r.showCommodities || valuation == nil,
+			ShowCommodities:    r.showCommodities,
 			SortAlphabetically: r.sortAlphabetically,
 			Dates:              dates,
 			Diff:               r.diff,

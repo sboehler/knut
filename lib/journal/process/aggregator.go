@@ -34,13 +34,13 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 	}
 	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
 		for _, t := range d.Transactions {
-			for _, b := range t.Postings() {
+			for _, b := range t.Postings {
 				amt := b.Amount
 				if agg.Valuation != nil {
 					amt = b.Value
 				}
 				kc := amounts.Key{
-					Date:      t.Date(),
+					Date:      t.Date,
 					Account:   b.Credit,
 					Other:     b.Debit,
 					Commodity: b.Commodity,
@@ -51,7 +51,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 					agg.Collection.Insert(kc, amt.Neg())
 				}
 				kd := amounts.Key{
-					Date:      t.Date(),
+					Date:      t.Date,
 					Account:   b.Debit,
 					Other:     b.Credit,
 					Commodity: b.Commodity,

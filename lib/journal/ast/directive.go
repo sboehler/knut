@@ -132,66 +132,23 @@ type Tag string
 
 // Transaction represents a transaction.
 type Transaction struct {
-	rng         Range
-	date        time.Time
-	description string
-	tags        []Tag
-	postings    []Posting
-	accrual     *Accrual
-}
-
-// Description returns the description.
-func (t Transaction) Description() string {
-	return t.description
-}
-
-// Date returns the transaction date.
-func (t Transaction) Date() time.Time {
-	return t.date
+	Range       Range
+	Date        time.Time
+	Description string
+	Tags        []Tag
+	Postings    []Posting
+	Accrual     *Accrual
 }
 
 // Position returns the source location.
 func (t Transaction) Position() Range {
-	return t.rng
-}
-
-// Tags returns the tags.
-func (t Transaction) Tags() []Tag {
-	return t.tags
-}
-
-// Postings returns the postings.
-func (t Transaction) Postings() []Posting {
-	return t.postings
-}
-
-// Accrual returns the accrual.
-func (t Transaction) Accrual() *Accrual {
-	return t.accrual
-}
-
-// ToBuilder creates a new builder based on this transaction.
-func (t Transaction) ToBuilder() TransactionBuilder {
-	var (
-		tags     = make([]Tag, len(t.tags))
-		postings = make([]Posting, len(t.postings))
-	)
-	copy(tags, t.tags)
-	copy(postings, t.postings)
-	return TransactionBuilder{
-		Range:       t.rng,
-		Date:        t.date,
-		Description: t.description,
-		Tags:        tags,
-		Postings:    postings,
-		Accrual:     t.accrual,
-	}
+	return t.Range
 }
 
 // Commodities returns the commodities in this transaction.
 func (t Transaction) Commodities() map[*journal.Commodity]bool {
 	var res = make(map[*journal.Commodity]bool)
-	for _, pst := range t.postings {
+	for _, pst := range t.Postings {
 		res[pst.Commodity] = true
 	}
 	return res
@@ -199,18 +156,18 @@ func (t Transaction) Commodities() map[*journal.Commodity]bool {
 
 // Less defines an order on transactions.
 func CompareTransactions(t *Transaction, t2 *Transaction) compare.Order {
-	if o := compare.Time(t.date, t2.date); o != compare.Equal {
+	if o := compare.Time(t.Date, t2.Date); o != compare.Equal {
 		return o
 	}
-	if o := compare.Ordered(t.description, t2.description); o != compare.Equal {
+	if o := compare.Ordered(t.Description, t2.Description); o != compare.Equal {
 		return o
 	}
-	for i := 0; i < len(t.postings) && i < len(t2.postings); i++ {
-		if o := ComparePostings(t.postings[i], t2.postings[i]); o != compare.Equal {
+	for i := 0; i < len(t.Postings) && i < len(t2.Postings); i++ {
+		if o := ComparePostings(t.Postings[i], t2.Postings[i]); o != compare.Equal {
 			return o
 		}
 	}
-	return compare.Ordered(len(t.postings), len(t2.postings))
+	return compare.Ordered(len(t.Postings), len(t2.Postings))
 }
 
 // TransactionBuilder builds transactions.
@@ -227,12 +184,12 @@ type TransactionBuilder struct {
 func (tb TransactionBuilder) Build() *Transaction {
 	compare.Sort(tb.Postings, ComparePostings)
 	return &Transaction{
-		rng:         tb.Range,
-		date:        tb.Date,
-		description: tb.Description,
-		tags:        tb.Tags,
-		postings:    tb.Postings,
-		accrual:     tb.Accrual,
+		Range:       tb.Range,
+		Date:        tb.Date,
+		Description: tb.Description,
+		Tags:        tb.Tags,
+		Postings:    tb.Postings,
+		Accrual:     tb.Accrual,
 	}
 }
 
@@ -280,7 +237,7 @@ type Accrual struct {
 // Expand expands an accrual transaction.
 func (a Accrual) Expand(t *Transaction) []*Transaction {
 	var (
-		posting                                                          = t.postings[0]
+		posting                                                          = t.Postings[0]
 		crAccountSingle, drAccountSingle, crAccountMulti, drAccountMulti = a.Account, a.Account, a.Account, a.Account
 	)
 	switch {
@@ -312,8 +269,8 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 			result = append(result, TransactionBuilder{
 				Range:       t.Position(),
 				Date:        period.End,
-				Tags:        t.Tags(),
-				Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description(), i+1, len(periods)),
+				Tags:        t.Tags,
+				Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description, i+1, len(periods)),
 				Postings: []Posting{
 					NewPosting(crAccountMulti, drAccountMulti, posting.Commodity, a),
 				},
@@ -323,9 +280,9 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 	if crAccountSingle != drAccountSingle {
 		result = append(result, TransactionBuilder{
 			Range:       t.Position(),
-			Date:        t.Date(),
-			Tags:        t.Tags(),
-			Description: t.description,
+			Date:        t.Date,
+			Tags:        t.Tags,
+			Description: t.Description,
 			Postings: []Posting{
 				NewPosting(crAccountSingle, drAccountSingle, posting.Commodity, posting.Amount),
 			},

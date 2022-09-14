@@ -56,19 +56,19 @@ func (p Printer) PrintDirective(w io.Writer, directive ast.Directive) (n int, er
 }
 
 func (p Printer) printTransaction(w io.Writer, t *ast.Transaction) (n int, err error) {
-	if t.Accrual() != nil {
-		c, err := p.printAccrual(w, t.Accrual())
+	if t.Accrual != nil {
+		c, err := p.printAccrual(w, t.Accrual)
 		n += c
 		if err != nil {
 			return n, err
 		}
 	}
-	c, err := fmt.Fprintf(w, "%s \"%s\"", t.Date().Format("2006-01-02"), t.Description())
+	c, err := fmt.Fprintf(w, "%s \"%s\"", t.Date.Format("2006-01-02"), t.Description)
 	n += c
 	if err != nil {
 		return n, err
 	}
-	for _, tag := range t.Tags() {
+	for _, tag := range t.Tags {
 		c, err := fmt.Fprintf(w, " %s", tag)
 		n += c
 		if err != nil {
@@ -80,7 +80,7 @@ func (p Printer) printTransaction(w io.Writer, t *ast.Transaction) (n int, err e
 	if err != nil {
 		return n, err
 	}
-	for _, po := range t.Postings() {
+	for _, po := range t.Postings {
 		d, err := p.printPosting(w, po)
 		n += d
 		if err != nil {
@@ -232,7 +232,7 @@ func (p *Printer) Initialize(directive []ast.Directive) {
 }
 
 func (p *Printer) updatePadding(t *ast.Transaction) {
-	for _, pt := range t.Postings() {
+	for _, pt := range t.Postings {
 		var cr, dr = utf8.RuneCountInString(pt.Credit.String()), utf8.RuneCountInString(pt.Debit.String())
 		if p.Padding < cr {
 			p.Padding = cr

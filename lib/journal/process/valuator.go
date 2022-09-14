@@ -34,27 +34,22 @@ func (val Valuator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh cha
 }
 
 func (val Valuator) valuateTransactions(d *ast.Day, values amounts.Amounts) error {
-	var (
-		err error
-		res []*ast.Transaction
-	)
 	for _, t := range d.Transactions {
-		tb := t.ToBuilder()
-		for i := range tb.Postings {
-			posting := &tb.Postings[i]
+		for i := range t.Postings {
+			posting := &t.Postings[i]
+			v := posting.Amount
+			var err error
 			if val.Valuation != posting.Commodity {
-				if posting.Value, err = d.Normalized.Valuate(posting.Commodity, posting.Amount); err != nil {
+				if v, err = d.Normalized.Valuate(posting.Commodity, posting.Amount); err != nil {
 					return err
 				}
-			} else {
-				posting.Value = posting.Amount
 			}
+			posting.Value = v
 			values.Add(amounts.AccountCommodityKey(posting.Credit, posting.Commodity), posting.Value.Neg())
 			values.Add(amounts.AccountCommodityKey(posting.Debit, posting.Commodity), posting.Value)
 		}
-		res = append(res, tb.Build())
+
 	}
-	d.Transactions = res
 	return nil
 }
 

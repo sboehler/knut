@@ -53,7 +53,7 @@ func (pr *Balancer) processOpenings(ctx context.Context, accounts accounts, d *a
 
 func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, amts amounts.Amounts, d *ast.Day) error {
 	for _, t := range d.Transactions {
-		for _, p := range t.Postings() {
+		for _, p := range t.Postings {
 			if !accounts.IsOpen(p.Credit) {
 				return Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)}
 			}

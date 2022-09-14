@@ -72,7 +72,7 @@ func (calc *Calculator) computeFlows(day *ast.Day) *ast.Performance {
 		// either positive or negative, but not both.
 		var flows, internalFlows pcv
 
-		for _, pst := range trx.Postings() {
+		for _, pst := range trx.Postings {
 			value, _ := pst.Amount.Float64()
 			var otherAccount *journal.Account
 

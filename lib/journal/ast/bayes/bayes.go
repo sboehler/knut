@@ -43,11 +43,11 @@ func NewModel(exclude *journal.Account) *Model {
 
 // Update updates the model with the given transaction.
 func (m *Model) Update(t *ast.Transaction) {
-	for _, p := range t.Postings() {
+	for _, p := range t.Postings {
 		if p.Credit != m.exclude {
 			m.accounts++
 			m.accountCounts[p.Credit]++
-			for token := range tokenize(t.Description(), &p, p.Credit) {
+			for token := range tokenize(t.Description, &p, p.Credit) {
 				tc, ok := m.tokenCounts[token]
 				if !ok {
 					tc = make(map[*journal.Account]int)
@@ -59,7 +59,7 @@ func (m *Model) Update(t *ast.Transaction) {
 		if p.Debit != m.exclude {
 			m.accounts++
 			m.accountCounts[p.Debit]++
-			for token := range tokenize(t.Description(), &p, p.Debit) {
+			for token := range tokenize(t.Description, &p, p.Debit) {
 				tc := dict.GetDefault(m.tokenCounts, token, func() map[*journal.Account]int { return make(map[*journal.Account]int) })
 				tc[p.Debit]++
 			}
@@ -69,18 +69,17 @@ func (m *Model) Update(t *ast.Transaction) {
 }
 
 // Infer replaces the given account with an inferred account.
-func (m *Model) Infer(t *ast.Transaction, tbd *journal.Account) *ast.Transaction {
-	trx := t.ToBuilder()
-	for i := range trx.Postings {
+func (m *Model) Infer(t *ast.Transaction, tbd *journal.Account) {
+	for i := range t.Postings {
 		var (
-			posting = &trx.Postings[i]
+			posting = &t.Postings[i]
 			tokens  map[string]struct{}
 		)
 		switch tbd {
 		case posting.Credit, posting.Debit:
-			tokens = tokenize(t.Description(), posting, tbd)
+			tokens = tokenize(t.Description, posting, tbd)
 		case posting.Debit:
-			tokens = tokenize(t.Description(), posting, tbd)
+			tokens = tokenize(t.Description, posting, tbd)
 		default:
 			continue
 		}
@@ -118,7 +117,6 @@ func (m *Model) Infer(t *ast.Transaction, tbd *journal.Account) *ast.Transaction
 			}
 		}
 	}
-	return trx.Build()
 }
 
 func tokenize(desc string, posting *ast.Posting, account *journal.Account) map[string]struct{} {

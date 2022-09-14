@@ -49,8 +49,8 @@ func (js *JournalSource) Load(ctx context.Context) error {
 			js.ast.AddPrice(t)
 
 		case *ast.Transaction:
-			if t.Accrual() != nil {
-				for _, ts := range t.Accrual().Expand(t) {
+			if t.Accrual != nil {
+				for _, ts := range t.Accrual.Expand(t) {
 					js.ast.AddTransaction(ts)
 				}
 			} else {

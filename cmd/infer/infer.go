@@ -139,7 +139,7 @@ func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model 
 		}
 		switch t := d.(type) {
 		case *ast.Transaction:
-			t = model.Infer(t, account)
+			model.Infer(t, account)
 			directives = append(directives, t)
 		default:
 			directives = append(directives, d)

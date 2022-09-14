@@ -49,10 +49,10 @@ func Transcode(w io.Writer, l []*ast.Day, c *journal.Commodity) error {
 		compare.Sort(day.Transactions, ast.CompareTransactions)
 
 		for _, trx := range day.Transactions {
-			for _, pst := range trx.Postings() {
+			for _, pst := range trx.Postings {
 				if strings.HasPrefix(pst.Credit.Name(), "Equity:Valuation:") && !openValAccounts[pst.Credit] {
 					openValAccounts[pst.Credit] = true
-					if _, err := p.PrintDirective(w, &ast.Open{Date: trx.Date(), Account: pst.Credit}); err != nil {
+					if _, err := p.PrintDirective(w, &ast.Open{Date: trx.Date, Account: pst.Credit}); err != nil {
 						return err
 					}
 					if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -61,7 +61,7 @@ func Transcode(w io.Writer, l []*ast.Day, c *journal.Commodity) error {
 				}
 				if strings.HasPrefix(pst.Debit.Name(), "Equity:Valuation:") && !openValAccounts[pst.Debit] {
 					openValAccounts[pst.Debit] = true
-					if _, err := p.PrintDirective(w, &ast.Open{Date: trx.Date(), Account: pst.Debit}); err != nil {
+					if _, err := p.PrintDirective(w, &ast.Open{Date: trx.Date, Account: pst.Debit}); err != nil {
 						return err
 					}
 					if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -88,10 +88,10 @@ func Transcode(w io.Writer, l []*ast.Day, c *journal.Commodity) error {
 }
 
 func writeTrx(w io.Writer, t *ast.Transaction, c *journal.Commodity) error {
-	if _, err := fmt.Fprintf(w, `%s * "%s"`, t.Date().Format("2006-01-02"), t.Description()); err != nil {
+	if _, err := fmt.Fprintf(w, `%s * "%s"`, t.Date.Format("2006-01-02"), t.Description); err != nil {
 		return err
 	}
-	for _, tag := range t.Tags() {
+	for _, tag := range t.Tags {
 		if _, err := fmt.Fprintf(w, " %s", tag); err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func writeTrx(w io.Writer, t *ast.Transaction, c *journal.Commodity) error {
 	if _, err := io.WriteString(w, "\n"); err != nil {
 		return err
 	}
-	for _, p := range t.Postings() {
+	for _, p := range t.Postings {
 		if err := writePosting(w, p, c); err != nil {
 			return err
 		}

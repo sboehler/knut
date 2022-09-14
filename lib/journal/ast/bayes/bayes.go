@@ -65,7 +65,7 @@ func (m *Model) Update(t *ast.Transaction) {
 }
 
 // Infer replaces the given account with an inferred account.
-// P(A | T1 & T2) ~ P(A) * P(T1|A) * P(T2|A)
+// P(A | T1 & T2 & ... & Tn) ~ P(A) * P(T1|A) * P(T2|A) * ... * P(Tn|A)
 func (m *Model) Infer(t *ast.Transaction, tbd *journal.Account) {
 	def := math.Log(1.0 / float64(m.total))
 	for i := range t.Postings {

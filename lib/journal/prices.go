@@ -34,40 +34,33 @@ func (p Prices) Insert(commodity *Commodity, price decimal.Decimal, target *Comm
 	p.addPrice(commodity, target, one.Div(price).Truncate(8))
 }
 
-func (p Prices) addPrice(target, commodity *Commodity, pr decimal.Decimal) {
-	i, ok := p[target]
+func (pr Prices) addPrice(target, commodity *Commodity, p decimal.Decimal) {
+	i, ok := pr[target]
 	if !ok {
 		i = make(map[*Commodity]decimal.Decimal)
-		p[target] = i
+		pr[target] = i
 	}
-	i[commodity] = pr
+	i[commodity] = p
 }
 
 // Normalize creates a normalized price map for the given commodity.
-func (p Prices) Normalize(c *Commodity) NormalizedPrices {
-	// prices in (target commodity / commodity)
-	var (
-		todo = NormalizedPrices{c: one}
-		done = make(NormalizedPrices)
+func (pr Prices) Normalize(t *Commodity) NormalizedPrices {
+	res := NormalizedPrices{t: one}
+	pr.normalize(t, res)
+	return res
+}
 
-		currentC *Commodity
-		currentP decimal.Decimal
-	)
-	for len(todo) > 0 {
-		// we're interested in an arbitrary element of the map
-		for currentC, currentP = range todo {
-			break
+// normalize recursively computes prices by traversing the price graph.
+// res must already contain a price for c.
+func (pr Prices) normalize(c *Commodity, res NormalizedPrices) {
+	for neighbor, price := range pr[c] {
+		if _, done := res[neighbor]; done {
+			continue
 		}
-		done[currentC] = currentP
-		for neighbor, price := range p[currentC] {
-			if _, ok := done[neighbor]; ok {
-				continue
-			}
-			todo[neighbor] = price.Mul(currentP).Truncate(8)
-		}
-		delete(todo, currentC)
+		p := price.Mul(res[c]).Truncate(8)
+		res[neighbor] = p
+		pr.normalize(neighbor, res)
 	}
-	return done
 }
 
 // NormalizedPrices is a map representing the price of

@@ -23,7 +23,7 @@ import (
 	"github.com/sboehler/knut/lib/journal/ast"
 )
 
-// Model is a model trained from a journal
+// Model implements a Bayes model for accounts and text tokens derived from transactions.
 type Model struct {
 	total                  int
 	totalByAccount         map[*journal.Account]int

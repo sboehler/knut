@@ -78,7 +78,7 @@ func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts a
 		amts.Add(amounts.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
 		d.Transactions = append(d.Transactions, ast.TransactionBuilder{
 			Date:        v.Date,
-			Description: fmt.Sprintf("Valuation adjustment for %v in %v", v.Commodity, v.Account),
+			Description: fmt.Sprintf("Valuation adjustment for %s in %s", v.Commodity.Name(), v.Account.Name()),
 			Postings:    []ast.Posting{p},
 		}.Build())
 	}

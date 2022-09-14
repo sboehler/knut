@@ -36,7 +36,9 @@ type Renderer struct {
 
 // Render renders a report.
 func (rn *Renderer) Render(r *Report) *table.Table {
-	r.ComputeWeights()
+	if !rn.SortAlphabetically {
+		r.ComputeWeights()
+	}
 	if rn.ShowCommodities {
 		rn.table = table.New(1, 1, len(rn.Dates))
 	} else {

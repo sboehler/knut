@@ -53,17 +53,23 @@ func CreateCmd() *cobra.Command {
 }
 
 type runner struct {
-	cpuprofile                              string
-	from, to                                flags.DateFlag
-	last                                    int
-	diff, showCommodities, thousands, color bool
-	sortAlphabetically                      bool
-	digits                                  int32
-	accounts, commodities                   flags.RegexFlag
-	interval                                flags.IntervalFlags
-	mapping                                 flags.MappingFlag
-	remap                                   flags.RegexFlag
-	valuation                               flags.CommodityFlag
+	// internal
+	cpuprofile string
+
+	// transformations
+	from, to              flags.DateFlag
+	last                  int
+	interval              flags.IntervalFlags
+	diff, showCommodities bool
+	mapping               flags.MappingFlag
+	remap                 flags.RegexFlag
+	valuation             flags.CommodityFlag
+	accounts, commodities flags.RegexFlag
+
+	// formatting
+	thousands, color   bool
+	sortAlphabetically bool
+	digits             int32
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) {

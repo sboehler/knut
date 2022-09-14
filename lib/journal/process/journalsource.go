@@ -22,8 +22,6 @@ type JournalSource struct {
 	Expand   bool
 	AutoLoad bool
 
-	Valuation *journal.Commodity
-
 	ast *ast.AST
 }
 
@@ -97,20 +95,20 @@ func (js JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) error
 	return nil
 }
 
-func (js JournalSource) Aggregate(ctx context.Context, f filter.Filter[amounts.Key], m mapper.Mapper[amounts.Key], c Collection) error {
+func (js JournalSource) Aggregate(ctx context.Context, v *journal.Commodity, f filter.Filter[amounts.Key], m mapper.Mapper[amounts.Key], c Collection) error {
 	var (
 		priceUpdater = &PriceUpdater{
-			Valuation: js.Valuation,
+			Valuation: v,
 		}
 		balancer = &Balancer{
 			Context: js.Context,
 		}
 		valuator = &Valuator{
 			Context:   js.Context,
-			Valuation: js.Valuation,
+			Valuation: v,
 		}
 		aggregator = &Aggregator{
-			Valuation:  js.Valuation,
+			Valuation:  v,
 			Collection: c,
 
 			Filter: f,

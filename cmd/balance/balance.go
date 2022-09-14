@@ -116,8 +116,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		Context: jctx,
 		Path:    args[0],
 		Expand:  true,
-
-		Valuation: valuation,
 	}
 	if err := journalSource.Load(ctx); err != nil {
 		return err
@@ -153,7 +151,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		}
 	)
 
-	if err := journalSource.Aggregate(ctx, f, m, rep); err != nil {
+	if err := journalSource.Aggregate(ctx, valuation, f, m, rep); err != nil {
 		return err
 	}
 

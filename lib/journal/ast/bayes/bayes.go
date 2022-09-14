@@ -25,9 +25,9 @@ import (
 
 // Model is a model trained from a journal
 type Model struct {
-	accounts      int
-	accountCounts map[*journal.Account]int
-	tokenCounts   map[string]map[*journal.Account]int
+	total                  int
+	totalByAccount         map[*journal.Account]int
+	totalByTokenAndAccount map[string]map[*journal.Account]int
 
 	exclude *journal.Account
 }
@@ -35,9 +35,9 @@ type Model struct {
 // NewModel creates a new model.
 func NewModel(exclude *journal.Account) *Model {
 	return &Model{
-		accounts:      0,
-		accountCounts: make(map[*journal.Account]int),
-		tokenCounts:   make(map[string]map[*journal.Account]int),
+		total:                  0,
+		totalByAccount:         make(map[*journal.Account]int),
+		totalByTokenAndAccount: make(map[string]map[*journal.Account]int),
 	}
 }
 
@@ -45,22 +45,18 @@ func NewModel(exclude *journal.Account) *Model {
 func (m *Model) Update(t *ast.Transaction) {
 	for _, p := range t.Postings {
 		if p.Credit != m.exclude {
-			m.accounts++
-			m.accountCounts[p.Credit]++
+			m.total++
+			m.totalByAccount[p.Credit]++
 			for token := range tokenize(t.Description, &p, p.Credit) {
-				tc, ok := m.tokenCounts[token]
-				if !ok {
-					tc = make(map[*journal.Account]int)
-					m.tokenCounts[token] = tc
-				}
+				tc := dict.GetDefault(m.totalByTokenAndAccount, token, func() map[*journal.Account]int { return make(map[*journal.Account]int) })
 				tc[p.Credit]++
 			}
 		}
 		if p.Debit != m.exclude {
-			m.accounts++
-			m.accountCounts[p.Debit]++
+			m.total++
+			m.totalByAccount[p.Debit]++
 			for token := range tokenize(t.Description, &p, p.Debit) {
-				tc := dict.GetDefault(m.tokenCounts, token, func() map[*journal.Account]int { return make(map[*journal.Account]int) })
+				tc := dict.GetDefault(m.totalByTokenAndAccount, token, func() map[*journal.Account]int { return make(map[*journal.Account]int) })
 				tc[p.Debit]++
 			}
 		}
@@ -69,52 +65,44 @@ func (m *Model) Update(t *ast.Transaction) {
 }
 
 // Infer replaces the given account with an inferred account.
+// P(A | T1 & T2) ~ P(A) * P(T1|A) * P(T2|A)
 func (m *Model) Infer(t *ast.Transaction, tbd *journal.Account) {
+	def := math.Log(1.0 / float64(m.total))
 	for i := range t.Postings {
-		var (
-			posting = &t.Postings[i]
-			tokens  map[string]struct{}
-		)
-		switch tbd {
-		case posting.Credit, posting.Debit:
-			tokens = tokenize(t.Description, posting, tbd)
-		case posting.Debit:
-			tokens = tokenize(t.Description, posting, tbd)
-		default:
+		posting := &t.Postings[i]
+		if posting.Credit != tbd && posting.Debit != tbd {
 			continue
 		}
 		scores := make(map[*journal.Account]float64)
-		for a, accountCount := range m.accountCounts {
-			if a == tbd {
+		tokens := tokenize(t.Description, posting, tbd)
+		for a, total := range m.totalByAccount {
+			if a == posting.Credit || a == posting.Debit {
+				// ignore both TBD and the other account of this posting
 				continue
 			}
-			scores[a] = math.Log(float64(accountCount) / float64(m.accounts))
+			scores[a] = math.Log(float64(total) / float64(m.total))
 			for token := range tokens {
-				if tokenCount, ok := m.tokenCounts[token][a]; ok {
-					scores[a] += math.Log(float64(tokenCount) / float64(accountCount))
+				if countForToken, ok := m.totalByTokenAndAccount[token][a]; ok {
+					scores[a] += math.Log(float64(countForToken) / float64(total))
 				} else {
 					// assign a low but positive default probability
-					scores[a] += math.Log(1.0 / float64(m.accounts))
+					scores[a] += def
 				}
 			}
 		}
-		var (
-			selected *journal.Account
-			max      = math.Inf(-1)
-		)
+		var selected *journal.Account
+		max := math.Inf(-1)
 		for a, score := range scores {
-			if score > max && a != posting.Credit && a != posting.Debit {
+			if score > max {
 				selected = a
 				max = score
 			}
 		}
-		if selected != nil {
-			if posting.Credit == tbd {
-				posting.Credit = selected
-			}
-			if posting.Debit == tbd {
-				posting.Debit = selected
-			}
+		if posting.Credit == tbd {
+			posting.Credit = selected
+		}
+		if posting.Debit == tbd {
+			posting.Debit = selected
 		}
 	}
 }
@@ -122,10 +110,10 @@ func (m *Model) Infer(t *ast.Transaction, tbd *journal.Account) {
 func tokenize(desc string, posting *ast.Posting, account *journal.Account) map[string]struct{} {
 	tokens := append(strings.Fields(desc), posting.Commodity.Name(), posting.Amount.String())
 	if account == posting.Credit {
-		tokens = append(tokens, "credit", posting.Debit.String())
+		tokens = append(tokens, "__knut_credit", posting.Debit.Name())
 	}
 	if account == posting.Debit {
-		tokens = append(tokens, "debit", posting.Credit.String())
+		tokens = append(tokens, "__knut_debit", posting.Credit.Name())
 	}
 	result := make(map[string]struct{})
 	for _, token := range tokens {

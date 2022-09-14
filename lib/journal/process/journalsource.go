@@ -96,29 +96,22 @@ func (js JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) error
 }
 
 func (js JournalSource) Aggregate(ctx context.Context, v *journal.Commodity, f filter.Filter[amounts.Key], m mapper.Mapper[amounts.Key], c Collection) error {
-	var (
-		priceUpdater = &PriceUpdater{
+	aggregator := &Aggregator{
+		Valuation:  v,
+		Collection: c,
+
+		Filter: f,
+		Mapper: m,
+	}
+	s := cpr.Compose[*ast.Day](js, &Balancer{Context: js.Context})
+	if v != nil {
+		s = cpr.Compose[*ast.Day](s, &PriceUpdater{
 			Valuation: v,
-		}
-		balancer = &Balancer{
-			Context: js.Context,
-		}
-		valuator = &Valuator{
+		})
+		s = cpr.Compose[*ast.Day](s, &Valuator{
 			Context:   js.Context,
 			Valuation: v,
-		}
-		aggregator = &Aggregator{
-			Valuation:  v,
-			Collection: c,
-
-			Filter: f,
-			Mapper: m,
-		}
-	)
-	s := cpr.Compose[*ast.Day](js, priceUpdater)
-	s = cpr.Compose[*ast.Day](s, balancer)
-	s = cpr.Compose[*ast.Day](s, valuator)
-	ppl := cpr.Connect[*ast.Day](s, aggregator)
-
-	return ppl.Process(ctx)
+		})
+	}
+	return cpr.Connect[*ast.Day](s, aggregator).Process(ctx)
 }

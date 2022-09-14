@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
+	"github.com/sboehler/knut/lib/common/filter"
+	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
@@ -18,6 +21,8 @@ type JournalSource struct {
 	Path     string
 	Expand   bool
 	AutoLoad bool
+
+	Valuation *journal.Commodity
 
 	ast *ast.AST
 }
@@ -90,4 +95,32 @@ func (js JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) error
 		}
 	}
 	return nil
+}
+
+func (js JournalSource) Aggregate(ctx context.Context, f filter.Filter[amounts.Key], m mapper.Mapper[amounts.Key], c Collection) error {
+	var (
+		priceUpdater = &PriceUpdater{
+			Valuation: js.Valuation,
+		}
+		balancer = &Balancer{
+			Context: js.Context,
+		}
+		valuator = &Valuator{
+			Context:   js.Context,
+			Valuation: js.Valuation,
+		}
+		aggregator = &Aggregator{
+			Valuation:  js.Valuation,
+			Collection: c,
+
+			Filter: f,
+			Mapper: m,
+		}
+	)
+	s := cpr.Compose[*ast.Day](js, priceUpdater)
+	s = cpr.Compose[*ast.Day](s, balancer)
+	s = cpr.Compose[*ast.Day](s, valuator)
+	ppl := cpr.Connect[*ast.Day](s, aggregator)
+
+	return ppl.Process(ctx)
 }

@@ -16,7 +16,7 @@ type Valuator struct {
 	Valuation *journal.Commodity
 }
 
-// Process computes prices.
+// Process valuates transactions.
 func (val Valuator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
 	values := make(amounts.Amounts)
 	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {

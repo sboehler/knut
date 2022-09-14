@@ -74,13 +74,13 @@ func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts a
 		}
 		valAcc := pr.Context.ValuationAccountFor(v.Account)
 		p := ast.PostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amts.Amount(amounts.AccountCommodityKey(v.Account, v.Commodity))), []*journal.Commodity{v.Commodity})
-		amts.Add(amounts.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
-		amts.Add(amounts.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
 		d.Transactions = append(d.Transactions, ast.TransactionBuilder{
 			Date:        v.Date,
 			Description: fmt.Sprintf("Valuation adjustment for %s in %s", v.Commodity.Name(), v.Account.Name()),
 			Postings:    []ast.Posting{p},
 		}.Build())
+		amts.Add(amounts.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
+		amts.Add(amounts.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
 	}
 	compare.Sort(d.Transactions, ast.CompareTransactions)
 	return nil

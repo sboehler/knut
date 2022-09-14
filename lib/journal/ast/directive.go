@@ -119,12 +119,6 @@ func ComparePostings(p Posting, p2 Posting) compare.Order {
 	return compare.Ordered(len(p.Targets), len(p2.Targets))
 }
 
-// sortPostings sorts the given postings.
-func sortPostings(ps []Posting) []Posting {
-	compare.Sort(ps, ComparePostings)
-	return ps
-}
-
 // Lot represents a lot.
 type Lot struct {
 	Date      time.Time
@@ -231,12 +225,13 @@ type TransactionBuilder struct {
 
 // Build builds a transactions.
 func (tb TransactionBuilder) Build() *Transaction {
+	compare.Sort(tb.Postings, ComparePostings)
 	return &Transaction{
 		rng:         tb.Range,
 		date:        tb.Date,
 		description: tb.Description,
 		tags:        tb.Tags,
-		postings:    sortPostings(tb.Postings),
+		postings:    tb.Postings,
 		accrual:     tb.Accrual,
 	}
 }

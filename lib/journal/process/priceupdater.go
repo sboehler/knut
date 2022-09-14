@@ -26,8 +26,8 @@ func (pu PriceUpdater) Process(ctx context.Context, inCh <-chan *ast.Day, outCh 
 					prc.Insert(p.Commodity, p.Price, p.Target)
 				}
 				day.Normalized = prc.Normalize(pu.Valuation)
+				previous = day.Normalized
 			}
-			previous = day.Normalized
 		}
 		return cpr.Push(ctx, outCh, day)
 	})

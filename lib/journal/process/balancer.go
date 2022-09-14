@@ -44,8 +44,8 @@ func (pr *Balancer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh cha
 
 func (pr *Balancer) processOpenings(ctx context.Context, accounts accounts, d *ast.Day) error {
 	for _, o := range d.Openings {
-		if err := accounts.Open(o.Account); err != nil {
-			return err
+		if ok := accounts.Open(o.Account); !ok {
+			return Error{o, "account is already open"}
 		}
 	}
 	return nil
@@ -93,7 +93,7 @@ func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, am
 		}
 		position := amounts.AccountCommodityKey(a.Account, a.Commodity)
 		if va, ok := amts[position]; !ok || !va.Equal(a.Amount) {
-			return Error{a, fmt.Sprintf("assertion failed: account %s has %s %s", a.Account.Name(), va, position.Commodity.Name())}
+			return Error{a, fmt.Sprintf("account has position: %s %s", va, position.Commodity.Name())}
 		}
 	}
 	return nil
@@ -106,39 +106,40 @@ func (pr *Balancer) processClosings(ctx context.Context, accounts accounts, amou
 				continue
 			}
 			if !amount.IsZero() {
-				return Error{c, "account has nonzero position"}
+				return Error{c, fmt.Sprintf("account has nonzero position: %s %s", amount, pos.Commodity.Name())}
 			}
 			delete(amounts, pos)
 		}
-		if err := accounts.Close(c.Account); err != nil {
-			return err
+		if ok := accounts.Close(c.Account); !ok {
+			return Error{c, fmt.Sprintf("account is not open")}
 		}
 	}
 	return nil
 }
 
 // accounts keeps track of open accounts.
-type accounts map[*journal.Account]bool
+type accounts map[*journal.Account]struct{}
 
 // Open opens an account.
-func (oa accounts) Open(a *journal.Account) error {
-	if oa[a] {
-		return fmt.Errorf("account %v is already open", a)
+func (oa accounts) Open(a *journal.Account) bool {
+	if _, open := oa[a]; open {
+		return false
 	}
-	oa[a] = true
-	return nil
+	oa[a] = struct{}{}
+	return true
 }
 
 // Close closes an account.
-func (oa accounts) Close(a *journal.Account) error {
-	if !oa[a] {
-		return fmt.Errorf("account %v is already closed", a)
+func (oa accounts) Close(a *journal.Account) bool {
+	if _, open := oa[a]; !open {
+		return false
 	}
 	delete(oa, a)
-	return nil
+	return true
 }
 
 // IsOpen returns whether an account is open.
 func (oa accounts) IsOpen(a *journal.Account) bool {
-	return oa[a]
+	_, open := oa[a]
+	return open
 }

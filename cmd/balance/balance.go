@@ -132,7 +132,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Date: date.Map(dates),
 			Account: mapper.Combine(
 				journal.RemapAccount(jctx, r.remap.Value()),
-				r.mapping.Value().Map(jctx),
+				journal.ShortenAccount(jctx, r.mapping.Value()),
 			),
 			Other:     mapper.Identity[*journal.Account],
 			Commodity: journal.MapCommodity(r.showCommodities),

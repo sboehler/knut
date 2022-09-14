@@ -379,7 +379,7 @@ func (m AccountMapping) level(a *Account) int {
 	return a.level
 }
 
-func (m AccountMapping) Map(jctx Context) mapper.Mapper[*Account] {
+func ShortenAccount(jctx Context, m AccountMapping) mapper.Mapper[*Account] {
 	if len(m) == 0 {
 		return mapper.Identity[*Account]
 	}

@@ -22,28 +22,22 @@ func (pr *Balancer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh cha
 	accounts := make(accounts)
 
 	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
-		var transactions []*ast.Transaction
-		var err error
 		if err := pr.processOpenings(ctx, accounts, d); err != nil {
 			return err
 		}
 		if err := pr.processTransactions(ctx, accounts, amounts, d); err != nil {
 			return err
 		}
-		if transactions, err = pr.processValues(ctx, accounts, amounts, d); err != nil {
+		if err := pr.processValues(ctx, accounts, amounts, d); err != nil {
 			return err
 		}
-		if err = pr.processAssertions(ctx, accounts, amounts, d); err != nil {
+		if err := pr.processAssertions(ctx, accounts, amounts, d); err != nil {
 			return err
 		}
-		if err = pr.processClosings(ctx, accounts, amounts, d); err != nil {
+		if err := pr.processClosings(ctx, accounts, amounts, d); err != nil {
 			return err
 		}
-
-		d.Transactions = append(d.Transactions, transactions...)
-		compare.Sort(d.Transactions, ast.CompareTransactions)
 		d.Amounts = amounts.Clone()
-
 		return cpr.Push(ctx, outCh, d)
 	})
 }
@@ -73,23 +67,23 @@ func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, 
 	return nil
 }
 
-func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts amounts.Amounts, d *ast.Day) ([]*ast.Transaction, error) {
-	var transactions []*ast.Transaction
+func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts amounts.Amounts, d *ast.Day) error {
 	for _, v := range d.Values {
 		if !accounts.IsOpen(v.Account) {
-			return nil, Error{v, "account is not open"}
+			return Error{v, "account is not open"}
 		}
 		valAcc := pr.Context.ValuationAccountFor(v.Account)
 		p := ast.PostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amts.Amount(amounts.AccountCommodityKey(v.Account, v.Commodity))), []*journal.Commodity{v.Commodity})
 		amts.Add(amounts.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
 		amts.Add(amounts.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
-		transactions = append(transactions, ast.TransactionBuilder{
+		d.Transactions = append(d.Transactions, ast.TransactionBuilder{
 			Date:        v.Date,
 			Description: fmt.Sprintf("Valuation adjustment for %v in %v", v.Commodity, v.Account),
 			Postings:    []ast.Posting{p},
 		}.Build())
 	}
-	return transactions, nil
+	compare.Sort(d.Transactions, ast.CompareTransactions)
+	return nil
 }
 
 func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, amts amounts.Amounts, d *ast.Day) error {

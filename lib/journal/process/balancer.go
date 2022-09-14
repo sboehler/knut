@@ -140,5 +140,5 @@ func (oa accounts) Close(a *journal.Account) error {
 
 // IsOpen returns whether an account is open.
 func (oa accounts) IsOpen(a *journal.Account) bool {
-	return oa[a] || a.Type() == journal.EQUITY
+	return oa[a]
 }

@@ -122,10 +122,10 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err := journalSource.Load(ctx); err != nil {
 		return err
 	}
-	dates := date.CreatePartition(r.from.ValueOr(journalSource.Min()), r.to.ValueOr(date.Today()), r.interval.Value(), r.last)
 	var (
-		rep = report.NewReport(jctx)
-		f   = filter.Combine(
+		dates = date.CreatePartition(r.from.ValueOr(journalSource.Min()), r.to.ValueOr(date.Today()), r.interval.Value(), r.last)
+		rep   = report.NewReport(jctx)
+		f     = filter.Combine(
 			amounts.FilterDates(dates[len(dates)-1]),
 			amounts.FilterAccount(r.accounts.Value()),
 			amounts.FilterCommodity(r.commodities.Value()),

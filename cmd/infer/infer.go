@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 
 	"github.com/natefinch/atomic"
 	"github.com/spf13/cobra"
@@ -88,16 +87,19 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	if err != nil {
 		return err
 	}
-	var buf bytes.Buffer
 	if r.inplace {
+		var buf bytes.Buffer
 		if err := r.writeTo(directives, targetFile, &buf); err != nil {
 			return err
 		}
 		return atomic.WriteFile(targetFile, &buf)
+	} else {
+		out := bufio.NewWriter(cmd.OutOrStdout())
+		if err := r.writeTo(directives, targetFile, out); err != nil {
+			return err
+		}
+		return out.Flush()
 	}
-	out := bufio.NewWriter(cmd.OutOrStdout())
-	defer out.Flush()
-	return r.writeTo(directives, targetFile, out)
 }
 
 func train(ctx context.Context, jctx journal.Context, file string, exclude *journal.Account) (*bayes.Model, error) {
@@ -145,19 +147,6 @@ func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model 
 			directives = append(directives, d)
 		}
 	}
-}
-
-func (r *runner) writeToTmp(directives []ast.Directive, targetFile string) (string, error) {
-	tmpfile, err := os.CreateTemp(path.Dir(targetFile), "infer-")
-	if err != nil {
-		return "", err
-	}
-	defer tmpfile.Close()
-
-	var dest = bufio.NewWriter(tmpfile)
-	defer dest.Flush()
-
-	return tmpfile.Name(), r.writeTo(directives, targetFile, dest)
 }
 
 func (r *runner) writeTo(directives []ast.Directive, targetFile string, out io.Writer) error {

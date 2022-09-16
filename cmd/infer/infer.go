@@ -16,6 +16,7 @@ package infer
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -76,8 +77,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 		account    *journal.Account
 		err        error
 	)
-	tbd, _ := jctx.GetAccount("Expenses:TBD")
-	if account, err = r.account.ValueWithDefault(jctx, tbd); err != nil {
+	if account, err = r.account.ValueWithDefault(jctx, jctx.Account("Expenses:TBD")); err != nil {
 		return err
 	}
 	model, err := train(cmd.Context(), jctx, r.trainingFile, account)
@@ -88,12 +88,12 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	if err != nil {
 		return err
 	}
+	var buf bytes.Buffer
 	if r.inplace {
-		tmpFile, err := r.writeToTmp(directives, targetFile)
-		if err != nil {
+		if err := r.writeTo(directives, targetFile, &buf); err != nil {
 			return err
 		}
-		return atomic.ReplaceFile(tmpFile, targetFile)
+		return atomic.WriteFile(targetFile, &buf)
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()

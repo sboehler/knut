@@ -31,33 +31,32 @@ type RecursiveParser struct {
 	File    string
 	Context journal.Context
 
-	errCh chan error
-	resCh chan ast.Directive
-
 	wg *errgroup.Group
 }
 
 // Parse parses the journal at the path, and branches out for include files
 func (rp *RecursiveParser) Parse(ctx context.Context) (<-chan ast.Directive, <-chan error) {
-	rp.resCh = make(chan ast.Directive, 1000)
-	rp.errCh = make((chan error))
+	resCh := make(chan ast.Directive, 1000)
+	errCh := make(chan error)
 
 	rp.wg, ctx = errgroup.WithContext(ctx)
 
-	rp.wg.Go(func() error { return rp.parseRecursively(ctx, rp.File) })
+	rp.wg.Go(func() error {
+		return rp.parseRecursively(ctx, resCh, rp.File)
+	})
 
 	// Parse and eventually close input channel
 	go func() {
-		defer close(rp.resCh)
-		defer close(rp.errCh)
+		defer close(resCh)
+		defer close(errCh)
 		if err := rp.wg.Wait(); err != nil {
-			cpr.Push(ctx, rp.errCh, err)
+			cpr.Push(ctx, errCh, err)
 		}
 	}()
-	return rp.resCh, rp.errCh
+	return resCh, errCh
 }
 
-func (rp *RecursiveParser) parseRecursively(ctx context.Context, file string) error {
+func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- ast.Directive, file string) error {
 	p, cls, err := FromPath(rp.Context, file)
 	if err != nil {
 		return err
@@ -75,10 +74,10 @@ func (rp *RecursiveParser) parseRecursively(ctx context.Context, file string) er
 		switch t := d.(type) {
 		case *ast.Include:
 			rp.wg.Go(func() error {
-				return rp.parseRecursively(ctx, path.Join(filepath.Dir(file), t.Path))
+				return rp.parseRecursively(ctx, resCh, path.Join(filepath.Dir(file), t.Path))
 			})
 		default:
-			if err := cpr.Push(ctx, rp.resCh, d); err != nil {
+			if err := cpr.Push(ctx, resCh, d); err != nil {
 				return err
 			}
 		}

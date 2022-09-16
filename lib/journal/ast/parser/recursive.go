@@ -19,11 +19,11 @@ import (
 	"io"
 	"path"
 	"path/filepath"
+	"sync"
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
-	"golang.org/x/sync/errgroup"
 )
 
 // RecursiveParser parses a file hierarchy recursively.
@@ -31,7 +31,7 @@ type RecursiveParser struct {
 	File    string
 	Context journal.Context
 
-	wg *errgroup.Group
+	wg sync.WaitGroup
 }
 
 // Parse parses the journal at the path, and branches out for include files
@@ -39,24 +39,25 @@ func (rp *RecursiveParser) Parse(ctx context.Context) (<-chan ast.Directive, <-c
 	resCh := make(chan ast.Directive, 1000)
 	errCh := make(chan error)
 
-	rp.wg, ctx = errgroup.WithContext(ctx)
-
-	rp.wg.Go(func() error {
-		return rp.parseRecursively(ctx, resCh, rp.File)
-	})
+	rp.wg.Add(1)
+	go func() {
+		defer rp.wg.Done()
+		err := rp.parseRecursively(ctx, resCh, errCh, rp.File)
+		if err != nil && ctx.Err() == nil {
+			cpr.Push(ctx, errCh, err)
+		}
+	}()
 
 	// Parse and eventually close input channel
 	go func() {
 		defer close(resCh)
 		defer close(errCh)
-		if err := rp.wg.Wait(); err != nil {
-			cpr.Push(ctx, errCh, err)
-		}
+		rp.wg.Wait()
 	}()
 	return resCh, errCh
 }
 
-func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- ast.Directive, file string) error {
+func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- ast.Directive, errCh chan<- error, file string) error {
 	p, cls, err := FromPath(rp.Context, file)
 	if err != nil {
 		return err
@@ -73,9 +74,14 @@ func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- as
 		}
 		switch t := d.(type) {
 		case *ast.Include:
-			rp.wg.Go(func() error {
-				return rp.parseRecursively(ctx, resCh, path.Join(filepath.Dir(file), t.Path))
-			})
+			rp.wg.Add(1)
+			go func() {
+				defer rp.wg.Done()
+				err := rp.parseRecursively(ctx, resCh, errCh, path.Join(filepath.Dir(file), t.Path))
+				if err != nil && ctx.Err() == nil {
+					cpr.Push(ctx, errCh, err)
+				}
+			}()
 		default:
 			if err := cpr.Push(ctx, resCh, d); err != nil {
 				return err

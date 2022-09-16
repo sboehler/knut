@@ -12,6 +12,7 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"go.uber.org/multierr"
 )
 
 // JournalSource emits journal data in daily batches.
@@ -32,10 +33,12 @@ func (js *JournalSource) Load(ctx context.Context) error {
 		File:    js.Path,
 	}
 	ch, errCh := p.Parse(ctx)
+	var errs error
 	for {
 		d, ok, err := cpr.Get(ch, errCh)
 		if err != nil {
-			return err
+			errs = multierr.Append(errs, err)
+			continue
 		}
 		if !ok {
 			break
@@ -67,10 +70,10 @@ func (js *JournalSource) Load(ctx context.Context) error {
 			js.ast.AddClose(t)
 
 		default:
-			return fmt.Errorf("unknown: %#v", t)
+			errs = multierr.Append(errs, fmt.Errorf("unknown: %#v", t))
 		}
 	}
-	return nil
+	return errs
 }
 
 func (js JournalSource) Min() time.Time {

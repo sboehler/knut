@@ -83,7 +83,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 	}
 
 	if err := r.execute(cmd, args); err != nil {
-		fmt.Fprintln(cmd.ErrOrStderr(), err)
+		fmt.Fprintf(cmd.ErrOrStderr(), "%+v\n", err)
 		os.Exit(1)
 	}
 }

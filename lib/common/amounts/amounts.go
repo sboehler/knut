@@ -223,6 +223,12 @@ func FilterDates(t time.Time) filter.Filter[Key] {
 	}
 }
 
+func FilterDatesBetween(t0, t1 time.Time) filter.Filter[Key] {
+	return func(k Key) bool {
+		return !(k.Date.Before(t0) || k.Date.After(t1))
+	}
+}
+
 func FilterCommodity(rx []*regexp.Regexp) filter.Filter[Key] {
 	if len(rx) == 0 {
 		return filter.AllowAll[Key]

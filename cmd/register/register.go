@@ -61,6 +61,7 @@ type runner struct {
 	last                          int
 	interval                      flags.IntervalFlags
 	showCommodities               bool
+	showSource                    bool
 	showDescriptions              bool
 	mapping                       flags.MappingFlag
 	remap                         flags.RegexFlag
@@ -95,14 +96,15 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().Var(&r.to, "to", "to date")
 	c.Flags().IntVar(&r.last, "last", 0, "last n periods")
 	r.interval.Setup(c, date.Daily)
-	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
-	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "s", false, "Show commodities on their own rows")
-	c.Flags().BoolVarP(&r.showDescriptions, "show-descriptions", "d", false, "Show descriptions on their own rows")
+	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "s", false, "Sort accounts alphabetically")
+	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "c", false, "Show commodities")
+	c.Flags().BoolVarP(&r.showDescriptions, "show-descriptions", "d", false, "Show descriptions")
+	c.Flags().BoolVarP(&r.showSource, "show-source", "a", false, "Show the source accounts")
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	c.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
 	c.Flags().VarP(&r.remap, "remap", "r", "<regex>")
-	c.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
-	c.Flags().Var(&r.others, "other", "filter other accounts with a regex")
+	c.Flags().Var(&r.accounts, "source", "filter source accounts with a regex")
+	c.Flags().Var(&r.others, "dest", "filter dest accounts with a regex")
 	c.Flags().Var(&r.commodities, "commodity", "filter commodities with a regex")
 	c.Flags().Int32Var(&r.digits, "digits", 0, "round to number of digits")
 	c.Flags().BoolVarP(&r.thousands, "thousands", "k", false, "show numbers in units of 1000")
@@ -128,21 +130,24 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err := journalSource.Load(ctx); err != nil {
 		return err
 	}
+	var am mapper.Mapper[*journal.Account]
+	if r.showSource {
+		am = journal.RemapAccount(jctx, r.remap.Value())
+	}
 	var (
-		dates = date.CreatePartition(r.from.ValueOr(journalSource.Min()), r.to.ValueOr(date.Today()), r.interval.Value(), r.last)
+		from  = r.from.ValueOr(journalSource.Min())
+		to    = r.to.ValueOr(date.Today())
+		dates = date.CreatePartition(from, to, r.interval.Value(), r.last)
 		rep   = register.NewReport(jctx)
 		f     = filter.And(
-			amounts.FilterDates(dates[len(dates)-1]),
+			amounts.FilterDatesBetween(from, to),
 			amounts.FilterAccount(r.accounts.Value()),
 			amounts.FilterOther(r.others.Value()),
 			amounts.FilterCommodity(r.commodities.Value()),
 		)
 		m = amounts.KeyMapper{
-			Date: date.Map(dates),
-			Account: mapper.Combine(
-				journal.RemapAccount(jctx, r.remap.Value()),
-				mapper.Nil[*journal.Account],
-			),
+			Date:    date.Map(dates),
+			Account: am,
 			Other: mapper.Combine(
 				journal.RemapAccount(jctx, r.remap.Value()),
 				journal.ShortenAccount(jctx, r.mapping.Value()),
@@ -154,6 +159,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		reportRenderer = register.Renderer{
 			ShowCommodities:    r.showCommodities,
 			ShowDescriptions:   r.showDescriptions,
+			ShowSource:         r.showSource,
 			SortAlphabetically: r.sortAlphabetically,
 		}
 		tableRenderer = table.TextRenderer{

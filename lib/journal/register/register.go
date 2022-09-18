@@ -42,6 +42,7 @@ func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
 
 type Renderer struct {
 	ShowCommodities    bool
+	ShowSource         bool
 	ShowDescriptions   bool
 	SortAlphabetically bool
 }
@@ -51,18 +52,23 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	if rn.ShowCommodities {
 		cols = append(cols, 1)
 	}
+	if rn.ShowSource {
+		cols = append(cols, 1)
+	}
 	if rn.ShowDescriptions {
 		cols = append(cols, 1)
 	}
 	tbl := table.New(cols...)
 	tbl.AddSeparatorRow()
-	header := tbl.AddRow().
-		AddText("Date", table.Center).
-		AddText("Account", table.Center)
+	header := tbl.AddRow().AddText("Date", table.Center)
+	if rn.ShowSource {
+		header.AddText("Source", table.Center)
+	}
+	header.AddText("Dest", table.Center)
+	header.AddText("Amount", table.Center)
 	if rn.ShowCommodities {
 		header.AddText("Comm", table.Center)
 	}
-	header.AddText("Amount", table.Center)
 	if rn.ShowDescriptions {
 		header.AddText("Desc", table.Center)
 	}
@@ -73,7 +79,6 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 		n := r.nodes[d]
 		rn.renderNode(tbl, n)
 	}
-	tbl.AddSeparatorRow()
 	return tbl
 }
 
@@ -92,11 +97,14 @@ func (rn *Renderer) renderNode(tbl *table.Table, n *Node) {
 		} else {
 			row.AddEmpty()
 		}
+		if rn.ShowSource {
+			row.AddText(k.Account.Name(), table.Left)
+		}
 		row.AddText(k.Other.Name(), table.Left)
+		row.AddNumber(n.Amounts[k].Neg())
 		if rn.ShowCommodities {
 			row.AddText(k.Commodity.Name(), table.Left)
 		}
-		row.AddNumber(n.Amounts[k].Neg())
 		if rn.ShowDescriptions {
 			desc := k.Description
 			if len(desc) > 100 {

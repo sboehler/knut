@@ -104,17 +104,19 @@ func (rf *RegexFlag) Value() regex.Regexes {
 
 // IntervalFlags manages multiple flags to determine a time period.
 type IntervalFlags struct {
+	def   date.Interval
 	flags [6]bool
 }
 
 // Setup configures the flags.
-func (pf *IntervalFlags) Setup(cmd *cobra.Command) {
+func (pf *IntervalFlags) Setup(cmd *cobra.Command, def date.Interval) {
 	cmd.Flags().BoolVar(&pf.flags[date.Daily], "days", false, "days")
 	cmd.Flags().BoolVar(&pf.flags[date.Weekly], "weeks", false, "weeks")
 	cmd.Flags().BoolVar(&pf.flags[date.Monthly], "months", false, "months")
 	cmd.Flags().BoolVar(&pf.flags[date.Quarterly], "quarters", false, "quarters")
 	cmd.Flags().BoolVar(&pf.flags[date.Yearly], "years", false, "years")
 	cmd.MarkFlagsMutuallyExclusive("days", "weeks", "months", "quarters", "years")
+	pf.def = def
 
 }
 
@@ -125,7 +127,7 @@ func (pf IntervalFlags) Value() date.Interval {
 			return date.Interval(i)
 		}
 	}
-	return date.Once
+	return pf.def
 }
 
 // MappingFlag manages a flag of type -c1,<regex>.

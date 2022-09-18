@@ -20,10 +20,10 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
-	"time"
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/amounts"
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/table"
@@ -57,9 +57,9 @@ type runner struct {
 	cpuprofile string
 
 	// transformations
-	// from, to              flags.DateFlag
-	// last                  int
-	// interval              flags.IntervalFlags
+	from, to              flags.DateFlag
+	last                  int
+	interval              flags.IntervalFlags
 	showCommodities       bool
 	mapping               flags.MappingFlag
 	remap                 flags.RegexFlag
@@ -90,13 +90,12 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 
 func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
-	// c.Flags().Var(&r.from, "from", "from date")
-	// c.Flags().Var(&r.to, "to", "to date")
-	// c.Flags().IntVar(&r.last, "last", 0, "last n periods")
-	// c.Flags().BoolVarP(&r.diff, "diff", "d", false, "diff")
+	c.Flags().Var(&r.from, "from", "from date")
+	c.Flags().Var(&r.to, "to", "to date")
+	c.Flags().IntVar(&r.last, "last", 0, "last n periods")
+	r.interval.Setup(c, date.Daily)
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "s", false, "Show commodities on their own rows")
-	// r.interval.Setup(c)
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	c.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
 	c.Flags().VarP(&r.remap, "remap", "r", "<regex>")
@@ -127,13 +126,15 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	var (
-		rep = register.NewReport(jctx)
-		f   = filter.Combine(
+		dates = date.CreatePartition(r.from.ValueOr(journalSource.Min()), r.to.ValueOr(date.Today()), r.interval.Value(), r.last)
+		rep   = register.NewReport(jctx)
+		f     = filter.Combine(
+			amounts.FilterDates(dates[len(dates)-1]),
 			amounts.FilterAccount(r.accounts.Value()),
 			amounts.FilterCommodity(r.commodities.Value()),
 		)
 		m = amounts.KeyMapper{
-			Date: mapper.Identity[time.Time],
+			Date: date.Map(dates),
 			Account: mapper.Combine(
 				journal.RemapAccount(jctx, r.remap.Value()),
 				mapper.Nil[*journal.Account],

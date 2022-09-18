@@ -98,7 +98,11 @@ func (rn *Renderer) renderNode(tbl *table.Table, n *Node) {
 		}
 		row.AddNumber(n.Amounts[k].Neg())
 		if rn.ShowDescriptions {
-			row.AddText(k.Description, table.Left)
+			desc := k.Description
+			if len(desc) > 100 {
+				desc = desc[:100]
+			}
+			row.AddText(desc, table.Left)
 		}
 	}
 	tbl.AddSeparatorRow()

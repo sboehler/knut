@@ -228,12 +228,22 @@ func FilterCommodity(rx []*regexp.Regexp) filter.Filter[Key] {
 	}
 }
 
-func FilterAccount(r []*regexp.Regexp) filter.Filter[Key] {
+func FilterAccountOrOther(r []*regexp.Regexp) filter.Filter[Key] {
 	if r == nil {
 		return filter.AllowAll[Key]
 	}
 	f := filter.ByName[*journal.Account](r)
 	return func(k Key) bool {
 		return f(k.Account) || f(k.Other)
+	}
+}
+
+func FilterAccount(r []*regexp.Regexp) filter.Filter[Key] {
+	if r == nil {
+		return filter.AllowAll[Key]
+	}
+	f := filter.ByName[*journal.Account](r)
+	return func(k Key) bool {
+		return f(k.Account)
 	}
 }

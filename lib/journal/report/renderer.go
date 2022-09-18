@@ -30,8 +30,6 @@ type Renderer struct {
 	SortAlphabetically bool
 	Dates              []time.Time
 	Diff               bool
-
-	table *table.Table
 }
 
 // Render renders a report.
@@ -39,62 +37,63 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	if !rn.SortAlphabetically {
 		r.ComputeWeights()
 	}
+	var tbl *table.Table
 	if rn.ShowCommodities {
-		rn.table = table.New(1, 1, len(rn.Dates))
+		tbl = table.New(1, 1, len(rn.Dates))
 	} else {
-		rn.table = table.New(1, len(rn.Dates))
+		tbl = table.New(1, len(rn.Dates))
 	}
-	rn.table.AddSeparatorRow()
-	header := rn.table.AddRow().AddText("Account", table.Center)
+	tbl.AddSeparatorRow()
+	header := tbl.AddRow().AddText("Account", table.Center)
 	if rn.ShowCommodities {
 		header.AddText("Comm", table.Center)
 	}
 	for _, d := range rn.Dates {
 		header.AddText(d.Format("2006-01-02"), table.Center)
 	}
-	rn.table.AddSeparatorRow()
+	tbl.AddSeparatorRow()
 
 	totalAL, totalEIE := r.Totals()
 
 	for _, n := range r.AL.Children() {
-		rn.renderNode(0, n)
-		rn.table.AddEmptyRow()
+		rn.renderNode(tbl, 0, n)
+		tbl.AddEmptyRow()
 	}
-	rn.render(0, "Total (A+L)", false, totalAL)
-	rn.table.AddSeparatorRow()
+	rn.render(tbl, 0, "Total (A+L)", false, totalAL)
+	tbl.AddSeparatorRow()
 	for _, n := range r.EIE.Children() {
-		rn.renderNode(0, n)
-		rn.table.AddEmptyRow()
+		rn.renderNode(tbl, 0, n)
+		tbl.AddEmptyRow()
 	}
-	rn.render(0, "Total (E+I+E)", true, totalEIE)
-	rn.table.AddSeparatorRow()
+	rn.render(tbl, 0, "Total (E+I+E)", true, totalEIE)
+	tbl.AddSeparatorRow()
 	totalAL.Plus(totalEIE)
-	rn.render(0, "Delta", false, totalAL)
-	rn.table.AddSeparatorRow()
+	rn.render(tbl, 0, "Delta", false, totalAL)
+	tbl.AddSeparatorRow()
 
-	return rn.table
+	return tbl
 }
 
-func (rn *Renderer) renderNode(indent int, n *Node) {
+func (rn *Renderer) renderNode(t *table.Table, indent int, n *Node) {
 	if n.Account != nil {
 		vals := n.Amounts.SumBy(nil, amounts.KeyMapper{
 			Date:      mapper.Identity[time.Time],
 			Commodity: mapper.Identity[*journal.Commodity],
 		}.Build())
-		rn.render(indent, n.Account.Segment(), !n.Account.IsAL(), vals)
+		rn.render(t, indent, n.Account.Segment(), !n.Account.IsAL(), vals)
 	}
 	for _, ch := range n.Children() {
-		rn.renderNode(indent+2, ch)
+		rn.renderNode(t, indent+2, ch)
 	}
 }
 
-func (rn *Renderer) render(indent int, name string, neg bool, vals amounts.Amounts) {
+func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, vals amounts.Amounts) {
 	if len(vals) == 0 {
-		rn.table.AddRow().AddIndented(name, indent).FillEmpty()
+		t.AddRow().AddIndented(name, indent).FillEmpty()
 		return
 	}
 	for i, c := range vals.CommoditiesSorted() {
-		row := rn.table.AddRow()
+		row := t.AddRow()
 		if i == 0 {
 			row.AddIndented(name, indent)
 		} else {

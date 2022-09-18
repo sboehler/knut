@@ -6,7 +6,7 @@ import (
 
 type Filter[T any] func(T) bool
 
-func Combine[T any](fs ...Filter[T]) Filter[T] {
+func And[T any](fs ...Filter[T]) Filter[T] {
 	return func(t T) bool {
 		for _, f := range fs {
 			if !f(t) {

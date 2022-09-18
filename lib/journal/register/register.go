@@ -42,16 +42,19 @@ func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
 
 type Renderer struct {
 	ShowCommodities    bool
+	ShowDescriptions   bool
 	SortAlphabetically bool
 }
 
 func (rn *Renderer) Render(r *Report) *table.Table {
-	var tbl *table.Table
+	cols := []int{1, 1, 1}
 	if rn.ShowCommodities {
-		tbl = table.New(1, 1, 1, 1)
-	} else {
-		tbl = table.New(1, 1, 1)
+		cols = append(cols, 1)
 	}
+	if rn.ShowDescriptions {
+		cols = append(cols, 1)
+	}
+	tbl := table.New(cols...)
 	tbl.AddSeparatorRow()
 	header := tbl.AddRow().
 		AddText("Date", table.Center).
@@ -60,6 +63,9 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 		header.AddText("Comm", table.Center)
 	}
 	header.AddText("Amount", table.Center)
+	if rn.ShowDescriptions {
+		header.AddText("Desc", table.Center)
+	}
 	tbl.AddSeparatorRow()
 
 	dates := dict.SortedKeys(r.nodes, compare.Time)
@@ -91,8 +97,11 @@ func (rn *Renderer) renderNode(tbl *table.Table, n *Node) {
 			row.AddText(k.Commodity.Name(), table.Left)
 		}
 		row.AddNumber(n.Amounts[k].Neg())
+		if rn.ShowDescriptions {
+			row.AddText(k.Description, table.Left)
+		}
 	}
-	tbl.AddEmptyRow()
+	tbl.AddSeparatorRow()
 }
 
 func compareAccount(k1, k2 amounts.Key) compare.Order {

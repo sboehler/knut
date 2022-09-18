@@ -131,7 +131,10 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		rep   = report.NewReport(jctx)
 		f     = filter.Combine(
 			amounts.FilterDates(dates[len(dates)-1]),
-			amounts.FilterAccountOrOther(r.accounts.Value()),
+			filter.Or(
+				amounts.FilterAccount(r.accounts.Value()),
+				amounts.FilterOther(r.accounts.Value()),
+			),
 			amounts.FilterCommodity(r.commodities.Value()),
 		)
 		m = amounts.KeyMapper{

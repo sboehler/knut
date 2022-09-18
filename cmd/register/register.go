@@ -57,14 +57,15 @@ type runner struct {
 	cpuprofile string
 
 	// transformations
-	from, to              flags.DateFlag
-	last                  int
-	interval              flags.IntervalFlags
-	showCommodities       bool
-	mapping               flags.MappingFlag
-	remap                 flags.RegexFlag
-	valuation             flags.CommodityFlag
-	accounts, commodities flags.RegexFlag
+	from, to                      flags.DateFlag
+	last                          int
+	interval                      flags.IntervalFlags
+	showCommodities               bool
+	showDescriptions              bool
+	mapping                       flags.MappingFlag
+	remap                         flags.RegexFlag
+	valuation                     flags.CommodityFlag
+	accounts, others, commodities flags.RegexFlag
 
 	// formatting
 	thousands, color   bool
@@ -96,10 +97,12 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	r.interval.Setup(c, date.Daily)
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "s", false, "Show commodities on their own rows")
+	c.Flags().BoolVarP(&r.showDescriptions, "show-descriptions", "d", false, "Show descriptions on their own rows")
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	c.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
 	c.Flags().VarP(&r.remap, "remap", "r", "<regex>")
 	c.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
+	c.Flags().Var(&r.others, "other", "filter other accounts with a regex")
 	c.Flags().Var(&r.commodities, "commodity", "filter commodities with a regex")
 	c.Flags().Int32Var(&r.digits, "digits", 0, "round to number of digits")
 	c.Flags().BoolVarP(&r.thousands, "thousands", "k", false, "show numbers in units of 1000")
@@ -131,6 +134,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		f     = filter.Combine(
 			amounts.FilterDates(dates[len(dates)-1]),
 			amounts.FilterAccount(r.accounts.Value()),
+			amounts.FilterOther(r.others.Value()),
 			amounts.FilterCommodity(r.commodities.Value()),
 		)
 		m = amounts.KeyMapper{
@@ -143,11 +147,13 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				journal.RemapAccount(jctx, r.remap.Value()),
 				journal.ShortenAccount(jctx, r.mapping.Value()),
 			),
-			Commodity: journal.MapCommodity(r.showCommodities),
-			Valuation: journal.MapCommodity(valuation != nil),
+			Commodity:   journal.MapCommodity(r.showCommodities),
+			Valuation:   journal.MapCommodity(valuation != nil),
+			Description: mapper.If[string](r.showDescriptions),
 		}.Build()
 		reportRenderer = register.Renderer{
 			ShowCommodities:    r.showCommodities,
+			ShowDescriptions:   r.showDescriptions,
 			SortAlphabetically: r.sortAlphabetically,
 		}
 		tableRenderer = table.TextRenderer{

@@ -30,3 +30,14 @@ func ByName[T Named](rxs regex.Regexes) Filter[T] {
 		return rxs.MatchString(t.Name())
 	}
 }
+
+func Or[T any](fs ...Filter[T]) Filter[T] {
+	return func(t T) bool {
+		for _, f := range fs {
+			if f(t) {
+				return true
+			}
+		}
+		return false
+	}
+}

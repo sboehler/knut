@@ -18,3 +18,13 @@ func Combine[T any](ms ...Mapper[T]) Mapper[T] {
 		return t
 	}
 }
+
+func If[T any](p bool) Mapper[T] {
+	if p {
+		return Identity[T]
+	}
+	var z T
+	return func(_ T) T {
+		return z
+	}
+}

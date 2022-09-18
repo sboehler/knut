@@ -18,6 +18,7 @@ type Key struct {
 	Account, Other *journal.Account
 	Commodity      *journal.Commodity
 	Valuation      *journal.Commodity
+	Description    string
 }
 
 func DateKey(d time.Time) Key {
@@ -188,6 +189,7 @@ type KeyMapper struct {
 	Date                 func(time.Time) time.Time
 	Account, Other       func(*journal.Account) *journal.Account
 	Commodity, Valuation func(*journal.Commodity) *journal.Commodity
+	Description          func(string) string
 }
 
 func (km KeyMapper) Build() mapper.Mapper[Key] {
@@ -207,6 +209,9 @@ func (km KeyMapper) Build() mapper.Mapper[Key] {
 		}
 		if km.Valuation != nil {
 			res.Valuation = km.Valuation(k.Valuation)
+		}
+		if km.Description != nil {
+			res.Description = km.Description(k.Description)
 		}
 		return res
 	}
@@ -228,16 +233,6 @@ func FilterCommodity(rx []*regexp.Regexp) filter.Filter[Key] {
 	}
 }
 
-func FilterAccountOrOther(r []*regexp.Regexp) filter.Filter[Key] {
-	if r == nil {
-		return filter.AllowAll[Key]
-	}
-	f := filter.ByName[*journal.Account](r)
-	return func(k Key) bool {
-		return f(k.Account) || f(k.Other)
-	}
-}
-
 func FilterAccount(r []*regexp.Regexp) filter.Filter[Key] {
 	if r == nil {
 		return filter.AllowAll[Key]
@@ -245,5 +240,15 @@ func FilterAccount(r []*regexp.Regexp) filter.Filter[Key] {
 	f := filter.ByName[*journal.Account](r)
 	return func(k Key) bool {
 		return f(k.Account)
+	}
+}
+
+func FilterOther(r []*regexp.Regexp) filter.Filter[Key] {
+	if r == nil {
+		return filter.AllowAll[Key]
+	}
+	f := filter.ByName[*journal.Account](r)
+	return func(k Key) bool {
+		return f(k.Other)
 	}
 }

@@ -40,22 +40,24 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 					amt = b.Value
 				}
 				kc := amounts.Key{
-					Date:      t.Date,
-					Account:   b.Credit,
-					Other:     b.Debit,
-					Commodity: b.Commodity,
-					Valuation: agg.Valuation,
+					Date:        t.Date,
+					Account:     b.Credit,
+					Other:       b.Debit,
+					Commodity:   b.Commodity,
+					Valuation:   agg.Valuation,
+					Description: t.Description,
 				}
 				if agg.Filter(kc) {
 					kc = agg.Mapper(kc)
 					agg.Collection.Insert(kc, amt.Neg())
 				}
 				kd := amounts.Key{
-					Date:      t.Date,
-					Account:   b.Debit,
-					Other:     b.Credit,
-					Commodity: b.Commodity,
-					Valuation: agg.Valuation,
+					Date:        t.Date,
+					Account:     b.Debit,
+					Other:       b.Credit,
+					Commodity:   b.Commodity,
+					Valuation:   agg.Valuation,
+					Description: t.Description,
 				}
 				if agg.Filter(kd) {
 					kd = agg.Mapper(kd)

@@ -72,12 +72,13 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 }
 
 func (rn *Renderer) renderNode(tbl *table.Table, n *Node) {
-	idx := n.Amounts.Index(func(k1, k2 amounts.Key) compare.Order {
-		if c := journal.CompareAccounts(k1.Other, k2.Other); c != compare.Equal {
-			return c
-		}
-		return journal.CompareCommodities(k1.Commodity, k2.Commodity)
-	})
+	var cmp compare.Compare[amounts.Key]
+	if rn.ShowCommodities {
+		cmp = compareAccountAndCommodities
+	} else {
+		cmp = compareAccount
+	}
+	idx := n.Amounts.Index(cmp)
 	for i, k := range idx {
 		row := tbl.AddRow()
 		if i == 0 {
@@ -89,7 +90,18 @@ func (rn *Renderer) renderNode(tbl *table.Table, n *Node) {
 		if rn.ShowCommodities {
 			row.AddText(k.Commodity.Name(), table.Left)
 		}
-		row.AddNumber(n.Amounts[k])
+		row.AddNumber(n.Amounts[k].Neg())
 	}
 	tbl.AddEmptyRow()
+}
+
+func compareAccount(k1, k2 amounts.Key) compare.Order {
+	return journal.CompareAccounts(k1.Other, k2.Other)
+}
+
+func compareAccountAndCommodities(k1, k2 amounts.Key) compare.Order {
+	if c := journal.CompareAccounts(k1.Other, k2.Other); c != compare.Equal {
+		return c
+	}
+	return journal.CompareCommodities(k1.Commodity, k2.Commodity)
 }

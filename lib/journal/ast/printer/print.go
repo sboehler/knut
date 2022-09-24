@@ -75,8 +75,7 @@ func (p Printer) printTransaction(w io.Writer, t *ast.Transaction) (n int, err e
 			return n, err
 		}
 	}
-	c, err = io.WriteString(w, "\n")
-	n += c
+	err = p.newline(w, &n)
 	if err != nil {
 		return n, err
 	}
@@ -86,8 +85,7 @@ func (p Printer) printTransaction(w io.Writer, t *ast.Transaction) (n int, err e
 		if err != nil {
 			return n, err
 		}
-		c, err = io.WriteString(w, "\n")
-		n += c
+		err = p.newline(w, &n)
 		if err != nil {
 			return n, err
 		}
@@ -192,8 +190,18 @@ func (p *Printer) PrintLedger(w io.Writer, l []*ast.Day) (int, error) {
 				return n, err
 			}
 		}
+		if len(day.Prices) > 0 {
+			if err := p.newline(w, &n); err != nil {
+				return n, err
+			}
+		}
 		for _, o := range day.Openings {
 			if err := p.writeLn(w, o, &n); err != nil {
+				return n, err
+			}
+		}
+		if len(day.Openings) > 0 {
+			if err := p.newline(w, &n); err != nil {
 				return n, err
 			}
 		}
@@ -207,13 +215,28 @@ func (p *Printer) PrintLedger(w io.Writer, l []*ast.Day) (int, error) {
 				return n, err
 			}
 		}
+		if len(day.Values) > 0 {
+			if err := p.newline(w, &n); err != nil {
+				return n, err
+			}
+		}
 		for _, a := range day.Assertions {
 			if err := p.writeLn(w, a, &n); err != nil {
 				return n, err
 			}
 		}
+		if len(day.Assertions) > 0 {
+			if err := p.newline(w, &n); err != nil {
+				return n, err
+			}
+		}
 		for _, c := range day.Closings {
 			if err := p.writeLn(w, c, &n); err != nil {
+				return n, err
+			}
+		}
+		if len(day.Closings) > 0 {
+			if err := p.newline(w, &n); err != nil {
 				return n, err
 			}
 		}
@@ -249,12 +272,13 @@ func (p Printer) writeLn(w io.Writer, d ast.Directive, count *int) error {
 	if err != nil {
 		return err
 	}
-	c, err = io.WriteString(w, "\n")
+	return p.newline(w, count)
+}
+
+func (p Printer) newline(w io.Writer, count *int) error {
+	c, err := io.WriteString(w, "\n")
 	*count += c
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (p Printer) rightPad(a *journal.Account) string {

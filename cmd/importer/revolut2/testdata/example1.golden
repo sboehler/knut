@@ -1,0 +1,80 @@
+2020-07-02 "a"
+Assets:Accounts:Revolut Expenses:Fees                    1 CHF
+Assets:Accounts:Revolut Expenses:TBD                 16.95 CHF
+
+2020-07-02 balance Assets:Accounts:Revolut 779.65 CHF
+
+2020-07-03 "b"
+Assets:Accounts:Revolut Expenses:TBD                     6 CHF
+
+2020-07-03 "b"
+Assets:Accounts:Revolut Expenses:TBD                  31.8 CHF
+
+2020-07-03 "c"
+Assets:Accounts:Revolut Expenses:TBD                     3 CHF
+
+2020-07-03 balance Assets:Accounts:Revolut 738.85 CHF
+
+2020-07-07 "d"
+Assets:Accounts:Revolut Expenses:TBD                 17.95 CHF
+
+2020-07-07 "e"
+Assets:Accounts:Revolut Expenses:TBD                 39.51 CHF
+
+2020-07-07 balance Assets:Accounts:Revolut 681.39 CHF
+
+2020-07-08 "d"
+Assets:Accounts:Revolut Expenses:TBD                  35.9 CHF
+
+2020-07-08 balance Assets:Accounts:Revolut 645.49 CHF
+
+2020-07-13 "f"
+Assets:Accounts:Revolut Expenses:TBD                  35.9 CHF
+
+2020-07-13 balance Assets:Accounts:Revolut 609.59 CHF
+
+2020-07-19 "g"
+Assets:Accounts:Revolut Expenses:TBD                 11.85 CHF
+
+2020-07-19 balance Assets:Accounts:Revolut 597.74 CHF
+
+2020-07-23 "b"
+Assets:Accounts:Revolut Expenses:TBD                     5 CHF
+
+2020-07-23 "h"
+Assets:Accounts:Revolut Expenses:TBD                  43.9 CHF
+
+2020-07-23 balance Assets:Accounts:Revolut 548.84 CHF
+
+2020-07-27 "i"
+Assets:Accounts:Revolut Expenses:TBD                  19.9 CHF
+
+2020-07-27 "j"
+Assets:Accounts:Revolut Expenses:TBD                   4.6 CHF
+
+2020-07-27 balance Assets:Accounts:Revolut 524.34 CHF
+
+2020-07-31 "k"
+Assets:Accounts:Revolut Expenses:TBD                  35.9 CHF
+
+2020-07-31 balance Assets:Accounts:Revolut 488.44 CHF
+
+2020-08-04 "b"
+Assets:Accounts:Revolut Expenses:TBD                     5 CHF
+
+2020-08-04 "l"
+Expenses:TBD            Assets:Accounts:Revolut       2000 CHF
+
+2020-08-04 "m"
+Assets:Accounts:Revolut Expenses:TBD                     1 CHF
+
+2020-08-04 "n"
+Assets:Accounts:Revolut Expenses:TBD                 95.96 CHF
+
+2020-08-04 balance Assets:Accounts:Revolut 2386.48 CHF
+
+2020-08-05 "o"
+Assets:Accounts:Revolut Expenses:TBD               1293.25 CHF
+
+2020-08-05 balance Assets:Accounts:Revolut 1093.23 CHF
+

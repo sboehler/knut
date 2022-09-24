@@ -25,6 +25,7 @@ import (
 	_ "github.com/sboehler/knut/cmd/importer/interactivebrokers"
 	_ "github.com/sboehler/knut/cmd/importer/postfinance"
 	_ "github.com/sboehler/knut/cmd/importer/revolut"
+	_ "github.com/sboehler/knut/cmd/importer/revolut2"
 	_ "github.com/sboehler/knut/cmd/importer/supercard"
 	_ "github.com/sboehler/knut/cmd/importer/swisscard"
 	_ "github.com/sboehler/knut/cmd/importer/swissquote"

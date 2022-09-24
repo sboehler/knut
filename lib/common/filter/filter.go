@@ -41,3 +41,9 @@ func Or[T any](fs ...Filter[T]) Filter[T] {
 		return false
 	}
 }
+
+func Not[T any](f Filter[T]) Filter[T] {
+	return func(t T) bool {
+		return !f(t)
+	}
+}

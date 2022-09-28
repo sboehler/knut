@@ -154,6 +154,9 @@ func (p *parser) parseBooking() error {
 	if err != nil {
 		return err
 	}
+	if r[bfCompletedDate] == "" {
+		return nil
+	}
 	d, err := time.Parse("2006-01-02", r[bfCompletedDate][:10])
 	if err != nil {
 		return fmt.Errorf("invalid started date in row %v: %w", r, err)

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package knut.Service;
+
+option go_package = "github.com/sboehler/knut/server/proto/service_go_proto";
+
+service KnutService {
+
+    rpc Hello(HelloRequest) returns (HelloResponse) {}
+
+}
+
+message HelloRequest {
+    string name = 1;
+}
+
+message HelloResponse {
+    string greeting = 1;
+}

@@ -6,3 +6,4 @@ builddoc
 *.sqlite3
 coverage.out
 .vscode
+*.pb.go

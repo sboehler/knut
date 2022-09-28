@@ -10,12 +10,21 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
+      with:
+        version: '3.x'
+    - name: Installing protoc-gen-go
+      run: |
+        go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+        go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
     - name: Install Go
       uses: actions/setup-go@v2
       with:
-        stable: false
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
       uses: actions/checkout@v2
+    - name: Generate code
+      run: go generate ./...
     - name: Test
       run: go test ./...

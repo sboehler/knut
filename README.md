@@ -7,20 +7,20 @@
 knut is a plain-text, double-entry accounting tool for the command line. It produces various reports based on simple accounting directives in a [text file](#file-format). knut is written in Go, and its primary use cases are personal finance and investing.
 
 ```text
-$ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 doc/example.knut
+$ knut balance --color=false -v CHF --months --from 2020-01-01 --to 2020-04-01 doc/example.knut
 +---------------+------------+------------+------------+------------+
-|    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
+|    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-01 |
 +---------------+------------+------------+------------+------------+
 | Assets        |            |            |            |            |
-|   BankAccount |     11,800 |     14,127 |     14,127 |     14,127 |
-|   Portfolio   |      1,025 |        919 |        856 |        984 |
+|   BankAccount |      1,800 |      4,127 |      4,127 |      4,127 |
+|   Portfolio   |      1,025 |        919 |        856 |        819 |
 |               |            |            |            |            |
-| Total         |     12,825 |     15,046 |     14,983 |     15,111 |
+| Total (A+L)   |      2,825 |      5,046 |      4,983 |      4,946 |
 +---------------+------------+------------+------------+------------+
 | Equity        |            |            |            |            |
-|   Equity      |     10,003 |     10,003 |     10,003 |     10,003 |
 |   Valuation   |            |            |            |            |
-|     Portfolio |         26 |        -80 |       -143 |        -15 |
+|     Portfolio |         26 |        -80 |       -143 |       -180 |
+|   Equity      |          3 |          3 |          3 |          3 |
 |               |            |            |            |            |
 | Income        |            |            |            |            |
 |   Salary      |      5,000 |     10,000 |     10,000 |     10,000 |
@@ -30,7 +30,7 @@ $ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 doc/example.knu
 |   Groceries   |       -200 |       -873 |       -873 |       -873 |
 |   Fees        |         -4 |         -4 |         -4 |         -4 |
 |               |            |            |            |            |
-| Total         |     12,825 |     15,046 |     14,983 |     15,111 |
+| Total (E+I+E) |      2,825 |      5,046 |      4,983 |      4,946 |
 +---------------+------------+------------+------------+------------+
 | Delta         |            |            |            |            |
 +---------------+------------+------------+------------+------------+
@@ -73,7 +73,6 @@ Usage:
   knut [command]
 
 Available Commands:
-  balance     create a balance sheet
   benchmark   various subcommands to benchmark knut
   completion  output shell completion code [bash|zsh]
   fetch       Fetch quotes from Yahoo! Finance
@@ -81,6 +80,7 @@ Available Commands:
   help        Help about any command
   import      Import financial account statements
   infer       Auto-assign accounts in a journal
+  sort        sort the given files
   transcode   transcode to beancount
 
 Flags:
@@ -101,48 +101,41 @@ Without additional options, knut will print a balance with counts of the various
 commodities per account.
 
 ```text
-$ knut balance doc/example.knut --to 2020-04-01
-+---------------+------------+
-|    Account    | 2020-04-01 |
-+---------------+------------+
-| Assets        |            |
-|   BankAccount |            |
-|     CHF       |     14,127 |
-|   Portfolio   |            |
-|     AAPL      |         12 |
-|     CHF       |         31 |
-|     USD       |         97 |
-|               |            |
-| Total         |            |
-|   AAPL        |         12 |
-|   CHF         |     14,158 |
-|   USD         |         97 |
-+---------------+------------+
-| Equity        |            |
-|   Equity      |            |
-|     AAPL      |         12 |
-|     CHF       |      9,031 |
-|     USD       |        101 |
-|               |            |
-| Income        |            |
-|   Salary      |            |
-|     CHF       |     10,000 |
-|               |            |
-| Expenses      |            |
-|   Rent        |            |
-|     CHF       |     -4,000 |
-|   Groceries   |            |
-|     CHF       |       -873 |
-|   Fees        |            |
-|     USD       |         -4 |
-|               |            |
-| Total         |            |
-|   AAPL        |         12 |
-|   CHF         |     14,158 |
-|   USD         |         97 |
-+---------------+------------+
-| Delta         |            |
-+---------------+------------+
+$ knut balance --color=false doc/example.knut --to 2020-04-01
++---------------+------+------------+
+|    Account    | Comm | 2020-04-01 |
++---------------+------+------------+
+| Assets        |      |            |
+|   BankAccount | CHF  |     14,127 |
+|   Portfolio   | AAPL |         12 |
+|               | CHF  |         31 |
+|               | USD  |         97 |
+|               |      |            |
+| Total (A+L)   | AAPL |         12 |
+|               | CHF  |     14,158 |
+|               | USD  |         97 |
++---------------+------+------------+
+| Equity        |      |            |
+|   Equity      | AAPL |         12 |
+|               | CHF  |      9,031 |
+|               | USD  |        101 |
+|               |      |            |
+| Income        |      |            |
+|   Salary      | CHF  |     10,000 |
+|               |      |            |
+| Expenses      |      |            |
+|   Fees        | USD  |         -4 |
+|   Groceries   | CHF  |       -873 |
+|   Rent        | CHF  |     -4,000 |
+|               |      |            |
+| Total (E+I+E) | AAPL |         12 |
+|               | CHF  |     14,158 |
+|               | USD  |         97 |
++---------------+------+------------+
+| Delta         | AAPL |            |
+|               | CHF  |            |
+|               | USD  |            |
++---------------+------+------------+
 
 
 ```
@@ -152,20 +145,20 @@ $ knut balance doc/example.knut --to 2020-04-01
 If prices are available, knut can valuate the balance in any of the available commodities. And the result is guaranteed to balance:
 
 ```text
-$ knut balance -v CHF --months --to 2020-04-01 doc/example.knut
+$ knut balance --color=false -v CHF --months --to 2020-04-01 doc/example.knut
 +---------------+------------+------------+------------+------------+------------+
-|    Account    | 2019-12-31 | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
+|    Account    | 2019-12-31 | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-01 |
 +---------------+------------+------------+------------+------------+------------+
 | Assets        |            |            |            |            |            |
 |   BankAccount |     10,000 |     11,800 |     14,127 |     14,127 |     14,127 |
-|   Portfolio   |            |      1,025 |        919 |        856 |        984 |
+|   Portfolio   |            |      1,025 |        919 |        856 |        819 |
 |               |            |            |            |            |            |
-| Total         |     10,000 |     12,825 |     15,046 |     14,983 |     15,111 |
+| Total (A+L)   |     10,000 |     12,825 |     15,046 |     14,983 |     14,946 |
 +---------------+------------+------------+------------+------------+------------+
 | Equity        |            |            |            |            |            |
 |   Equity      |     10,000 |     10,003 |     10,003 |     10,003 |     10,003 |
 |   Valuation   |            |            |            |            |            |
-|     Portfolio |            |         26 |        -80 |       -143 |        -15 |
+|     Portfolio |            |         26 |        -80 |       -143 |       -180 |
 |               |            |            |            |            |            |
 | Income        |            |            |            |            |            |
 |   Salary      |            |      5,000 |     10,000 |     10,000 |     10,000 |
@@ -175,7 +168,7 @@ $ knut balance -v CHF --months --to 2020-04-01 doc/example.knut
 |   Groceries   |            |       -200 |       -873 |       -873 |       -873 |
 |   Fees        |            |         -4 |         -4 |         -4 |         -4 |
 |               |            |            |            |            |            |
-| Total         |     10,000 |     12,825 |     15,046 |     14,983 |     15,111 |
+| Total (E+I+E) |     10,000 |     12,825 |     15,046 |     14,983 |     14,946 |
 +---------------+------------+------------+------------+------------+------------+
 | Delta         |            |            |            |            |            |
 +---------------+------------+------------+------------+------------+------------+
@@ -186,21 +179,21 @@ $ knut balance -v CHF --months --to 2020-04-01 doc/example.knut
 It balances in any currency:
 
 ```text
-$ knut balance -v USD --months --to 2020-04-01 doc/example.knut
+$ knut balance --color=false -v USD --months --to 2020-04-01 doc/example.knut
 +-----------------+------------+------------+------------+------------+------------+
-|     Account     | 2019-12-31 | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
+|     Account     | 2019-12-31 | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-01 |
 +-----------------+------------+------------+------------+------------+------------+
 | Assets          |            |            |            |            |            |
-|   BankAccount   |     10,324 |     12,172 |     14,583 |     14,716 |     14,506 |
-|   Portfolio     |            |      1,058 |        949 |        892 |      1,010 |
+|   BankAccount   |     10,324 |     12,172 |     14,583 |     14,716 |     14,693 |
+|   Portfolio     |            |      1,058 |        949 |        892 |        852 |
 |                 |            |            |            |            |            |
-| Total           |     10,324 |     13,230 |     15,532 |     15,608 |     15,516 |
+| Total (A+L)     |     10,324 |     13,230 |     15,532 |     15,608 |     15,544 |
 +-----------------+------------+------------+------------+------------+------------+
 | Equity          |            |            |            |            |            |
 |   Equity        |     10,324 |     10,327 |     10,327 |     10,327 |     10,327 |
 |   Valuation     |            |            |            |            |            |
-|     BankAccount |            |         -5 |         55 |        188 |        -22 |
-|     Portfolio   |            |         29 |        -80 |       -136 |        -18 |
+|     Portfolio   |            |         29 |        -80 |       -136 |       -177 |
+|     BankAccount |            |         -5 |         55 |        188 |        165 |
 |                 |            |            |            |            |            |
 | Income          |            |            |            |            |            |
 |   Salary        |            |      5,157 |     10,260 |     10,260 |     10,260 |
@@ -210,7 +203,7 @@ $ knut balance -v USD --months --to 2020-04-01 doc/example.knut
 |   Groceries     |            |       -207 |       -896 |       -896 |       -896 |
 |   Fees          |            |         -4 |         -4 |         -4 |         -4 |
 |                 |            |            |            |            |            |
-| Total           |     10,324 |     13,230 |     15,532 |     15,608 |     15,516 |
+| Total (E+I+E)   |     10,324 |     13,230 |     15,532 |     15,608 |     15,544 |
 +-----------------+------------+------------+------------+------------+------------+
 | Delta           |            |            |            |            |            |
 +-----------------+------------+------------+------------+------------+------------+
@@ -223,25 +216,25 @@ $ knut balance -v USD --months --to 2020-04-01 doc/example.knut
 Use `--diff` to look into period differences. Use `--account` to filter for transactions affecting a single account, or `--commodity` to filter for transactions which affect a commodity. Both `--account` and `--commodity` take regular expressions, to select multiple matches.
 
 ```text
-$ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff --account Portfolio doc/example.knut
+$ knut balance --color=false -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff --account Portfolio doc/example.knut
 +---------------+------------+------------+------------+------------+
-|    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
+|    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-01 |
 +---------------+------------+------------+------------+------------+
 | Assets        |            |            |            |            |
 |   BankAccount |     -1,000 |            |            |            |
-|   Portfolio   |      1,025 |       -106 |        -63 |        127 |
+|   Portfolio   |      1,025 |       -106 |        -63 |        -37 |
 |               |            |            |            |            |
-| Total         |         25 |       -106 |        -63 |        127 |
+| Total (A+L)   |         25 |       -106 |        -63 |        -37 |
 +---------------+------------+------------+------------+------------+
 | Equity        |            |            |            |            |
 |   Valuation   |            |            |            |            |
-|     Portfolio |         26 |       -106 |        -63 |        127 |
+|     Portfolio |         26 |       -106 |        -63 |        -37 |
 |   Equity      |          3 |            |            |            |
 |               |            |            |            |            |
 | Expenses      |            |            |            |            |
 |   Fees        |         -4 |            |            |            |
 |               |            |            |            |            |
-| Total         |         25 |       -106 |        -63 |        127 |
+| Total (E+I+E) |         25 |       -106 |        -63 |        -37 |
 +---------------+------------+------------+------------+------------+
 | Delta         |            |            |            |            |
 +---------------+------------+------------+------------+------------+
@@ -250,21 +243,21 @@ $ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff --accoun
 ```
 
 ```text
-$ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff --commodity AAPL doc/example.knut
+$ knut balance --color=false -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff --commodity AAPL doc/example.knut
 +---------------+------------+------------+------------+------------+
-|    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
+|    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-01 |
 +---------------+------------+------------+------------+------------+
 | Assets        |            |            |            |            |
-|   Portfolio   |        900 |       -106 |        -62 |        126 |
+|   Portfolio   |        900 |       -106 |        -62 |        -37 |
 |               |            |            |            |            |
-| Total         |        900 |       -106 |        -62 |        126 |
+| Total (A+L)   |        900 |       -106 |        -62 |        -37 |
 +---------------+------------+------------+------------+------------+
 | Equity        |            |            |            |            |
 |   Equity      |        874 |            |            |            |
 |   Valuation   |            |            |            |            |
-|     Portfolio |         26 |       -106 |        -62 |        126 |
+|     Portfolio |         26 |       -106 |        -62 |        -37 |
 |               |            |            |            |            |
-| Total         |        900 |       -106 |        -62 |        126 |
+| Total (E+I+E) |        900 |       -106 |        -62 |        -37 |
 +---------------+------------+------------+------------+------------+
 | Delta         |            |            |            |            |
 +---------------+------------+------------+------------+------------+
@@ -277,22 +270,22 @@ $ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff --commod
 Use `-m` to map accounts matching a certain regex to a reduced number of segments. This can be used to completely hide an account (`-m0` - its positions will show up in the delta):
 
 ```text
-$ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff -m0,(Income|Expenses) doc/example.knut
+$ knut balance --color=false -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff -m0,(Income|Expenses) doc/example.knut
 +---------------+------------+------------+------------+------------+
-|    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
+|    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-01 |
 +---------------+------------+------------+------------+------------+
 | Assets        |            |            |            |            |
-|   BankAccount |     11,800 |      2,327 |            |            |
-|   Portfolio   |      1,025 |       -106 |        -63 |        127 |
+|   BankAccount |      1,800 |      2,327 |            |            |
+|   Portfolio   |      1,025 |       -106 |        -63 |        -37 |
 |               |            |            |            |            |
-| Total         |     12,825 |      2,221 |        -63 |        127 |
+| Total (A+L)   |      2,825 |      2,221 |        -63 |        -37 |
 +---------------+------------+------------+------------+------------+
 | Equity        |            |            |            |            |
-|   Equity      |     10,003 |            |            |            |
 |   Valuation   |            |            |            |            |
-|     Portfolio |         26 |       -106 |        -63 |        127 |
+|     Portfolio |         26 |       -106 |        -63 |        -37 |
+|   Equity      |          3 |            |            |            |
 |               |            |            |            |            |
-| Total         |     10,029 |       -106 |        -63 |        127 |
+| Total (E+I+E) |         29 |       -106 |        -63 |        -37 |
 +---------------+------------+------------+------------+------------+
 | Delta         |      2,796 |      2,327 |            |            |
 +---------------+------------+------------+------------+------------+
@@ -303,23 +296,23 @@ $ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff -m0,(Inc
 Alternatively, with a number > 0, subaccounts will be aggregated:
 
 ```text
-$ knut balance -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff -m1,(Income|Expenses|Equity) doc/example.knut
+$ knut balance --color=false -v CHF --months --from 2020-01-01 --to 2020-04-01 --diff -m1,(Income|Expenses|Equity) doc/example.knut
 +---------------+------------+------------+------------+------------+
-|    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-30 |
+|    Account    | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-01 |
 +---------------+------------+------------+------------+------------+
 | Assets        |            |            |            |            |
-|   BankAccount |     11,800 |      2,327 |            |            |
-|   Portfolio   |      1,025 |       -106 |        -63 |        127 |
+|   BankAccount |      1,800 |      2,327 |            |            |
+|   Portfolio   |      1,025 |       -106 |        -63 |        -37 |
 |               |            |            |            |            |
-| Total         |     12,825 |      2,221 |        -63 |        127 |
+| Total (A+L)   |      2,825 |      2,221 |        -63 |        -37 |
 +---------------+------------+------------+------------+------------+
-| Equity        |     10,029 |       -106 |        -63 |        127 |
+| Equity        |         29 |       -106 |        -63 |        -37 |
 |               |            |            |            |            |
 | Income        |      5,000 |      5,000 |            |            |
 |               |            |            |            |            |
 | Expenses      |     -2,204 |     -2,673 |            |            |
 |               |            |            |            |            |
-| Total         |     12,825 |      2,221 |        -63 |        127 |
+| Total (E+I+E) |      2,825 |      2,221 |        -63 |        -37 |
 +---------------+------------+------------+------------+------------+
 | Delta         |            |            |            |            |
 +---------------+------------+------------+------------+------------+
@@ -380,10 +373,12 @@ Usage:
 Available Commands:
   ch.cumulus            Import Cumulus credit card statements
   ch.postfinance        Import Postfinance CSV account statements
+  ch.supercard          Import Supercard credit card statements
   ch.swisscard          Import Swisscard credit card statements
   ch.swissquote         Import Swissquote account reports
   ch.viac               Import VIAC values from JSON files
   revolut               Import Revolut CSV account statements
+  revolut2              Import Revolut CSV account statements
   us.interactivebrokers Import Interactive Brokers account reports
 
 Flags:

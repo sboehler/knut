@@ -45,7 +45,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) {
-	if err := server.Test(cmd.OutOrStdout()); err != nil {
+	if err := server.Run(); err != nil {
 		fmt.Fprintf(cmd.ErrOrStderr(), "%+v\n", err)
 		os.Exit(1)
 	}

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package knut.Service;
+package knut.service;
 
 option go_package = "github.com/sboehler/knut/server/proto/service_go_proto";
 

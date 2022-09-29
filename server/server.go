@@ -3,12 +3,13 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
-	"net"
+	"net/http"
 
-	pb "github.com/sboehler/knut/server/proto"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+
+	pb "github.com/sboehler/knut/server/proto"
 )
 
 // Test with:
@@ -16,15 +17,22 @@ import (
 
 // Run runs the GRPC server.
 func Run() error {
-	lis, err := net.Listen("tcp", "localhost:7777")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterKnutServiceServer(grpcServer, new(Server))
 	reflection.Register(grpcServer)
-	return grpcServer.Serve(lis)
+
+	wrappedGrpc := grpcweb.WrapServer(grpcServer)
+	f := http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		if wrappedGrpc.IsGrpcWebRequest(req) {
+			wrappedGrpc.ServeHTTP(resp, req)
+			return
+		}
+		// Fall back to other servers.
+		http.DefaultServeMux.ServeHTTP(resp, req)
+	})
+
+	return http.ListenAndServe("localhost:7777", f)
 }
 
 type Server struct {

@@ -49,7 +49,6 @@ clean:
 	rm -f ./knut
 
 knut: $(protogen) web/build
-	go generate ./...
 	go build
 
 fe: proto web/node_modules

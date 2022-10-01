@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	pb "github.com/sboehler/knut/server/proto"
+	"github.com/sboehler/knut/web"
 )
 
 // Test with:
@@ -21,17 +22,18 @@ func Run() error {
 	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterKnutServiceServer(grpcServer, new(Server))
 	reflection.Register(grpcServer)
-
+	assets, err := web.Files()
+	if err != nil {
+		return fmt.Errorf("web.Files(): %w", err)
+	}
 	wrappedGrpc := grpcweb.WrapServer(grpcServer)
 	f := http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if wrappedGrpc.IsGrpcWebRequest(req) {
 			wrappedGrpc.ServeHTTP(resp, req)
 			return
 		}
-		// Fall back to other servers.
-		http.DefaultServeMux.ServeHTTP(resp, req)
+		assets.ServeHTTP(resp, req)
 	})
-
 	return http.ListenAndServe("localhost:7777", f)
 }
 

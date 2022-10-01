@@ -24,14 +24,12 @@ func Run() error {
 
 	wrappedGrpc := grpcweb.WrapServer(grpcServer)
 	f := http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-		resp.Header().Set("Access-Control-Allow-Origin", "*")
-		resp.Header().Set("Access-Control-Allow-Headers", "*")
 		if wrappedGrpc.IsGrpcWebRequest(req) {
 			wrappedGrpc.ServeHTTP(resp, req)
 			return
 		}
 		// Fall back to other servers.
-		// http.DefaultServeMux.ServeHTTP(resp, req)
+		http.DefaultServeMux.ServeHTTP(resp, req)
 	})
 
 	return http.ListenAndServe("localhost:7777", f)

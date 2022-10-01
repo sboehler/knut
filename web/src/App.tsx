@@ -3,7 +3,8 @@ import { KnutServiceClient } from "./proto/ServiceServiceClientPb";
 import { HelloRequest } from "./proto/service_pb";
 
 // gRPC hello world
-const knutService = new KnutServiceClient("http://localhost:7777");
+const knutService = new KnutServiceClient("");
+
 const req = new HelloRequest().setName("Foobar");
 knutService.hello(req, {}, function (err, response) {
   if (err) {

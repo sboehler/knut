@@ -6,8 +6,5 @@ builddoc
 *.sqlite3
 coverage.out
 .vscode
-server/proto/*.pb.go
-web/src/proto/service_pb.*
-web/src/proto/ServiceServiceClientPb.ts
 node_modules
 web/build

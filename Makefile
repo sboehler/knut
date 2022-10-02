@@ -1,6 +1,6 @@
-all: build
+all: knut
 
-.PHONY: clean test test-update doc web
+.PHONY: clean test test-update doc
 
 doc:
 	go run scripts/builddoc.go > README.md

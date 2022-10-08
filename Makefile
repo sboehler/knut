@@ -1,6 +1,6 @@
 all: knut
 
-.PHONY: clean test test-update doc
+.PHONY: clean test test-update doc install
 
 doc:
 	go run scripts/builddoc.go > README.md
@@ -50,6 +50,9 @@ clean:
 
 knut: $(protogen) web/build
 	go build
+
+install: $(protogen) web/build
+	go install
 
 fe: proto web/node_modules
 	cd web && BROWSER=none npm start

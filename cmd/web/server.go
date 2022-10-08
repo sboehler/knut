@@ -39,13 +39,17 @@ func CreateCmd() *cobra.Command {
 	return c
 }
 
-type runner struct{}
+type runner struct {
+	address string
+}
 
 func (r *runner) setupFlags(c *cobra.Command) {
+	c.Flags().StringVar(&r.address, "listen", "localhost:7777", "<host>[:<port>]")
+
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) {
-	if err := server.Run(); err != nil {
+	if err := server.NewServer(r.address); err != nil {
 		fmt.Fprintf(cmd.ErrOrStderr(), "%+v\n", err)
 		os.Exit(1)
 	}

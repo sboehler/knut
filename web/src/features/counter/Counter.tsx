@@ -45,7 +45,7 @@ const greeting = selector({
   key: "greeting",
   get: async ({ get }) => {
     const req = new HelloRequest().setName(get(name));
-    const res = await knutService.hello(req, {})
+    const res = await knutService.hello(req, {});
     return res.getGreeting();
   },
 });

@@ -92,28 +92,26 @@ func (calc *Calculator) computeFlows(day *ast.Day) *ast.Performance {
 			// transaction should be split: non-currencies > currencies > valuation currency.
 			tgts := calc.pickTargets(pst.Targets)
 
-			switch otherAccount.Type() {
-
-			case journal.INCOME, journal.EXPENSES, journal.EQUITY:
-				if tgts == nil {
-					// no effect: regular flow into or out of the portfolio
-					get(&flows)[pst.Commodity] += value
-				} else if len(tgts) == 0 {
-					// performance effect on portfolio, not allocated to a specific commodity
-					get(&internalFlows)[pst.Commodity] += value
-					portfolioFlows -= value
-				} else if len(tgts) > 1 || len(tgts) == 1 && tgts[0] != pst.Commodity {
-					// effect on multiple commodities: re-allocate the flows among the target commodities
-					l := float64(len(tgts))
-					intf := get(&internalFlows)
-					for _, com := range tgts {
-						intf[com] -= value / l
-					}
-					intf[pst.Commodity] += value
-				}
-
-			case journal.ASSETS, journal.LIABILITIES:
+			if otherAccount.IsAL() || tgts == nil {
+				// no effect: regular flow into or out of the portfolio
 				get(&flows)[pst.Commodity] += value
+				continue
+			}
+			if len(tgts) == 1 && tgts[0] == pst.Commodity {
+				// performance effect on native commodity
+				continue
+			}
+			intf := get(&internalFlows)
+			intf[pst.Commodity] += value
+			if len(tgts) == 0 {
+				// performance effect on portfolio, not allocated to a specific commodity
+				portfolioFlows -= value
+			} else {
+				// effect on multiple commodities: re-allocate the flows among the target commodities
+				l := float64(len(tgts))
+				for _, com := range tgts {
+					intf[com] -= value / l
+				}
 			}
 		}
 

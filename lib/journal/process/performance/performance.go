@@ -90,7 +90,7 @@ func (calc *Calculator) computeFlows(day *ast.Day) *ast.Performance {
 
 			// tgts contains the commodities among which the performance effects of this
 			// transaction should be split: non-currencies > currencies > valuation currency.
-			tgts := calc.determineStructure(pst.Targets)
+			tgts := calc.pickTargets(pst.Targets)
 
 			switch otherAccount.Type() {
 
@@ -147,7 +147,7 @@ func get(m *pcv) pcv {
 	return *m
 }
 
-func (calc Calculator) determineStructure(tgts []*journal.Commodity) []*journal.Commodity {
+func (calc Calculator) pickTargets(tgts []*journal.Commodity) []*journal.Commodity {
 	if len(tgts) == 0 {
 		return tgts
 	}

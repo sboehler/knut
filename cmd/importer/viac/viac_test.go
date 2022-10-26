@@ -33,8 +33,8 @@ func TestGolden(t *testing.T) {
 		t.Run(test, func(t *testing.T) {
 			t.Parallel()
 			var args = []string{
-				"--account",
-				"Assets:VIAC",
+				"--commodity",
+				"VIAC1",
 				path.Join("testdata", fmt.Sprintf("%s.input", test)),
 			}
 

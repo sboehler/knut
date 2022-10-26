@@ -17,7 +17,7 @@ package viac
 import (
 	"bufio"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -52,33 +52,33 @@ func init() {
 
 func (r *runner) setupFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(&r.from, "from", "f", "YYYY-MM-DD - ignore entries before this date")
-	cmd.Flags().VarP(&r.account, "account", "a", "account name")
+	cmd.Flags().VarP(&r.commodity, "commodity", "a", "target commodity name")
 }
 
 type runner struct {
-	from    flags.DateFlag
-	account flags.AccountFlag
+	from      flags.DateFlag
+	commodity flags.CommodityFlag
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx     = journal.NewContext()
-		f       *bufio.Reader
-		account *journal.Account
-		err     error
+		ctx       = journal.NewContext()
+		f         *bufio.Reader
+		commodity *journal.Commodity
+		err       error
 	)
 
-	if account, err = r.account.Value(ctx); err != nil {
+	if commodity, err = r.commodity.Value(ctx); err != nil {
 		return err
 	}
-	commodity, err := ctx.GetCommodity("CHF")
+	tgt, err := ctx.GetCommodity("CHF")
 	if err != nil {
 		return err
 	}
 	if f, err = flags.OpenFile(args[0]); err != nil {
 		return err
 	}
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	if err != nil {
 		return err
 	}
@@ -98,11 +98,11 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		builder.AddValue(&ast.Value{
+		builder.AddPrice(&ast.Price{
 			Date:      d,
-			Account:   account,
-			Amount:    a.Round(2),
 			Commodity: commodity,
+			Target:    tgt,
+			Price:     a.Round(2),
 		})
 	}
 

@@ -1,9 +1,9 @@
-Datum;Auftrag #;Transaktionen;Symbol;Name;ISIN;Anzahl;Stückpreis;Kosten;Aufgelaufene Zinsen;Nettobetrag;Saldo;Währung
+Datum;Auftrag #;Transaktionen;Symbol;Name;ISIN;Anzahl;StÃ¼ckpreis;Kosten;Aufgelaufene Zinsen;Nettobetrag;Saldo;WÃ¤hrung
 09-10-2020 12:17:42;76396333;Kauf;VWRL;Vanguard All World ETF Dist;IE00B3RBWM25;8.0;87.60;12.90;0.00;-713.70;85.12;CHF
 09-10-2020 12:13:40;00000000;Forex-Gutschrift;;;;1.0;830.07;0.00;0.00;830.07;798.82;CHF
 09-10-2020 12:13:40;00000000;Forex-Belastung;;;;1.0;918.00;0.00;0.00;-918.00;0.80;USD
 09-10-2020 07:02:32;00000000;Dividende;VWRL;Vanguard All World ETF Dist;IE00B3RBWM25;1.0;23.80;0.00;0.00;23.80;23.80;USD
-30-09-2020 12:18:46;00000000;Depotgebühren;;;;1.0;42.27;3.25;0.00;-45.52;-31.25;CHF
+30-09-2020 12:18:46;00000000;DepotgebÃ¼hren;;;;1.0;42.27;3.25;0.00;-45.52;-31.25;CHF
 30-12-2017 13:19:07;00000000;Zins;;;;1.0;0.19;0.00;0.00;0.19;418.08;USD
 05-05-2015 09:05:02;00000000;Capital Gain;SYM;NAME;CH00XX;1.0;82.00;0.00;0.00;82.00;3'441.70;CHF
 27-05-2020 07:02:56;00000000;Einzahlung;;;;1.0;3'656.89;0.00;0.00;3'656.89;3'656.88;USD

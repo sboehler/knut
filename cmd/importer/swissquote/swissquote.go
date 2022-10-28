@@ -24,7 +24,6 @@ import (
 
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
-	"golang.org/x/text/encoding/charmap"
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
@@ -81,7 +80,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	var p = parser{
-		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)),
+		reader:  csv.NewReader(f),
 		builder: ast.New(ctx),
 	}
 	if p.account, err = r.account.Value(ctx); err != nil {

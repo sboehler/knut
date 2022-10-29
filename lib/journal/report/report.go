@@ -36,7 +36,7 @@ func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
 	n, ok := r.cache[k.Account]
 	if !ok {
 		ancestors := r.Context.Accounts().Ancestors(k.Account)
-		if k.Account.Type() == journal.ASSETS || k.Account.Type() == journal.LIABILITIES {
+		if k.Account.IsAL() {
 			n = r.AL.Leaf(ancestors)
 		} else {
 			n = r.EIE.Leaf(ancestors)

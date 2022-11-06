@@ -51,8 +51,7 @@ func (m *Model) Update(t *journal.Transaction) {
 			m.total++
 			m.totalByAccount[acc]++
 			for token := range tokenize(t.Description, &p, acc) {
-				tc := dict.GetDefault(m.totalByTokenAndAccount, token, newCountByAccount)
-				tc[acc]++
+				dict.GetDefault(m.totalByTokenAndAccount, token, newCountByAccount)[acc]++
 			}
 		}
 	}

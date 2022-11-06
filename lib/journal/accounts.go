@@ -242,10 +242,7 @@ func (as *Accounts) Get(name string) (*Account, error) {
 				level:       i + 1,
 			}
 			as.parents[acc] = parent
-			ch := dict.GetDefault(as.children, parent, func() set.Set[*Account] {
-				return set.New[*Account]()
-			})
-			ch.Add(acc)
+			dict.GetDefault(as.children, parent, set.New[*Account]).Add(acc)
 			return acc
 		})
 	}

@@ -36,8 +36,7 @@ func (p Prices) Insert(commodity *Commodity, price decimal.Decimal, target *Comm
 }
 
 func (pr Prices) addPrice(target, commodity *Commodity, p decimal.Decimal) {
-	i := dict.GetDefault(pr, target, func() NormalizedPrices { return make(NormalizedPrices) })
-	i[commodity] = p
+	dict.GetDefault(pr, target, NewNormalizedPrices)[commodity] = p
 }
 
 // Normalize creates a normalized price map for the given commodity.
@@ -62,6 +61,10 @@ func (pr Prices) normalize(c *Commodity, res NormalizedPrices) {
 // NormalizedPrices is a map representing the price of
 // commodities in some base commodity.
 type NormalizedPrices map[*Commodity]decimal.Decimal
+
+func NewNormalizedPrices() NormalizedPrices {
+	return make(NormalizedPrices)
+}
 
 // Valuate valuates the given amount.
 func (n NormalizedPrices) Valuate(c *Commodity, a decimal.Decimal) (decimal.Decimal, error) {

@@ -110,7 +110,7 @@ func (pr *Balancer) processClosings(ctx context.Context, accounts set.Set[*journ
 			}
 			delete(amounts, pos)
 		}
-		if accounts.Has(c.Account) {
+		if !accounts.Has(c.Account) {
 			return Error{c, "account is not open"}
 		}
 		accounts.Remove(c.Account)

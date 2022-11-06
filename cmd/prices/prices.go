@@ -22,9 +22,8 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/parser"
+	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
 	"github.com/shopspring/decimal"
 	"go.uber.org/multierr"
@@ -124,13 +123,13 @@ func readConfig(path string) ([]config, error) {
 	return t, nil
 }
 
-func readFile(ctx journal.Context, filepath string) (res map[time.Time]*ast.Price, err error) {
+func readFile(ctx journal.Context, filepath string) (res map[time.Time]*journal.Price, err error) {
 	p, cls, err := parser.FromPath(ctx, filepath)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { err = multierr.Append(err, cls()) }()
-	prices := make(map[time.Time]*ast.Price)
+	prices := make(map[time.Time]*journal.Price)
 	for {
 		d, err := p.Next()
 		if err == io.EOF {
@@ -139,7 +138,7 @@ func readFile(ctx journal.Context, filepath string) (res map[time.Time]*ast.Pric
 		if err != nil {
 			return nil, err
 		}
-		if p, ok := d.(*ast.Price); ok {
+		if p, ok := d.(*journal.Price); ok {
 			prices[p.Date] = p
 		} else {
 			return nil, fmt.Errorf("unexpected directive in prices file: %v", d)
@@ -147,7 +146,7 @@ func readFile(ctx journal.Context, filepath string) (res map[time.Time]*ast.Pric
 	}
 }
 
-func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[time.Time]*ast.Price) error {
+func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[time.Time]*journal.Price) error {
 	var (
 		c                 = yahoo.New()
 		quotes            []yahoo.Quote
@@ -164,7 +163,7 @@ func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[
 		return err
 	}
 	for _, i := range quotes {
-		results[i.Date] = &ast.Price{
+		results[i.Date] = &journal.Price{
 			Date:      i.Date,
 			Commodity: commodity,
 			Target:    target,
@@ -174,8 +173,8 @@ func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[
 	return nil
 }
 
-func writeFile(ctx journal.Context, prices map[time.Time]*ast.Price, filepath string) error {
-	var b = ast.New(ctx)
+func writeFile(ctx journal.Context, prices map[time.Time]*journal.Price, filepath string) error {
+	var b = journal.New(ctx)
 	for _, price := range prices {
 		b.AddPrice(price)
 	}

@@ -28,8 +28,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // CreateCmd creates the cobra command.
@@ -69,7 +68,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = Parser{
 		reader: csv.NewReader(reader),
-		ast:    ast.New(ctx),
+		ast:    journal.New(ctx),
 	}
 	if p.account, err = r.accountFlag.Value(ctx); err != nil {
 		return err
@@ -91,7 +90,7 @@ func init() {
 type Parser struct {
 	reader  *csv.Reader
 	account *journal.Account
-	ast     *ast.Journal
+	ast     *journal.Journal
 
 	currency *journal.Commodity
 }
@@ -178,11 +177,11 @@ func (p *Parser) readBookingLine(l []string) error {
 	if amount, err = parseAmount(l); err != nil {
 		return err
 	}
-	p.ast.AddTransaction(ast.TransactionBuilder{
+	p.ast.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: strings.TrimSpace(l[bfAvisierungstext]),
-		Postings: []ast.Posting{
-			ast.NewPosting(p.ast.Context.TBDAccount(), p.account, p.currency, amount),
+		Postings: []journal.Posting{
+			journal.NewPosting(p.ast.Context.TBDAccount(), p.account, p.currency, amount),
 		},
 	}.Build())
 	return nil

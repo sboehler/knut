@@ -26,9 +26,8 @@ import (
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/parser"
+	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // CreateCmd creates the command.
@@ -97,14 +96,14 @@ func sortFile(target string) error {
 	return atomic.WriteFile(target, &buf)
 }
 
-func readDirectives(jctx journal.Context, target string) (*ast.Journal, error) {
+func readDirectives(jctx journal.Context, target string) (*journal.Journal, error) {
 	p, close, err := parser.FromPath(jctx, target)
 	if err != nil {
 		return nil, err
 	}
 	defer close()
 
-	res := ast.New(jctx)
+	res := journal.New(jctx)
 
 	for {
 		d, err := p.Next()
@@ -116,22 +115,22 @@ func readDirectives(jctx journal.Context, target string) (*ast.Journal, error) {
 		}
 		switch t := d.(type) {
 
-		case *ast.Open:
+		case *journal.Open:
 			res.AddOpen(t)
 
-		case *ast.Price:
+		case *journal.Price:
 			res.AddPrice(t)
 
-		case *ast.Transaction:
+		case *journal.Transaction:
 			res.AddTransaction(t)
 
-		case *ast.Assertion:
+		case *journal.Assertion:
 			res.AddAssertion(t)
 
-		case *ast.Value:
+		case *journal.Value:
 			res.AddValue(t)
 
-		case *ast.Close:
+		case *journal.Close:
 			res.AddClose(t)
 
 		default:

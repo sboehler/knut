@@ -29,8 +29,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // CreateCmd creates the command.
@@ -74,7 +73,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = parser{
 		reader:  csv.NewReader(f),
-		builder: ast.New(ctx),
+		builder: journal.New(ctx),
 	}
 	if p.account, err = r.account.Value(ctx); err != nil {
 		return err
@@ -91,7 +90,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 type parser struct {
 	reader  *csv.Reader
 	account *journal.Account
-	builder *ast.Journal
+	builder *journal.Journal
 }
 
 func (p *parser) parse() error {
@@ -152,11 +151,11 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if chf, err = p.builder.Context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        d,
 		Description: desc,
-		Postings: []ast.Posting{
-			ast.NewPosting(p.account, p.builder.Context.TBDAccount(), chf, amt),
+		Postings: []journal.Posting{
+			journal.NewPosting(p.account, p.builder.Context.TBDAccount(), chf, amt),
 		},
 	}.Build())
 	return true, nil

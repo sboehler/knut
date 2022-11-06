@@ -29,8 +29,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // CreateCmd creates the command.
@@ -80,11 +79,11 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		context: ctx,
 		account: account,
 	}
-	var trx []*ast.Transaction
+	var trx []*journal.Transaction
 	if trx, err = p.parse(reader); err != nil {
 		return err
 	}
-	builder := ast.New(ctx)
+	builder := journal.New(ctx)
 	for _, trx := range trx {
 		builder.AddTransaction(trx)
 	}
@@ -100,10 +99,10 @@ type parser struct {
 
 	// internal variables
 	reader       *csv.Reader
-	transactions []ast.TransactionBuilder
+	transactions []journal.TransactionBuilder
 }
 
-func (p *parser) parse(r io.Reader) ([]*ast.Transaction, error) {
+func (p *parser) parse(r io.Reader) ([]*journal.Transaction, error) {
 	p.reader = csv.NewReader(r)
 	p.reader.FieldsPerRecord = -1
 	p.reader.LazyQuotes = true
@@ -116,7 +115,7 @@ func (p *parser) parse(r io.Reader) ([]*ast.Transaction, error) {
 			return nil, err
 		}
 	}
-	var res []*ast.Transaction
+	var res []*journal.Transaction
 	for _, b := range p.transactions {
 		res = append(res, b.Build())
 	}
@@ -176,11 +175,11 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.transactions = append(p.transactions, ast.TransactionBuilder{
+	p.transactions = append(p.transactions, journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []ast.Posting{
-			ast.NewPosting(p.context.TBDAccount(), p.account, chf, amount),
+		Postings: []journal.Posting{
+			journal.NewPosting(p.context.TBDAccount(), p.account, chf, amount),
 		},
 	})
 	return true, nil
@@ -261,11 +260,11 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.transactions = append(p.transactions, ast.TransactionBuilder{
+	p.transactions = append(p.transactions, journal.TransactionBuilder{
 		Date:        date,
 		Description: r[rfBeschreibung],
-		Postings: []ast.Posting{
-			ast.NewPosting(p.context.TBDAccount(), p.account, chf, amount),
+		Postings: []journal.Posting{
+			journal.NewPosting(p.context.TBDAccount(), p.account, chf, amount),
 		},
 	})
 	return true, nil

@@ -28,10 +28,9 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/bayes"
-	"github.com/sboehler/knut/lib/journal/ast/format"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"github.com/sboehler/knut/lib/journal/bayes"
+	"github.com/sboehler/knut/lib/journal/format"
+	"github.com/sboehler/knut/lib/journal/parser"
 )
 
 // CreateCmd creates the command.
@@ -117,20 +116,20 @@ func train(ctx context.Context, jctx journal.Context, file string, exclude *jour
 		if err != nil {
 			return nil, err
 		}
-		if t, ok := d.(*ast.Transaction); ok {
+		if t, ok := d.(*journal.Transaction); ok {
 			m.Update(t)
 		}
 	}
 	return m, nil
 }
 
-func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model *bayes.Model, targetFile string, account *journal.Account) ([]ast.Directive, error) {
+func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model *bayes.Model, targetFile string, account *journal.Account) ([]journal.Directive, error) {
 	p, cls, err := parser.FromPath(jctx, targetFile)
 	if err != nil {
 		return nil, err
 	}
 	defer cls()
-	var directives []ast.Directive
+	var directives []journal.Directive
 	for {
 		d, err := p.Next()
 		if err == io.EOF {
@@ -140,7 +139,7 @@ func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model 
 			return nil, err
 		}
 		switch t := d.(type) {
-		case *ast.Transaction:
+		case *journal.Transaction:
 			model.Infer(t, account)
 			directives = append(directives, t)
 		default:
@@ -149,7 +148,7 @@ func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model 
 	}
 }
 
-func (r *runner) writeTo(directives []ast.Directive, targetFile string, out io.Writer) error {
+func (r *runner) writeTo(directives []journal.Directive, targetFile string, out io.Writer) error {
 	srcFile, err := os.Open(targetFile)
 	if err != nil {
 		return err

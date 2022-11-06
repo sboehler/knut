@@ -23,7 +23,6 @@ import (
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 )
 
 // RecursiveParser parses a file hierarchy recursively.
@@ -35,8 +34,8 @@ type RecursiveParser struct {
 }
 
 // Parse parses the journal at the path, and branches out for include files
-func (rp *RecursiveParser) Parse(ctx context.Context) (<-chan ast.Directive, <-chan error) {
-	resCh := make(chan ast.Directive, 1000)
+func (rp *RecursiveParser) Parse(ctx context.Context) (<-chan journal.Directive, <-chan error) {
+	resCh := make(chan journal.Directive, 1000)
 	errCh := make(chan error)
 
 	rp.wg.Add(1)
@@ -57,7 +56,7 @@ func (rp *RecursiveParser) Parse(ctx context.Context) (<-chan ast.Directive, <-c
 	return resCh, errCh
 }
 
-func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- ast.Directive, errCh chan<- error, file string) error {
+func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- journal.Directive, errCh chan<- error, file string) error {
 	p, cls, err := FromPath(rp.Context, file)
 	if err != nil {
 		return err
@@ -73,7 +72,7 @@ func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- as
 			return err
 		}
 		switch t := d.(type) {
-		case *ast.Include:
+		case *journal.Include:
 			rp.wg.Add(1)
 			go func() {
 				defer rp.wg.Done()

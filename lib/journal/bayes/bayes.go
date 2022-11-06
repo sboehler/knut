@@ -20,7 +20,6 @@ import (
 
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 )
 
 // Model implements a Bayes model for accounts and text tokens derived from transactions.
@@ -42,7 +41,7 @@ func NewModel(exclude *journal.Account) *Model {
 }
 
 // Update updates the model with the given transaction.
-func (m *Model) Update(t *ast.Transaction) {
+func (m *Model) Update(t *journal.Transaction) {
 	for _, p := range t.Postings {
 		if p.Credit != m.exclude {
 			m.total++
@@ -66,7 +65,7 @@ func (m *Model) Update(t *ast.Transaction) {
 
 // Infer replaces the given account with an inferred account.
 // P(A | T1 & T2 & ... & Tn) ~ P(A) * P(T1|A) * P(T2|A) * ... * P(Tn|A)
-func (m *Model) Infer(t *ast.Transaction, tbd *journal.Account) {
+func (m *Model) Infer(t *journal.Transaction, tbd *journal.Account) {
 	def := math.Log(1.0 / float64(m.total))
 	for i := range t.Postings {
 		posting := &t.Postings[i]
@@ -107,7 +106,7 @@ func (m *Model) Infer(t *ast.Transaction, tbd *journal.Account) {
 	}
 }
 
-func tokenize(desc string, posting *ast.Posting, account *journal.Account) map[string]struct{} {
+func tokenize(desc string, posting *journal.Posting, account *journal.Account) map[string]struct{} {
 	tokens := append(strings.Fields(desc), posting.Commodity.Name(), posting.Amount.String())
 	if account == posting.Credit {
 		tokens = append(tokens, "__knut_credit", posting.Debit.Name())

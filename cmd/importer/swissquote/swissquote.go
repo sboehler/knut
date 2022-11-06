@@ -28,8 +28,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // CreateCmd creates the command.
@@ -81,7 +80,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = parser{
 		reader:  csv.NewReader(f),
-		builder: ast.New(ctx),
+		builder: journal.New(ctx),
 	}
 	if p.account, err = r.account.Value(ctx); err != nil {
 		return err
@@ -112,7 +111,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 type parser struct {
 	reader  *csv.Reader
-	builder *ast.Journal
+	builder *journal.Journal
 	last    *record
 
 	account, dividend, tax, fee, interest, trading *journal.Account
@@ -258,13 +257,13 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	if proceeds.IsPositive() {
 		qty = qty.Neg()
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
-		Postings: []ast.Posting{
-			ast.PostingWithTargets(p.trading, p.account, r.symbol, qty, []*journal.Commodity{r.symbol, r.currency}),
-			ast.PostingWithTargets(p.trading, p.account, r.currency, proceeds, []*journal.Commodity{r.symbol, r.currency}),
-			ast.PostingWithTargets(p.fee, p.account, r.currency, fee, []*journal.Commodity{r.symbol, r.currency}),
+		Postings: []journal.Posting{
+			journal.PostingWithTargets(p.trading, p.account, r.symbol, qty, []*journal.Commodity{r.symbol, r.currency}),
+			journal.PostingWithTargets(p.trading, p.account, r.currency, proceeds, []*journal.Commodity{r.symbol, r.currency}),
+			journal.PostingWithTargets(p.fee, p.account, r.currency, fee, []*journal.Commodity{r.symbol, r.currency}),
 		},
 	}.Build())
 	return true, nil
@@ -288,12 +287,12 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		return true, nil
 	}
 	var desc = fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency.Name(), r.trxType, r.netAmount, r.currency.Name())
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
-		Postings: []ast.Posting{
-			ast.PostingWithTargets(p.trading, p.account, p.last.currency, p.last.netAmount, []*journal.Commodity{p.last.currency, r.currency}),
-			ast.PostingWithTargets(p.trading, p.account, r.currency, r.netAmount, []*journal.Commodity{p.last.currency, r.currency}),
+		Postings: []journal.Posting{
+			journal.PostingWithTargets(p.trading, p.account, p.last.currency, p.last.netAmount, []*journal.Commodity{p.last.currency, r.currency}),
+			journal.PostingWithTargets(p.trading, p.account, r.currency, r.netAmount, []*journal.Commodity{p.last.currency, r.currency}),
 		},
 	}.Build())
 	p.last = nil
@@ -309,13 +308,13 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 	if _, ok := w[r.trxType]; !ok {
 		return false, nil
 	}
-	var postings = []ast.Posting{
-		ast.PostingWithTargets(p.dividend, p.account, r.currency, r.price, []*journal.Commodity{r.symbol}),
+	var postings = []journal.Posting{
+		journal.PostingWithTargets(p.dividend, p.account, r.currency, r.price, []*journal.Commodity{r.symbol}),
 	}
 	if !r.fee.IsZero() {
-		postings = append(postings, ast.PostingWithTargets(p.account, p.tax, r.currency, r.fee, []*journal.Commodity{r.symbol}))
+		postings = append(postings, journal.PostingWithTargets(p.account, p.tax, r.currency, r.fee, []*journal.Commodity{r.symbol}))
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol.Name(), r.name, r.isin),
 		Postings:    postings,
@@ -327,11 +326,11 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 	if r.trxType != "Depotgebühren" {
 		return false, nil
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []ast.Posting{
-			ast.PostingWithTargets(p.fee, p.account, r.currency, r.netAmount, make([]*journal.Commodity, 0)),
+		Postings: []journal.Posting{
+			journal.PostingWithTargets(p.fee, p.account, r.currency, r.netAmount, make([]*journal.Commodity, 0)),
 		},
 	}.Build())
 	return true, nil
@@ -347,11 +346,11 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 	if _, ok := w[r.trxType]; !ok {
 		return false, nil
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []ast.Posting{
-			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
+		Postings: []journal.Posting{
+			journal.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
 		},
 	}.Build())
 	return true, nil
@@ -361,22 +360,22 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 	if r.trxType != "Zins" {
 		return false, nil
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []ast.Posting{
-			ast.PostingWithTargets(p.interest, p.account, r.currency, r.netAmount, []*journal.Commodity{r.currency}),
+		Postings: []journal.Posting{
+			journal.PostingWithTargets(p.interest, p.account, r.currency, r.netAmount, []*journal.Commodity{r.currency}),
 		},
 	}.Build())
 	return true, nil
 }
 
 func (p *parser) parseCatchall(r *record) (bool, error) {
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: []ast.Posting{
-			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
+		Postings: []journal.Posting{
+			journal.NewPosting(p.builder.Context.TBDAccount(), p.account, r.currency, r.netAmount),
 		},
 	}.Build())
 	return true, nil

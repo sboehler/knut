@@ -5,7 +5,6 @@ import (
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 )
 
 // PriceUpdater updates the prices in a stream of days.
@@ -14,15 +13,15 @@ type PriceUpdater struct {
 }
 
 // Process computes prices.
-func (pu PriceUpdater) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
+func (pu PriceUpdater) Process(ctx context.Context, inCh <-chan *journal.Day, outCh chan<- *journal.Day) error {
 	if pu.Valuation == nil {
-		return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
+		return cpr.Consume(ctx, inCh, func(d *journal.Day) error {
 			return cpr.Push(ctx, outCh, d)
 		})
 	}
 	var previous journal.NormalizedPrices
 	prc := make(journal.Prices)
-	return cpr.Consume(ctx, inCh, func(day *ast.Day) error {
+	return cpr.Consume(ctx, inCh, func(day *journal.Day) error {
 		if len(day.Prices) == 0 {
 			day.Normalized = previous
 		} else {

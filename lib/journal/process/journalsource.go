@@ -9,8 +9,7 @@ import (
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"github.com/sboehler/knut/lib/journal/parser"
 	"go.uber.org/multierr"
 )
 
@@ -22,11 +21,11 @@ type JournalSource struct {
 	Expand   bool
 	AutoLoad bool
 
-	ast *ast.Journal
+	ast *journal.Journal
 }
 
 func (js *JournalSource) Load(ctx context.Context) error {
-	js.ast = ast.New(js.Context)
+	js.ast = journal.New(js.Context)
 	p := parser.RecursiveParser{
 		Context: js.Context,
 		File:    js.Path,
@@ -44,13 +43,13 @@ func (js *JournalSource) Load(ctx context.Context) error {
 		}
 		switch t := d.(type) {
 
-		case *ast.Open:
+		case *journal.Open:
 			js.ast.AddOpen(t)
 
-		case *ast.Price:
+		case *journal.Price:
 			js.ast.AddPrice(t)
 
-		case *ast.Transaction:
+		case *journal.Transaction:
 			if t.Accrual != nil {
 				for _, ts := range t.Accrual.Expand(t) {
 					js.ast.AddTransaction(ts)
@@ -59,13 +58,13 @@ func (js *JournalSource) Load(ctx context.Context) error {
 				js.ast.AddTransaction(t)
 			}
 
-		case *ast.Assertion:
+		case *journal.Assertion:
 			js.ast.AddAssertion(t)
 
-		case *ast.Value:
+		case *journal.Value:
 			js.ast.AddValue(t)
 
-		case *ast.Close:
+		case *journal.Close:
 			js.ast.AddClose(t)
 
 		default:
@@ -83,7 +82,7 @@ func (js JournalSource) Max() time.Time {
 	return js.ast.Max()
 }
 
-func (js JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) error {
+func (js JournalSource) Source(ctx context.Context, outCh chan<- *journal.Day) error {
 	if js.AutoLoad {
 		if err := js.Load(ctx); err != nil {
 			return err
@@ -105,15 +104,15 @@ func (js JournalSource) Aggregate(ctx context.Context, v *journal.Commodity, f f
 		Filter: f,
 		Mapper: m,
 	}
-	s := cpr.Compose[*ast.Day](js, &Balancer{Context: js.Context})
+	s := cpr.Compose[*journal.Day](js, &Balancer{Context: js.Context})
 	if v != nil {
-		s = cpr.Compose[*ast.Day](s, &PriceUpdater{
+		s = cpr.Compose[*journal.Day](s, &PriceUpdater{
 			Valuation: v,
 		})
-		s = cpr.Compose[*ast.Day](s, &Valuator{
+		s = cpr.Compose[*journal.Day](s, &Valuator{
 			Context:   js.Context,
 			Valuation: v,
 		})
 	}
-	return cpr.Connect[*ast.Day](s, aggregator).Process(ctx)
+	return cpr.Connect[*journal.Day](s, aggregator).Process(ctx)
 }

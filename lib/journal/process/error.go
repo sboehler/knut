@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // Error is an error.
 type Error struct {
-	directive ast.Directive
+	directive journal.Directive
 	msg       string
 }
 

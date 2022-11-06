@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/shopspring/decimal"
 )
 
@@ -33,13 +32,13 @@ func TestComputeFlows(t *testing.T) {
 	var (
 		tests = []struct {
 			desc string
-			trx  *ast.Transaction
-			want *ast.Performance
+			trx  *journal.Transaction
+			want *journal.Performance
 		}{
 			{
 				desc: "outflow",
-				trx: ast.TransactionBuilder{
-					Postings: []ast.Posting{
+				trx: journal.TransactionBuilder{
+					Postings: []journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     acc2,
@@ -48,12 +47,12 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				}.Build(),
-				want: &ast.Performance{Outflow: pcv{usd: -1.0}},
+				want: &journal.Performance{Outflow: pcv{usd: -1.0}},
 			},
 			{
 				desc: "inflow",
-				trx: ast.TransactionBuilder{
-					Postings: []ast.Posting{
+				trx: journal.TransactionBuilder{
+					Postings: []journal.Posting{
 						{
 							Credit:    acc1,
 							Debit:     portfolio,
@@ -62,12 +61,12 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				}.Build(),
-				want: &ast.Performance{Inflow: pcv{usd: 1.0}},
+				want: &journal.Performance{Inflow: pcv{usd: 1.0}},
 			},
 			{
 				desc: "dividend",
-				trx: ast.TransactionBuilder{
-					Postings: []ast.Posting{
+				trx: journal.TransactionBuilder{
+					Postings: []journal.Posting{
 						{
 							Credit:    dividend,
 							Debit:     portfolio,
@@ -77,15 +76,15 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				}.Build(),
-				want: &ast.Performance{
+				want: &journal.Performance{
 					InternalInflow:  pcv{usd: 1.0},
 					InternalOutflow: pcv{aapl: -1.0},
 				},
 			},
 			{
 				desc: "expense",
-				trx: ast.TransactionBuilder{
-					Postings: []ast.Posting{
+				trx: journal.TransactionBuilder{
+					Postings: []journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     expense,
@@ -95,15 +94,15 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				}.Build(),
-				want: &ast.Performance{
+				want: &journal.Performance{
 					InternalInflow:  pcv{aapl: 1.0},
 					InternalOutflow: pcv{usd: -1.0},
 				},
 			},
 			{
 				desc: "expense with effect on porfolio",
-				trx: ast.TransactionBuilder{
-					Postings: []ast.Posting{
+				trx: journal.TransactionBuilder{
+					Postings: []journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     expense,
@@ -113,15 +112,15 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				}.Build(),
-				want: &ast.Performance{
+				want: &journal.Performance{
 					InternalOutflow: pcv{usd: -1.0},
 					PortfolioInflow: 1.0,
 				},
 			},
 			{
 				desc: "stock purchase",
-				trx: ast.TransactionBuilder{
-					Postings: []ast.Posting{
+				trx: journal.TransactionBuilder{
+					Postings: []journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,
@@ -138,15 +137,15 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				}.Build(),
-				want: &ast.Performance{
+				want: &journal.Performance{
 					InternalInflow:  pcv{aapl: 1010.0},
 					InternalOutflow: pcv{usd: -1010.0},
 				},
 			},
 			{
 				desc: "stock purchase with fee",
-				trx: ast.TransactionBuilder{
-					Postings: []ast.Posting{
+				trx: journal.TransactionBuilder{
+					Postings: []journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,
@@ -170,15 +169,15 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				}.Build(),
-				want: &ast.Performance{
+				want: &journal.Performance{
 					InternalInflow:  pcv{aapl: 1020.0},
 					InternalOutflow: pcv{usd: -1020.0},
 				},
 			},
 			{
 				desc: "stock sale",
-				trx: ast.TransactionBuilder{
-					Postings: []ast.Posting{
+				trx: journal.TransactionBuilder{
+					Postings: []journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,
@@ -195,7 +194,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				}.Build(),
-				want: &ast.Performance{
+				want: &journal.Performance{
 					InternalInflow:  pcv{usd: 990.0},
 					InternalOutflow: pcv{aapl: -990.0},
 				},
@@ -203,8 +202,8 @@ func TestComputeFlows(t *testing.T) {
 
 			{
 				desc: "forex without fee",
-				trx: ast.TransactionBuilder{
-					Postings: []ast.Posting{
+				trx: journal.TransactionBuilder{
+					Postings: []journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,
@@ -221,15 +220,15 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				}.Build(),
-				want: &ast.Performance{
+				want: &journal.Performance{
 					InternalOutflow: pcv{gbp: -1375.0},
 					InternalInflow:  pcv{usd: 1375.0},
 				},
 			},
 			{
 				desc: "forex with fee",
-				trx: ast.TransactionBuilder{
-					Postings: []ast.Posting{
+				trx: journal.TransactionBuilder{
+					Postings: []journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,
@@ -253,15 +252,15 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				}.Build(),
-				want: &ast.Performance{
+				want: &journal.Performance{
 					InternalOutflow: pcv{gbp: -1370.0, chf: -10},
 					InternalInflow:  pcv{usd: 1380.0},
 				},
 			},
 			{
 				desc: "forex with native fee",
-				trx: ast.TransactionBuilder{
-					Postings: []ast.Posting{
+				trx: journal.TransactionBuilder{
+					Postings: []journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,
@@ -285,7 +284,7 @@ func TestComputeFlows(t *testing.T) {
 						},
 					},
 				}.Build(),
-				want: &ast.Performance{
+				want: &journal.Performance{
 					InternalOutflow: pcv{gbp: -1370.0},
 					InternalInflow:  pcv{usd: 1370.0},
 				},
@@ -295,9 +294,9 @@ func TestComputeFlows(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			var (
-				d = &ast.Day{
+				d = &journal.Day{
 					Date:         time.Date(2021, 11, 15, 0, 0, 0, 0, time.UTC),
-					Transactions: []*ast.Transaction{test.trx},
+					Transactions: []*journal.Transaction{test.trx},
 				}
 
 				fc = Calculator{

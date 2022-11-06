@@ -22,8 +22,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/beancount"
+	"github.com/sboehler/knut/lib/journal/beancount"
 	"github.com/sboehler/knut/lib/journal/process"
 
 	"github.com/spf13/cobra"
@@ -90,13 +89,13 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 			Context:   jctx,
 			Valuation: valuation,
 		}
-		c = new(cpr.Collector[*ast.Day])
+		c = new(cpr.Collector[*journal.Day])
 	)
 
-	s := cpr.Compose[*ast.Day](journalSource, priceUpdater)
-	s = cpr.Compose[*ast.Day](s, balancer)
-	s = cpr.Compose[*ast.Day](s, valuator)
-	ppl := cpr.Connect[*ast.Day](s, c)
+	s := cpr.Compose[*journal.Day](journalSource, priceUpdater)
+	s = cpr.Compose[*journal.Day](s, balancer)
+	s = cpr.Compose[*journal.Day](s, valuator)
+	ppl := cpr.Connect[*journal.Day](s, c)
 
 	if err := ppl.Process(cmd.Context()); err != nil {
 		return err

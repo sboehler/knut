@@ -7,7 +7,6 @@ import (
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/shopspring/decimal"
 )
 
@@ -24,14 +23,14 @@ type Aggregator struct {
 	Collection Collection
 }
 
-func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
+func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *journal.Day) error {
 	if agg.Filter == nil {
 		agg.Filter = filter.AllowAll[journal.Key]
 	}
 	if agg.Mapper == nil {
 		agg.Mapper = mapper.Identity[journal.Key]
 	}
-	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
+	return cpr.Consume(ctx, inCh, func(d *journal.Day) error {
 		for _, t := range d.Transactions {
 			for _, b := range t.Postings {
 				amt := b.Amount

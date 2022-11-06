@@ -22,13 +22,12 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/shopspring/decimal"
 )
 
 // Transcode transcodes the given ledger to beancount.
-func Transcode(w io.Writer, l []*ast.Day, c *journal.Commodity) error {
+func Transcode(w io.Writer, l []*journal.Day, c *journal.Commodity) error {
 	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c.Name()); err != nil {
 		return err
 	}
@@ -46,13 +45,13 @@ func Transcode(w io.Writer, l []*ast.Day, c *journal.Commodity) error {
 				return err
 			}
 		}
-		compare.Sort(day.Transactions, ast.CompareTransactions)
+		compare.Sort(day.Transactions, journal.CompareTransactions)
 
 		for _, trx := range day.Transactions {
 			for _, pst := range trx.Postings {
 				if strings.HasPrefix(pst.Credit.Name(), "Equity:Valuation:") && !openValAccounts[pst.Credit] {
 					openValAccounts[pst.Credit] = true
-					if _, err := p.PrintDirective(w, &ast.Open{Date: trx.Date, Account: pst.Credit}); err != nil {
+					if _, err := p.PrintDirective(w, &journal.Open{Date: trx.Date, Account: pst.Credit}); err != nil {
 						return err
 					}
 					if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -61,7 +60,7 @@ func Transcode(w io.Writer, l []*ast.Day, c *journal.Commodity) error {
 				}
 				if strings.HasPrefix(pst.Debit.Name(), "Equity:Valuation:") && !openValAccounts[pst.Debit] {
 					openValAccounts[pst.Debit] = true
-					if _, err := p.PrintDirective(w, &ast.Open{Date: trx.Date, Account: pst.Debit}); err != nil {
+					if _, err := p.PrintDirective(w, &journal.Open{Date: trx.Date, Account: pst.Debit}); err != nil {
 						return err
 					}
 					if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -87,7 +86,7 @@ func Transcode(w io.Writer, l []*ast.Day, c *journal.Commodity) error {
 	return nil
 }
 
-func writeTrx(w io.Writer, t *ast.Transaction, c *journal.Commodity) error {
+func writeTrx(w io.Writer, t *journal.Transaction, c *journal.Commodity) error {
 	if _, err := fmt.Fprintf(w, `%s * "%s"`, t.Date.Format("2006-01-02"), t.Description); err != nil {
 		return err
 	}
@@ -109,7 +108,7 @@ func writeTrx(w io.Writer, t *ast.Transaction, c *journal.Commodity) error {
 }
 
 // WriteTo pretty-prints a posting.
-func writePosting(w io.Writer, p ast.Posting, c *journal.Commodity) error {
+func writePosting(w io.Writer, p journal.Posting, c *journal.Commodity) error {
 	var amt decimal.Decimal
 	if c == nil {
 		amt = p.Amount

@@ -21,7 +21,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 )
 
 // Printer prints directives.
@@ -35,27 +34,27 @@ func New() *Printer {
 }
 
 // PrintDirective prints a directive to the given Writer.
-func (p Printer) PrintDirective(w io.Writer, directive ast.Directive) (n int, err error) {
+func (p Printer) PrintDirective(w io.Writer, directive journal.Directive) (n int, err error) {
 	switch d := directive.(type) {
-	case *ast.Transaction:
+	case *journal.Transaction:
 		return p.printTransaction(w, d)
-	case *ast.Open:
+	case *journal.Open:
 		return p.printOpen(w, d)
-	case *ast.Close:
+	case *journal.Close:
 		return p.printClose(w, d)
-	case *ast.Assertion:
+	case *journal.Assertion:
 		return p.printAssertion(w, d)
-	case *ast.Include:
+	case *journal.Include:
 		return p.printInclude(w, d)
-	case *ast.Price:
+	case *journal.Price:
 		return p.printPrice(w, d)
-	case *ast.Value:
+	case *journal.Value:
 		return p.printValue(w, d)
 	}
 	return 0, fmt.Errorf("unknown directive: %v", directive)
 }
 
-func (p Printer) printTransaction(w io.Writer, t *ast.Transaction) (n int, err error) {
+func (p Printer) printTransaction(w io.Writer, t *journal.Transaction) (n int, err error) {
 	if t.Accrual != nil {
 		c, err := p.printAccrual(w, t.Accrual)
 		n += c
@@ -93,11 +92,11 @@ func (p Printer) printTransaction(w io.Writer, t *ast.Transaction) (n int, err e
 	return n, nil
 }
 
-func (p Printer) printAccrual(w io.Writer, a *ast.Accrual) (n int, err error) {
+func (p Printer) printAccrual(w io.Writer, a *journal.Accrual) (n int, err error) {
 	return fmt.Fprintf(w, "@accrue %s %s %s %s\n", a.Interval, a.T0.Format("2006-01-02"), a.T1.Format("2006-01-02"), a.Account)
 }
 
-func (p Printer) printPosting(w io.Writer, t ast.Posting) (int, error) {
+func (p Printer) printPosting(w io.Writer, t journal.Posting) (int, error) {
 	var n int
 	c, err := fmt.Fprintf(w, "%s %s %s %s", p.rightPad(t.Credit), p.rightPad(t.Debit), leftPad(10, t.Amount.String()), t.Commodity.Name())
 	n += c
@@ -130,7 +129,7 @@ func (p Printer) printPosting(w io.Writer, t ast.Posting) (int, error) {
 	return n, nil
 }
 
-func (p Printer) printLot(w io.Writer, l *ast.Lot) (int, error) {
+func (p Printer) printLot(w io.Writer, l *journal.Lot) (int, error) {
 	var n int
 	c, err := fmt.Fprintf(w, "{ %g %s, %s ", l.Price, l.Commodity.Name(), l.Date.Format("2006-01-02"))
 	n += c
@@ -152,32 +151,32 @@ func (p Printer) printLot(w io.Writer, l *ast.Lot) (int, error) {
 	return n, nil
 }
 
-func (p Printer) printOpen(w io.Writer, o *ast.Open) (int, error) {
+func (p Printer) printOpen(w io.Writer, o *journal.Open) (int, error) {
 	return fmt.Fprintf(w, "%s open %s", o.Date.Format("2006-01-02"), o.Account)
 }
 
-func (p Printer) printClose(w io.Writer, c *ast.Close) (int, error) {
+func (p Printer) printClose(w io.Writer, c *journal.Close) (int, error) {
 	return fmt.Fprintf(w, "%s close %s", c.Date.Format("2006-01-02"), c.Account)
 }
 
-func (p Printer) printPrice(w io.Writer, pr *ast.Price) (int, error) {
+func (p Printer) printPrice(w io.Writer, pr *journal.Price) (int, error) {
 	return fmt.Fprintf(w, "%s price %s %s %s", pr.Date.Format("2006-01-02"), pr.Commodity.Name(), pr.Price, pr.Target.Name())
 }
 
-func (p Printer) printInclude(w io.Writer, i *ast.Include) (int, error) {
+func (p Printer) printInclude(w io.Writer, i *journal.Include) (int, error) {
 	return fmt.Fprintf(w, "include \"%s\"", i.Path)
 }
 
-func (p Printer) printAssertion(w io.Writer, a *ast.Assertion) (int, error) {
+func (p Printer) printAssertion(w io.Writer, a *journal.Assertion) (int, error) {
 	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity.Name())
 }
 
-func (p Printer) printValue(w io.Writer, v *ast.Value) (int, error) {
+func (p Printer) printValue(w io.Writer, v *journal.Value) (int, error) {
 	return fmt.Fprintf(w, "%s value %s %s %s", v.Date.Format("2006-01-02"), v.Account, v.Amount, v.Commodity.Name())
 }
 
 // PrintLedger prints a Ledger.
-func (p *Printer) PrintLedger(w io.Writer, l []*ast.Day) (int, error) {
+func (p *Printer) PrintLedger(w io.Writer, l []*journal.Day) (int, error) {
 	for _, day := range l {
 		for _, t := range day.Transactions {
 			p.updatePadding(t)
@@ -245,16 +244,16 @@ func (p *Printer) PrintLedger(w io.Writer, l []*ast.Day) (int, error) {
 }
 
 // Initialize initializes the padding of this printer.
-func (p *Printer) Initialize(directive []ast.Directive) {
+func (p *Printer) Initialize(directive []journal.Directive) {
 	for _, d := range directive {
 		switch t := d.(type) {
-		case *ast.Transaction:
+		case *journal.Transaction:
 			p.updatePadding(t)
 		}
 	}
 }
 
-func (p *Printer) updatePadding(t *ast.Transaction) {
+func (p *Printer) updatePadding(t *journal.Transaction) {
 	for _, pt := range t.Postings {
 		var cr, dr = utf8.RuneCountInString(pt.Credit.String()), utf8.RuneCountInString(pt.Debit.String())
 		if p.Padding < cr {
@@ -266,7 +265,7 @@ func (p *Printer) updatePadding(t *ast.Transaction) {
 	}
 }
 
-func (p Printer) writeLn(w io.Writer, d ast.Directive, count *int) error {
+func (p Printer) writeLn(w io.Writer, d journal.Directive, count *int) error {
 	c, err := p.PrintDirective(w, d)
 	*count += c
 	if err != nil {

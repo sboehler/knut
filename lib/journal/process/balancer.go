@@ -7,7 +7,6 @@ import (
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 )
 
 // Balancer processes ASTs.
@@ -16,11 +15,11 @@ type Balancer struct {
 }
 
 // Process processes days.
-func (pr *Balancer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
+func (pr *Balancer) Process(ctx context.Context, inCh <-chan *journal.Day, outCh chan<- *journal.Day) error {
 	amounts := make(journal.Amounts)
 	accounts := make(accounts)
 
-	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
+	return cpr.Consume(ctx, inCh, func(d *journal.Day) error {
 		if err := pr.processOpenings(ctx, accounts, d); err != nil {
 			return err
 		}
@@ -41,7 +40,7 @@ func (pr *Balancer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh cha
 	})
 }
 
-func (pr *Balancer) processOpenings(ctx context.Context, accounts accounts, d *ast.Day) error {
+func (pr *Balancer) processOpenings(ctx context.Context, accounts accounts, d *journal.Day) error {
 	for _, o := range d.Openings {
 		if ok := accounts.Open(o.Account); !ok {
 			return Error{o, "account is already open"}
@@ -50,7 +49,7 @@ func (pr *Balancer) processOpenings(ctx context.Context, accounts accounts, d *a
 	return nil
 }
 
-func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, amts journal.Amounts, d *ast.Day) error {
+func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, amts journal.Amounts, d *journal.Day) error {
 	for _, t := range d.Transactions {
 		for _, p := range t.Postings {
 			if !accounts.IsOpen(p.Credit) {
@@ -66,26 +65,26 @@ func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, 
 	return nil
 }
 
-func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts journal.Amounts, d *ast.Day) error {
+func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts journal.Amounts, d *journal.Day) error {
 	for _, v := range d.Values {
 		if !accounts.IsOpen(v.Account) {
 			return Error{v, "account is not open"}
 		}
 		valAcc := pr.Context.ValuationAccountFor(v.Account)
-		p := ast.PostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amts.Amount(journal.AccountCommodityKey(v.Account, v.Commodity))), []*journal.Commodity{v.Commodity})
-		d.Transactions = append(d.Transactions, ast.TransactionBuilder{
+		p := journal.PostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amts.Amount(journal.AccountCommodityKey(v.Account, v.Commodity))), []*journal.Commodity{v.Commodity})
+		d.Transactions = append(d.Transactions, journal.TransactionBuilder{
 			Date:        v.Date,
 			Description: fmt.Sprintf("Valuation adjustment for %s in %s", v.Commodity.Name(), v.Account.Name()),
-			Postings:    []ast.Posting{p},
+			Postings:    []journal.Posting{p},
 		}.Build())
 		amts.Add(journal.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
 		amts.Add(journal.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
 	}
-	compare.Sort(d.Transactions, ast.CompareTransactions)
+	compare.Sort(d.Transactions, journal.CompareTransactions)
 	return nil
 }
 
-func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, amts journal.Amounts, d *ast.Day) error {
+func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, amts journal.Amounts, d *journal.Day) error {
 	for _, a := range d.Assertions {
 		if !accounts.IsOpen(a.Account) {
 			return Error{a, "account is not open"}
@@ -98,7 +97,7 @@ func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, am
 	return nil
 }
 
-func (pr *Balancer) processClosings(ctx context.Context, accounts accounts, amounts journal.Amounts, d *ast.Day) error {
+func (pr *Balancer) processClosings(ctx context.Context, accounts accounts, amounts journal.Amounts, d *journal.Day) error {
 	for _, c := range d.Closings {
 		for pos, amount := range amounts {
 			if pos.Account != c.Account {

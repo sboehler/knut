@@ -27,8 +27,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // CreateCmd creates the command.
@@ -66,7 +65,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		f   *bufio.Reader
 		err error
 	)
-	a := ast.New(ctx)
+	a := journal.New(ctx)
 	for _, path := range args {
 		if f, err = flags.OpenFile(path); err != nil {
 			return err
@@ -94,7 +93,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 type parser struct {
 	reader              *csv.Reader
 	account, feeAccount *journal.Account
-	ast                 *ast.Journal
+	ast                 *journal.Journal
 	balance             journal.Amounts
 }
 
@@ -168,11 +167,11 @@ func (p *parser) parseBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid amount in row %v: %v", r, err)
 	}
-	t := ast.TransactionBuilder{
+	t := journal.TransactionBuilder{
 		Date:        d,
 		Description: r[bfDescription],
-		Postings: []ast.Posting{
-			ast.NewPosting(p.ast.Context.TBDAccount(), p.account, c, amt),
+		Postings: []journal.Posting{
+			journal.NewPosting(p.ast.Context.TBDAccount(), p.account, c, amt),
 		},
 	}
 	fee, err := decimal.NewFromString(r[bfFee])
@@ -180,7 +179,7 @@ func (p *parser) parseBooking() error {
 		return fmt.Errorf("invalid fee in row %v: %v", r, err)
 	}
 	if !fee.IsZero() {
-		t.Postings = append(t.Postings, ast.NewPosting(p.account, p.feeAccount, c, fee))
+		t.Postings = append(t.Postings, journal.NewPosting(p.account, p.feeAccount, c, fee))
 	}
 	p.ast.AddTransaction(t.Build())
 	bal, err := decimal.NewFromString(r[bfBalance])
@@ -193,7 +192,7 @@ func (p *parser) parseBooking() error {
 
 func (p *parser) addBalances() {
 	for k, bal := range p.balance {
-		p.ast.AddAssertion(&ast.Assertion{
+		p.ast.AddAssertion(&journal.Assertion{
 			Date:      k.Date,
 			Commodity: k.Commodity,
 			Amount:    bal,

@@ -27,8 +27,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 )
@@ -78,17 +77,17 @@ func execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	var files []io.Writer
-	journal, close, err := createFile(filepath.Join(c.path, "journal.knut"))
+	j, close, err := createFile(filepath.Join(c.path, "journal.knut"))
 	if err != nil {
 		return err
 	}
 	defer close()
-	defer journal.Flush()
+	defer j.Flush()
 
 	var p printer.Printer
 
 	if c.includes == 0 {
-		files = append(files, journal)
+		files = append(files, j)
 	} else {
 		for i := 0; i < c.includes; i++ {
 			var name = fmt.Sprintf("include%d.knut", i)
@@ -99,10 +98,10 @@ func execute(cmd *cobra.Command, args []string) error {
 			defer close()
 			defer include.Flush()
 			files = append(files, include)
-			if _, err := p.PrintDirective(journal, &ast.Include{Path: name}); err != nil {
+			if _, err := p.PrintDirective(j, &journal.Include{Path: name}); err != nil {
 				return err
 			}
-			io.WriteString(journal, "\n")
+			io.WriteString(j, "\n")
 		}
 	}
 	for i, o := range open {
@@ -177,7 +176,7 @@ func parseDate(cmd *cobra.Command, name string) (time.Time, error) {
 	return time.Parse("2006-01-02", s)
 }
 
-func generate(c config) ([]*ast.Open, []*ast.Price, []*ast.Transaction) {
+func generate(c config) ([]*journal.Open, []*journal.Price, []*journal.Transaction) {
 	rand.Seed(c.seed)
 	var (
 		accounts     = generateAccounts(c)
@@ -220,11 +219,11 @@ func generateCommodities(c config) []*journal.Commodity {
 	return res
 }
 
-func generateOpenings(c config, as []*journal.Account) []*ast.Open {
-	var res []*ast.Open
+func generateOpenings(c config, as []*journal.Account) []*journal.Open {
+	var res []*journal.Open
 
 	for _, a := range as {
-		res = append(res, &ast.Open{
+		res = append(res, &journal.Open{
 			Date:    c.from,
 			Account: a,
 		})
@@ -232,16 +231,16 @@ func generateOpenings(c config, as []*journal.Account) []*ast.Open {
 	return res
 }
 
-func generateTransactions(c config, cs []*journal.Commodity, as []*journal.Account) []*ast.Transaction {
-	var trx []*ast.Transaction
+func generateTransactions(c config, cs []*journal.Commodity, as []*journal.Account) []*journal.Transaction {
+	var trx []*journal.Transaction
 	var dates = date.Periods(c.from, c.to, date.Daily)
 	for i := 0; i < c.transactions; i++ {
 
-		trx = append(trx, ast.TransactionBuilder{
+		trx = append(trx, journal.TransactionBuilder{
 			Date:        dates[rand.Intn(len(dates))].End,
 			Description: generateIdentifier(200),
-			Postings: []ast.Posting{
-				ast.NewPosting(as[rand.Intn(len(as))], as[rand.Intn(len(as))], cs[rand.Intn(len(cs))], decimal.NewFromFloat(rand.Float64()*1000).Round(4)),
+			Postings: []journal.Posting{
+				journal.NewPosting(as[rand.Intn(len(as))], as[rand.Intn(len(as))], cs[rand.Intn(len(cs))], decimal.NewFromFloat(rand.Float64()*1000).Round(4)),
 			},
 		}.Build())
 	}
@@ -250,13 +249,13 @@ func generateTransactions(c config, cs []*journal.Commodity, as []*journal.Accou
 
 var stdev = 0.13 / math.Sqrt(365)
 
-func generatePrices(c config, cs []*journal.Commodity) []*ast.Price {
-	var prices []*ast.Price
+func generatePrices(c config, cs []*journal.Commodity) []*journal.Price {
+	var prices []*journal.Price
 	for _, commodity := range cs[1:] {
 		var price = decimal.NewFromFloat(1.0 + 200*rand.Float64())
 		for _, d := range date.Periods(c.from, c.to, date.Daily) {
 			price = price.Mul(decimal.NewFromFloat(1 + rand.NormFloat64()*stdev)).Truncate(4)
-			prices = append(prices, &ast.Price{
+			prices = append(prices, &journal.Price{
 				Date:      d.End,
 				Commodity: commodity,
 				Target:    cs[0],

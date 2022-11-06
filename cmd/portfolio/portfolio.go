@@ -26,7 +26,6 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/process"
 	"github.com/sboehler/knut/lib/journal/process/performance"
 )
@@ -115,11 +114,11 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 		}
 	)
 
-	s := cpr.Compose[*ast.Day](journalSource, balancer)
-	s = cpr.Compose[*ast.Day](s, priceUpdater)
-	s = cpr.Compose[*ast.Day](s, valuator)
-	s = cpr.Compose[*ast.Day](s, calculator)
-	ppl := cpr.Connect[*ast.Day](s, calculator)
+	s := cpr.Compose[*journal.Day](journalSource, balancer)
+	s = cpr.Compose[*journal.Day](s, priceUpdater)
+	s = cpr.Compose[*journal.Day](s, valuator)
+	s = cpr.Compose[*journal.Day](s, calculator)
+	ppl := cpr.Connect[*journal.Day](s, calculator)
 
 	return ppl.Process(ctx)
 

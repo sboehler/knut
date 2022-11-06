@@ -8,7 +8,6 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 )
 
 // Calculator calculates portfolio performance
@@ -20,9 +19,9 @@ type Calculator struct {
 }
 
 // Process computes portfolio performance.
-func (calc Calculator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
+func (calc Calculator) Process(ctx context.Context, inCh <-chan *journal.Day, outCh chan<- *journal.Day) error {
 	var prev pcv
-	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
+	return cpr.Consume(ctx, inCh, func(d *journal.Day) error {
 		dpr := calc.computeFlows(d)
 		dpr.V0 = prev
 		dpr.V1 = calc.valueByCommodity(d)
@@ -34,14 +33,14 @@ func (calc Calculator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh 
 }
 
 // Sink implements Sink.
-func (calc Calculator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
-	return cpr.Consume(ctx, inCh, func(p *ast.Day) error {
+func (calc Calculator) Sink(ctx context.Context, inCh <-chan *journal.Day) error {
+	return cpr.Consume(ctx, inCh, func(p *journal.Day) error {
 		fmt.Printf("%v: %.1f%%\n", p.Date.Format("2006-01-02"), 100*(Performance(p.Performance)-1))
 		return nil
 	})
 }
 
-func (calc *Calculator) valueByCommodity(d *ast.Day) pcv {
+func (calc *Calculator) valueByCommodity(d *journal.Day) pcv {
 	res := make(pcv)
 	for pos, val := range d.Value {
 		if !pos.Account.IsAL() {
@@ -59,7 +58,7 @@ func (calc *Calculator) valueByCommodity(d *ast.Day) pcv {
 // pcv is a per-commodity value.
 type pcv map[*journal.Commodity]float64
 
-func (calc *Calculator) computeFlows(day *ast.Day) *ast.Performance {
+func (calc *Calculator) computeFlows(day *journal.Day) *journal.Performance {
 
 	var (
 		internalInflows, internalOutflows, inflows, outflows pcv
@@ -118,7 +117,7 @@ func (calc *Calculator) computeFlows(day *ast.Day) *ast.Performance {
 		split(flows, &inflows, &outflows)
 		split(internalFlows, &internalInflows, &internalOutflows)
 	}
-	return &ast.Performance{
+	return &journal.Performance{
 		InternalInflow:   internalInflows,
 		InternalOutflow:  internalOutflows,
 		Inflow:           inflows,
@@ -182,7 +181,7 @@ func (calc Calculator) isPortfolioAccount(a *journal.Account) bool {
 // perf = ( V1 - Outflow ) / ( V0 + Inflow )
 
 // Performance computes the portfolio performance.
-func Performance(dpv *ast.Performance) float64 {
+func Performance(dpv *journal.Performance) float64 {
 	var (
 		v0, v1          float64
 		inflow, outflow = dpv.PortfolioInflow, dpv.PortfolioOutflow

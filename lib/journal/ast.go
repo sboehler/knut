@@ -12,25 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ast
+package journal
 
 import (
 	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/journal"
 )
 
-// Journal represents an unprocessed journal.
+// Journal represents an unprocessed
 type Journal struct {
-	Context  journal.Context
+	Context  Context
 	Days     map[time.Time]*Day
 	min, max time.Time
 }
 
 // New creates a new AST
-func New(ctx journal.Context) *Journal {
+func New(ctx Context) *Journal {
 	return &Journal{
 		Context: ctx,
 		Days:    make(map[time.Time]*Day),
@@ -120,9 +119,9 @@ type Day struct {
 	Transactions []*Transaction
 	Closings     []*Close
 
-	Amounts, Value journal.Amounts
+	Amounts, Value Amounts
 
-	Normalized journal.NormalizedPrices
+	Normalized NormalizedPrices
 
 	Performance *Performance
 }
@@ -135,6 +134,6 @@ func CompareDays(d *Day, d2 *Day) compare.Order {
 // Performance holds aggregate information used to compute
 // portfolio performance.
 type Performance struct {
-	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow map[*journal.Commodity]float64
+	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow map[*Commodity]float64
 	PortfolioInflow, PortfolioOutflow                        float64
 }

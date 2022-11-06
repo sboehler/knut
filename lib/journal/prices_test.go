@@ -8,12 +8,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type Price struct {
-	Commodity *Commodity
-	Price     decimal.Decimal
-	Target    *Commodity
-}
-
 func TestPrices(t *testing.T) {
 	jctx := NewContext()
 	com1 := jctx.Commodity("COM1")

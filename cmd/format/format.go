@@ -27,9 +27,8 @@ import (
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/format"
-	"github.com/sboehler/knut/lib/journal/ast/parser"
+	"github.com/sboehler/knut/lib/journal/format"
+	"github.com/sboehler/knut/lib/journal/parser"
 )
 
 // CreateCmd creates the command.
@@ -86,7 +85,7 @@ func execute(cmd *cobra.Command, args []string) error {
 
 func formatFile(target string) error {
 	var (
-		directives           []ast.Directive
+		directives           []journal.Directive
 		err                  error
 		srcFile, tmpDestFile *os.File
 	)
@@ -108,14 +107,14 @@ func formatFile(target string) error {
 	return multierr.Append(err, atomic.ReplaceFile(tmpDestFile.Name(), target))
 }
 
-func readDirectives(target string) ([]ast.Directive, error) {
+func readDirectives(target string) ([]journal.Directive, error) {
 	p, close, err := parser.FromPath(journal.NewContext(), target)
 	if err != nil {
 		return nil, err
 	}
 	defer close()
 
-	var directives []ast.Directive
+	var directives []journal.Directive
 
 	for {
 		d, err := p.Next()

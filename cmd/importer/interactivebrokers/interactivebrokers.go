@@ -29,8 +29,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // CreateCmd creates the command.
@@ -83,7 +82,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = parser{
 		reader:  csv.NewReader(f),
-		builder: ast.New(ctx),
+		builder: journal.New(ctx),
 	}
 	if p.account, err = r.accountFlag.Value(ctx); err != nil {
 		return err
@@ -114,7 +113,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 type parser struct {
 	reader           *csv.Reader
-	builder          *ast.Journal
+	builder          *journal.Journal
 	baseCurrency     *journal.Commodity
 	dateFrom, dateTo time.Time
 
@@ -289,13 +288,13 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []ast.Posting{
-			ast.PostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
-			ast.PostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
-			ast.PostingWithTargets(p.fee, p.account, currency, fee, []*journal.Commodity{stock, currency}),
+		Postings: []journal.Posting{
+			journal.PostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
+			journal.PostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
+			journal.PostingWithTargets(p.fee, p.account, currency, fee, []*journal.Commodity{stock, currency}),
 		},
 	}.Build())
 	return true, nil
@@ -344,14 +343,14 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
-	var postings = []ast.Posting{
-		ast.PostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
-		ast.PostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
+	var postings = []journal.Posting{
+		journal.PostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
+		journal.PostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
 	}
 	if !fee.IsZero() {
-		postings = append(postings, ast.PostingWithTargets(p.fee, p.account, p.baseCurrency, fee, []*journal.Commodity{stock, currency}))
+		postings = append(postings, journal.PostingWithTargets(p.fee, p.account, p.baseCurrency, fee, []*journal.Commodity{stock, currency}))
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 		Postings:    postings,
@@ -398,11 +397,11 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Withdraw %s %s", amount, currency.Name())
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []ast.Posting{
-			ast.NewPosting(p.builder.Context.TBDAccount(), p.account, currency, amount),
+		Postings: []journal.Posting{
+			journal.NewPosting(p.builder.Context.TBDAccount(), p.account, currency, amount),
 		},
 	}.Build())
 	return true, nil
@@ -449,11 +448,11 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if security, err = p.builder.Context.GetCommodity(symbol); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []ast.Posting{
-			ast.PostingWithTargets(p.dividend, p.account, currency, amount, []*journal.Commodity{security}),
+		Postings: []journal.Posting{
+			journal.PostingWithTargets(p.dividend, p.account, currency, amount, []*journal.Commodity{security}),
 		},
 	}.Build())
 	return true, nil
@@ -510,11 +509,11 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if security, err = p.builder.Context.GetCommodity(symbol); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []ast.Posting{
-			ast.PostingWithTargets(p.tax, p.account, currency, amount, []*journal.Commodity{security}),
+		Postings: []journal.Posting{
+			journal.PostingWithTargets(p.tax, p.account, currency, amount, []*journal.Commodity{security}),
 		},
 	}.Build())
 	return true, nil
@@ -541,11 +540,11 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	if amount, err = parseDecimal(r[dfAmount]); err != nil {
 		return false, err
 	}
-	p.builder.AddTransaction(ast.TransactionBuilder{
+	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []ast.Posting{
-			ast.PostingWithTargets(p.interest, p.account, currency, amount, []*journal.Commodity{currency})},
+		Postings: []journal.Posting{
+			journal.PostingWithTargets(p.interest, p.account, currency, amount, []*journal.Commodity{currency})},
 	}.Build())
 	return true, nil
 }
@@ -590,7 +589,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 	if amt, err = decimal.NewFromString(r[opfQuantity]); err != nil {
 		return false, err
 	}
-	p.builder.AddAssertion(&ast.Assertion{
+	p.builder.AddAssertion(&journal.Assertion{
 		Date:      p.dateTo,
 		Account:   p.account,
 		Commodity: symbol,
@@ -636,7 +635,7 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 	if amount, err = parseRoundedDecimal(r[fbfQuantity]); err != nil {
 		return false, err
 	}
-	p.builder.AddAssertion(&ast.Assertion{
+	p.builder.AddAssertion(&journal.Assertion{
 		Date:      p.dateTo,
 		Account:   p.account,
 		Commodity: symbol,

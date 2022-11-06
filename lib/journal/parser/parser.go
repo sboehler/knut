@@ -26,8 +26,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/scanner"
+	"github.com/sboehler/knut/lib/journal/scanner"
 	"github.com/shopspring/decimal"
 )
 
@@ -42,8 +41,8 @@ func (p *Parser) markStart() {
 	p.startPos = p.scanner.Location
 }
 
-func (p *Parser) getRange() ast.Range {
-	return ast.Range{
+func (p *Parser) getRange() journal.Range {
+	return journal.Range{
 		Start: p.startPos,
 		End:   p.scanner.Location,
 		Path:  p.scanner.Path,
@@ -81,7 +80,7 @@ func (p *Parser) current() rune {
 }
 
 // Next returns the Next directive
-func (p *Parser) Next() (ast.Directive, error) {
+func (p *Parser) Next() (journal.Directive, error) {
 	for p.current() != scanner.EOF {
 		if err := p.scanner.ConsumeWhile(isWhitespaceOrNewline); err != nil {
 			return nil, p.scanner.ParseError(err)
@@ -136,7 +135,7 @@ func (p *Parser) consumeComment() error {
 	return nil
 }
 
-func (p *Parser) parseDirective(a *ast.Accrual) (ast.Directive, error) {
+func (p *Parser) parseDirective(a *journal.Accrual) (journal.Directive, error) {
 	p.markStart()
 	d, err := p.parseDate()
 	if err != nil {
@@ -145,7 +144,7 @@ func (p *Parser) parseDirective(a *ast.Accrual) (ast.Directive, error) {
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	var result ast.Directive
+	var result journal.Directive
 	switch p.current() {
 	case '"':
 		result, err = p.parseTransaction(d, a)
@@ -168,7 +167,7 @@ func (p *Parser) parseDirective(a *ast.Accrual) (ast.Directive, error) {
 	return result, nil
 }
 
-func (p *Parser) parseTransaction(d time.Time, a *ast.Accrual) (*ast.Transaction, error) {
+func (p *Parser) parseTransaction(d time.Time, a *journal.Accrual) (*journal.Transaction, error) {
 	desc, err := p.parseQuotedString()
 	if err != nil {
 		return nil, err
@@ -193,7 +192,7 @@ func (p *Parser) parseTransaction(d time.Time, a *ast.Accrual) (*ast.Transaction
 	if a != nil {
 		r.Start = a.Range.Start
 	}
-	return ast.TransactionBuilder{
+	return journal.TransactionBuilder{
 		Range:       r,
 		Date:        d,
 		Description: desc,
@@ -204,7 +203,7 @@ func (p *Parser) parseTransaction(d time.Time, a *ast.Accrual) (*ast.Transaction
 
 }
 
-func (p *Parser) parseAddOn() (*ast.Accrual, error) {
+func (p *Parser) parseAddOn() (*journal.Accrual, error) {
 	p.markStart()
 	if err := p.scanner.ConsumeRune('@'); err != nil {
 		return nil, err
@@ -260,7 +259,7 @@ func (p *Parser) parseAddOn() (*ast.Accrual, error) {
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
 		return nil, err
 	}
-	return &ast.Accrual{
+	return &journal.Accrual{
 		Range:    p.getRange(),
 		T0:       dateFrom,
 		T1:       dateTo,
@@ -269,15 +268,15 @@ func (p *Parser) parseAddOn() (*ast.Accrual, error) {
 	}, nil
 }
 
-func (p *Parser) parsePostings() ([]ast.Posting, error) {
-	var postings []ast.Posting
+func (p *Parser) parsePostings() ([]journal.Posting, error) {
+	var postings []journal.Posting
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		var (
 			credit, debit *journal.Account
 			amount        decimal.Decimal
 			commodity     *journal.Commodity
 			targets       []*journal.Commodity
-			lot           *ast.Lot
+			lot           *journal.Lot
 
 			err error
 		)
@@ -329,7 +328,7 @@ func (p *Parser) parsePostings() ([]ast.Posting, error) {
 				}
 			}
 		}
-		postings = append(postings, ast.Posting{
+		postings = append(postings, journal.Posting{
 			Credit:    credit,
 			Debit:     debit,
 			Amount:    amount,
@@ -344,7 +343,7 @@ func (p *Parser) parsePostings() ([]ast.Posting, error) {
 	return postings, nil
 }
 
-func (p *Parser) parseOpen(d time.Time) (*ast.Open, error) {
+func (p *Parser) parseOpen(d time.Time) (*journal.Open, error) {
 	if err := p.scanner.ParseString("open"); err != nil {
 		return nil, err
 	}
@@ -355,14 +354,14 @@ func (p *Parser) parseOpen(d time.Time) (*ast.Open, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ast.Open{
+	return &journal.Open{
 		Range:   p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
 }
 
-func (p *Parser) parseClose(d time.Time) (*ast.Close, error) {
+func (p *Parser) parseClose(d time.Time) (*journal.Close, error) {
 	if err := p.scanner.ParseString("close"); err != nil {
 		return nil, err
 	}
@@ -373,14 +372,14 @@ func (p *Parser) parseClose(d time.Time) (*ast.Close, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ast.Close{
+	return &journal.Close{
 		Range:   p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
 }
 
-func (p *Parser) parsePrice(d time.Time) (*ast.Price, error) {
+func (p *Parser) parsePrice(d time.Time) (*journal.Price, error) {
 	if err := p.scanner.ParseString("price"); err != nil {
 		return nil, err
 	}
@@ -406,7 +405,7 @@ func (p *Parser) parsePrice(d time.Time) (*ast.Price, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ast.Price{
+	return &journal.Price{
 		Range:     p.getRange(),
 		Date:      d,
 		Commodity: commodity,
@@ -415,7 +414,7 @@ func (p *Parser) parsePrice(d time.Time) (*ast.Price, error) {
 	}, nil
 }
 
-func (p *Parser) parseBalanceAssertion(d time.Time) (*ast.Assertion, error) {
+func (p *Parser) parseBalanceAssertion(d time.Time) (*journal.Assertion, error) {
 	if err := p.scanner.ParseString("balance"); err != nil {
 		return nil, err
 	}
@@ -440,7 +439,7 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*ast.Assertion, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ast.Assertion{
+	return &journal.Assertion{
 		Range:     p.getRange(),
 		Date:      d,
 		Account:   account,
@@ -449,7 +448,7 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*ast.Assertion, error) {
 	}, nil
 }
 
-func (p *Parser) parseValue(d time.Time) (*ast.Value, error) {
+func (p *Parser) parseValue(d time.Time) (*journal.Value, error) {
 	if err := p.scanner.ParseString("value"); err != nil {
 		return nil, err
 	}
@@ -474,7 +473,7 @@ func (p *Parser) parseValue(d time.Time) (*ast.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ast.Value{
+	return &journal.Value{
 		Range:     p.getRange(),
 		Date:      d,
 		Account:   account,
@@ -483,7 +482,7 @@ func (p *Parser) parseValue(d time.Time) (*ast.Value, error) {
 	}, nil
 }
 
-func (p *Parser) parseInclude() (*ast.Include, error) {
+func (p *Parser) parseInclude() (*journal.Include, error) {
 	p.markStart()
 	if err := p.scanner.ParseString("include"); err != nil {
 		return nil, err
@@ -495,7 +494,7 @@ func (p *Parser) parseInclude() (*ast.Include, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := &ast.Include{
+	result := &journal.Include{
 		Range: p.getRange(),
 		Path:  i,
 	}
@@ -505,7 +504,7 @@ func (p *Parser) parseInclude() (*ast.Include, error) {
 	return result, nil
 }
 
-func (p *Parser) parseCurrency() (*ast.Currency, error) {
+func (p *Parser) parseCurrency() (*journal.Currency, error) {
 	p.markStart()
 	if err := p.scanner.ParseString("currency"); err != nil {
 		return nil, err
@@ -517,7 +516,7 @@ func (p *Parser) parseCurrency() (*ast.Currency, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := &ast.Currency{
+	result := &journal.Currency{
 		Range:     p.getRange(),
 		Commodity: i,
 	}
@@ -558,7 +557,7 @@ func (p *Parser) consumeRestOfWhitespaceLine() error {
 	return p.consumeNewline()
 }
 
-func (p *Parser) parseLot() (*ast.Lot, error) {
+func (p *Parser) parseLot() (*journal.Lot, error) {
 	err := p.scanner.ConsumeRune('{')
 	if err != nil {
 		return nil, err
@@ -614,7 +613,7 @@ func (p *Parser) parseLot() (*ast.Lot, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ast.Lot{
+	return &journal.Lot{
 		Date:      d,
 		Label:     label,
 		Price:     price,
@@ -663,8 +662,8 @@ func (p *Parser) parseTargetCommodities() ([]*journal.Commodity, error) {
 	return res, nil
 }
 
-func (p *Parser) parseTags() ([]ast.Tag, error) {
-	var tags []ast.Tag
+func (p *Parser) parseTags() ([]journal.Tag, error) {
+	var tags []journal.Tag
 	for p.current() == '#' {
 		tag, err := p.parseTag()
 		if err != nil {
@@ -678,7 +677,7 @@ func (p *Parser) parseTags() ([]ast.Tag, error) {
 	return tags, nil
 }
 
-func (p *Parser) parseTag() (ast.Tag, error) {
+func (p *Parser) parseTag() (journal.Tag, error) {
 	if p.current() != '#' {
 		return "", fmt.Errorf("expected tag, got %c", p.current())
 	}
@@ -692,7 +691,7 @@ func (p *Parser) parseTag() (ast.Tag, error) {
 		return "", err
 	}
 	b.WriteString(i)
-	return ast.Tag(b.String()), nil
+	return journal.Tag(b.String()), nil
 }
 
 // parseQuotedString parses a quoted string

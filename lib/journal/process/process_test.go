@@ -5,7 +5,6 @@ import (
 
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/shopspring/decimal"
 )
 
@@ -13,9 +12,9 @@ type TestData struct {
 	date1, date2, date3    time.Time
 	account1, account2     *journal.Account
 	commodity1, commodity2 *journal.Commodity
-	open1, open2           *ast.Open
-	price1                 *ast.Price
-	trx1, trx2             *ast.Transaction
+	open1, open2           *journal.Open
+	price1                 *journal.Price
+	trx1, trx2             *journal.Transaction
 }
 
 func newTestData(jctx journal.Context) TestData {
@@ -27,26 +26,26 @@ func newTestData(jctx journal.Context) TestData {
 		account2   = jctx.Account("Assets:Other")
 		commodity1 = jctx.Commodity("COM")
 		commodity2 = jctx.Commodity("TGT")
-		price1     = &ast.Price{
+		price1     = &journal.Price{
 			Date:      date1,
 			Commodity: commodity1,
 			Target:    commodity2,
 			Price:     decimal.NewFromInt(4),
 		}
-		open1 = &ast.Open{Date: date2, Account: account1}
-		open2 = &ast.Open{Date: date2, Account: account2}
-		trx1  = ast.TransactionBuilder{
+		open1 = &journal.Open{Date: date2, Account: account1}
+		open2 = &journal.Open{Date: date2, Account: account2}
+		trx1  = journal.TransactionBuilder{
 			Date:        date1,
 			Description: "foo",
-			Postings: []ast.Posting{
-				ast.NewPosting(account1, account2, commodity1, decimal.NewFromInt(10)),
+			Postings: []journal.Posting{
+				journal.NewPosting(account1, account2, commodity1, decimal.NewFromInt(10)),
 			},
 		}.Build()
-		trx2 = ast.TransactionBuilder{
+		trx2 = journal.TransactionBuilder{
 			Date:        date2,
 			Description: "foo",
-			Postings: []ast.Posting{
-				ast.NewPosting(account2, account1, commodity2, decimal.NewFromInt(11)),
+			Postings: []journal.Posting{
+				journal.NewPosting(account2, account1, commodity2, decimal.NewFromInt(11)),
 			},
 		}.Build()
 	)

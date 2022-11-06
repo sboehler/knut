@@ -26,8 +26,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // CreateCmd creates the command.
@@ -85,7 +84,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var resp response
 	json.Unmarshal(b, &resp)
 
-	var builder = ast.New(ctx)
+	var builder = journal.New(ctx)
 	for _, dv := range resp.DailyValues {
 		d, err := time.Parse("2006-01-02", dv.Date)
 		if err != nil {
@@ -98,7 +97,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		builder.AddValue(&ast.Value{
+		builder.AddValue(&journal.Value{
 			Date:      d,
 			Account:   account,
 			Amount:    a.Round(2),

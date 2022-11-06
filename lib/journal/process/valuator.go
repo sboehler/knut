@@ -6,7 +6,6 @@ import (
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
 )
 
 // Valuator produces valuated days.
@@ -16,9 +15,9 @@ type Valuator struct {
 }
 
 // Process valuates transactions.
-func (val Valuator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
+func (val Valuator) Process(ctx context.Context, inCh <-chan *journal.Day, outCh chan<- *journal.Day) error {
 	values := make(journal.Amounts)
-	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
+	return cpr.Consume(ctx, inCh, func(d *journal.Day) error {
 		if val.Valuation != nil {
 			if err := val.valuateTransactions(d, values); err != nil {
 				return err
@@ -32,7 +31,7 @@ func (val Valuator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh cha
 	})
 }
 
-func (val Valuator) valuateTransactions(d *ast.Day, values journal.Amounts) error {
+func (val Valuator) valuateTransactions(d *journal.Day, values journal.Amounts) error {
 	for _, t := range d.Transactions {
 		for i := range t.Postings {
 			posting := &t.Postings[i]
@@ -52,7 +51,7 @@ func (val Valuator) valuateTransactions(d *ast.Day, values journal.Amounts) erro
 	return nil
 }
 
-func (val Valuator) valuateGains(d *ast.Day, values journal.Amounts) error {
+func (val Valuator) valuateGains(d *journal.Day, values journal.Amounts) error {
 	for pos, amt := range d.Amounts {
 		if pos.Commodity == val.Valuation {
 			continue
@@ -69,11 +68,11 @@ func (val Valuator) valuateGains(d *ast.Day, values journal.Amounts) error {
 			continue
 		}
 		credit := val.Context.ValuationAccountFor(pos.Account)
-		d.Transactions = append(d.Transactions, ast.TransactionBuilder{
+		d.Transactions = append(d.Transactions, journal.TransactionBuilder{
 			Date:        d.Date,
 			Description: fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity.Name(), pos.Account.Name()),
-			Postings: []ast.Posting{
-				ast.NewValuePosting(credit, pos.Account, pos.Commodity, gain, []*journal.Commodity{pos.Commodity}),
+			Postings: []journal.Posting{
+				journal.NewValuePosting(credit, pos.Account, pos.Commodity, gain, []*journal.Commodity{pos.Commodity}),
 			},
 		}.Build())
 		values.Add(pos, gain)

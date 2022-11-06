@@ -1,4 +1,4 @@
-package ast
+package journal
 
 import (
 	"fmt"
@@ -6,8 +6,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast/scanner"
+	"github.com/sboehler/knut/lib/journal/scanner"
 	"github.com/shopspring/decimal"
 )
 
@@ -42,28 +41,28 @@ var (
 type Open struct {
 	Range
 	Date    time.Time
-	Account *journal.Account
+	Account *Account
 }
 
 // Close represents a close command.
 type Close struct {
 	Range
 	Date    time.Time
-	Account *journal.Account
+	Account *Account
 }
 
 // Posting represents a posting.
 type Posting struct {
 	Amount, Value decimal.Decimal
-	Credit, Debit *journal.Account
-	Commodity     *journal.Commodity
-	Targets       []*journal.Commodity
+	Credit, Debit *Account
+	Commodity     *Commodity
+	Targets       []*Commodity
 	Lot           *Lot
 }
 
 // NewPosting creates a new posting from the given parameters. If amount is negative, it
 // will be inverted and the accounts reversed.
-func NewPosting(crAccount, drAccount *journal.Account, commodity *journal.Commodity, amt decimal.Decimal) Posting {
+func NewPosting(crAccount, drAccount *Account, commodity *Commodity, amt decimal.Decimal) Posting {
 	if amt.IsNegative() {
 		crAccount, drAccount = drAccount, crAccount
 		amt = amt.Neg()
@@ -78,14 +77,14 @@ func NewPosting(crAccount, drAccount *journal.Account, commodity *journal.Commod
 
 // PostingWithTargets creates a new posting from the given parameters. If amount is negative, it
 // will be inverted and the accounts reversed.
-func PostingWithTargets(crAccount, drAccount *journal.Account, commodity *journal.Commodity, amt decimal.Decimal, targets []*journal.Commodity) Posting {
+func PostingWithTargets(crAccount, drAccount *Account, commodity *Commodity, amt decimal.Decimal, targets []*Commodity) Posting {
 	p := NewPosting(crAccount, drAccount, commodity, amt)
 	p.Targets = targets
 	return p
 }
 
 // NewValuePosting creates a value adjustment posting.
-func NewValuePosting(crAccount, drAccount *journal.Account, commodity *journal.Commodity, val decimal.Decimal, targets []*journal.Commodity) Posting {
+func NewValuePosting(crAccount, drAccount *Account, commodity *Commodity, val decimal.Decimal, targets []*Commodity) Posting {
 	if val.IsNegative() {
 		crAccount, drAccount = drAccount, crAccount
 		val = val.Neg()
@@ -101,10 +100,10 @@ func NewValuePosting(crAccount, drAccount *journal.Account, commodity *journal.C
 
 // Less determines an order on postings.
 func ComparePostings(p Posting, p2 Posting) compare.Order {
-	if o := journal.CompareAccounts(p.Credit, p2.Credit); o != compare.Equal {
+	if o := CompareAccounts(p.Credit, p2.Credit); o != compare.Equal {
 		return o
 	}
-	if o := journal.CompareAccounts(p.Debit, p2.Debit); o != compare.Equal {
+	if o := CompareAccounts(p.Debit, p2.Debit); o != compare.Equal {
 		return o
 	}
 	if o := compare.Decimal(p.Amount, p2.Amount); o != compare.Equal {
@@ -124,7 +123,7 @@ type Lot struct {
 	Date      time.Time
 	Label     string
 	Price     float64
-	Commodity *journal.Commodity
+	Commodity *Commodity
 }
 
 // Tag represents a tag for a transaction or booking.
@@ -146,8 +145,8 @@ func (t Transaction) Position() Range {
 }
 
 // Commodities returns the commodities in this transaction.
-func (t Transaction) Commodities() map[*journal.Commodity]bool {
-	var res = make(map[*journal.Commodity]bool)
+func (t Transaction) Commodities() map[*Commodity]bool {
+	var res = make(map[*Commodity]bool)
 	for _, pst := range t.Postings {
 		res[pst.Commodity] = true
 	}
@@ -197,8 +196,8 @@ func (tb TransactionBuilder) Build() *Transaction {
 type Price struct {
 	Range
 	Date      time.Time
-	Commodity *journal.Commodity
-	Target    *journal.Commodity
+	Commodity *Commodity
+	Target    *Commodity
 	Price     decimal.Decimal
 }
 
@@ -212,18 +211,18 @@ type Include struct {
 type Assertion struct {
 	Range
 	Date      time.Time
-	Account   *journal.Account
+	Account   *Account
 	Amount    decimal.Decimal
-	Commodity *journal.Commodity
+	Commodity *Commodity
 }
 
 // Value represents a value directive.
 type Value struct {
 	Range
 	Date      time.Time
-	Account   *journal.Account
+	Account   *Account
 	Amount    decimal.Decimal
-	Commodity *journal.Commodity
+	Commodity *Commodity
 }
 
 // Accrual represents an accrual.
@@ -231,7 +230,7 @@ type Accrual struct {
 	Range
 	Interval date.Interval
 	T0, T1   time.Time
-	Account  *journal.Account
+	Account  *Account
 }
 
 // Expand expands an accrual transaction.
@@ -296,5 +295,5 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 type Currency struct {
 	Range
 	Date time.Time
-	*journal.Commodity
+	*Commodity
 }

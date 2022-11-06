@@ -29,8 +29,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/ast"
-	"github.com/sboehler/knut/lib/journal/ast/printer"
+	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // CreateCmd creates the command.
@@ -73,7 +72,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	p := parser{
 		reader: csv.NewReader(f),
-		ast:    ast.New(ctx),
+		ast:    journal.New(ctx),
 	}
 	if p.account, err = r.account.Value(ctx); err != nil {
 		return err
@@ -90,7 +89,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 type parser struct {
 	reader   *csv.Reader
 	account  *journal.Account
-	ast      *ast.Journal
+	ast      *journal.Journal
 	currency *journal.Commodity
 	date     time.Time
 }
@@ -171,7 +170,7 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		p.ast.AddAssertion(&ast.Assertion{
+		p.ast.AddAssertion(&journal.Assertion{
 			Date:      date,
 			Account:   p.account,
 			Amount:    balance,
@@ -204,7 +203,7 @@ func (p *parser) parseBooking(r []string) error {
 		return err
 	}
 	amount = amount.Mul(sign)
-	var t = ast.TransactionBuilder{
+	var t = journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 	}
@@ -214,22 +213,22 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		t.Postings = []ast.Posting{
-			ast.NewPosting(p.ast.Context.ValuationAccount(), p.account, p.currency, amount),
-			ast.NewPosting(p.ast.Context.ValuationAccount(), p.account, otherCommodity, otherAmount),
+		t.Postings = []journal.Posting{
+			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, p.currency, amount),
+			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, otherCommodity, otherAmount),
 		}
 	case fxBuyRegex.MatchString(r[bfReference]):
 		otherCommodity, otherAmount, err := p.parseCombiField(r[bfExchangeIn])
 		if err != nil {
 			return err
 		}
-		t.Postings = []ast.Posting{
-			ast.NewPosting(p.ast.Context.ValuationAccount(), p.account, p.currency, amount),
-			ast.NewPosting(p.ast.Context.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg()),
+		t.Postings = []journal.Posting{
+			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, p.currency, amount),
+			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg()),
 		}
 	default:
-		t.Postings = []ast.Posting{
-			ast.NewPosting(p.ast.Context.TBDAccount(), p.account, p.currency, amount),
+		t.Postings = []journal.Posting{
+			journal.NewPosting(p.ast.Context.TBDAccount(), p.account, p.currency, amount),
 		}
 	}
 	p.ast.AddTransaction(t.Build())

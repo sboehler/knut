@@ -89,43 +89,6 @@ func (am Amounts) Index(cmp compare.Compare[Key]) []Key {
 	return res
 }
 
-// func (am Amounts) CumulativeSum(ds []time.Time) {
-// 	idx := am.Index(func(k1, k2 Key) compare.Order {
-// 		return compare.Time(k1.Date, k2.Date)
-// 	})
-// 	var previous, current time.Time
-// 	keys := make(map[Key]struct{})
-// 	for _, d := range ds {
-
-// 	}
-// 	for _, k := range idx {
-// 		if current != k.Date {
-// 			for kg := range keys {
-// 				kPrev, kCur := kg, kg
-// 				kPrev.Date = previous
-// 				kCur.Date = current
-// 				if !am[kPrev].IsZero() {
-// 					am[kCur] = am[kCur].Add(am[kPrev])
-// 				}
-// 			}
-// 			previous = current
-// 			current = k.Date
-// 			fmt.Println(previous, current)
-// 		}
-// 		gen := k
-// 		gen.Date = time.Time{}
-// 		keys[gen] = struct{}{}
-// 	}
-// 	for kg := range keys {
-// 		kPrev, kCur := kg, kg
-// 		kPrev.Date = previous
-// 		kCur.Date = current
-// 		if !am[kPrev].IsZero() {
-// 			am[kCur] = am[kCur].Add(am[kPrev])
-// 		}
-// 	}
-// }
-
 func (am Amounts) Commodities() set.Set[*Commodity] {
 	cs := set.New[*Commodity]()
 	for k := range am {

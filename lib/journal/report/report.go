@@ -32,16 +32,13 @@ func (r *Report) Insert(k journal.Key, v decimal.Decimal) {
 	if k.Account == nil {
 		return
 	}
-	n, ok := r.cache[k.Account]
-	if !ok {
+	n := dict.GetDefault(r.cache, k.Account, func() *Node {
 		ancestors := r.Context.Accounts().Ancestors(k.Account)
 		if k.Account.IsAL() {
-			n = r.AL.Leaf(ancestors)
-		} else {
-			n = r.EIE.Leaf(ancestors)
+			return r.AL.Leaf(ancestors)
 		}
-		r.cache[k.Account] = n
-	}
+		return r.EIE.Leaf(ancestors)
+	})
 	n.Insert(k, v)
 }
 

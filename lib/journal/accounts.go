@@ -22,8 +22,10 @@ import (
 	"unicode"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/regex"
+	"github.com/sboehler/knut/lib/common/set"
 )
 
 // AccountType is the type of an account.
@@ -174,7 +176,7 @@ type Accounts struct {
 	mutex    sync.RWMutex
 	index    map[string]*Account
 	accounts map[AccountType]*Account
-	children map[*Account]map[*Account]bool
+	children map[*Account]set.Set[*Account]
 	parents  map[*Account]*Account
 	swaps    map[*Account]*Account
 }
@@ -196,7 +198,7 @@ func NewAccounts() *Accounts {
 		accounts: accounts,
 		index:    index,
 		parents:  make(map[*Account]*Account),
-		children: make(map[*Account]map[*Account]bool),
+		children: make(map[*Account]set.Set[*Account]),
 		swaps:    make(map[*Account]*Account),
 	}
 }
@@ -232,24 +234,20 @@ func (as *Accounts) Get(name string) (*Account, error) {
 	var parent *Account
 	for i := range segments {
 		n := strings.Join(segments[:i+1], ":")
-		acc, ok := as.index[n]
-		if !ok {
-			acc = &Account{
+		parent = dict.GetDefault(as.index, n, func() *Account {
+			acc := &Account{
 				accountType: at,
 				name:        n,
 				segment:     segments[i],
 				level:       i + 1,
 			}
-			as.index[n] = acc
 			as.parents[acc] = parent
-			ch, ok := as.children[parent]
-			if !ok {
-				ch = make(map[*Account]bool)
-				as.children[parent] = ch
-			}
-			ch[acc] = true
-		}
-		parent = acc
+			ch := dict.GetDefault(as.children, parent, func() set.Set[*Account] {
+				return set.New[*Account]()
+			})
+			ch.Add(acc)
+			return acc
+		})
 	}
 	return parent, nil
 }

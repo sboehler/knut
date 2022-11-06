@@ -17,6 +17,7 @@ package journal
 import (
 	"fmt"
 
+	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/shopspring/decimal"
 )
 
@@ -24,7 +25,7 @@ import (
 // Outer map: target commodity
 // Inner map: commodity
 // value: price in (target commodity / commodity)
-type Prices map[*Commodity]map[*Commodity]decimal.Decimal
+type Prices map[*Commodity]NormalizedPrices
 
 var one = decimal.NewFromInt(1)
 
@@ -35,11 +36,7 @@ func (p Prices) Insert(commodity *Commodity, price decimal.Decimal, target *Comm
 }
 
 func (pr Prices) addPrice(target, commodity *Commodity, p decimal.Decimal) {
-	i, ok := pr[target]
-	if !ok {
-		i = make(map[*Commodity]decimal.Decimal)
-		pr[target] = i
-	}
+	i := dict.GetDefault(pr, target, func() NormalizedPrices { return make(NormalizedPrices) })
 	i[commodity] = p
 }
 
@@ -57,8 +54,7 @@ func (pr Prices) normalize(c *Commodity, res NormalizedPrices) {
 		if _, done := res[neighbor]; done {
 			continue
 		}
-		p := price.Mul(res[c]).Truncate(8)
-		res[neighbor] = p
+		res[neighbor] = multiply(price, res[c])
 		pr.normalize(neighbor, res)
 	}
 }
@@ -73,5 +69,9 @@ func (n NormalizedPrices) Valuate(c *Commodity, a decimal.Decimal) (decimal.Deci
 	if !ok {
 		return decimal.Zero, fmt.Errorf("no price found for %v in %v", c, n)
 	}
-	return a.Mul(price).Truncate(8), nil
+	return multiply(a, price), nil
+}
+
+func multiply(n1, n2 decimal.Decimal) decimal.Decimal {
+	return n1.Mul(n2).Truncate(8)
 }

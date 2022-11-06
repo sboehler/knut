@@ -19,6 +19,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/common/dict"
 )
 
 // Journal represents an unprocessed
@@ -40,12 +41,7 @@ func New(ctx Context) *Journal {
 
 // Day returns the Day for the given date.
 func (ast *Journal) Day(d time.Time) *Day {
-	s, ok := ast.Days[d]
-	if !ok {
-		s = &Day{Date: d}
-		ast.Days[d] = s
-	}
-	return s
+	return dict.GetDefault(ast.Days, d, func() *Day { return &Day{Date: d} })
 }
 
 // SortedDays returns all days ordered by date.

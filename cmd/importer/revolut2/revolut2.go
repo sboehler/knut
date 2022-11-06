@@ -26,7 +26,6 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
 	"github.com/sboehler/knut/lib/journal/ast/printer"
@@ -95,15 +94,15 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 type parser struct {
 	reader              *csv.Reader
 	account, feeAccount *journal.Account
-	ast                 *ast.AST
-	balance             amounts.Amounts
+	ast                 *ast.Journal
+	balance             journal.Amounts
 }
 
 func (p *parser) parse() error {
 	p.reader.TrimLeadingSpace = true
 	p.reader.Comma = ','
 	p.reader.FieldsPerRecord = 10
-	p.balance = make(amounts.Amounts)
+	p.balance = make(journal.Amounts)
 
 	if err := p.parseHeader(); err != nil {
 		return err
@@ -188,7 +187,7 @@ func (p *parser) parseBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid balance in row %v: %v", r, err)
 	}
-	p.balance[amounts.DateCommodityKey(d, c)] = bal
+	p.balance[journal.DateCommodityKey(d, c)] = bal
 	return nil
 }
 

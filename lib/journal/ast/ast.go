@@ -17,22 +17,21 @@ package ast
 import (
 	"time"
 
-	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
 )
 
-// AST represents an unprocessed abstract syntax tree.
-type AST struct {
+// Journal represents an unprocessed journal.
+type Journal struct {
 	Context  journal.Context
 	Days     map[time.Time]*Day
 	min, max time.Time
 }
 
 // New creates a new AST
-func New(ctx journal.Context) *AST {
-	return &AST{
+func New(ctx journal.Context) *Journal {
+	return &Journal{
 		Context: ctx,
 		Days:    make(map[time.Time]*Day),
 		min:     date.Date(9999, 12, 31),
@@ -41,7 +40,7 @@ func New(ctx journal.Context) *AST {
 }
 
 // Day returns the Day for the given date.
-func (ast *AST) Day(d time.Time) *Day {
+func (ast *Journal) Day(d time.Time) *Day {
 	s, ok := ast.Days[d]
 	if !ok {
 		s = &Day{Date: d}
@@ -51,7 +50,7 @@ func (ast *AST) Day(d time.Time) *Day {
 }
 
 // SortedDays returns all days ordered by date.
-func (ast *AST) SortedDays() []*Day {
+func (ast *Journal) SortedDays() []*Day {
 	var res []*Day
 	for _, day := range ast.Days {
 		compare.Sort(day.Transactions, CompareTransactions)
@@ -62,20 +61,20 @@ func (ast *AST) SortedDays() []*Day {
 }
 
 // AddOpen adds an Open directive.
-func (ast *AST) AddOpen(o *Open) {
-	var d = ast.Day(o.Date)
+func (ast *Journal) AddOpen(o *Open) {
+	d := ast.Day(o.Date)
 	d.Openings = append(d.Openings, o)
 }
 
 // AddPrice adds an Price directive.
-func (ast *AST) AddPrice(p *Price) {
-	var d = ast.Day(p.Date)
+func (ast *Journal) AddPrice(p *Price) {
+	d := ast.Day(p.Date)
 	d.Prices = append(d.Prices, p)
 }
 
 // AddTransaction adds an Transaction directive.
-func (ast *AST) AddTransaction(t *Transaction) {
-	var d = ast.Day(t.Date)
+func (ast *Journal) AddTransaction(t *Transaction) {
+	d := ast.Day(t.Date)
 	if ast.max.Before(d.Date) {
 		ast.max = d.Date
 	}
@@ -86,28 +85,28 @@ func (ast *AST) AddTransaction(t *Transaction) {
 }
 
 // AddValue adds an Value directive.
-func (ast *AST) AddValue(v *Value) {
-	var d = ast.Day(v.Date)
+func (ast *Journal) AddValue(v *Value) {
+	d := ast.Day(v.Date)
 	d.Values = append(d.Values, v)
 }
 
 // AddAssertion adds an Assertion directive.
-func (ast *AST) AddAssertion(a *Assertion) {
-	var d = ast.Day(a.Date)
+func (ast *Journal) AddAssertion(a *Assertion) {
+	d := ast.Day(a.Date)
 	d.Assertions = append(d.Assertions, a)
 }
 
 // AddClose adds an Close directive.
-func (ast *AST) AddClose(c *Close) {
-	var d = ast.Day(c.Date)
+func (ast *Journal) AddClose(c *Close) {
+	d := ast.Day(c.Date)
 	d.Closings = append(d.Closings, c)
 }
 
-func (ast *AST) Min() time.Time {
+func (ast *Journal) Min() time.Time {
 	return ast.min
 }
 
-func (ast *AST) Max() time.Time {
+func (ast *Journal) Max() time.Time {
 	return ast.max
 }
 
@@ -121,7 +120,7 @@ type Day struct {
 	Transactions []*Transaction
 	Closings     []*Close
 
-	Amounts, Value amounts.Amounts
+	Amounts, Value journal.Amounts
 
 	Normalized journal.NormalizedPrices
 

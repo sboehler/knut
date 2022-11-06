@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
@@ -23,7 +22,7 @@ type JournalSource struct {
 	Expand   bool
 	AutoLoad bool
 
-	ast *ast.AST
+	ast *ast.Journal
 }
 
 func (js *JournalSource) Load(ctx context.Context) error {
@@ -98,7 +97,7 @@ func (js JournalSource) Source(ctx context.Context, outCh chan<- *ast.Day) error
 	return nil
 }
 
-func (js JournalSource) Aggregate(ctx context.Context, v *journal.Commodity, f filter.Filter[amounts.Key], m mapper.Mapper[amounts.Key], c Collection) error {
+func (js JournalSource) Aggregate(ctx context.Context, v *journal.Commodity, f filter.Filter[journal.Key], m mapper.Mapper[journal.Key], c Collection) error {
 	aggregator := &Aggregator{
 		Valuation:  v,
 		Collection: c,

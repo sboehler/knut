@@ -17,7 +17,6 @@ package report
 import (
 	"time"
 
-	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
@@ -76,7 +75,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 
 func (rn *Renderer) renderNode(t *table.Table, indent int, n *Node) {
 	if n.Account != nil {
-		vals := n.Amounts.SumBy(nil, amounts.KeyMapper{
+		vals := n.Amounts.SumBy(nil, journal.KeyMapper{
 			Date:      mapper.Identity[time.Time],
 			Commodity: mapper.Identity[*journal.Commodity],
 		}.Build())
@@ -87,7 +86,7 @@ func (rn *Renderer) renderNode(t *table.Table, indent int, n *Node) {
 	}
 }
 
-func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, vals amounts.Amounts) {
+func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, vals journal.Amounts) {
 	if len(vals) == 0 {
 		t.AddRow().AddIndented(name, indent).FillEmpty()
 		return
@@ -104,7 +103,7 @@ func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, va
 		}
 		var total decimal.Decimal
 		for _, d := range rn.Dates {
-			v := vals[amounts.DateCommodityKey(d, c)]
+			v := vals[journal.DateCommodityKey(d, c)]
 			if !rn.Diff {
 				total = total.Add(v)
 				v = total

@@ -22,7 +22,6 @@ import (
 	"runtime/pprof"
 
 	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
@@ -140,12 +139,12 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		dates = date.CreatePartition(from, to, r.interval.Value(), r.last)
 		rep   = register.NewReport(jctx)
 		f     = filter.And(
-			amounts.FilterDatesBetween(from, to),
-			amounts.FilterAccount(r.accounts.Value()),
-			amounts.FilterOther(r.others.Value()),
-			amounts.FilterCommodity(r.commodities.Value()),
+			journal.FilterDatesBetween(from, to),
+			journal.FilterAccount(r.accounts.Value()),
+			journal.FilterOther(r.others.Value()),
+			journal.FilterCommodity(r.commodities.Value()),
 		)
-		m = amounts.KeyMapper{
+		m = journal.KeyMapper{
 			Date:    date.Map(dates),
 			Account: am,
 			Other: mapper.Combine(

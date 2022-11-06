@@ -1,4 +1,4 @@
-package amounts
+package journal
 
 import (
 	"regexp"
@@ -8,16 +8,15 @@ import (
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
 
 // Key represents a position.
 type Key struct {
 	Date           time.Time
-	Account, Other *journal.Account
-	Commodity      *journal.Commodity
-	Valuation      *journal.Commodity
+	Account, Other *Account
+	Commodity      *Commodity
+	Valuation      *Commodity
 	Description    string
 }
 
@@ -25,19 +24,19 @@ func DateKey(d time.Time) Key {
 	return Key{Date: d}
 }
 
-func DateCommodityKey(d time.Time, c *journal.Commodity) Key {
+func DateCommodityKey(d time.Time, c *Commodity) Key {
 	return Key{Date: d, Commodity: c}
 }
 
-func CommodityKey(c *journal.Commodity) Key {
+func CommodityKey(c *Commodity) Key {
 	return Key{Commodity: c}
 }
 
-func AccountKey(a *journal.Account) Key {
+func AccountKey(a *Account) Key {
 	return Key{Account: a}
 }
 
-func AccountCommodityKey(a *journal.Account, c *journal.Commodity) Key {
+func AccountCommodityKey(a *Account, c *Commodity) Key {
 	return Key{Account: a, Commodity: c}
 }
 
@@ -126,17 +125,17 @@ func (am Amounts) Index(cmp compare.Compare[Key]) []Key {
 // 	}
 // }
 
-func (am Amounts) Commodities() map[*journal.Commodity]struct{} {
-	cs := make(map[*journal.Commodity]struct{})
+func (am Amounts) Commodities() map[*Commodity]struct{} {
+	cs := make(map[*Commodity]struct{})
 	for k := range am {
 		cs[k.Commodity] = struct{}{}
 	}
 	return cs
 }
 
-func (am Amounts) CommoditiesSorted() []*journal.Commodity {
+func (am Amounts) CommoditiesSorted() []*Commodity {
 	cs := am.Commodities()
-	return dict.SortedKeys(cs, journal.CompareCommodities)
+	return dict.SortedKeys(cs, CompareCommodities)
 }
 
 func (am Amounts) Dates() map[time.Time]struct{} {
@@ -187,8 +186,8 @@ func (am Amounts) SumOver(f func(k Key) bool) decimal.Decimal {
 
 type KeyMapper struct {
 	Date                 func(time.Time) time.Time
-	Account, Other       func(*journal.Account) *journal.Account
-	Commodity, Valuation func(*journal.Commodity) *journal.Commodity
+	Account, Other       func(*Account) *Account
+	Commodity, Valuation func(*Commodity) *Commodity
 	Description          func(string) string
 }
 
@@ -233,7 +232,7 @@ func FilterCommodity(rx []*regexp.Regexp) filter.Filter[Key] {
 	if len(rx) == 0 {
 		return filter.AllowAll[Key]
 	}
-	f := filter.ByName[*journal.Commodity](rx)
+	f := filter.ByName[*Commodity](rx)
 	return func(k Key) bool {
 		return f(k.Commodity)
 	}
@@ -243,7 +242,7 @@ func FilterAccount(r []*regexp.Regexp) filter.Filter[Key] {
 	if r == nil {
 		return filter.AllowAll[Key]
 	}
-	f := filter.ByName[*journal.Account](r)
+	f := filter.ByName[*Account](r)
 	return func(k Key) bool {
 		return f(k.Account)
 	}
@@ -253,7 +252,7 @@ func FilterOther(r []*regexp.Regexp) filter.Filter[Key] {
 	if r == nil {
 		return filter.AllowAll[Key]
 	}
-	f := filter.ByName[*journal.Account](r)
+	f := filter.ByName[*Account](r)
 	return func(k Key) bool {
 		return f(k.Other)
 	}

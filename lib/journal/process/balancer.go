@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
@@ -18,7 +17,7 @@ type Balancer struct {
 
 // Process processes days.
 func (pr *Balancer) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
-	amounts := make(amounts.Amounts)
+	amounts := make(journal.Amounts)
 	accounts := make(accounts)
 
 	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
@@ -51,7 +50,7 @@ func (pr *Balancer) processOpenings(ctx context.Context, accounts accounts, d *a
 	return nil
 }
 
-func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, amts amounts.Amounts, d *ast.Day) error {
+func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, amts journal.Amounts, d *ast.Day) error {
 	for _, t := range d.Transactions {
 		for _, p := range t.Postings {
 			if !accounts.IsOpen(p.Credit) {
@@ -60,38 +59,38 @@ func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, 
 			if !accounts.IsOpen(p.Debit) {
 				return Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)}
 			}
-			amts.Add(amounts.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
-			amts.Add(amounts.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
+			amts.Add(journal.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
+			amts.Add(journal.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
 		}
 	}
 	return nil
 }
 
-func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts amounts.Amounts, d *ast.Day) error {
+func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts journal.Amounts, d *ast.Day) error {
 	for _, v := range d.Values {
 		if !accounts.IsOpen(v.Account) {
 			return Error{v, "account is not open"}
 		}
 		valAcc := pr.Context.ValuationAccountFor(v.Account)
-		p := ast.PostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amts.Amount(amounts.AccountCommodityKey(v.Account, v.Commodity))), []*journal.Commodity{v.Commodity})
+		p := ast.PostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amts.Amount(journal.AccountCommodityKey(v.Account, v.Commodity))), []*journal.Commodity{v.Commodity})
 		d.Transactions = append(d.Transactions, ast.TransactionBuilder{
 			Date:        v.Date,
 			Description: fmt.Sprintf("Valuation adjustment for %s in %s", v.Commodity.Name(), v.Account.Name()),
 			Postings:    []ast.Posting{p},
 		}.Build())
-		amts.Add(amounts.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
-		amts.Add(amounts.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
+		amts.Add(journal.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
+		amts.Add(journal.AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
 	}
 	compare.Sort(d.Transactions, ast.CompareTransactions)
 	return nil
 }
 
-func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, amts amounts.Amounts, d *ast.Day) error {
+func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, amts journal.Amounts, d *ast.Day) error {
 	for _, a := range d.Assertions {
 		if !accounts.IsOpen(a.Account) {
 			return Error{a, "account is not open"}
 		}
-		position := amounts.AccountCommodityKey(a.Account, a.Commodity)
+		position := journal.AccountCommodityKey(a.Account, a.Commodity)
 		if va, ok := amts[position]; !ok || !va.Equal(a.Amount) {
 			return Error{a, fmt.Sprintf("account has position: %s %s", va, position.Commodity.Name())}
 		}
@@ -99,7 +98,7 @@ func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, am
 	return nil
 }
 
-func (pr *Balancer) processClosings(ctx context.Context, accounts accounts, amounts amounts.Amounts, d *ast.Day) error {
+func (pr *Balancer) processClosings(ctx context.Context, accounts accounts, amounts journal.Amounts, d *ast.Day) error {
 	for _, c := range d.Closings {
 		for pos, amount := range amounts {
 			if pos.Account != c.Account {

@@ -3,7 +3,6 @@ package report
 import (
 	"time"
 
-	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/dict"
@@ -29,7 +28,7 @@ func NewReport(jctx journal.Context) *Report {
 	}
 }
 
-func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
+func (r *Report) Insert(k journal.Key, v decimal.Decimal) {
 	if k.Account == nil {
 		return
 	}
@@ -53,8 +52,8 @@ func (r *Report) ComputeWeights() {
 	)()
 }
 
-func (r *Report) Totals() (amounts.Amounts, amounts.Amounts) {
-	res1, res2 := make(amounts.Amounts), make(amounts.Amounts)
+func (r *Report) Totals() (journal.Amounts, journal.Amounts) {
+	res1, res2 := make(journal.Amounts), make(journal.Amounts)
 	cpr.Parallel(
 		func() { r.AL.computeTotals(res1) },
 		func() { r.EIE.computeTotals(res2) },
@@ -65,7 +64,7 @@ func (r *Report) Totals() (amounts.Amounts, amounts.Amounts) {
 type Node struct {
 	Account  *journal.Account
 	children map[*journal.Account]*Node
-	Amounts  amounts.Amounts
+	Amounts  journal.Amounts
 
 	weight float64
 }
@@ -74,11 +73,11 @@ func newNode(a *journal.Account) *Node {
 	return &Node{
 		Account:  a,
 		children: make(map[*journal.Account]*Node),
-		Amounts:  make(amounts.Amounts),
+		Amounts:  make(journal.Amounts),
 	}
 }
 
-func (n *Node) Insert(k amounts.Key, v decimal.Decimal) {
+func (n *Node) Insert(k journal.Key, v decimal.Decimal) {
 	n.Amounts.Add(k, v)
 }
 
@@ -115,7 +114,7 @@ func (n *Node) computeWeights() {
 		sn.computeWeights()
 	})
 	n.weight = 0
-	keysWithVal := func(k amounts.Key) bool { return k.Valuation != nil }
+	keysWithVal := func(k journal.Key) bool { return k.Valuation != nil }
 	w := n.Amounts.SumOver(keysWithVal)
 	f, _ := w.Abs().Float64()
 	n.weight -= f
@@ -125,11 +124,11 @@ func (n *Node) computeWeights() {
 	}
 }
 
-func (n *Node) computeTotals(m amounts.Amounts) {
+func (n *Node) computeTotals(m journal.Amounts) {
 	for _, ch := range n.children {
 		ch.computeTotals(m)
 	}
-	n.Amounts.SumIntoBy(m, nil, amounts.KeyMapper{
+	n.Amounts.SumIntoBy(m, nil, journal.KeyMapper{
 		Date:      mapper.Identity[time.Time],
 		Commodity: mapper.Identity[*journal.Commodity],
 	}.Build())

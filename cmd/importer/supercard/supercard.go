@@ -92,7 +92,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 type parser struct {
 	reader  *csv.Reader
 	account *journal.Account
-	builder *ast.AST
+	builder *ast.Journal
 }
 
 func (p *parser) parse() error {

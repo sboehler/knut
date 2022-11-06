@@ -3,7 +3,6 @@ package process
 import (
 	"context"
 
-	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
@@ -13,12 +12,12 @@ import (
 )
 
 type Collection interface {
-	Insert(k amounts.Key, v decimal.Decimal)
+	Insert(k journal.Key, v decimal.Decimal)
 }
 
 type Aggregator struct {
-	Mapper    mapper.Mapper[amounts.Key]
-	Filter    filter.Filter[amounts.Key]
+	Mapper    mapper.Mapper[journal.Key]
+	Filter    filter.Filter[journal.Key]
 	Valuation *journal.Commodity
 	Value     bool
 
@@ -27,10 +26,10 @@ type Aggregator struct {
 
 func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 	if agg.Filter == nil {
-		agg.Filter = filter.AllowAll[amounts.Key]
+		agg.Filter = filter.AllowAll[journal.Key]
 	}
 	if agg.Mapper == nil {
-		agg.Mapper = mapper.Identity[amounts.Key]
+		agg.Mapper = mapper.Identity[journal.Key]
 	}
 	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
 		for _, t := range d.Transactions {
@@ -39,7 +38,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 				if agg.Valuation != nil {
 					amt = b.Value
 				}
-				kc := amounts.Key{
+				kc := journal.Key{
 					Date:        t.Date,
 					Account:     b.Credit,
 					Other:       b.Debit,
@@ -51,7 +50,7 @@ func (agg *Aggregator) Sink(ctx context.Context, inCh <-chan *ast.Day) error {
 					kc = agg.Mapper(kc)
 					agg.Collection.Insert(kc, amt.Neg())
 				}
-				kd := amounts.Key{
+				kd := journal.Key{
 					Date:        t.Date,
 					Account:     b.Debit,
 					Other:       b.Credit,

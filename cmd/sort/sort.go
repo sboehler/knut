@@ -97,7 +97,7 @@ func sortFile(target string) error {
 	return atomic.WriteFile(target, &buf)
 }
 
-func readDirectives(jctx journal.Context, target string) (*ast.AST, error) {
+func readDirectives(jctx journal.Context, target string) (*ast.Journal, error) {
 	p, close, err := parser.FromPath(jctx, target)
 	if err != nil {
 		return nil, err

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/ast"
@@ -18,7 +17,7 @@ type Valuator struct {
 
 // Process valuates transactions.
 func (val Valuator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh chan<- *ast.Day) error {
-	values := make(amounts.Amounts)
+	values := make(journal.Amounts)
 	return cpr.Consume(ctx, inCh, func(d *ast.Day) error {
 		if val.Valuation != nil {
 			if err := val.valuateTransactions(d, values); err != nil {
@@ -33,7 +32,7 @@ func (val Valuator) Process(ctx context.Context, inCh <-chan *ast.Day, outCh cha
 	})
 }
 
-func (val Valuator) valuateTransactions(d *ast.Day, values amounts.Amounts) error {
+func (val Valuator) valuateTransactions(d *ast.Day, values journal.Amounts) error {
 	for _, t := range d.Transactions {
 		for i := range t.Postings {
 			posting := &t.Postings[i]
@@ -45,15 +44,15 @@ func (val Valuator) valuateTransactions(d *ast.Day, values amounts.Amounts) erro
 				}
 			}
 			posting.Value = v
-			values.Add(amounts.AccountCommodityKey(posting.Credit, posting.Commodity), posting.Value.Neg())
-			values.Add(amounts.AccountCommodityKey(posting.Debit, posting.Commodity), posting.Value)
+			values.Add(journal.AccountCommodityKey(posting.Credit, posting.Commodity), posting.Value.Neg())
+			values.Add(journal.AccountCommodityKey(posting.Debit, posting.Commodity), posting.Value)
 		}
 
 	}
 	return nil
 }
 
-func (val Valuator) valuateGains(d *ast.Day, values amounts.Amounts) error {
+func (val Valuator) valuateGains(d *ast.Day, values journal.Amounts) error {
 	for pos, amt := range d.Amounts {
 		if pos.Commodity == val.Valuation {
 			continue
@@ -78,7 +77,7 @@ func (val Valuator) valuateGains(d *ast.Day, values amounts.Amounts) error {
 			},
 		}.Build())
 		values.Add(pos, gain)
-		values.Add(amounts.AccountCommodityKey(credit, pos.Commodity), gain.Neg())
+		values.Add(journal.AccountCommodityKey(credit, pos.Commodity), gain.Neg())
 	}
 	return nil
 

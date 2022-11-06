@@ -3,7 +3,6 @@ package register
 import (
 	"time"
 
-	"github.com/sboehler/knut/lib/common/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/table"
@@ -19,7 +18,7 @@ type Report struct {
 
 type Node struct {
 	Date    time.Time
-	Amounts amounts.Amounts
+	Amounts journal.Amounts
 }
 
 func NewReport(jctx journal.Context) *Report {
@@ -31,11 +30,11 @@ func NewReport(jctx journal.Context) *Report {
 func newNode(d time.Time) *Node {
 	return &Node{
 		Date:    d,
-		Amounts: make(amounts.Amounts),
+		Amounts: make(journal.Amounts),
 	}
 }
 
-func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
+func (r *Report) Insert(k journal.Key, v decimal.Decimal) {
 	n := dict.GetDefault(r.nodes, k.Date, func() *Node { return newNode(k.Date) })
 	n.Amounts.Add(k, v)
 }
@@ -83,7 +82,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 }
 
 func (rn *Renderer) renderNode(tbl *table.Table, n *Node) {
-	var cmp compare.Compare[amounts.Key]
+	var cmp compare.Compare[journal.Key]
 	if rn.ShowCommodities {
 		cmp = compareAccountAndCommodities
 	} else {
@@ -116,11 +115,11 @@ func (rn *Renderer) renderNode(tbl *table.Table, n *Node) {
 	tbl.AddSeparatorRow()
 }
 
-func compareAccount(k1, k2 amounts.Key) compare.Order {
+func compareAccount(k1, k2 journal.Key) compare.Order {
 	return journal.CompareAccounts(k1.Other, k2.Other)
 }
 
-func compareAccountAndCommodities(k1, k2 amounts.Key) compare.Order {
+func compareAccountAndCommodities(k1, k2 journal.Key) compare.Order {
 	if c := journal.CompareAccounts(k1.Other, k2.Other); c != compare.Equal {
 		return c
 	}

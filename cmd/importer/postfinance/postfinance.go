@@ -27,6 +27,7 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
+	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/printer"
 )
@@ -137,12 +138,9 @@ const (
 )
 
 func (p *Parser) readHeaderLine(l []string) error {
-	var currencyHeaders = map[string]bool{
-		"Währung:":  true,
-		"Currency:": true,
-	}
+	currencyHeaders := set.From("Währung:", "Currency:")
 	var err error
-	if currencyHeaders[l[hfHeader]] {
+	if currencyHeaders.Has(l[hfHeader]) {
 		sym := strings.Trim(l[hfData], "=\"")
 		if p.currency, err = p.ast.Context.GetCommodity(sym); err != nil {
 			return err

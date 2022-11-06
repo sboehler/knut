@@ -27,6 +27,7 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
+	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/printer"
 )
@@ -270,13 +271,13 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 }
 
 func (p *parser) parseForex(r *record) (bool, error) {
-	var w = map[string]bool{
-		"Forex-Gutschrift":    true,
-		"Forex-Belastung":     true,
-		"Fx-Gutschrift Comp.": true,
-		"Fx-Belastung Comp.":  true,
-	}
-	if _, ok := w[r.trxType]; !ok {
+	w := set.From(
+		"Forex-Gutschrift",
+		"Forex-Belastung",
+		"Fx-Gutschrift Comp.",
+		"Fx-Belastung Comp.",
+	)
+	if !w.Has(r.trxType) {
 		if p.last != nil {
 			return false, fmt.Errorf("expected forex transaction, got %v", r)
 		}
@@ -286,7 +287,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		p.last = r
 		return true, nil
 	}
-	var desc = fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency.Name(), r.trxType, r.netAmount, r.currency.Name())
+	desc := fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency.Name(), r.trxType, r.netAmount, r.currency.Name())
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
@@ -300,15 +301,15 @@ func (p *parser) parseForex(r *record) (bool, error) {
 }
 
 func (p *parser) parseDividend(r *record) (bool, error) {
-	var w = map[string]bool{
-		"Capital Gain":       true,
-		"Kapitalrückzahlung": true,
-		"Dividende":          true,
-	}
-	if _, ok := w[r.trxType]; !ok {
+	w := set.From(
+		"Capital Gain",
+		"Kapitalrückzahlung",
+		"Dividende",
+	)
+	if !w.Has(r.trxType) {
 		return false, nil
 	}
-	var postings = []journal.Posting{
+	postings := []journal.Posting{
 		journal.PostingWithTargets(p.dividend, p.account, r.currency, r.price, []*journal.Commodity{r.symbol}),
 	}
 	if !r.fee.IsZero() {
@@ -337,13 +338,13 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 }
 
 func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
-	var w = map[string]bool{
-		"Einzahlung": true,
-		"Auszahlung": true,
-		"Vergütung":  true,
-		"Belastung":  true,
-	}
-	if _, ok := w[r.trxType]; !ok {
+	var w = set.From(
+		"Einzahlung",
+		"Auszahlung",
+		"Vergütung",
+		"Belastung",
+	)
+	if !w.Has(r.trxType) {
 		return false, nil
 	}
 	p.builder.AddTransaction(journal.TransactionBuilder{

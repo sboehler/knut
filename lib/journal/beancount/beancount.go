@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/shopspring/decimal"
@@ -35,7 +36,7 @@ func Transcode(w io.Writer, l []*journal.Day, c *journal.Commodity) error {
 		return err
 	}
 	var p printer.Printer
-	var openValAccounts = make(map[*journal.Account]bool)
+	openValAccounts := set.New[*journal.Account]()
 	for _, day := range l {
 		for _, open := range day.Openings {
 			if _, err := p.PrintDirective(w, open); err != nil {
@@ -49,8 +50,8 @@ func Transcode(w io.Writer, l []*journal.Day, c *journal.Commodity) error {
 
 		for _, trx := range day.Transactions {
 			for _, pst := range trx.Postings {
-				if strings.HasPrefix(pst.Credit.Name(), "Equity:Valuation:") && !openValAccounts[pst.Credit] {
-					openValAccounts[pst.Credit] = true
+				if strings.HasPrefix(pst.Credit.Name(), "Equity:Valuation:") && !openValAccounts.Has(pst.Credit) {
+					openValAccounts.Add(pst.Credit)
 					if _, err := p.PrintDirective(w, &journal.Open{Date: trx.Date, Account: pst.Credit}); err != nil {
 						return err
 					}
@@ -58,8 +59,8 @@ func Transcode(w io.Writer, l []*journal.Day, c *journal.Commodity) error {
 						return err
 					}
 				}
-				if strings.HasPrefix(pst.Debit.Name(), "Equity:Valuation:") && !openValAccounts[pst.Debit] {
-					openValAccounts[pst.Debit] = true
+				if strings.HasPrefix(pst.Debit.Name(), "Equity:Valuation:") && !openValAccounts.Has(pst.Debit) {
+					openValAccounts.Add(pst.Debit)
 					if _, err := p.PrintDirective(w, &journal.Open{Date: trx.Date, Account: pst.Debit}); err != nil {
 						return err
 					}

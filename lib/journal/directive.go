@@ -148,15 +148,6 @@ func (t Transaction) Position() Range {
 	return t.Range
 }
 
-// Commodities returns the commodities in this transaction.
-func (t Transaction) Commodities() map[*Commodity]bool {
-	var res = make(map[*Commodity]bool)
-	for _, pst := range t.Postings {
-		res[pst.Commodity] = true
-	}
-	return res
-}
-
 // Less defines an order on transactions.
 func CompareTransactions(t *Transaction, t2 *Transaction) compare.Order {
 	if o := compare.Time(t.Date, t2.Date); o != compare.Equal {

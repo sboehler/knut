@@ -18,3 +18,11 @@ func (set Set[T]) Has(t T) bool {
 func (set Set[T]) Remove(t T) {
 	delete(set, t)
 }
+
+func From[T comparable](ts ...T) Set[T] {
+	res := New[T]()
+	for _, t := range ts {
+		res.Add(t)
+	}
+	return res
+}

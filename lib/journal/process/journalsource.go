@@ -21,11 +21,11 @@ type JournalSource struct {
 	Expand   bool
 	AutoLoad bool
 
-	ast *journal.Journal
+	journal *journal.Journal
 }
 
 func (js *JournalSource) Load(ctx context.Context) error {
-	js.ast = journal.New(js.Context)
+	js.journal = journal.New(js.Context)
 	p := parser.RecursiveParser{
 		Context: js.Context,
 		File:    js.Path,
@@ -44,28 +44,28 @@ func (js *JournalSource) Load(ctx context.Context) error {
 		switch t := d.(type) {
 
 		case *journal.Open:
-			js.ast.AddOpen(t)
+			js.journal.AddOpen(t)
 
 		case *journal.Price:
-			js.ast.AddPrice(t)
+			js.journal.AddPrice(t)
 
 		case *journal.Transaction:
 			if t.Accrual != nil {
 				for _, ts := range t.Accrual.Expand(t) {
-					js.ast.AddTransaction(ts)
+					js.journal.AddTransaction(ts)
 				}
 			} else {
-				js.ast.AddTransaction(t)
+				js.journal.AddTransaction(t)
 			}
 
 		case *journal.Assertion:
-			js.ast.AddAssertion(t)
+			js.journal.AddAssertion(t)
 
 		case *journal.Value:
-			js.ast.AddValue(t)
+			js.journal.AddValue(t)
 
 		case *journal.Close:
-			js.ast.AddClose(t)
+			js.journal.AddClose(t)
 
 		default:
 			errs = multierr.Append(errs, fmt.Errorf("unknown: %#v", t))
@@ -75,11 +75,11 @@ func (js *JournalSource) Load(ctx context.Context) error {
 }
 
 func (js JournalSource) Min() time.Time {
-	return js.ast.Min()
+	return js.journal.Min()
 }
 
 func (js JournalSource) Max() time.Time {
-	return js.ast.Max()
+	return js.journal.Max()
 }
 
 func (js JournalSource) Source(ctx context.Context, outCh chan<- *journal.Day) error {
@@ -88,7 +88,7 @@ func (js JournalSource) Source(ctx context.Context, outCh chan<- *journal.Day) e
 			return err
 		}
 	}
-	for _, d := range js.ast.SortedDays() {
+	for _, d := range js.journal.SortedDays() {
 		if err := cpr.Push(ctx, outCh, d); err != nil {
 			return err
 		}

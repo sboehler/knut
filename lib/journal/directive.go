@@ -98,6 +98,10 @@ func NewValuePosting(crAccount, drAccount *Account, commodity *Commodity, val de
 	}
 }
 
+func (pst *Posting) Accounts() []*Account {
+	return []*Account{pst.Credit, pst.Debit}
+}
+
 // Less determines an order on postings.
 func ComparePostings(p Posting, p2 Posting) compare.Order {
 	if o := CompareAccounts(p.Credit, p2.Credit); o != compare.Equal {

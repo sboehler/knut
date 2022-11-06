@@ -6,6 +6,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
+	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal"
 )
 
@@ -17,7 +18,7 @@ type Balancer struct {
 // Process processes days.
 func (pr *Balancer) Process(ctx context.Context, inCh <-chan *journal.Day, outCh chan<- *journal.Day) error {
 	amounts := make(journal.Amounts)
-	accounts := make(accounts)
+	accounts := set.New[*journal.Account]()
 
 	return cpr.Consume(ctx, inCh, func(d *journal.Day) error {
 		if err := pr.processOpenings(ctx, accounts, d); err != nil {
@@ -40,22 +41,23 @@ func (pr *Balancer) Process(ctx context.Context, inCh <-chan *journal.Day, outCh
 	})
 }
 
-func (pr *Balancer) processOpenings(ctx context.Context, accounts accounts, d *journal.Day) error {
+func (pr *Balancer) processOpenings(ctx context.Context, accounts set.Set[*journal.Account], d *journal.Day) error {
 	for _, o := range d.Openings {
-		if ok := accounts.Open(o.Account); !ok {
+		if accounts.Has(o.Account) {
 			return Error{o, "account is already open"}
 		}
+		accounts.Add(o.Account)
 	}
 	return nil
 }
 
-func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, amts journal.Amounts, d *journal.Day) error {
+func (pr *Balancer) processTransactions(ctx context.Context, accounts set.Set[*journal.Account], amts journal.Amounts, d *journal.Day) error {
 	for _, t := range d.Transactions {
 		for _, p := range t.Postings {
-			if !accounts.IsOpen(p.Credit) {
+			if !accounts.Has(p.Credit) {
 				return Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)}
 			}
-			if !accounts.IsOpen(p.Debit) {
+			if !accounts.Has(p.Debit) {
 				return Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)}
 			}
 			amts.Add(journal.AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
@@ -65,9 +67,9 @@ func (pr *Balancer) processTransactions(ctx context.Context, accounts accounts, 
 	return nil
 }
 
-func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts journal.Amounts, d *journal.Day) error {
+func (pr *Balancer) processValues(ctx context.Context, accounts set.Set[*journal.Account], amts journal.Amounts, d *journal.Day) error {
 	for _, v := range d.Values {
-		if !accounts.IsOpen(v.Account) {
+		if !accounts.Has(v.Account) {
 			return Error{v, "account is not open"}
 		}
 		valAcc := pr.Context.ValuationAccountFor(v.Account)
@@ -84,9 +86,9 @@ func (pr *Balancer) processValues(ctx context.Context, accounts accounts, amts j
 	return nil
 }
 
-func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, amts journal.Amounts, d *journal.Day) error {
+func (pr *Balancer) processAssertions(ctx context.Context, accounts set.Set[*journal.Account], amts journal.Amounts, d *journal.Day) error {
 	for _, a := range d.Assertions {
-		if !accounts.IsOpen(a.Account) {
+		if !accounts.Has(a.Account) {
 			return Error{a, "account is not open"}
 		}
 		position := journal.AccountCommodityKey(a.Account, a.Commodity)
@@ -97,7 +99,7 @@ func (pr *Balancer) processAssertions(ctx context.Context, accounts accounts, am
 	return nil
 }
 
-func (pr *Balancer) processClosings(ctx context.Context, accounts accounts, amounts journal.Amounts, d *journal.Day) error {
+func (pr *Balancer) processClosings(ctx context.Context, accounts set.Set[*journal.Account], amounts journal.Amounts, d *journal.Day) error {
 	for _, c := range d.Closings {
 		for pos, amount := range amounts {
 			if pos.Account != c.Account {
@@ -108,36 +110,10 @@ func (pr *Balancer) processClosings(ctx context.Context, accounts accounts, amou
 			}
 			delete(amounts, pos)
 		}
-		if ok := accounts.Close(c.Account); !ok {
+		if accounts.Has(c.Account) {
 			return Error{c, "account is not open"}
 		}
+		accounts.Remove(c.Account)
 	}
 	return nil
-}
-
-// accounts keeps track of open accounts.
-type accounts map[*journal.Account]struct{}
-
-// Open opens an account.
-func (oa accounts) Open(a *journal.Account) bool {
-	if _, open := oa[a]; open {
-		return false
-	}
-	oa[a] = struct{}{}
-	return true
-}
-
-// Close closes an account.
-func (oa accounts) Close(a *journal.Account) bool {
-	if _, open := oa[a]; !open {
-		return false
-	}
-	delete(oa, a)
-	return true
-}
-
-// IsOpen returns whether an account is open.
-func (oa accounts) IsOpen(a *journal.Account) bool {
-	_, open := oa[a]
-	return open
 }

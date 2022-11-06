@@ -8,6 +8,7 @@ import (
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
+	"github.com/sboehler/knut/lib/common/set"
 	"github.com/shopspring/decimal"
 )
 
@@ -125,10 +126,10 @@ func (am Amounts) Index(cmp compare.Compare[Key]) []Key {
 // 	}
 // }
 
-func (am Amounts) Commodities() map[*Commodity]struct{} {
-	cs := make(map[*Commodity]struct{})
+func (am Amounts) Commodities() set.Set[*Commodity] {
+	cs := set.New[*Commodity]()
 	for k := range am {
-		cs[k.Commodity] = struct{}{}
+		cs.Add(k.Commodity)
 	}
 	return cs
 }
@@ -138,10 +139,10 @@ func (am Amounts) CommoditiesSorted() []*Commodity {
 	return dict.SortedKeys(cs, CompareCommodities)
 }
 
-func (am Amounts) Dates() map[time.Time]struct{} {
-	cs := make(map[time.Time]struct{})
+func (am Amounts) Dates() set.Set[time.Time] {
+	cs := set.New[time.Time]()
 	for k := range am {
-		cs[k.Date] = struct{}{}
+		cs.Add(k.Date)
 	}
 	return cs
 }

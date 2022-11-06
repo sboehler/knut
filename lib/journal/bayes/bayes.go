@@ -19,14 +19,15 @@ import (
 	"strings"
 
 	"github.com/sboehler/knut/lib/common/dict"
+	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal"
 )
 
 // Model implements a Bayes model for accounts and text tokens derived from transactions.
 type Model struct {
 	total                  int
-	totalByAccount         map[*journal.Account]int
-	totalByTokenAndAccount map[string]map[*journal.Account]int
+	totalByAccount         countByAccount
+	totalByTokenAndAccount map[string]countByAccount
 
 	exclude *journal.Account
 }
@@ -35,32 +36,32 @@ type Model struct {
 func NewModel(exclude *journal.Account) *Model {
 	return &Model{
 		total:                  0,
-		totalByAccount:         make(map[*journal.Account]int),
-		totalByTokenAndAccount: make(map[string]map[*journal.Account]int),
+		totalByAccount:         newCountByAccount(),
+		totalByTokenAndAccount: make(map[string]countByAccount),
 	}
 }
 
 // Update updates the model with the given transaction.
 func (m *Model) Update(t *journal.Transaction) {
 	for _, p := range t.Postings {
-		if p.Credit != m.exclude {
+		for _, acc := range p.Accounts() {
+			if acc == m.exclude {
+				continue
+			}
 			m.total++
-			m.totalByAccount[p.Credit]++
-			for token := range tokenize(t.Description, &p, p.Credit) {
-				tc := dict.GetDefault(m.totalByTokenAndAccount, token, func() map[*journal.Account]int { return make(map[*journal.Account]int) })
-				tc[p.Credit]++
+			m.totalByAccount[acc]++
+			for token := range tokenize(t.Description, &p, acc) {
+				tc := dict.GetDefault(m.totalByTokenAndAccount, token, newCountByAccount)
+				tc[acc]++
 			}
 		}
-		if p.Debit != m.exclude {
-			m.total++
-			m.totalByAccount[p.Debit]++
-			for token := range tokenize(t.Description, &p, p.Debit) {
-				tc := dict.GetDefault(m.totalByTokenAndAccount, token, func() map[*journal.Account]int { return make(map[*journal.Account]int) })
-				tc[p.Debit]++
-			}
-		}
-
 	}
+}
+
+type countByAccount map[*journal.Account]int
+
+func newCountByAccount() countByAccount {
+	return make(map[*journal.Account]int)
 }
 
 // Infer replaces the given account with an inferred account.
@@ -106,17 +107,17 @@ func (m *Model) Infer(t *journal.Transaction, tbd *journal.Account) {
 	}
 }
 
-func tokenize(desc string, posting *journal.Posting, account *journal.Account) map[string]struct{} {
+func tokenize(desc string, posting *journal.Posting, account *journal.Account) set.Set[string] {
 	tokens := append(strings.Fields(desc), posting.Commodity.Name(), posting.Amount.String())
-	if account == posting.Credit {
+	switch account {
+	case posting.Credit:
 		tokens = append(tokens, "__knut_credit", posting.Debit.Name())
-	}
-	if account == posting.Debit {
+	case posting.Debit:
 		tokens = append(tokens, "__knut_debit", posting.Credit.Name())
 	}
-	result := make(map[string]struct{})
+	result := set.New[string]()
 	for _, token := range tokens {
-		result[strings.ToLower(token)] = struct{}{}
+		result.Add(strings.ToLower(token))
 	}
 	return result
 }

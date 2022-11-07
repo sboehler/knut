@@ -213,7 +213,7 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		t.Postings = []journal.Posting{
+		t.Postings = []*journal.Posting{
 			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, p.currency, amount),
 			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, otherCommodity, otherAmount),
 		}
@@ -222,12 +222,12 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		t.Postings = []journal.Posting{
+		t.Postings = []*journal.Posting{
 			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, p.currency, amount),
 			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg()),
 		}
 	default:
-		t.Postings = []journal.Posting{
+		t.Postings = []*journal.Posting{
 			journal.NewPosting(p.ast.Context.TBDAccount(), p.account, p.currency, amount),
 		}
 	}

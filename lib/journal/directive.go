@@ -62,12 +62,12 @@ type Posting struct {
 
 // NewPosting creates a new posting from the given parameters. If amount is negative, it
 // will be inverted and the accounts reversed.
-func NewPosting(crAccount, drAccount *Account, commodity *Commodity, amt decimal.Decimal) Posting {
+func NewPosting(crAccount, drAccount *Account, commodity *Commodity, amt decimal.Decimal) *Posting {
 	if amt.IsNegative() {
 		crAccount, drAccount = drAccount, crAccount
 		amt = amt.Neg()
 	}
-	return Posting{
+	return &Posting{
 		Credit:    crAccount,
 		Debit:     drAccount,
 		Amount:    amt,
@@ -77,19 +77,19 @@ func NewPosting(crAccount, drAccount *Account, commodity *Commodity, amt decimal
 
 // PostingWithTargets creates a new posting from the given parameters. If amount is negative, it
 // will be inverted and the accounts reversed.
-func PostingWithTargets(crAccount, drAccount *Account, commodity *Commodity, amt decimal.Decimal, targets []*Commodity) Posting {
+func PostingWithTargets(crAccount, drAccount *Account, commodity *Commodity, amt decimal.Decimal, targets []*Commodity) *Posting {
 	p := NewPosting(crAccount, drAccount, commodity, amt)
 	p.Targets = targets
 	return p
 }
 
 // NewValuePosting creates a value adjustment posting.
-func NewValuePosting(crAccount, drAccount *Account, commodity *Commodity, val decimal.Decimal, targets []*Commodity) Posting {
+func NewValuePosting(crAccount, drAccount *Account, commodity *Commodity, val decimal.Decimal, targets []*Commodity) *Posting {
 	if val.IsNegative() {
 		crAccount, drAccount = drAccount, crAccount
 		val = val.Neg()
 	}
-	return Posting{
+	return &Posting{
 		Credit:    crAccount,
 		Debit:     drAccount,
 		Value:     val,
@@ -103,7 +103,7 @@ func (pst *Posting) Accounts() []*Account {
 }
 
 // Less determines an order on postings.
-func ComparePostings(p Posting, p2 Posting) compare.Order {
+func ComparePostings(p, p2 *Posting) compare.Order {
 	if o := CompareAccounts(p.Credit, p2.Credit); o != compare.Equal {
 		return o
 	}
@@ -139,7 +139,7 @@ type Transaction struct {
 	Date        time.Time
 	Description string
 	Tags        []Tag
-	Postings    []Posting
+	Postings    []*Posting
 	Accrual     *Accrual
 }
 
@@ -170,7 +170,7 @@ type TransactionBuilder struct {
 	Date        time.Time
 	Description string
 	Tags        []Tag
-	Postings    []Posting
+	Postings    []*Posting
 	Accrual     *Accrual
 }
 
@@ -265,7 +265,7 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 				Date:        period.End,
 				Tags:        t.Tags,
 				Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description, i+1, len(periods)),
-				Postings: []Posting{
+				Postings: []*Posting{
 					NewPosting(crAccountMulti, drAccountMulti, posting.Commodity, a),
 				},
 			}.Build())
@@ -277,7 +277,7 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 			Date:        t.Date,
 			Tags:        t.Tags,
 			Description: t.Description,
-			Postings: []Posting{
+			Postings: []*Posting{
 				NewPosting(crAccountSingle, drAccountSingle, posting.Commodity, posting.Amount),
 			},
 		}.Build())

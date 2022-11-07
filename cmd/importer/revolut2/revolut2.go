@@ -170,7 +170,7 @@ func (p *parser) parseBooking() error {
 	t := journal.TransactionBuilder{
 		Date:        d,
 		Description: r[bfDescription],
-		Postings: []journal.Posting{
+		Postings: []*journal.Posting{
 			journal.NewPosting(p.ast.Context.TBDAccount(), p.account, c, amt),
 		},
 	}

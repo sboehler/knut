@@ -291,7 +291,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []journal.Posting{
+		Postings: []*journal.Posting{
 			journal.PostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
 			journal.PostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
 			journal.PostingWithTargets(p.fee, p.account, currency, fee, []*journal.Commodity{stock, currency}),
@@ -343,7 +343,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
-	var postings = []journal.Posting{
+	var postings = []*journal.Posting{
 		journal.PostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
 		journal.PostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
 	}
@@ -400,7 +400,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []journal.Posting{
+		Postings: []*journal.Posting{
 			journal.NewPosting(p.builder.Context.TBDAccount(), p.account, currency, amount),
 		},
 	}.Build())
@@ -451,7 +451,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []journal.Posting{
+		Postings: []*journal.Posting{
 			journal.PostingWithTargets(p.dividend, p.account, currency, amount, []*journal.Commodity{security}),
 		},
 	}.Build())
@@ -512,7 +512,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []journal.Posting{
+		Postings: []*journal.Posting{
 			journal.PostingWithTargets(p.tax, p.account, currency, amount, []*journal.Commodity{security}),
 		},
 	}.Build())
@@ -543,7 +543,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []journal.Posting{
+		Postings: []*journal.Posting{
 			journal.PostingWithTargets(p.interest, p.account, currency, amount, []*journal.Commodity{currency})},
 	}.Build())
 	return true, nil

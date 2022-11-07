@@ -109,7 +109,7 @@ func writeTrx(w io.Writer, t *journal.Transaction, c *journal.Commodity) error {
 }
 
 // WriteTo pretty-prints a posting.
-func writePosting(w io.Writer, p journal.Posting, c *journal.Commodity) error {
+func writePosting(w io.Writer, p *journal.Posting, c *journal.Commodity) error {
 	var amt decimal.Decimal
 	if c == nil {
 		amt = p.Amount

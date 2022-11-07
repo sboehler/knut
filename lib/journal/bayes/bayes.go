@@ -50,7 +50,7 @@ func (m *Model) Update(t *journal.Transaction) {
 			}
 			m.count++
 			m.countByAccount[acc]++
-			for token := range tokenize(t.Description, &p, acc) {
+			for token := range tokenize(t.Description, p, acc) {
 				dict.GetDefault(m.countByTokenAndAccount, token, newCountByAccount)[acc]++
 			}
 		}
@@ -67,8 +67,7 @@ func newCountByAccount() countByAccount {
 // P(A | T1 & T2 & ... & Tn) ~ P(A) * P(T1|A) * P(T2|A) * ... * P(Tn|A)
 func (m *Model) Infer(t *journal.Transaction, tbd *journal.Account) {
 	def := math.Log(1.0 / float64(m.count))
-	for i := range t.Postings {
-		posting := &t.Postings[i]
+	for _, posting := range t.Postings {
 		if posting.Credit != tbd && posting.Debit != tbd {
 			continue
 		}

@@ -96,7 +96,7 @@ func (p Printer) printAccrual(w io.Writer, a *journal.Accrual) (n int, err error
 	return fmt.Fprintf(w, "@accrue %s %s %s %s\n", a.Interval, a.T0.Format("2006-01-02"), a.T1.Format("2006-01-02"), a.Account)
 }
 
-func (p Printer) printPosting(w io.Writer, t journal.Posting) (int, error) {
+func (p Printer) printPosting(w io.Writer, t *journal.Posting) (int, error) {
 	var n int
 	c, err := fmt.Fprintf(w, "%s %s %s %s", p.rightPad(t.Credit), p.rightPad(t.Debit), leftPad(10, t.Amount.String()), t.Commodity.Name())
 	n += c

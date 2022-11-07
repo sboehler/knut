@@ -154,7 +154,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        d,
 		Description: desc,
-		Postings: []journal.Posting{
+		Postings: []*journal.Posting{
 			journal.NewPosting(p.account, p.builder.Context.TBDAccount(), chf, amt),
 		},
 	}.Build())

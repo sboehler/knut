@@ -37,14 +37,14 @@ func newTestData(jctx journal.Context) TestData {
 		trx1  = journal.TransactionBuilder{
 			Date:        date1,
 			Description: "foo",
-			Postings: []journal.Posting{
+			Postings: []*journal.Posting{
 				journal.NewPosting(account1, account2, commodity1, decimal.NewFromInt(10)),
 			},
 		}.Build()
 		trx2 = journal.TransactionBuilder{
 			Date:        date2,
 			Description: "foo",
-			Postings: []journal.Posting{
+			Postings: []*journal.Posting{
 				journal.NewPosting(account2, account1, commodity2, decimal.NewFromInt(11)),
 			},
 		}.Build()

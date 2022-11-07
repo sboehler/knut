@@ -33,8 +33,7 @@ func (val Valuator) Process(ctx context.Context, inCh <-chan *journal.Day, outCh
 
 func (val Valuator) valuateTransactions(d *journal.Day, values journal.Amounts) error {
 	for _, t := range d.Transactions {
-		for i := range t.Postings {
-			posting := &t.Postings[i]
+		for _, posting := range t.Postings {
 			v := posting.Amount
 			var err error
 			if val.Valuation != posting.Commodity {
@@ -71,7 +70,7 @@ func (val Valuator) valuateGains(d *journal.Day, values journal.Amounts) error {
 		d.Transactions = append(d.Transactions, journal.TransactionBuilder{
 			Date:        d.Date,
 			Description: fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity.Name(), pos.Account.Name()),
-			Postings: []journal.Posting{
+			Postings: []*journal.Posting{
 				journal.NewValuePosting(credit, pos.Account, pos.Commodity, gain, []*journal.Commodity{pos.Commodity}),
 			},
 		}.Build())

@@ -38,7 +38,7 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "outflow",
 				trx: journal.TransactionBuilder{
-					Postings: []journal.Posting{
+					Postings: []*journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     acc2,
@@ -52,7 +52,7 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "inflow",
 				trx: journal.TransactionBuilder{
-					Postings: []journal.Posting{
+					Postings: []*journal.Posting{
 						{
 							Credit:    acc1,
 							Debit:     portfolio,
@@ -66,7 +66,7 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "dividend",
 				trx: journal.TransactionBuilder{
-					Postings: []journal.Posting{
+					Postings: []*journal.Posting{
 						{
 							Credit:    dividend,
 							Debit:     portfolio,
@@ -84,7 +84,7 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "expense",
 				trx: journal.TransactionBuilder{
-					Postings: []journal.Posting{
+					Postings: []*journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     expense,
@@ -102,7 +102,7 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "expense with effect on porfolio",
 				trx: journal.TransactionBuilder{
-					Postings: []journal.Posting{
+					Postings: []*journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     expense,
@@ -120,7 +120,7 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "stock purchase",
 				trx: journal.TransactionBuilder{
-					Postings: []journal.Posting{
+					Postings: []*journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,
@@ -145,7 +145,7 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "stock purchase with fee",
 				trx: journal.TransactionBuilder{
-					Postings: []journal.Posting{
+					Postings: []*journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,
@@ -177,7 +177,7 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "stock sale",
 				trx: journal.TransactionBuilder{
-					Postings: []journal.Posting{
+					Postings: []*journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,
@@ -203,7 +203,7 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "forex without fee",
 				trx: journal.TransactionBuilder{
-					Postings: []journal.Posting{
+					Postings: []*journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,
@@ -228,7 +228,7 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "forex with fee",
 				trx: journal.TransactionBuilder{
-					Postings: []journal.Posting{
+					Postings: []*journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,
@@ -260,7 +260,7 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "forex with native fee",
 				trx: journal.TransactionBuilder{
-					Postings: []journal.Posting{
+					Postings: []*journal.Posting{
 						{
 							Credit:    portfolio,
 							Debit:     equity,

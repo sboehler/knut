@@ -239,7 +239,7 @@ func generateTransactions(c config, cs []*journal.Commodity, as []*journal.Accou
 		trx = append(trx, journal.TransactionBuilder{
 			Date:        dates[rand.Intn(len(dates))].End,
 			Description: generateIdentifier(200),
-			Postings: []journal.Posting{
+			Postings: []*journal.Posting{
 				journal.NewPosting(as[rand.Intn(len(as))], as[rand.Intn(len(as))], cs[rand.Intn(len(cs))], decimal.NewFromFloat(rand.Float64()*1000).Round(4)),
 			},
 		}.Build())
@@ -252,7 +252,7 @@ var stdev = 0.13 / math.Sqrt(365)
 func generatePrices(c config, cs []*journal.Commodity) []*journal.Price {
 	var prices []*journal.Price
 	for _, commodity := range cs[1:] {
-		var price = decimal.NewFromFloat(1.0 + 200*rand.Float64())
+		price := decimal.NewFromFloat(1.0 + 200*rand.Float64())
 		for _, d := range date.Periods(c.from, c.to, date.Daily) {
 			price = price.Mul(decimal.NewFromFloat(1 + rand.NormFloat64()*stdev)).Truncate(4)
 			prices = append(prices, &journal.Price{

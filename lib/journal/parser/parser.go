@@ -268,8 +268,8 @@ func (p *Parser) parseAddOn() (*journal.Accrual, error) {
 	}, nil
 }
 
-func (p *Parser) parsePostings() ([]journal.Posting, error) {
-	var postings []journal.Posting
+func (p *Parser) parsePostings() ([]*journal.Posting, error) {
+	var postings []*journal.Posting
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		var (
 			credit, debit *journal.Account
@@ -328,7 +328,7 @@ func (p *Parser) parsePostings() ([]journal.Posting, error) {
 				}
 			}
 		}
-		postings = append(postings, journal.Posting{
+		postings = append(postings, &journal.Posting{
 			Credit:    credit,
 			Debit:     debit,
 			Amount:    amount,

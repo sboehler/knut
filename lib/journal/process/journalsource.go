@@ -30,18 +30,12 @@ func (js *JournalSource) Load(ctx context.Context) error {
 		Context: js.Context,
 		File:    js.Path,
 	}
-	ch, errCh := p.Parse(ctx)
 	var errs error
-	for {
-		d, ok, err := cpr.Get(ch, errCh)
-		if err != nil {
-			errs = multierr.Append(errs, err)
-			continue
-		}
-		if !ok {
-			break
-		}
+	err := cpr.Consume(ctx, p.Parse(ctx), func(d any) error {
 		switch t := d.(type) {
+
+		case error:
+			errs = multierr.Append(errs, t)
 
 		case *journal.Open:
 			js.journal.AddOpen(t)
@@ -70,6 +64,10 @@ func (js *JournalSource) Load(ctx context.Context) error {
 		default:
 			errs = multierr.Append(errs, fmt.Errorf("unknown: %#v", t))
 		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 	return errs
 }

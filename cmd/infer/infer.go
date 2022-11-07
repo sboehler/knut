@@ -106,21 +106,16 @@ func train(ctx context.Context, jctx journal.Context, file string, exclude *jour
 		j = parser.RecursiveParser{Context: jctx, File: file}
 		m = bayes.NewModel(exclude)
 	)
-	resCh, errCh := j.Parse(ctx)
-
-	for {
-		d, ok, err := cpr.Get(resCh, errCh)
-		if !ok {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		if t, ok := d.(*journal.Transaction); ok {
+	err := cpr.Consume(ctx, j.Parse(ctx), func(d any) error {
+		switch t := d.(type) {
+		case error:
+			return t
+		case *journal.Transaction:
 			m.Update(t)
 		}
-	}
-	return m, nil
+		return nil
+	})
+	return m, err
 }
 
 func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model *bayes.Model, targetFile string, account *journal.Account) ([]journal.Directive, error) {

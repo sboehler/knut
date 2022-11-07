@@ -34,29 +34,27 @@ type RecursiveParser struct {
 }
 
 // Parse parses the journal at the path, and branches out for include files
-func (rp *RecursiveParser) Parse(ctx context.Context) (<-chan journal.Directive, <-chan error) {
-	resCh := make(chan journal.Directive, 1000)
-	errCh := make(chan error)
+func (rp *RecursiveParser) Parse(ctx context.Context) <-chan any {
+	resCh := make(chan any, 1000)
 
 	rp.wg.Add(1)
 	go func() {
 		defer rp.wg.Done()
-		err := rp.parseRecursively(ctx, resCh, errCh, rp.File)
+		err := rp.parseRecursively(ctx, resCh, rp.File)
 		if err != nil && ctx.Err() == nil {
-			cpr.Push(ctx, errCh, err)
+			cpr.Push[any](ctx, resCh, err)
 		}
 	}()
 
 	// Parse and eventually close input channel
 	go func() {
 		defer close(resCh)
-		defer close(errCh)
 		rp.wg.Wait()
 	}()
-	return resCh, errCh
+	return resCh
 }
 
-func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- journal.Directive, errCh chan<- error, file string) error {
+func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- any, file string) error {
 	p, cls, err := FromPath(rp.Context, file)
 	if err != nil {
 		return err
@@ -76,13 +74,13 @@ func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- jo
 			rp.wg.Add(1)
 			go func() {
 				defer rp.wg.Done()
-				err := rp.parseRecursively(ctx, resCh, errCh, path.Join(filepath.Dir(file), t.Path))
+				err := rp.parseRecursively(ctx, resCh, path.Join(filepath.Dir(file), t.Path))
 				if err != nil && ctx.Err() == nil {
-					cpr.Push(ctx, errCh, err)
+					cpr.Push[any](ctx, resCh, err)
 				}
 			}()
 		default:
-			if err := cpr.Push(ctx, resCh, d); err != nil {
+			if err := cpr.Push[any](ctx, resCh, d); err != nil {
 				return err
 			}
 		}

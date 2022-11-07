@@ -25,9 +25,9 @@ import (
 
 // Model implements a Bayes model for accounts and text tokens derived from transactions.
 type Model struct {
-	total                  int
-	totalByAccount         countByAccount
-	totalByTokenAndAccount map[string]countByAccount
+	count                  int
+	countByAccount         countByAccount
+	countByTokenAndAccount map[string]countByAccount
 
 	exclude *journal.Account
 }
@@ -35,9 +35,9 @@ type Model struct {
 // NewModel creates a new model.
 func NewModel(exclude *journal.Account) *Model {
 	return &Model{
-		total:                  0,
-		totalByAccount:         newCountByAccount(),
-		totalByTokenAndAccount: make(map[string]countByAccount),
+		count:                  0,
+		countByAccount:         newCountByAccount(),
+		countByTokenAndAccount: make(map[string]countByAccount),
 	}
 }
 
@@ -48,10 +48,10 @@ func (m *Model) Update(t *journal.Transaction) {
 			if acc == m.exclude {
 				continue
 			}
-			m.total++
-			m.totalByAccount[acc]++
+			m.count++
+			m.countByAccount[acc]++
 			for token := range tokenize(t.Description, &p, acc) {
-				dict.GetDefault(m.totalByTokenAndAccount, token, newCountByAccount)[acc]++
+				dict.GetDefault(m.countByTokenAndAccount, token, newCountByAccount)[acc]++
 			}
 		}
 	}
@@ -66,7 +66,7 @@ func newCountByAccount() countByAccount {
 // Infer replaces the given account with an inferred account.
 // P(A | T1 & T2 & ... & Tn) ~ P(A) * P(T1|A) * P(T2|A) * ... * P(Tn|A)
 func (m *Model) Infer(t *journal.Transaction, tbd *journal.Account) {
-	def := math.Log(1.0 / float64(m.total))
+	def := math.Log(1.0 / float64(m.count))
 	for i := range t.Postings {
 		posting := &t.Postings[i]
 		if posting.Credit != tbd && posting.Debit != tbd {
@@ -74,14 +74,14 @@ func (m *Model) Infer(t *journal.Transaction, tbd *journal.Account) {
 		}
 		scores := make(map[*journal.Account]float64)
 		tokens := tokenize(t.Description, posting, tbd)
-		for a, total := range m.totalByAccount {
+		for a, total := range m.countByAccount {
 			if a == posting.Credit || a == posting.Debit {
 				// ignore both TBD and the other account of this posting
 				continue
 			}
-			scores[a] = math.Log(float64(total) / float64(m.total))
+			scores[a] = math.Log(float64(total) / float64(m.count))
 			for token := range tokens {
-				if countForToken, ok := m.totalByTokenAndAccount[token][a]; ok {
+				if countForToken, ok := m.countByTokenAndAccount[token][a]; ok {
 					scores[a] += math.Log(float64(countForToken) / float64(total))
 				} else {
 					// assign a low but positive default probability

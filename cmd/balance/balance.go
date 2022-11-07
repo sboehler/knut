@@ -131,7 +131,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		dates = date.CreatePartition(from, to, r.interval.Value(), r.last)
 		rep   = report.NewReport(jctx)
 		f     = filter.And(
-			journal.FilterDatesBetween(from, to),
+			journal.FilterDates(date.Between(from, to)),
 			filter.Or(
 				journal.FilterAccount(r.accounts.Value()),
 				journal.FilterOther(r.accounts.Value()),

@@ -149,10 +149,10 @@ func (am Amounts) SumOver(f func(k Key) bool) decimal.Decimal {
 }
 
 type KeyMapper struct {
-	Date                 func(time.Time) time.Time
-	Account, Other       func(*Account) *Account
-	Commodity, Valuation func(*Commodity) *Commodity
-	Description          func(string) string
+	Date                 mapper.Mapper[time.Time]
+	Account, Other       mapper.Mapper[*Account]
+	Commodity, Valuation mapper.Mapper[*Commodity]
+	Description          mapper.Mapper[string]
 }
 
 func (km KeyMapper) Build() mapper.Mapper[Key] {
@@ -180,16 +180,8 @@ func (km KeyMapper) Build() mapper.Mapper[Key] {
 	}
 }
 
-func FilterDates(t time.Time) filter.Filter[Key] {
-	return func(k Key) bool {
-		return !k.Date.After(t)
-	}
-}
-
-func FilterDatesBetween(t0, t1 time.Time) filter.Filter[Key] {
-	return func(k Key) bool {
-		return !(k.Date.Before(t0) || k.Date.After(t1))
-	}
+func FilterDates(f filter.Filter[time.Time]) filter.Filter[Key] {
+	return func(k Key) bool { return f(k.Date) }
 }
 
 func FilterCommodity(rx []*regexp.Regexp) filter.Filter[Key] {

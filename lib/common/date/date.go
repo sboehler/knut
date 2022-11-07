@@ -17,6 +17,8 @@ package date
 import (
 	"sort"
 	"time"
+
+	"github.com/sboehler/knut/lib/common/filter"
 )
 
 // Interval is a time interval.
@@ -206,4 +208,10 @@ func CreatePartition(t0, t1 time.Time, p Interval, n int) []time.Time {
 		res = res[len(res)-n:]
 	}
 	return res
+}
+
+func Between(t0, t1 time.Time) filter.Filter[time.Time] {
+	return func(t time.Time) bool {
+		return !t.Before(t0) && !t.After(t1)
+	}
 }

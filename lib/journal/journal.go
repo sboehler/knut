@@ -31,8 +31,8 @@ type JournalBuilder struct {
 	min, max time.Time
 }
 
-// New creates a new AST
-func New(ctx Context) *JournalBuilder {
+// NewBuilder creates a new AST
+func NewBuilder(ctx Context) *JournalBuilder {
 	return &JournalBuilder{
 		Context: ctx,
 		Days:    make(map[time.Time]*Day),

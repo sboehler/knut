@@ -83,7 +83,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var resp response
 	json.Unmarshal(b, &resp)
 
-	var builder = journal.New(ctx)
+	var builder = journal.NewBuilder(ctx)
 	for _, dv := range resp.DailyValues {
 		d, err := time.Parse("2006-01-02", dv.Date)
 		if err != nil {

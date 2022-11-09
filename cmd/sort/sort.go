@@ -101,7 +101,7 @@ func readDirectives(jctx journal.Context, target string) (*journal.JournalBuilde
 	}
 	defer close()
 
-	res := journal.New(jctx)
+	res := journal.NewBuilder(jctx)
 
 	for {
 		d, err := p.Next()

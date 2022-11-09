@@ -24,7 +24,7 @@ type JournalSource struct {
 }
 
 func (js *JournalSource) Load(ctx context.Context) error {
-	js.journal = journal.New(js.Context)
+	js.journal = journal.NewBuilder(js.Context)
 	p := journal.RecursiveParser{
 		Context: js.Context,
 		File:    js.Path,

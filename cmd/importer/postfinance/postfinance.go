@@ -68,7 +68,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = Parser{
 		reader: csv.NewReader(reader),
-		ast:    journal.New(ctx),
+		ast:    journal.NewBuilder(ctx),
 	}
 	if p.account, err = r.accountFlag.Value(ctx); err != nil {
 		return err

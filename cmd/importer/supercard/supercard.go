@@ -72,7 +72,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = parser{
 		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)),
-		builder: journal.New(ctx),
+		builder: journal.NewBuilder(ctx),
 	}
 
 	if p.account, err = r.account.Value(ctx); err != nil {

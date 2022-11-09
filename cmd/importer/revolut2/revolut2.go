@@ -64,7 +64,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		f   *bufio.Reader
 		err error
 	)
-	a := journal.New(ctx)
+	a := journal.NewBuilder(ctx)
 	for _, path := range args {
 		if f, err = flags.OpenFile(path); err != nil {
 			return err

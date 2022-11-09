@@ -21,7 +21,7 @@ type JournalSource struct {
 	Expand   bool
 	AutoLoad bool
 
-	journal *journal.Journal
+	journal *journal.JournalBuilder
 }
 
 func (js *JournalSource) Load(ctx context.Context) error {

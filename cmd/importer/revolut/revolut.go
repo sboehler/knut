@@ -88,7 +88,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 type parser struct {
 	reader   *csv.Reader
 	account  *journal.Account
-	ast      *journal.Journal
+	ast      *journal.JournalBuilder
 	currency *journal.Commodity
 	date     time.Time
 }

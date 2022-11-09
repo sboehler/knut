@@ -22,16 +22,16 @@ import (
 	"github.com/sboehler/knut/lib/common/dict"
 )
 
-// Journal represents an unprocessed
-type Journal struct {
+// JournalBuilder represents an unprocessed
+type JournalBuilder struct {
 	Context  Context
 	Days     map[time.Time]*Day
 	min, max time.Time
 }
 
 // New creates a new AST
-func New(ctx Context) *Journal {
-	return &Journal{
+func New(ctx Context) *JournalBuilder {
+	return &JournalBuilder{
 		Context: ctx,
 		Days:    make(map[time.Time]*Day),
 		min:     date.Date(9999, 12, 31),
@@ -40,12 +40,12 @@ func New(ctx Context) *Journal {
 }
 
 // Day returns the Day for the given date.
-func (ast *Journal) Day(d time.Time) *Day {
+func (ast *JournalBuilder) Day(d time.Time) *Day {
 	return dict.GetDefault(ast.Days, d, func() *Day { return &Day{Date: d} })
 }
 
 // SortedDays returns all days ordered by date.
-func (ast *Journal) SortedDays() []*Day {
+func (ast *JournalBuilder) SortedDays() []*Day {
 	var res []*Day
 	for _, day := range ast.Days {
 		compare.Sort(day.Transactions, CompareTransactions)
@@ -56,19 +56,19 @@ func (ast *Journal) SortedDays() []*Day {
 }
 
 // AddOpen adds an Open directive.
-func (ast *Journal) AddOpen(o *Open) {
+func (ast *JournalBuilder) AddOpen(o *Open) {
 	d := ast.Day(o.Date)
 	d.Openings = append(d.Openings, o)
 }
 
 // AddPrice adds an Price directive.
-func (ast *Journal) AddPrice(p *Price) {
+func (ast *JournalBuilder) AddPrice(p *Price) {
 	d := ast.Day(p.Date)
 	d.Prices = append(d.Prices, p)
 }
 
 // AddTransaction adds an Transaction directive.
-func (ast *Journal) AddTransaction(t *Transaction) {
+func (ast *JournalBuilder) AddTransaction(t *Transaction) {
 	d := ast.Day(t.Date)
 	if ast.max.Before(d.Date) {
 		ast.max = d.Date
@@ -80,28 +80,28 @@ func (ast *Journal) AddTransaction(t *Transaction) {
 }
 
 // AddValue adds an Value directive.
-func (ast *Journal) AddValue(v *Value) {
+func (ast *JournalBuilder) AddValue(v *Value) {
 	d := ast.Day(v.Date)
 	d.Values = append(d.Values, v)
 }
 
 // AddAssertion adds an Assertion directive.
-func (ast *Journal) AddAssertion(a *Assertion) {
+func (ast *JournalBuilder) AddAssertion(a *Assertion) {
 	d := ast.Day(a.Date)
 	d.Assertions = append(d.Assertions, a)
 }
 
 // AddClose adds an Close directive.
-func (ast *Journal) AddClose(c *Close) {
+func (ast *JournalBuilder) AddClose(c *Close) {
 	d := ast.Day(c.Date)
 	d.Closings = append(d.Closings, c)
 }
 
-func (ast *Journal) Min() time.Time {
+func (ast *JournalBuilder) Min() time.Time {
 	return ast.min
 }
 
-func (ast *Journal) Max() time.Time {
+func (ast *JournalBuilder) Max() time.Time {
 	return ast.max
 }
 

@@ -112,7 +112,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 type parser struct {
 	reader           *csv.Reader
-	builder          *journal.Journal
+	builder          *journal.JournalBuilder
 	baseCurrency     *journal.Commodity
 	dateFrom, dateTo time.Time
 

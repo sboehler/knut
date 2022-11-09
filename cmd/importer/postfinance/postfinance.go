@@ -90,7 +90,7 @@ func init() {
 type Parser struct {
 	reader  *csv.Reader
 	account *journal.Account
-	ast     *journal.Journal
+	ast     *journal.JournalBuilder
 
 	currency *journal.Commodity
 }

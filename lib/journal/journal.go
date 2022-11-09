@@ -15,11 +15,13 @@
 package journal
 
 import (
+	"context"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/dict"
+	"github.com/sboehler/knut/lib/common/slice"
 )
 
 // JournalBuilder represents an unprocessed
@@ -103,6 +105,37 @@ func (ast *JournalBuilder) Min() time.Time {
 
 func (ast *JournalBuilder) Max() time.Time {
 	return ast.max
+}
+
+func (ast *JournalBuilder) Build(v *Commodity) (*Journal, error) {
+	ds := dict.SortedValues(ast.Days, CompareDays)
+	err := slice.Parallel(context.Background(), ds, Balance(ast.Context), ComputePrices(v), Valuate(ast.Context, v), Sort())
+	if err != nil {
+		return nil, err
+	}
+	return &Journal{
+		Context: ast.Context,
+		Days:    ds,
+	}, nil
+
+}
+
+func (ast *JournalBuilder) Build2(fs ...func(*Day) error) (*Journal, error) {
+	ds := dict.SortedValues(ast.Days, CompareDays)
+	err := slice.Parallel(context.Background(), ds, fs...)
+	if err != nil {
+		return nil, err
+	}
+	return &Journal{
+		Context: ast.Context,
+		Days:    ds,
+	}, nil
+
+}
+
+type Journal struct {
+	Context Context
+	Days    []*Day
 }
 
 // Day groups all commands for a given date.

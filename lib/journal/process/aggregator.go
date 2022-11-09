@@ -18,7 +18,6 @@ type Aggregator struct {
 	Mapper    mapper.Mapper[journal.Key]
 	Filter    filter.Filter[journal.Key]
 	Valuation *journal.Commodity
-	Value     bool
 
 	Collection Collection
 }

@@ -5,7 +5,10 @@ import (
 	"strings"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/filter"
+	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/set"
+	"github.com/shopspring/decimal"
 )
 
 type DayFn func(*Day) error
@@ -53,7 +56,7 @@ func ComputePrices(v *Commodity) DayFn {
 	}
 }
 
-// Balance balances the journal.
+// Balance balances the
 func Balance(jctx Context) DayFn {
 	amounts := make(Amounts)
 	accounts := set.New[*Account]()
@@ -156,7 +159,7 @@ func Balance(jctx Context) DayFn {
 	}
 }
 
-// Valuate valuates the journal.
+// Valuate valuates the
 func Valuate(jctx Context, v *Commodity) DayFn {
 	if v == nil {
 		return NoOp[*Day]
@@ -221,6 +224,60 @@ func Valuate(jctx Context, v *Commodity) DayFn {
 			return err
 		}
 		d.Value = values.Clone()
+		return nil
+	}
+}
+
+// Sort sorts the directives in this day.
+func Sort() DayFn {
+	return func(d *Day) error {
+		compare.Sort(d.Transactions, CompareTransactions)
+		return nil
+	}
+}
+
+type Collection interface {
+	Insert(k Key, v decimal.Decimal)
+}
+
+func Aggregate(m mapper.Mapper[Key], f filter.Filter[Key], v *Commodity, c Collection) DayFn {
+	if f == nil {
+		f = filter.AllowAll[Key]
+	}
+	if m == nil {
+		m = mapper.Identity[Key]
+	}
+	return func(d *Day) error {
+		for _, t := range d.Transactions {
+			for _, b := range t.Postings {
+				amt := b.Amount
+				if v != nil {
+					amt = b.Value
+				}
+				kc := Key{
+					Date:        t.Date,
+					Account:     b.Credit,
+					Other:       b.Debit,
+					Commodity:   b.Commodity,
+					Valuation:   v,
+					Description: t.Description,
+				}
+				if f(kc) {
+					c.Insert(m(kc), amt.Neg())
+				}
+				kd := Key{
+					Date:        t.Date,
+					Account:     b.Debit,
+					Other:       b.Credit,
+					Commodity:   b.Commodity,
+					Valuation:   v,
+					Description: t.Description,
+				}
+				if f(kd) {
+					c.Insert(m(kd), amt)
+				}
+			}
+		}
 		return nil
 	}
 }

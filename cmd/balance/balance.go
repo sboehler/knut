@@ -159,11 +159,14 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Round:     r.digits,
 		}
 	)
-
-	if err := journalSource.Aggregate(ctx, valuation, f, m, rep); err != nil {
+	_, err = journalSource.Build(ctx,
+		journal.Balance(jctx),
+		journal.ComputePrices(valuation),
+		journal.Valuate(jctx, valuation),
+		journal.Aggregate(m, f, valuation, rep))
+	if err != nil {
 		return err
 	}
-
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 	return tableRenderer.Render(reportRenderer.Render(rep), out)

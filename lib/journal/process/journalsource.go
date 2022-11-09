@@ -94,6 +94,15 @@ func (js JournalSource) Source(ctx context.Context, outCh chan<- *journal.Day) e
 	return nil
 }
 
+func (js JournalSource) Build(ctx context.Context, fs ...func(*journal.Day) error) (*journal.Journal, error) {
+	if js.AutoLoad {
+		if err := js.Load(ctx); err != nil {
+			return nil, err
+		}
+	}
+	return js.journal.Build2(fs...)
+}
+
 func (js JournalSource) Aggregate(ctx context.Context, v *journal.Commodity, f filter.Filter[journal.Key], m mapper.Mapper[journal.Key], c Collection) error {
 	aggregator := &Aggregator{
 		Valuation:  v,

@@ -65,8 +65,8 @@ func newParser(ctx Context, path string, r io.RuneReader) (*Parser, error) {
 	}, nil
 }
 
-// FromPath creates a new parser for the given file.
-func FromPath(ctx Context, path string) (*Parser, func() error, error) {
+// ParserFromPath creates a new parser for the given file.
+func ParserFromPath(ctx Context, path string) (*Parser, func() error, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, nil, err
@@ -813,7 +813,7 @@ func (rp *RecursiveParser) Parse(ctx context.Context) <-chan any {
 }
 
 func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- any, file string) error {
-	p, cls, err := FromPath(rp.Context, file)
+	p, cls, err := ParserFromPath(rp.Context, file)
 	if err != nil {
 		return err
 	}

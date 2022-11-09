@@ -122,7 +122,7 @@ func readConfig(path string) ([]config, error) {
 }
 
 func readFile(ctx journal.Context, filepath string) (res map[time.Time]*journal.Price, err error) {
-	p, cls, err := journal.FromPath(ctx, filepath)
+	p, cls, err := journal.ParserFromPath(ctx, filepath)
 	if err != nil {
 		return nil, err
 	}

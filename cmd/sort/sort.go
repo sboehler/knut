@@ -95,7 +95,7 @@ func sortFile(target string) error {
 }
 
 func readDirectives(jctx journal.Context, target string) (*journal.JournalBuilder, error) {
-	p, close, err := journal.FromPath(jctx, target)
+	p, close, err := journal.ParserFromPath(jctx, target)
 	if err != nil {
 		return nil, err
 	}

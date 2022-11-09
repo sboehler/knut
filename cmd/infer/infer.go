@@ -118,7 +118,7 @@ func train(ctx context.Context, jctx journal.Context, file string, exclude *jour
 }
 
 func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model *bayes.Model, targetFile string, account *journal.Account) ([]journal.Directive, error) {
-	p, cls, err := journal.FromPath(jctx, targetFile)
+	p, cls, err := journal.ParserFromPath(jctx, targetFile)
 	if err != nil {
 		return nil, err
 	}

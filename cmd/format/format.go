@@ -107,7 +107,7 @@ func formatFile(target string) error {
 }
 
 func readDirectives(target string) ([]journal.Directive, error) {
-	p, close, err := journal.FromPath(journal.NewContext(), target)
+	p, close, err := journal.ParserFromPath(journal.NewContext(), target)
 	if err != nil {
 		return nil, err
 	}

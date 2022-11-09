@@ -39,8 +39,8 @@ func New(ctx Context) *JournalBuilder {
 	}
 }
 
-// Day returns the Day for the given date.
-func (ast *JournalBuilder) Day(d time.Time) *Day {
+// day returns the day for the given date.
+func (ast *JournalBuilder) day(d time.Time) *Day {
 	return dict.GetDefault(ast.Days, d, func() *Day { return &Day{Date: d} })
 }
 
@@ -57,19 +57,19 @@ func (ast *JournalBuilder) SortedDays() []*Day {
 
 // AddOpen adds an Open directive.
 func (ast *JournalBuilder) AddOpen(o *Open) {
-	d := ast.Day(o.Date)
+	d := ast.day(o.Date)
 	d.Openings = append(d.Openings, o)
 }
 
 // AddPrice adds an Price directive.
 func (ast *JournalBuilder) AddPrice(p *Price) {
-	d := ast.Day(p.Date)
+	d := ast.day(p.Date)
 	d.Prices = append(d.Prices, p)
 }
 
 // AddTransaction adds an Transaction directive.
 func (ast *JournalBuilder) AddTransaction(t *Transaction) {
-	d := ast.Day(t.Date)
+	d := ast.day(t.Date)
 	if ast.max.Before(d.Date) {
 		ast.max = d.Date
 	}
@@ -81,19 +81,19 @@ func (ast *JournalBuilder) AddTransaction(t *Transaction) {
 
 // AddValue adds an Value directive.
 func (ast *JournalBuilder) AddValue(v *Value) {
-	d := ast.Day(v.Date)
+	d := ast.day(v.Date)
 	d.Values = append(d.Values, v)
 }
 
 // AddAssertion adds an Assertion directive.
 func (ast *JournalBuilder) AddAssertion(a *Assertion) {
-	d := ast.Day(a.Date)
+	d := ast.day(a.Date)
 	d.Assertions = append(d.Assertions, a)
 }
 
 // AddClose adds an Close directive.
 func (ast *JournalBuilder) AddClose(c *Close) {
-	d := ast.Day(c.Date)
+	d := ast.day(c.Date)
 	d.Closings = append(d.Closings, c)
 }
 

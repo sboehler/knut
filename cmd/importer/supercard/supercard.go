@@ -30,7 +30,6 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // CreateCmd creates the command.
@@ -84,7 +83,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = printer.New().PrintLedger(out, p.builder.SortedDays())
+	_, err = journal.NewPrinter().PrintLedger(out, p.builder.SortedDays())
 	return err
 }
 

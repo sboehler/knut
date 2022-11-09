@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // Error is an error.
@@ -16,7 +15,7 @@ type Error struct {
 
 func (be Error) Error() string {
 	var (
-		p printer.Printer
+		p journal.Printer
 		b strings.Builder
 	)
 	fmt.Fprintf(&b, "%s:\n", be.directive.Position().Start)

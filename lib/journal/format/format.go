@@ -19,7 +19,6 @@ import (
 	"io/ioutil"
 
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 type reader interface {
@@ -30,7 +29,7 @@ type reader interface {
 // Format formats the directives returned by p.
 func Format(directives []journal.Directive, src reader, dest io.Writer) error {
 	var (
-		p          = printer.New()
+		p          = journal.NewPrinter()
 		srcBytePos int
 	)
 	p.Initialize(directives)

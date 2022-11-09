@@ -27,7 +27,6 @@ import (
 
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 )
@@ -84,7 +83,7 @@ func execute(cmd *cobra.Command, args []string) error {
 	defer close()
 	defer j.Flush()
 
-	var p printer.Printer
+	var p journal.Printer
 
 	if c.includes == 0 {
 		files = append(files, j)

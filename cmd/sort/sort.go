@@ -27,7 +27,6 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/parser"
-	"github.com/sboehler/knut/lib/journal/printer"
 )
 
 // CreateCmd creates the command.
@@ -89,7 +88,7 @@ func sortFile(target string) error {
 		return err
 	}
 	var buf bytes.Buffer
-	_, err = printer.New().PrintLedger(&buf, ast.SortedDays())
+	_, err = journal.NewPrinter().PrintLedger(&buf, ast.SortedDays())
 	if err != nil {
 		return err
 	}

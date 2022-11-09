@@ -23,7 +23,6 @@ import (
 
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/parser"
-	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
 	"github.com/shopspring/decimal"
 	"go.uber.org/multierr"
@@ -181,7 +180,7 @@ func writeFile(ctx journal.Context, prices map[time.Time]*journal.Price, filepat
 	r, w := io.Pipe()
 	go func() {
 		defer w.Close()
-		_, err := printer.New().PrintLedger(w, b.SortedDays())
+		_, err := journal.NewPrinter().PrintLedger(w, b.SortedDays())
 		if err != nil {
 			panic(err)
 		}

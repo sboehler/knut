@@ -23,7 +23,6 @@ import (
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/shopspring/decimal"
 )
 
@@ -35,7 +34,7 @@ func Transcode(w io.Writer, l []*journal.Day, c *journal.Commodity) error {
 	if _, err := io.WriteString(w, "\n\n"); err != nil {
 		return err
 	}
-	var p printer.Printer
+	var p journal.Printer
 	openValAccounts := set.New[*journal.Account]()
 	for _, day := range l {
 		for _, open := range day.Openings {

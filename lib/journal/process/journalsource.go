@@ -9,7 +9,6 @@ import (
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/parser"
 	"go.uber.org/multierr"
 )
 
@@ -26,7 +25,7 @@ type JournalSource struct {
 
 func (js *JournalSource) Load(ctx context.Context) error {
 	js.journal = journal.New(js.Context)
-	p := parser.RecursiveParser{
+	p := journal.RecursiveParser{
 		Context: js.Context,
 		File:    js.Path,
 	}

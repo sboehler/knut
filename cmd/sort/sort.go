@@ -26,7 +26,6 @@ import (
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/parser"
 )
 
 // CreateCmd creates the command.
@@ -96,7 +95,7 @@ func sortFile(target string) error {
 }
 
 func readDirectives(jctx journal.Context, target string) (*journal.JournalBuilder, error) {
-	p, close, err := parser.FromPath(jctx, target)
+	p, close, err := journal.FromPath(jctx, target)
 	if err != nil {
 		return nil, err
 	}

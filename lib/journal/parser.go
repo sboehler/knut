@@ -12,27 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package parser
+package journal
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/scanner"
 	"github.com/shopspring/decimal"
 )
 
 // Parser parses a journal
 type Parser struct {
-	context  journal.Context
+	context  Context
 	scanner  *scanner.Scanner
 	startPos scanner.Location
 }
@@ -41,8 +45,8 @@ func (p *Parser) markStart() {
 	p.startPos = p.scanner.Location
 }
 
-func (p *Parser) getRange() journal.Range {
-	return journal.Range{
+func (p *Parser) getRange() Range {
+	return Range{
 		Start: p.startPos,
 		End:   p.scanner.Location,
 		Path:  p.scanner.Path,
@@ -50,7 +54,7 @@ func (p *Parser) getRange() journal.Range {
 }
 
 // New creates a new parser
-func New(ctx journal.Context, path string, r io.RuneReader) (*Parser, error) {
+func newParser(ctx Context, path string, r io.RuneReader) (*Parser, error) {
 	s, err := scanner.New(r, path)
 	if err != nil {
 		return nil, err
@@ -62,12 +66,12 @@ func New(ctx journal.Context, path string, r io.RuneReader) (*Parser, error) {
 }
 
 // FromPath creates a new parser for the given file.
-func FromPath(ctx journal.Context, path string) (*Parser, func() error, error) {
+func FromPath(ctx Context, path string) (*Parser, func() error, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, nil, err
 	}
-	p, err := New(ctx, path, bufio.NewReader(f))
+	p, err := newParser(ctx, path, bufio.NewReader(f))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -80,7 +84,7 @@ func (p *Parser) current() rune {
 }
 
 // Next returns the Next directive
-func (p *Parser) Next() (journal.Directive, error) {
+func (p *Parser) Next() (Directive, error) {
 	for p.current() != scanner.EOF {
 		if err := p.scanner.ConsumeWhile(isWhitespaceOrNewline); err != nil {
 			return nil, p.scanner.ParseError(err)
@@ -135,7 +139,7 @@ func (p *Parser) consumeComment() error {
 	return nil
 }
 
-func (p *Parser) parseDirective(a *journal.Accrual) (journal.Directive, error) {
+func (p *Parser) parseDirective(a *Accrual) (Directive, error) {
 	p.markStart()
 	d, err := p.parseDate()
 	if err != nil {
@@ -144,7 +148,7 @@ func (p *Parser) parseDirective(a *journal.Accrual) (journal.Directive, error) {
 	if err := p.consumeWhitespace1(); err != nil {
 		return nil, err
 	}
-	var result journal.Directive
+	var result Directive
 	switch p.current() {
 	case '"':
 		result, err = p.parseTransaction(d, a)
@@ -167,7 +171,7 @@ func (p *Parser) parseDirective(a *journal.Accrual) (journal.Directive, error) {
 	return result, nil
 }
 
-func (p *Parser) parseTransaction(d time.Time, a *journal.Accrual) (*journal.Transaction, error) {
+func (p *Parser) parseTransaction(d time.Time, a *Accrual) (*Transaction, error) {
 	desc, err := p.parseQuotedString()
 	if err != nil {
 		return nil, err
@@ -192,7 +196,7 @@ func (p *Parser) parseTransaction(d time.Time, a *journal.Accrual) (*journal.Tra
 	if a != nil {
 		r.Start = a.Range.Start
 	}
-	return journal.TransactionBuilder{
+	return TransactionBuilder{
 		Range:       r,
 		Date:        d,
 		Description: desc,
@@ -203,7 +207,7 @@ func (p *Parser) parseTransaction(d time.Time, a *journal.Accrual) (*journal.Tra
 
 }
 
-func (p *Parser) parseAddOn() (*journal.Accrual, error) {
+func (p *Parser) parseAddOn() (*Accrual, error) {
 	p.markStart()
 	if err := p.scanner.ConsumeRune('@'); err != nil {
 		return nil, err
@@ -259,7 +263,7 @@ func (p *Parser) parseAddOn() (*journal.Accrual, error) {
 	if err := p.consumeRestOfWhitespaceLine(); err != nil {
 		return nil, err
 	}
-	return &journal.Accrual{
+	return &Accrual{
 		Range:    p.getRange(),
 		T0:       dateFrom,
 		T1:       dateTo,
@@ -268,15 +272,15 @@ func (p *Parser) parseAddOn() (*journal.Accrual, error) {
 	}, nil
 }
 
-func (p *Parser) parsePostings() ([]*journal.Posting, error) {
-	var postings []*journal.Posting
+func (p *Parser) parsePostings() ([]*Posting, error) {
+	var postings []*Posting
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		var (
-			credit, debit *journal.Account
+			credit, debit *Account
 			amount        decimal.Decimal
-			commodity     *journal.Commodity
-			targets       []*journal.Commodity
-			lot           *journal.Lot
+			commodity     *Commodity
+			targets       []*Commodity
+			lot           *Lot
 
 			err error
 		)
@@ -328,7 +332,7 @@ func (p *Parser) parsePostings() ([]*journal.Posting, error) {
 				}
 			}
 		}
-		postings = append(postings, &journal.Posting{
+		postings = append(postings, &Posting{
 			Credit:    credit,
 			Debit:     debit,
 			Amount:    amount,
@@ -343,7 +347,7 @@ func (p *Parser) parsePostings() ([]*journal.Posting, error) {
 	return postings, nil
 }
 
-func (p *Parser) parseOpen(d time.Time) (*journal.Open, error) {
+func (p *Parser) parseOpen(d time.Time) (*Open, error) {
 	if err := p.scanner.ParseString("open"); err != nil {
 		return nil, err
 	}
@@ -354,14 +358,14 @@ func (p *Parser) parseOpen(d time.Time) (*journal.Open, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &journal.Open{
+	return &Open{
 		Range:   p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
 }
 
-func (p *Parser) parseClose(d time.Time) (*journal.Close, error) {
+func (p *Parser) parseClose(d time.Time) (*Close, error) {
 	if err := p.scanner.ParseString("close"); err != nil {
 		return nil, err
 	}
@@ -372,14 +376,14 @@ func (p *Parser) parseClose(d time.Time) (*journal.Close, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &journal.Close{
+	return &Close{
 		Range:   p.getRange(),
 		Date:    d,
 		Account: account,
 	}, nil
 }
 
-func (p *Parser) parsePrice(d time.Time) (*journal.Price, error) {
+func (p *Parser) parsePrice(d time.Time) (*Price, error) {
 	if err := p.scanner.ParseString("price"); err != nil {
 		return nil, err
 	}
@@ -405,7 +409,7 @@ func (p *Parser) parsePrice(d time.Time) (*journal.Price, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &journal.Price{
+	return &Price{
 		Range:     p.getRange(),
 		Date:      d,
 		Commodity: commodity,
@@ -414,7 +418,7 @@ func (p *Parser) parsePrice(d time.Time) (*journal.Price, error) {
 	}, nil
 }
 
-func (p *Parser) parseBalanceAssertion(d time.Time) (*journal.Assertion, error) {
+func (p *Parser) parseBalanceAssertion(d time.Time) (*Assertion, error) {
 	if err := p.scanner.ParseString("balance"); err != nil {
 		return nil, err
 	}
@@ -439,7 +443,7 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*journal.Assertion, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &journal.Assertion{
+	return &Assertion{
 		Range:     p.getRange(),
 		Date:      d,
 		Account:   account,
@@ -448,7 +452,7 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*journal.Assertion, error) 
 	}, nil
 }
 
-func (p *Parser) parseValue(d time.Time) (*journal.Value, error) {
+func (p *Parser) parseValue(d time.Time) (*Value, error) {
 	if err := p.scanner.ParseString("value"); err != nil {
 		return nil, err
 	}
@@ -473,7 +477,7 @@ func (p *Parser) parseValue(d time.Time) (*journal.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &journal.Value{
+	return &Value{
 		Range:     p.getRange(),
 		Date:      d,
 		Account:   account,
@@ -482,7 +486,7 @@ func (p *Parser) parseValue(d time.Time) (*journal.Value, error) {
 	}, nil
 }
 
-func (p *Parser) parseInclude() (*journal.Include, error) {
+func (p *Parser) parseInclude() (*Include, error) {
 	p.markStart()
 	if err := p.scanner.ParseString("include"); err != nil {
 		return nil, err
@@ -494,7 +498,7 @@ func (p *Parser) parseInclude() (*journal.Include, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := &journal.Include{
+	result := &Include{
 		Range: p.getRange(),
 		Path:  i,
 	}
@@ -504,7 +508,7 @@ func (p *Parser) parseInclude() (*journal.Include, error) {
 	return result, nil
 }
 
-func (p *Parser) parseCurrency() (*journal.Currency, error) {
+func (p *Parser) parseCurrency() (*Currency, error) {
 	p.markStart()
 	if err := p.scanner.ParseString("currency"); err != nil {
 		return nil, err
@@ -516,7 +520,7 @@ func (p *Parser) parseCurrency() (*journal.Currency, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := &journal.Currency{
+	result := &Currency{
 		Range:     p.getRange(),
 		Commodity: i,
 	}
@@ -533,7 +537,7 @@ func (p *Parser) consumeNewline() error {
 	return nil
 }
 
-func (p *Parser) parseAccount() (*journal.Account, error) {
+func (p *Parser) parseAccount() (*Account, error) {
 	s, err := p.scanner.ReadWhile(func(r rune) bool {
 		return r == ':' || unicode.IsLetter(r) || unicode.IsDigit(r)
 	})
@@ -557,7 +561,7 @@ func (p *Parser) consumeRestOfWhitespaceLine() error {
 	return p.consumeNewline()
 }
 
-func (p *Parser) parseLot() (*journal.Lot, error) {
+func (p *Parser) parseLot() (*Lot, error) {
 	err := p.scanner.ConsumeRune('{')
 	if err != nil {
 		return nil, err
@@ -613,7 +617,7 @@ func (p *Parser) parseLot() (*journal.Lot, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &journal.Lot{
+	return &Lot{
 		Date:      d,
 		Label:     label,
 		Price:     price,
@@ -621,9 +625,9 @@ func (p *Parser) parseLot() (*journal.Lot, error) {
 	}, nil
 }
 
-func (p *Parser) parseTargetCommodities() ([]*journal.Commodity, error) {
+func (p *Parser) parseTargetCommodities() ([]*Commodity, error) {
 	// we use non-nil slices of size 0 to mark portfolio income / expenses
-	res := make([]*journal.Commodity, 0)
+	res := make([]*Commodity, 0)
 	if err := p.scanner.ConsumeRune('('); err != nil {
 		return nil, err
 	}
@@ -662,8 +666,8 @@ func (p *Parser) parseTargetCommodities() ([]*journal.Commodity, error) {
 	return res, nil
 }
 
-func (p *Parser) parseTags() ([]journal.Tag, error) {
-	var tags []journal.Tag
+func (p *Parser) parseTags() ([]Tag, error) {
+	var tags []Tag
 	for p.current() == '#' {
 		tag, err := p.parseTag()
 		if err != nil {
@@ -677,7 +681,7 @@ func (p *Parser) parseTags() ([]journal.Tag, error) {
 	return tags, nil
 }
 
-func (p *Parser) parseTag() (journal.Tag, error) {
+func (p *Parser) parseTag() (Tag, error) {
 	if p.current() != '#' {
 		return "", fmt.Errorf("expected tag, got %c", p.current())
 	}
@@ -691,7 +695,7 @@ func (p *Parser) parseTag() (journal.Tag, error) {
 		return "", err
 	}
 	b.WriteString(i)
-	return journal.Tag(b.String()), nil
+	return Tag(b.String()), nil
 }
 
 // parseQuotedString parses a quoted string
@@ -760,7 +764,7 @@ func (p *Parser) parseFloat() (float64, error) {
 }
 
 // parseCommodity parses a commodity
-func (p *Parser) parseCommodity() (*journal.Commodity, error) {
+func (p *Parser) parseCommodity() (*Commodity, error) {
 	i, err := p.parseIdentifier()
 	if err != nil {
 		return nil, err
@@ -777,4 +781,66 @@ func isNewline(ch rune) bool {
 
 func isWhitespaceOrNewline(ch rune) bool {
 	return isNewline(ch) || isWhitespace(ch)
+}
+
+// RecursiveParser parses a file hierarchy recursively.
+type RecursiveParser struct {
+	File    string
+	Context Context
+
+	wg sync.WaitGroup
+}
+
+// Parse parses the journal at the path, and branches out for include files
+func (rp *RecursiveParser) Parse(ctx context.Context) <-chan any {
+	resCh := make(chan any, 1000)
+
+	rp.wg.Add(1)
+	go func() {
+		defer rp.wg.Done()
+		err := rp.parseRecursively(ctx, resCh, rp.File)
+		if err != nil && ctx.Err() == nil {
+			cpr.Push[any](ctx, resCh, err)
+		}
+	}()
+
+	// Parse and eventually close input channel
+	go func() {
+		defer close(resCh)
+		rp.wg.Wait()
+	}()
+	return resCh
+}
+
+func (rp *RecursiveParser) parseRecursively(ctx context.Context, resCh chan<- any, file string) error {
+	p, cls, err := FromPath(rp.Context, file)
+	if err != nil {
+		return err
+	}
+	defer cls()
+
+	for {
+		d, err := p.Next()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		switch t := d.(type) {
+		case *Include:
+			rp.wg.Add(1)
+			go func() {
+				defer rp.wg.Done()
+				err := rp.parseRecursively(ctx, resCh, path.Join(filepath.Dir(file), t.Path))
+				if err != nil && ctx.Err() == nil {
+					cpr.Push[any](ctx, resCh, err)
+				}
+			}()
+		default:
+			if err := cpr.Push[any](ctx, resCh, d); err != nil {
+				return err
+			}
+		}
+	}
 }

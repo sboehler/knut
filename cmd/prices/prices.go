@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/parser"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
 	"github.com/shopspring/decimal"
 	"go.uber.org/multierr"
@@ -123,7 +122,7 @@ func readConfig(path string) ([]config, error) {
 }
 
 func readFile(ctx journal.Context, filepath string) (res map[time.Time]*journal.Price, err error) {
-	p, cls, err := parser.FromPath(ctx, filepath)
+	p, cls, err := journal.FromPath(ctx, filepath)
 	if err != nil {
 		return nil, err
 	}

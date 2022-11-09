@@ -30,7 +30,6 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/bayes"
 	"github.com/sboehler/knut/lib/journal/format"
-	"github.com/sboehler/knut/lib/journal/parser"
 )
 
 // CreateCmd creates the command.
@@ -103,7 +102,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 
 func train(ctx context.Context, jctx journal.Context, file string, exclude *journal.Account) (*bayes.Model, error) {
 	var (
-		j = parser.RecursiveParser{Context: jctx, File: file}
+		j = journal.RecursiveParser{Context: jctx, File: file}
 		m = bayes.NewModel(exclude)
 	)
 	err := cpr.Consume(ctx, j.Parse(ctx), func(d any) error {
@@ -119,7 +118,7 @@ func train(ctx context.Context, jctx journal.Context, file string, exclude *jour
 }
 
 func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model *bayes.Model, targetFile string, account *journal.Account) ([]journal.Directive, error) {
-	p, cls, err := parser.FromPath(jctx, targetFile)
+	p, cls, err := journal.FromPath(jctx, targetFile)
 	if err != nil {
 		return nil, err
 	}

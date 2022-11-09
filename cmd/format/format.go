@@ -28,7 +28,6 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/format"
-	"github.com/sboehler/knut/lib/journal/parser"
 )
 
 // CreateCmd creates the command.
@@ -108,7 +107,7 @@ func formatFile(target string) error {
 }
 
 func readDirectives(target string) ([]journal.Directive, error) {
-	p, close, err := parser.FromPath(journal.NewContext(), target)
+	p, close, err := journal.FromPath(journal.NewContext(), target)
 	if err != nil {
 		return nil, err
 	}

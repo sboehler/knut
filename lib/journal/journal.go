@@ -49,15 +49,15 @@ func (ast *Journal) day(d time.Time) *Day {
 	return dict.GetDefault(ast.Days, d, func() *Day { return &Day{Date: d} })
 }
 
-// SortedDays returns all days ordered by date.
-func (ast *Journal) SortedDays() []*Day {
-	var res []*Day
-	for _, day := range ast.Days {
+func (ast *Journal) SortedDays() *Ledger {
+	ds := dict.SortedValues(ast.Days, CompareDays)
+	for _, day := range ds {
 		compare.Sort(day.Transactions, CompareTransactions)
-		res = append(res, day)
 	}
-	compare.Sort(res, CompareDays)
-	return res
+	return &Ledger{
+		Context: ast.Context,
+		Days:    ds,
+	}
 }
 
 // AddOpen adds an Open directive.

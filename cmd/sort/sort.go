@@ -94,14 +94,14 @@ func sortFile(target string) error {
 	return atomic.WriteFile(target, &buf)
 }
 
-func readDirectives(jctx journal.Context, target string) (*journal.JournalBuilder, error) {
+func readDirectives(jctx journal.Context, target string) (*journal.Journal, error) {
 	p, close, err := journal.ParserFromPath(jctx, target)
 	if err != nil {
 		return nil, err
 	}
 	defer close()
 
-	res := journal.NewBuilder(jctx)
+	res := journal.New(jctx)
 
 	for {
 		d, err := p.Next()

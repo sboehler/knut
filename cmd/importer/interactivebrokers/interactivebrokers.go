@@ -81,7 +81,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var p = parser{
 		reader:  csv.NewReader(f),
-		builder: journal.NewBuilder(ctx),
+		builder: journal.New(ctx),
 	}
 	if p.account, err = r.accountFlag.Value(ctx); err != nil {
 		return err
@@ -112,7 +112,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 type parser struct {
 	reader           *csv.Reader
-	builder          *journal.JournalBuilder
+	builder          *journal.Journal
 	baseCurrency     *journal.Commodity
 	dateFrom, dateTo time.Time
 

@@ -172,7 +172,7 @@ func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[
 }
 
 func writeFile(ctx journal.Context, prices map[time.Time]*journal.Price, filepath string) error {
-	var b = journal.NewBuilder(ctx)
+	var b = journal.New(ctx)
 	for _, price := range prices {
 		b.AddPrice(price)
 	}

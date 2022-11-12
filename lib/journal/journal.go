@@ -27,16 +27,16 @@ import (
 	"go.uber.org/multierr"
 )
 
-// JournalBuilder represents an unprocessed
-type JournalBuilder struct {
+// Journal represents an unprocessed
+type Journal struct {
 	Context  Context
 	Days     map[time.Time]*Day
 	min, max time.Time
 }
 
-// NewBuilder creates a new AST
-func NewBuilder(ctx Context) *JournalBuilder {
-	return &JournalBuilder{
+// New creates a new Journal.
+func New(ctx Context) *Journal {
+	return &Journal{
 		Context: ctx,
 		Days:    make(map[time.Time]*Day),
 		min:     date.Date(9999, 12, 31),
@@ -45,12 +45,12 @@ func NewBuilder(ctx Context) *JournalBuilder {
 }
 
 // day returns the day for the given date.
-func (ast *JournalBuilder) day(d time.Time) *Day {
+func (ast *Journal) day(d time.Time) *Day {
 	return dict.GetDefault(ast.Days, d, func() *Day { return &Day{Date: d} })
 }
 
 // SortedDays returns all days ordered by date.
-func (ast *JournalBuilder) SortedDays() []*Day {
+func (ast *Journal) SortedDays() []*Day {
 	var res []*Day
 	for _, day := range ast.Days {
 		compare.Sort(day.Transactions, CompareTransactions)
@@ -61,19 +61,19 @@ func (ast *JournalBuilder) SortedDays() []*Day {
 }
 
 // AddOpen adds an Open directive.
-func (ast *JournalBuilder) AddOpen(o *Open) {
+func (ast *Journal) AddOpen(o *Open) {
 	d := ast.day(o.Date)
 	d.Openings = append(d.Openings, o)
 }
 
 // AddPrice adds an Price directive.
-func (ast *JournalBuilder) AddPrice(p *Price) {
+func (ast *Journal) AddPrice(p *Price) {
 	d := ast.day(p.Date)
 	d.Prices = append(d.Prices, p)
 }
 
 // AddTransaction adds an Transaction directive.
-func (ast *JournalBuilder) AddTransaction(t *Transaction) {
+func (ast *Journal) AddTransaction(t *Transaction) {
 	d := ast.day(t.Date)
 	if ast.max.Before(d.Date) {
 		ast.max = d.Date
@@ -85,65 +85,65 @@ func (ast *JournalBuilder) AddTransaction(t *Transaction) {
 }
 
 // AddValue adds an Value directive.
-func (ast *JournalBuilder) AddValue(v *Value) {
+func (ast *Journal) AddValue(v *Value) {
 	d := ast.day(v.Date)
 	d.Values = append(d.Values, v)
 }
 
 // AddAssertion adds an Assertion directive.
-func (ast *JournalBuilder) AddAssertion(a *Assertion) {
+func (ast *Journal) AddAssertion(a *Assertion) {
 	d := ast.day(a.Date)
 	d.Assertions = append(d.Assertions, a)
 }
 
 // AddClose adds an Close directive.
-func (ast *JournalBuilder) AddClose(c *Close) {
+func (ast *Journal) AddClose(c *Close) {
 	d := ast.day(c.Date)
 	d.Closings = append(d.Closings, c)
 }
 
-func (ast *JournalBuilder) Min() time.Time {
+func (ast *Journal) Min() time.Time {
 	return ast.min
 }
 
-func (ast *JournalBuilder) Max() time.Time {
+func (ast *Journal) Max() time.Time {
 	return ast.max
 }
 
-func (ast *JournalBuilder) Build2(fs ...func(*Day) error) (*Journal, error) {
+func (ast *Journal) Process(fs ...func(*Day) error) (*Ledger, error) {
 	ds := dict.SortedValues(ast.Days, CompareDays)
 	err := slice.Parallel(context.Background(), ds, fs...)
 	if err != nil {
 		return nil, err
 	}
-	return &Journal{
+	return &Ledger{
 		Context: ast.Context,
 		Days:    ds,
 	}, nil
 
 }
 
-type Journal struct {
+type Ledger struct {
 	Context Context
 	Days    []*Day
 }
 
-func (ast *Journal) Min() time.Time {
+func (ast *Ledger) Min() time.Time {
 	if len(ast.Days) > 0 {
 		return ast.Days[0].Date
 	}
 	return time.Time{}
 }
 
-func (ast *Journal) Max() time.Time {
+func (ast *Ledger) Max() time.Time {
 	if len(ast.Days) > 0 {
 		return ast.Days[len(ast.Days)-1].Date
 	}
 	return time.Time{}
 }
 
-func FromPath(ctx context.Context, jctx Context, path string, fs ...func(*Day) error) (*Journal, error) {
-	builder := NewBuilder(jctx)
+func FromPath(ctx context.Context, jctx Context, path string) (*Journal, error) {
+	builder := New(jctx)
 	p := RecursiveParser{
 		Context: jctx,
 		File:    path,
@@ -190,7 +190,7 @@ func FromPath(ctx context.Context, jctx Context, path string, fs ...func(*Day) e
 	if errs != nil {
 		return nil, errs
 	}
-	return builder.Build2(fs...)
+	return builder, nil
 }
 
 // Day groups all commands for a given date.

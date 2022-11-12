@@ -20,11 +20,11 @@ type JournalSource struct {
 	Expand   bool
 	AutoLoad bool
 
-	journal *journal.JournalBuilder
+	journal *journal.Journal
 }
 
 func (js *JournalSource) Load(ctx context.Context) error {
-	js.journal = journal.NewBuilder(js.Context)
+	js.journal = journal.New(js.Context)
 	p := journal.RecursiveParser{
 		Context: js.Context,
 		File:    js.Path,
@@ -93,13 +93,13 @@ func (js JournalSource) Source(ctx context.Context, outCh chan<- *journal.Day) e
 	return nil
 }
 
-func (js JournalSource) Build(ctx context.Context, fs ...func(*journal.Day) error) (*journal.Journal, error) {
+func (js JournalSource) Build(ctx context.Context, fs ...func(*journal.Day) error) (*journal.Ledger, error) {
 	if js.AutoLoad {
 		if err := js.Load(ctx); err != nil {
 			return nil, err
 		}
 	}
-	return js.journal.Build2(fs...)
+	return js.journal.Process(fs...)
 }
 
 func (js JournalSource) Aggregate(ctx context.Context, v *journal.Commodity, f filter.Filter[journal.Key], m mapper.Mapper[journal.Key], c Collection) error {

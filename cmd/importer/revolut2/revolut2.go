@@ -64,7 +64,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		f   *bufio.Reader
 		err error
 	)
-	a := journal.NewBuilder(ctx)
+	a := journal.New(ctx)
 	for _, path := range args {
 		if f, err = flags.OpenFile(path); err != nil {
 			return err
@@ -92,7 +92,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 type parser struct {
 	reader              *csv.Reader
 	account, feeAccount *journal.Account
-	ast                 *journal.JournalBuilder
+	ast                 *journal.Journal
 	balance             journal.Amounts
 }
 

@@ -117,11 +117,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 	r.showCommodities = r.showCommodities || valuation == nil
 
-	j, err := journal.FromPath(ctx, jctx, args[0],
-		journal.Balance(jctx),
-		journal.ComputePrices(valuation),
-		journal.Valuate(jctx, valuation),
-	)
+	j, err := journal.FromPath(ctx, jctx, args[0])
 	if err != nil {
 		return err
 	}
@@ -159,8 +155,16 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Round:     r.digits,
 		}
 	)
+	l, err := j.Process(
+		journal.Balance(jctx),
+		journal.ComputePrices(valuation),
+		journal.Valuate(jctx, valuation),
+	)
+	if err != nil {
+		return err
+	}
 	agg := journal.Aggregate(m, f, valuation, rep)
-	for _, d := range j.Days {
+	for _, d := range l.Days {
 		if err := agg(d); err != nil {
 			return err
 		}

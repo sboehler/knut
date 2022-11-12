@@ -82,7 +82,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if trx, err = p.parse(reader); err != nil {
 		return err
 	}
-	builder := journal.NewBuilder(ctx)
+	builder := journal.New(ctx)
 	for _, trx := range trx {
 		builder.AddTransaction(trx)
 	}

@@ -27,7 +27,6 @@ import (
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/process"
 	"github.com/sboehler/knut/lib/journal/report"
 
 	"github.com/spf13/cobra"
@@ -117,16 +116,17 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	r.showCommodities = r.showCommodities || valuation == nil
-	journalSource := &process.JournalSource{
-		Context: jctx,
-		Path:    args[0],
-		Expand:  true,
-	}
-	if err := journalSource.Load(ctx); err != nil {
+
+	j, err := journal.FromPath(ctx, jctx, args[0],
+		journal.Balance(jctx),
+		journal.ComputePrices(valuation),
+		journal.Valuate(jctx, valuation),
+	)
+	if err != nil {
 		return err
 	}
 	var (
-		from, to = r.from.ValueOr(journalSource.Min()), r.to.ValueOr(date.Today())
+		from, to = r.from.ValueOr(j.Min()), r.to.ValueOr(date.Today())
 		dates    = date.CreatePartition(from, to, r.interval.Value(), r.last)
 		f        = filter.And(
 			journal.FilterDates(date.Between(from, to)),
@@ -159,13 +159,11 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Round:     r.digits,
 		}
 	)
-	_, err = journalSource.Build(ctx,
-		journal.Balance(jctx),
-		journal.ComputePrices(valuation),
-		journal.Valuate(jctx, valuation),
-		journal.Aggregate(m, f, valuation, rep))
-	if err != nil {
-		return err
+	agg := journal.Aggregate(m, f, valuation, rep)
+	for _, d := range j.Days {
+		if err := agg(d); err != nil {
+			return err
+		}
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()

@@ -16,12 +16,15 @@ package journal
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/slice"
+	"go.uber.org/multierr"
 )
 
 // JournalBuilder represents an unprocessed
@@ -107,19 +110,6 @@ func (ast *JournalBuilder) Max() time.Time {
 	return ast.max
 }
 
-func (ast *JournalBuilder) Build(v *Commodity) (*Journal, error) {
-	ds := dict.SortedValues(ast.Days, CompareDays)
-	err := slice.Parallel(context.Background(), ds, Balance(ast.Context), ComputePrices(v), Valuate(ast.Context, v), Sort())
-	if err != nil {
-		return nil, err
-	}
-	return &Journal{
-		Context: ast.Context,
-		Days:    ds,
-	}, nil
-
-}
-
 func (ast *JournalBuilder) Build2(fs ...func(*Day) error) (*Journal, error) {
 	ds := dict.SortedValues(ast.Days, CompareDays)
 	err := slice.Parallel(context.Background(), ds, fs...)
@@ -136,6 +126,71 @@ func (ast *JournalBuilder) Build2(fs ...func(*Day) error) (*Journal, error) {
 type Journal struct {
 	Context Context
 	Days    []*Day
+}
+
+func (ast *Journal) Min() time.Time {
+	if len(ast.Days) > 0 {
+		return ast.Days[0].Date
+	}
+	return time.Time{}
+}
+
+func (ast *Journal) Max() time.Time {
+	if len(ast.Days) > 0 {
+		return ast.Days[len(ast.Days)-1].Date
+	}
+	return time.Time{}
+}
+
+func FromPath(ctx context.Context, jctx Context, path string, fs ...func(*Day) error) (*Journal, error) {
+	builder := NewBuilder(jctx)
+	p := RecursiveParser{
+		Context: jctx,
+		File:    path,
+	}
+	var errs error
+	err := cpr.Consume(ctx, p.Parse(ctx), func(d any) error {
+		switch t := d.(type) {
+
+		case error:
+			errs = multierr.Append(errs, t)
+
+		case *Open:
+			builder.AddOpen(t)
+
+		case *Price:
+			builder.AddPrice(t)
+
+		case *Transaction:
+			if t.Accrual != nil {
+				for _, ts := range t.Accrual.Expand(t) {
+					builder.AddTransaction(ts)
+				}
+			} else {
+				builder.AddTransaction(t)
+			}
+
+		case *Assertion:
+			builder.AddAssertion(t)
+
+		case *Value:
+			builder.AddValue(t)
+
+		case *Close:
+			builder.AddClose(t)
+
+		default:
+			errs = multierr.Append(errs, fmt.Errorf("unknown: %#v", t))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if errs != nil {
+		return nil, errs
+	}
+	return builder.Build2(fs...)
 }
 
 // Day groups all commands for a given date.

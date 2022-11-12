@@ -1,11 +1,9 @@
 package performance
 
 import (
-	"context"
 	"fmt"
 	"math"
 
-	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
 )
@@ -19,25 +17,19 @@ type Calculator struct {
 }
 
 // Process computes portfolio performance.
-func (calc Calculator) Process(ctx context.Context, inCh <-chan *journal.Day, outCh chan<- *journal.Day) error {
+func (calc Calculator) Process(d *journal.Day) error {
 	var prev pcv
-	return cpr.Consume(ctx, inCh, func(d *journal.Day) error {
-		dpr := calc.computeFlows(d)
-		dpr.V0 = prev
-		dpr.V1 = calc.valueByCommodity(d)
-		prev = dpr.V1
-		d.Performance = dpr
-
-		return cpr.Push(ctx, outCh, d)
-	})
+	dpr := calc.computeFlows(d)
+	dpr.V0 = prev
+	dpr.V1 = calc.valueByCommodity(d)
+	prev = dpr.V1
+	d.Performance = dpr
+	return nil
 }
 
 // Sink implements Sink.
-func (calc Calculator) Sink(ctx context.Context, inCh <-chan *journal.Day) error {
-	return cpr.Consume(ctx, inCh, func(p *journal.Day) error {
-		fmt.Printf("%v: %.1f%%\n", p.Date.Format("2006-01-02"), 100*(Performance(p.Performance)-1))
-		return nil
-	})
+func (calc Calculator) Sink(d *journal.Day) {
+	fmt.Printf("%v: %.1f%%\n", d.Date.Format("2006-01-02"), 100*(Performance(d.Performance)-1))
 }
 
 func (calc *Calculator) valueByCommodity(d *journal.Day) pcv {

@@ -23,11 +23,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/process"
-	"github.com/sboehler/knut/lib/journal/process/performance"
+	"github.com/sboehler/knut/lib/journal/performance"
 )
 
 // CreateCmd creates the command.
@@ -88,24 +86,11 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	if valuation, err = r.valuation.Value(jctx); err != nil {
 		return err
 	}
+	j, err := journal.FromPath(ctx, jctx, args[0])
+	if err != nil {
+		return err
+	}
 	var (
-		journalSource = &process.JournalSource{
-			Context: jctx,
-
-			Path:     args[0],
-			Expand:   true,
-			AutoLoad: true,
-		}
-		balancer = &process.Balancer{
-			Context: jctx,
-		}
-		priceUpdater = &process.PriceUpdater{
-			Valuation: valuation,
-		}
-		valuator = &process.Valuator{
-			Context:   jctx,
-			Valuation: valuation,
-		}
 		calculator = &performance.Calculator{
 			Context:         jctx,
 			Valuation:       valuation,
@@ -113,13 +98,17 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 			CommodityFilter: filter.ByName[*journal.Commodity](r.commodities.Value()),
 		}
 	)
-
-	s := cpr.Compose[*journal.Day](journalSource, balancer)
-	s = cpr.Compose[*journal.Day](s, priceUpdater)
-	s = cpr.Compose[*journal.Day](s, valuator)
-	s = cpr.Compose[*journal.Day](s, calculator)
-	ppl := cpr.Connect[*journal.Day](s, calculator)
-
-	return ppl.Process(ctx)
-
+	l, err := j.Process(
+		journal.Balance(jctx),
+		journal.ComputePrices(valuation),
+		journal.Valuate(jctx, valuation),
+		calculator.Process,
+	)
+	if err != nil {
+		return err
+	}
+	for _, d := range l.Days {
+		fmt.Printf("%v: %.1f%%\n", d.Date.Format("2006-01-02"), 100*(performance.Performance(d.Performance)-1))
+	}
+	return nil
 }

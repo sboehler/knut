@@ -20,10 +20,8 @@ import (
 	"os"
 
 	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/beancount"
-	"github.com/sboehler/knut/lib/journal/process"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
@@ -72,38 +70,18 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	if valuation, err = r.valuation.Value(jctx); err != nil {
 		return err
 	}
-	var (
-		journalSource = &process.JournalSource{
-			Context:  jctx,
-			Path:     args[0],
-			Expand:   true,
-			AutoLoad: true,
-		}
-		balancer = &process.Balancer{
-			Context: jctx,
-		}
-		priceUpdater = &process.PriceUpdater{
-			Valuation: valuation,
-		}
-		valuator = &process.Valuator{
-			Context:   jctx,
-			Valuation: valuation,
-		}
-		c = new(cpr.Collector[*journal.Day])
-	)
-
-	s := cpr.Compose[*journal.Day](journalSource, priceUpdater)
-	s = cpr.Compose[*journal.Day](s, balancer)
-	s = cpr.Compose[*journal.Day](s, valuator)
-	ppl := cpr.Connect[*journal.Day](s, c)
-
-	if err := ppl.Process(cmd.Context()); err != nil {
+	j, err := journal.FromPath(cmd.Context(), jctx, args[0])
+	if err != nil {
 		return err
 	}
-
+	l, err := j.Process(
+		journal.Balance(jctx),
+		journal.ComputePrices(valuation),
+		journal.Valuate(jctx, valuation),
+	)
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer func() { err = multierr.Append(err, w.Flush()) }()
 
 	// transcode the ledger here
-	return beancount.Transcode(w, c.Result, valuation)
+	return beancount.Transcode(w, l.Days, valuation)
 }

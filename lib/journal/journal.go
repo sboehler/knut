@@ -123,25 +123,6 @@ func (ast *Journal) Process(fs ...func(*Day) error) (*Ledger, error) {
 
 }
 
-type Ledger struct {
-	Context Context
-	Days    []*Day
-}
-
-func (ast *Ledger) Min() time.Time {
-	if len(ast.Days) > 0 {
-		return ast.Days[0].Date
-	}
-	return time.Time{}
-}
-
-func (ast *Ledger) Max() time.Time {
-	if len(ast.Days) > 0 {
-		return ast.Days[len(ast.Days)-1].Date
-	}
-	return time.Time{}
-}
-
 func FromPath(ctx context.Context, jctx Context, path string) (*Journal, error) {
 	builder := New(jctx)
 	p := RecursiveParser{
@@ -191,6 +172,12 @@ func FromPath(ctx context.Context, jctx Context, path string) (*Journal, error) 
 		return nil, errs
 	}
 	return builder, nil
+}
+
+// Ledger is an ordered and processed list of Days.
+type Ledger struct {
+	Context Context
+	Days    []*Day
 }
 
 // Day groups all commands for a given date.

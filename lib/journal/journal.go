@@ -120,7 +120,18 @@ func (ast *Journal) Process(fs ...func(*Day) error) (*Ledger, error) {
 		Context: ast.Context,
 		Days:    ds,
 	}, nil
+}
 
+func (ast *Journal) Process2(fs ...func(*Day) ([]*Day, error)) (*Ledger, error) {
+	ds := dict.SortedValues(ast.Days, CompareDays)
+	ds, err := slice.Parallel2(context.Background(), ds, fs...)
+	if err != nil {
+		return nil, err
+	}
+	return &Ledger{
+		Context: ast.Context,
+		Days:    ds,
+	}, nil
 }
 
 func FromPath(ctx context.Context, jctx Context, path string) (*Journal, error) {

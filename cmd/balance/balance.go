@@ -25,6 +25,7 @@ import (
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
+	"github.com/sboehler/knut/lib/common/slice"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/report"
@@ -155,10 +156,10 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Round:     r.digits,
 		}
 	)
-	l, err := j.Process(
-		journal.Balance(jctx),
-		journal.ComputePrices(valuation),
-		journal.Valuate(jctx, valuation),
+	l, err := j.Process2(
+		slice.Adapt(journal.Balance(jctx)),
+		slice.Adapt(journal.ComputePrices(valuation)),
+		slice.Adapt(journal.Valuate(jctx, valuation)),
 	)
 	if err != nil {
 		return err

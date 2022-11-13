@@ -270,7 +270,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 }
 
 func (p *parser) parseForex(r *record) (bool, error) {
-	w := set.From(
+	w := set.Of(
 		"Forex-Gutschrift",
 		"Forex-Belastung",
 		"Fx-Gutschrift Comp.",
@@ -300,7 +300,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 }
 
 func (p *parser) parseDividend(r *record) (bool, error) {
-	w := set.From(
+	w := set.Of(
 		"Capital Gain",
 		"Kapitalrückzahlung",
 		"Dividende",
@@ -337,7 +337,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 }
 
 func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
-	var w = set.From(
+	var w = set.Of(
 		"Einzahlung",
 		"Auszahlung",
 		"Vergütung",

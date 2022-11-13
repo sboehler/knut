@@ -137,7 +137,7 @@ const (
 )
 
 func (p *Parser) readHeaderLine(l []string) error {
-	currencyHeaders := set.From("Währung:", "Currency:")
+	currencyHeaders := set.Of("Währung:", "Currency:")
 	var err error
 	if currencyHeaders.Has(l[hfHeader]) {
 		sym := strings.Trim(l[hfData], "=\"")

@@ -127,7 +127,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 	var am mapper.Mapper[*journal.Account]
 	if r.showSource {
-		am = journal.RemapAccount(jctx, r.remap.Value())
+		am = journal.RemapAccount(jctx, r.remap.Regex())
 	}
 	var (
 		from  = r.from.ValueOr(j.Min())
@@ -135,16 +135,16 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		dates = date.CreatePartition(from, to, r.interval.Value(), r.last)
 		rep   = register.NewReport(jctx)
 		f     = filter.And(
-			journal.FilterDates(dates.Contain),
-			journal.FilterAccount(r.accounts.Value()),
-			journal.FilterOther(r.others.Value()),
-			journal.FilterCommodity(r.commodities.Value()),
+			journal.FilterDates(dates.Contains),
+			journal.FilterAccount(r.accounts.Regex()),
+			journal.FilterOther(r.others.Regex()),
+			journal.FilterCommodity(r.commodities.Regex()),
 		)
 		m = journal.KeyMapper{
 			Date:    dates.MapToEndOfPeriod,
 			Account: am,
 			Other: mapper.Combine(
-				journal.RemapAccount(jctx, r.remap.Value()),
+				journal.RemapAccount(jctx, r.remap.Regex()),
 				journal.ShortenAccount(jctx, r.mapping.Value()),
 			),
 			Commodity:   journal.MapCommodity(r.showCommodities),

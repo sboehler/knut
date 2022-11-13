@@ -123,7 +123,7 @@ func (j *Journal) Process(fs ...func(*Day, func(*Day)) error) (*Ledger, error) {
 }
 
 func FromPath(ctx context.Context, jctx Context, path string) (*Journal, error) {
-	builder := New(jctx)
+	j := New(jctx)
 	p := RecursiveParser{
 		Context: jctx,
 		File:    path,
@@ -136,28 +136,28 @@ func FromPath(ctx context.Context, jctx Context, path string) (*Journal, error) 
 			errs = multierr.Append(errs, t)
 
 		case *Open:
-			builder.AddOpen(t)
+			j.AddOpen(t)
 
 		case *Price:
-			builder.AddPrice(t)
+			j.AddPrice(t)
 
 		case *Transaction:
 			if t.Accrual != nil {
 				for _, ts := range t.Accrual.Expand(t) {
-					builder.AddTransaction(ts)
+					j.AddTransaction(ts)
 				}
 			} else {
-				builder.AddTransaction(t)
+				j.AddTransaction(t)
 			}
 
 		case *Assertion:
-			builder.AddAssertion(t)
+			j.AddAssertion(t)
 
 		case *Value:
-			builder.AddValue(t)
+			j.AddValue(t)
 
 		case *Close:
-			builder.AddClose(t)
+			j.AddClose(t)
 
 		default:
 			errs = multierr.Append(errs, fmt.Errorf("unknown: %#v", t))
@@ -170,7 +170,7 @@ func FromPath(ctx context.Context, jctx Context, path string) (*Journal, error) 
 	if errs != nil {
 		return nil, errs
 	}
-	return builder, nil
+	return j, nil
 }
 
 // Ledger is an ordered and processed list of Days.

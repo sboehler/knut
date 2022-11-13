@@ -169,6 +169,6 @@ func (p Partition) EndDates() []time.Time {
 	return res
 }
 
-func (p *Partition) Contain(t time.Time) bool {
+func (p *Partition) Contains(t time.Time) bool {
 	return !t.Before(p.t0) && !t.After(p.t1)
 }

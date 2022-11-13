@@ -98,7 +98,7 @@ func (rf RegexFlag) Type() string {
 	return "<regex>"
 }
 
-func (rf *RegexFlag) Value() regex.Regexes {
+func (rf *RegexFlag) Regex() regex.Regexes {
 	return rf.rxs
 }
 

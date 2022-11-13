@@ -123,20 +123,20 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	var (
-		from, to = r.from.ValueOr(j.Min()), r.to.ValueOr(date.Today())
-		dates    = date.CreatePartition(from, to, r.interval.Value(), r.last)
-		f        = filter.And(
-			journal.FilterDates(dates.Contain),
+		from, to  = r.from.ValueOr(j.Min()), r.to.ValueOr(date.Today())
+		partition = date.CreatePartition(from, to, r.interval.Value(), r.last)
+		f         = filter.And(
+			journal.FilterDates(partition.Contains),
 			filter.Or(
-				journal.FilterAccount(r.accounts.Value()),
-				journal.FilterOther(r.accounts.Value()),
+				journal.FilterAccount(r.accounts.Regex()),
+				journal.FilterOther(r.accounts.Regex()),
 			),
-			journal.FilterCommodity(r.commodities.Value()),
+			journal.FilterCommodity(r.commodities.Regex()),
 		)
 		m = journal.KeyMapper{
-			Date: dates.MapToEndOfPeriod,
+			Date: partition.MapToEndOfPeriod,
 			Account: mapper.Combine(
-				journal.RemapAccount(jctx, r.remap.Value()),
+				journal.RemapAccount(jctx, r.remap.Regex()),
 				journal.ShortenAccount(jctx, r.mapping.Value()),
 			),
 			Other:     mapper.Identity[*journal.Account],
@@ -147,7 +147,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		reportRenderer = report.Renderer{
 			ShowCommodities:    r.showCommodities,
 			SortAlphabetically: r.sortAlphabetically,
-			Dates:              dates.EndDates(),
+			Dates:              partition.EndDates(),
 			Diff:               r.diff,
 		}
 		tableRenderer = table.TextRenderer{
@@ -163,7 +163,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		processors = append(processors, journal.ComputePrices(valuation), journal.Valuate(jctx, valuation))
 	}
 	if r.close {
-		processors = append(processors, journal.CloseAccounts(jctx, dates))
+		processors = append(processors, journal.CloseAccounts(jctx, partition))
 	}
 	l, err := j.Process(processors...)
 	if err != nil {

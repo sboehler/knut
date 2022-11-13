@@ -94,8 +94,8 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 		calculator = &performance.Calculator{
 			Context:         jctx,
 			Valuation:       valuation,
-			AccountFilter:   filter.ByName[*journal.Account](r.accounts.Value()),
-			CommodityFilter: filter.ByName[*journal.Commodity](r.commodities.Value()),
+			AccountFilter:   filter.ByName[*journal.Account](r.accounts.Regex()),
+			CommodityFilter: filter.ByName[*journal.Commodity](r.commodities.Regex()),
 		}
 	)
 	l, err := j.Process(

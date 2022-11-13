@@ -198,7 +198,7 @@ func CloseAccounts(jctx Context, dates date.Partition) DayFn {
 				Description: fmt.Sprintf("Closing account %s in %s", k.Account.Name(), k.Commodity.Name()),
 				Postings: PostingBuilder{
 					Credit:    k.Account,
-					Debit:     jctx.Account("Equity:RetainedEarnings"),
+					Debit:     jctx.Account("Equity:Equity"),
 					Commodity: k.Commodity,
 					Amount:    amt,
 					Value:     values[k],

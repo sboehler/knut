@@ -42,122 +42,120 @@ option "operating_currency" "CHF"
   Equity:Equity -972.45148 CHF
   Assets:Portfolio 972.45148 CHF
 
-2020-01-07 open Equity:Valuation:Portfolio
-
 2020-01-07 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -6.77688552 CHF
-  Equity:Valuation:Portfolio 6.77688552 CHF
+  Income:CapitalGain:Portfolio 6.77688552 CHF
 
 2020-01-07 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.28906 CHF
-  Equity:Valuation:Portfolio 0.28906 CHF
+  Income:CapitalGain:Portfolio 0.28906 CHF
 
 2020-01-08 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -14.24652324 CHF
+  Income:CapitalGain:Portfolio -14.24652324 CHF
   Assets:Portfolio 14.24652324 CHF
 
 2020-01-08 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.03201 CHF
+  Income:CapitalGain:Portfolio -0.03201 CHF
   Assets:Portfolio 0.03201 CHF
 
 2020-01-09 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -22.77704496 CHF
+  Income:CapitalGain:Portfolio -22.77704496 CHF
   Assets:Portfolio 22.77704496 CHF
 
 2020-01-09 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.42389 CHF
+  Income:CapitalGain:Portfolio -0.42389 CHF
   Assets:Portfolio 0.42389 CHF
 
 2020-01-10 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -1.96919412 CHF
+  Income:CapitalGain:Portfolio -1.96919412 CHF
   Assets:Portfolio 1.96919412 CHF
 
 2020-01-10 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.00776 CHF
-  Equity:Valuation:Portfolio 0.00776 CHF
+  Income:CapitalGain:Portfolio 0.00776 CHF
 
 2020-01-13 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -19.37438604 CHF
+  Income:CapitalGain:Portfolio -19.37438604 CHF
   Assets:Portfolio 19.37438604 CHF
 
 2020-01-13 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.00194 CHF
+  Income:CapitalGain:Portfolio -0.00194 CHF
   Assets:Portfolio 0.00194 CHF
 
 2020-01-14 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -14.7839352 CHF
-  Equity:Valuation:Portfolio 14.7839352 CHF
+  Income:CapitalGain:Portfolio 14.7839352 CHF
 
 2020-01-14 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.23668 CHF
-  Equity:Valuation:Portfolio 0.23668 CHF
+  Income:CapitalGain:Portfolio 0.23668 CHF
 
 2020-01-15 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -7.29269484 CHF
-  Equity:Valuation:Portfolio 7.29269484 CHF
+  Income:CapitalGain:Portfolio 7.29269484 CHF
 
 2020-01-15 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.35211 CHF
-  Equity:Valuation:Portfolio 0.35211 CHF
+  Income:CapitalGain:Portfolio 0.35211 CHF
 
 2020-01-15 * "Groceries"
   Assets:BankAccount -200 CHF
   Expenses:Groceries 200 CHF
 
 2020-01-16 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -8.12763108 CHF
+  Income:CapitalGain:Portfolio -8.12763108 CHF
   Assets:Portfolio 8.12763108 CHF
 
 2020-01-16 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.32689 CHF
-  Equity:Valuation:Portfolio 0.32689 CHF
+  Income:CapitalGain:Portfolio 0.32689 CHF
 
 2020-01-17 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -11.21830104 CHF
+  Income:CapitalGain:Portfolio -11.21830104 CHF
   Assets:Portfolio 11.21830104 CHF
 
 2020-01-17 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.11446 CHF
+  Income:CapitalGain:Portfolio -0.11446 CHF
   Assets:Portfolio 0.11446 CHF
 
 2020-01-20 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -3.18411276 CHF
+  Income:CapitalGain:Portfolio -3.18411276 CHF
   Assets:Portfolio 3.18411276 CHF
 
 2020-01-20 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.32301 CHF
+  Income:CapitalGain:Portfolio -0.32301 CHF
   Assets:Portfolio 0.32301 CHF
 
 2020-01-21 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -6.11256168 CHF
-  Equity:Valuation:Portfolio 6.11256168 CHF
+  Income:CapitalGain:Portfolio 6.11256168 CHF
 
 2020-01-21 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.01649 CHF
+  Income:CapitalGain:Portfolio -0.01649 CHF
   Assets:Portfolio 0.01649 CHF
 
 2020-01-22 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -3.68312184 CHF
+  Income:CapitalGain:Portfolio -3.68312184 CHF
   Assets:Portfolio 3.68312184 CHF
 
 2020-01-22 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.04074 CHF
+  Income:CapitalGain:Portfolio -0.04074 CHF
   Assets:Portfolio 0.04074 CHF
 
 2020-01-23 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -3.106026 CHF
+  Income:CapitalGain:Portfolio -3.106026 CHF
   Assets:Portfolio 3.106026 CHF
 
 2020-01-23 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.1358 CHF
-  Equity:Valuation:Portfolio 0.1358 CHF
+  Income:CapitalGain:Portfolio 0.1358 CHF
 
 2020-01-24 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -0.66471744 CHF
-  Equity:Valuation:Portfolio 0.66471744 CHF
+  Income:CapitalGain:Portfolio 0.66471744 CHF
 
 2020-01-24 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.2037 CHF
+  Income:CapitalGain:Portfolio -0.2037 CHF
   Assets:Portfolio 0.2037 CHF
 
 2020-01-25 * "Salary January 2020"
@@ -166,43 +164,43 @@ option "operating_currency" "CHF"
 
 2020-01-27 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -26.81569956 CHF
-  Equity:Valuation:Portfolio 26.81569956 CHF
+  Income:CapitalGain:Portfolio 26.81569956 CHF
 
 2020-01-27 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.04268 CHF
+  Income:CapitalGain:Portfolio -0.04268 CHF
   Assets:Portfolio 0.04268 CHF
 
 2020-01-28 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -25.34602728 CHF
+  Income:CapitalGain:Portfolio -25.34602728 CHF
   Assets:Portfolio 25.34602728 CHF
 
 2020-01-28 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.00873 CHF
-  Equity:Valuation:Portfolio 0.00873 CHF
+  Income:CapitalGain:Portfolio 0.00873 CHF
 
 2020-01-29 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -22.39403676 CHF
+  Income:CapitalGain:Portfolio -22.39403676 CHF
   Assets:Portfolio 22.39403676 CHF
 
 2020-01-29 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.30361 CHF
+  Income:CapitalGain:Portfolio -0.30361 CHF
   Assets:Portfolio 0.30361 CHF
 
 2020-01-30 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -1.1775798 CHF
-  Equity:Valuation:Portfolio 1.1775798 CHF
+  Income:CapitalGain:Portfolio 1.1775798 CHF
 
 2020-01-30 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.0194 CHF
+  Income:CapitalGain:Portfolio -0.0194 CHF
   Assets:Portfolio 0.0194 CHF
 
 2020-01-31 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -45.42511752 CHF
-  Equity:Valuation:Portfolio 45.42511752 CHF
+  Income:CapitalGain:Portfolio 45.42511752 CHF
 
 2020-01-31 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.36569 CHF
-  Equity:Valuation:Portfolio 0.36569 CHF
+  Income:CapitalGain:Portfolio 0.36569 CHF
 
 2020-02-02 * "Rent January"
   Assets:BankAccount -2000 CHF
@@ -210,26 +208,26 @@ option "operating_currency" "CHF"
 
 2020-02-03 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -8.0741862 CHF
-  Equity:Valuation:Portfolio 8.0741862 CHF
+  Income:CapitalGain:Portfolio 8.0741862 CHF
 
 2020-02-03 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.58685 CHF
-  Equity:Valuation:Portfolio 0.58685 CHF
+  Income:CapitalGain:Portfolio 0.58685 CHF
 
 2020-02-04 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -31.68825384 CHF
+  Income:CapitalGain:Portfolio -31.68825384 CHF
   Assets:Portfolio 31.68825384 CHF
 
 2020-02-04 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.22698 CHF
+  Income:CapitalGain:Portfolio -0.22698 CHF
   Assets:Portfolio 0.22698 CHF
 
 2020-02-05 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -10.9752012 CHF
+  Income:CapitalGain:Portfolio -10.9752012 CHF
   Assets:Portfolio 10.9752012 CHF
 
 2020-02-05 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.34629 CHF
+  Income:CapitalGain:Portfolio -0.34629 CHF
   Assets:Portfolio 0.34629 CHF
 
 2020-02-05 * "Groceries"
@@ -237,115 +235,115 @@ option "operating_currency" "CHF"
   Expenses:Groceries 250 CHF
 
 2020-02-06 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -14.86509624 CHF
+  Income:CapitalGain:Portfolio -14.86509624 CHF
   Assets:Portfolio 14.86509624 CHF
 
 2020-02-06 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.39091 CHF
+  Income:CapitalGain:Portfolio -0.39091 CHF
   Assets:Portfolio 0.39091 CHF
 
 2020-02-07 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -13.9729506 CHF
-  Equity:Valuation:Portfolio 13.9729506 CHF
+  Income:CapitalGain:Portfolio 13.9729506 CHF
 
 2020-02-07 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.1164 CHF
+  Income:CapitalGain:Portfolio -0.1164 CHF
   Assets:Portfolio 0.1164 CHF
 
 2020-02-10 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -6.52732884 CHF
+  Income:CapitalGain:Portfolio -6.52732884 CHF
   Assets:Portfolio 6.52732884 CHF
 
 2020-02-10 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.20952 CHF
+  Income:CapitalGain:Portfolio -0.20952 CHF
   Assets:Portfolio 0.20952 CHF
 
 2020-02-11 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -5.26228776 CHF
-  Equity:Valuation:Portfolio 5.26228776 CHF
+  Income:CapitalGain:Portfolio 5.26228776 CHF
 
 2020-02-11 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.04268 CHF
+  Income:CapitalGain:Portfolio -0.04268 CHF
   Assets:Portfolio 0.04268 CHF
 
 2020-02-12 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -20.77624896 CHF
+  Income:CapitalGain:Portfolio -20.77624896 CHF
   Assets:Portfolio 20.77624896 CHF
 
 2020-02-12 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.1455 CHF
-  Equity:Valuation:Portfolio 0.1455 CHF
+  Income:CapitalGain:Portfolio 0.1455 CHF
 
 2020-02-13 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -4.9092552 CHF
-  Equity:Valuation:Portfolio 4.9092552 CHF
+  Income:CapitalGain:Portfolio 4.9092552 CHF
 
 2020-02-13 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.19012 CHF
+  Income:CapitalGain:Portfolio -0.19012 CHF
   Assets:Portfolio 0.19012 CHF
 
 2020-02-14 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -1.52146332 CHF
+  Income:CapitalGain:Portfolio -1.52146332 CHF
   Assets:Portfolio 1.52146332 CHF
 
 2020-02-14 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.12804 CHF
+  Income:CapitalGain:Portfolio -0.12804 CHF
   Assets:Portfolio 0.12804 CHF
 
 2020-02-17 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -2.73932868 CHF
+  Income:CapitalGain:Portfolio -2.73932868 CHF
   Assets:Portfolio 2.73932868 CHF
 
 2020-02-17 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.27257 CHF
+  Income:CapitalGain:Portfolio -0.27257 CHF
   Assets:Portfolio 0.27257 CHF
 
 2020-02-18 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -18.75773184 CHF
-  Equity:Valuation:Portfolio 18.75773184 CHF
+  Income:CapitalGain:Portfolio 18.75773184 CHF
 
 2020-02-18 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.12513 CHF
-  Equity:Valuation:Portfolio 0.12513 CHF
+  Income:CapitalGain:Portfolio 0.12513 CHF
 
 2020-02-19 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -16.01548212 CHF
+  Income:CapitalGain:Portfolio -16.01548212 CHF
   Assets:Portfolio 16.01548212 CHF
 
 2020-02-19 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.2425 CHF
+  Income:CapitalGain:Portfolio -0.2425 CHF
   Assets:Portfolio 0.2425 CHF
 
 2020-02-20 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -9.21316764 CHF
-  Equity:Valuation:Portfolio 9.21316764 CHF
+  Income:CapitalGain:Portfolio 9.21316764 CHF
 
 2020-02-20 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.0582 CHF
+  Income:CapitalGain:Portfolio -0.0582 CHF
   Assets:Portfolio 0.0582 CHF
 
 2020-02-21 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -21.146946 CHF
-  Equity:Valuation:Portfolio 21.146946 CHF
+  Income:CapitalGain:Portfolio 21.146946 CHF
 
 2020-02-21 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.02522 CHF
+  Income:CapitalGain:Portfolio -0.02522 CHF
   Assets:Portfolio 0.02522 CHF
 
 2020-02-24 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -48.2866584 CHF
-  Equity:Valuation:Portfolio 48.2866584 CHF
+  Income:CapitalGain:Portfolio 48.2866584 CHF
 
 2020-02-24 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.47724 CHF
-  Equity:Valuation:Portfolio 0.47724 CHF
+  Income:CapitalGain:Portfolio 0.47724 CHF
 
 2020-02-25 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -28.84647816 CHF
-  Equity:Valuation:Portfolio 28.84647816 CHF
+  Income:CapitalGain:Portfolio 28.84647816 CHF
 
 2020-02-25 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.09118 CHF
+  Income:CapitalGain:Portfolio -0.09118 CHF
   Assets:Portfolio 0.09118 CHF
 
 2020-02-25 * "Groceries"
@@ -357,26 +355,26 @@ option "operating_currency" "CHF"
   Assets:BankAccount 5000 CHF
 
 2020-02-26 * "Adjust value of AAPL in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -10.02634956 CHF
+  Income:CapitalGain:Portfolio -10.02634956 CHF
   Assets:Portfolio 10.02634956 CHF
 
 2020-02-26 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.37636 CHF
-  Equity:Valuation:Portfolio 0.37636 CHF
+  Income:CapitalGain:Portfolio 0.37636 CHF
 
 2020-02-27 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -55.60483824 CHF
-  Equity:Valuation:Portfolio 55.60483824 CHF
+  Income:CapitalGain:Portfolio 55.60483824 CHF
 
 2020-02-27 * "Adjust value of USD in account Assets:Portfolio"
-  Equity:Valuation:Portfolio -0.04753 CHF
+  Income:CapitalGain:Portfolio -0.04753 CHF
   Assets:Portfolio 0.04753 CHF
 
 2020-02-28 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -6.7340898 CHF
-  Equity:Valuation:Portfolio 6.7340898 CHF
+  Income:CapitalGain:Portfolio 6.7340898 CHF
 
 2020-02-28 * "Adjust value of USD in account Assets:Portfolio"
   Assets:Portfolio -0.74108 CHF
-  Equity:Valuation:Portfolio 0.74108 CHF
+  Income:CapitalGain:Portfolio 0.74108 CHF
 

@@ -1,6 +1,6 @@
 2020-08-05 "Bought EUR from CHF FX-rate € 1 = CHF 1.0777 General"
-Assets:Accounts:Revolut Equity:Valuation           1293.25 CHF
-Equity:Valuation        Assets:Accounts:Revolut       1200 EUR
+Assets:Accounts:Revolut Income:CapitalGain         1293.25 CHF
+Income:CapitalGain      Assets:Accounts:Revolut       1200 EUR
 
 2020-08-05 balance Assets:Accounts:Revolut 1200 EUR
 
@@ -81,8 +81,8 @@ Assets:Accounts:Revolut Expenses:TBD                   0.7 EUR
 2020-08-17 balance Assets:Accounts:Revolut 284.98 EUR
 
 2020-11-26 "Sold EUR to CHF FX-rate € 1 = CHF 1.0809 General"
-Assets:Accounts:Revolut Equity:Valuation            184.98 EUR
-Equity:Valuation        Assets:Accounts:Revolut     199.95 CHF
+Assets:Accounts:Revolut Income:CapitalGain          184.98 EUR
+Income:CapitalGain      Assets:Accounts:Revolut     199.95 CHF
 
 2020-11-26 balance Assets:Accounts:Revolut 100 EUR
 

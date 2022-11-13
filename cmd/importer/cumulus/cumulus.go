@@ -177,9 +177,12 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	p.transactions = append(p.transactions, journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []*journal.Posting{
-			journal.NewPosting(p.context.TBDAccount(), p.account, chf, amount),
-		},
+		Postings: journal.PostingBuilder{
+			Credit:    p.context.TBDAccount(),
+			Debit:     p.account,
+			Commodity: chf,
+			Amount:    amount,
+		}.Singleton(),
 	})
 	return true, nil
 }
@@ -262,9 +265,12 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	p.transactions = append(p.transactions, journal.TransactionBuilder{
 		Date:        date,
 		Description: r[rfBeschreibung],
-		Postings: []*journal.Posting{
-			journal.NewPosting(p.context.TBDAccount(), p.account, chf, amount),
-		},
+		Postings: journal.PostingBuilder{
+			Credit:    p.context.TBDAccount(),
+			Debit:     p.account,
+			Commodity: chf,
+			Amount:    amount,
+		}.Singleton(),
 	})
 	return true, nil
 }

@@ -238,9 +238,12 @@ func generateTransactions(c config, cs []*journal.Commodity, as []*journal.Accou
 		trx = append(trx, journal.TransactionBuilder{
 			Date:        dates[rand.Intn(len(dates))].End,
 			Description: generateIdentifier(200),
-			Postings: []*journal.Posting{
-				journal.NewPosting(as[rand.Intn(len(as))], as[rand.Intn(len(as))], cs[rand.Intn(len(cs))], decimal.NewFromFloat(rand.Float64()*1000).Round(4)),
-			},
+			Postings: journal.PostingBuilder{
+				Credit:    as[rand.Intn(len(as))],
+				Debit:     as[rand.Intn(len(as))],
+				Commodity: cs[rand.Intn(len(cs))],
+				Amount:    decimal.NewFromFloat(rand.Float64() * 1000).Round(4),
+			}.Singleton(),
 		}.Build())
 	}
 	return trx

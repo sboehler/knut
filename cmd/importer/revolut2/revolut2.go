@@ -169,16 +169,24 @@ func (p *parser) parseBooking() error {
 	t := journal.TransactionBuilder{
 		Date:        d,
 		Description: r[bfDescription],
-		Postings: []*journal.Posting{
-			journal.NewPosting(p.ast.Context.TBDAccount(), p.account, c, amt),
-		},
+		Postings: journal.PostingBuilder{
+			Credit:    p.ast.Context.TBDAccount(),
+			Debit:     p.account,
+			Commodity: c,
+			Amount:    amt,
+		}.Singleton(),
 	}
 	fee, err := decimal.NewFromString(r[bfFee])
 	if err != nil {
 		return fmt.Errorf("invalid fee in row %v: %v", r, err)
 	}
 	if !fee.IsZero() {
-		t.Postings = append(t.Postings, journal.NewPosting(p.account, p.feeAccount, c, fee))
+		t.Postings = append(t.Postings, journal.PostingBuilder{
+			Credit:    p.account,
+			Debit:     p.feeAccount,
+			Commodity: c,
+			Amount:    fee,
+		}.Build())
 	}
 	p.ast.AddTransaction(t.Build())
 	bal, err := decimal.NewFromString(r[bfBalance])

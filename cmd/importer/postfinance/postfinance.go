@@ -177,9 +177,12 @@ func (p *Parser) readBookingLine(l []string) error {
 	p.ast.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: strings.TrimSpace(l[bfAvisierungstext]),
-		Postings: []*journal.Posting{
-			journal.NewPosting(p.ast.Context.TBDAccount(), p.account, p.currency, amount),
-		},
+		Postings: journal.PostingBuilder{
+			Credit:    p.ast.Context.TBDAccount(),
+			Debit:     p.account,
+			Commodity: p.currency,
+			Amount:    amount,
+		}.Singleton(),
 	}.Build())
 	return nil
 }

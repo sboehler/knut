@@ -55,14 +55,14 @@ type runner struct {
 	cpuprofile string
 
 	// transformations
-	from, to              flags.DateFlag
-	last                  int
-	interval              flags.IntervalFlags
-	diff, showCommodities bool
-	mapping               flags.MappingFlag
-	remap                 flags.RegexFlag
-	valuation             flags.CommodityFlag
-	accounts, commodities flags.RegexFlag
+	from, to                     flags.DateFlag
+	last                         int
+	interval                     flags.IntervalFlags
+	diff, showCommodities, close bool
+	mapping                      flags.MappingFlag
+	remap                        flags.RegexFlag
+	valuation                    flags.CommodityFlag
+	accounts, commodities        flags.RegexFlag
 
 	// formatting
 	thousands, color   bool
@@ -92,6 +92,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().Var(&r.to, "to", "to date")
 	c.Flags().IntVar(&r.last, "last", 0, "last n periods")
 	c.Flags().BoolVarP(&r.diff, "diff", "d", false, "diff")
+	c.Flags().BoolVar(&r.close, "close", true, "close")
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "s", false, "Show commodities on their own rows")
 	r.interval.Setup(c, date.Once)
@@ -155,11 +156,16 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Round:     r.digits,
 		}
 	)
-	l, err := j.Process(
+	processors := []journal.DayFn{
 		journal.Balance(jctx),
-		journal.ComputePrices(valuation),
-		journal.Valuate(jctx, valuation),
-	)
+	}
+	if valuation != nil {
+		processors = append(processors, journal.ComputePrices(valuation), journal.Valuate(jctx, valuation))
+	}
+	if r.close {
+		processors = append(processors, journal.CloseAccounts(jctx, dates))
+	}
+	l, err := j.Process(processors...)
 	if err != nil {
 		return err
 	}

@@ -291,9 +291,27 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: []*journal.Posting{
-			journal.PostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
-			journal.PostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
-			journal.PostingWithTargets(p.fee, p.account, currency, fee, []*journal.Commodity{stock, currency}),
+			journal.PostingBuilder{
+				Credit:    p.trading,
+				Debit:     p.account,
+				Commodity: stock,
+				Amount:    qty,
+				Targets:   []*journal.Commodity{stock, currency},
+			}.Build(),
+			journal.PostingBuilder{
+				Credit:    p.trading,
+				Debit:     p.account,
+				Commodity: currency,
+				Amount:    proceeds,
+				Targets:   []*journal.Commodity{stock, currency},
+			}.Build(),
+			journal.PostingBuilder{
+				Credit:    p.fee,
+				Debit:     p.account,
+				Commodity: currency,
+				Amount:    fee,
+				Targets:   []*journal.Commodity{stock, currency},
+			}.Build(),
 		},
 	}.Build())
 	return true, nil
@@ -343,11 +361,29 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
 	var postings = []*journal.Posting{
-		journal.PostingWithTargets(p.trading, p.account, stock, qty, []*journal.Commodity{stock, currency}),
-		journal.PostingWithTargets(p.trading, p.account, currency, proceeds, []*journal.Commodity{stock, currency}),
+		journal.PostingBuilder{
+			Credit:    p.trading,
+			Debit:     p.account,
+			Commodity: stock,
+			Amount:    qty,
+			Targets:   []*journal.Commodity{stock, currency},
+		}.Build(),
+		journal.PostingBuilder{
+			Credit:    p.trading,
+			Debit:     p.account,
+			Commodity: currency,
+			Amount:    proceeds,
+			Targets:   []*journal.Commodity{stock, currency},
+		}.Build(),
 	}
 	if !fee.IsZero() {
-		postings = append(postings, journal.PostingWithTargets(p.fee, p.account, p.baseCurrency, fee, []*journal.Commodity{stock, currency}))
+		postings = append(postings, journal.PostingBuilder{
+			Credit:    p.fee,
+			Debit:     p.account,
+			Commodity: p.baseCurrency,
+			Amount:    fee,
+			Targets:   []*journal.Commodity{stock, currency},
+		}.Build())
 	}
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
@@ -399,9 +435,12 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []*journal.Posting{
-			journal.NewPosting(p.builder.Context.TBDAccount(), p.account, currency, amount),
-		},
+		Postings: journal.PostingBuilder{
+			Credit:    p.builder.Context.TBDAccount(),
+			Debit:     p.account,
+			Commodity: currency,
+			Amount:    amount,
+		}.Singleton(),
 	}.Build())
 	return true, nil
 }
@@ -450,9 +489,13 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []*journal.Posting{
-			journal.PostingWithTargets(p.dividend, p.account, currency, amount, []*journal.Commodity{security}),
-		},
+		Postings: journal.PostingBuilder{
+			Credit:    p.dividend,
+			Debit:     p.account,
+			Commodity: currency,
+			Amount:    amount,
+			Targets:   []*journal.Commodity{security},
+		}.Singleton(),
 	}.Build())
 	return true, nil
 }
@@ -511,9 +554,13 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []*journal.Posting{
-			journal.PostingWithTargets(p.tax, p.account, currency, amount, []*journal.Commodity{security}),
-		},
+		Postings: journal.PostingBuilder{
+			Credit:    p.tax,
+			Debit:     p.account,
+			Commodity: currency,
+			Amount:    amount,
+			Targets:   []*journal.Commodity{security},
+		}.Singleton(),
 	}.Build())
 	return true, nil
 }
@@ -542,8 +589,13 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []*journal.Posting{
-			journal.PostingWithTargets(p.interest, p.account, currency, amount, []*journal.Commodity{currency})},
+		Postings: journal.PostingBuilder{
+			Credit:    p.interest,
+			Debit:     p.account,
+			Commodity: currency,
+			Amount:    amount,
+			Targets:   []*journal.Commodity{currency},
+		}.Singleton(),
 	}.Build())
 	return true, nil
 }

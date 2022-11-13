@@ -60,42 +60,33 @@ type Posting struct {
 	Lot           *Lot
 }
 
-// NewPosting creates a new posting from the given parameters. If amount is negative, it
-// will be inverted and the accounts reversed.
-func NewPosting(crAccount, drAccount *Account, commodity *Commodity, amt decimal.Decimal) *Posting {
-	if amt.IsNegative() {
-		crAccount, drAccount = drAccount, crAccount
-		amt = amt.Neg()
+type PostingBuilder struct {
+	Amount, Value decimal.Decimal
+	Credit, Debit *Account
+	Commodity     *Commodity
+	Targets       []*Commodity
+	Lot           *Lot
+}
+
+func (pb PostingBuilder) Build() *Posting {
+	if pb.Amount.IsNegative() || pb.Amount.IsZero() && pb.Value.IsNegative() {
+		pb.Value = pb.Value.Neg()
+		pb.Amount = pb.Amount.Neg()
+		pb.Credit, pb.Debit = pb.Debit, pb.Credit
 	}
 	return &Posting{
-		Credit:    crAccount,
-		Debit:     drAccount,
-		Amount:    amt,
-		Commodity: commodity,
+		Credit:    pb.Credit,
+		Debit:     pb.Debit,
+		Commodity: pb.Commodity,
+		Amount:    pb.Amount,
+		Value:     pb.Value,
+		Targets:   pb.Targets,
+		Lot:       pb.Lot,
 	}
 }
 
-// PostingWithTargets creates a new posting from the given parameters. If amount is negative, it
-// will be inverted and the accounts reversed.
-func PostingWithTargets(crAccount, drAccount *Account, commodity *Commodity, amt decimal.Decimal, targets []*Commodity) *Posting {
-	p := NewPosting(crAccount, drAccount, commodity, amt)
-	p.Targets = targets
-	return p
-}
-
-// NewValuePosting creates a value adjustment posting.
-func NewValuePosting(crAccount, drAccount *Account, commodity *Commodity, val decimal.Decimal, targets []*Commodity) *Posting {
-	if val.IsNegative() {
-		crAccount, drAccount = drAccount, crAccount
-		val = val.Neg()
-	}
-	return &Posting{
-		Credit:    crAccount,
-		Debit:     drAccount,
-		Value:     val,
-		Commodity: commodity,
-		Targets:   targets,
-	}
+func (pb PostingBuilder) Singleton() []*Posting {
+	return []*Posting{pb.Build()}
 }
 
 func (pst *Posting) Accounts() []*Account {
@@ -265,9 +256,12 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 				Date:        period.End,
 				Tags:        t.Tags,
 				Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description, i+1, len(periods)),
-				Postings: []*Posting{
-					NewPosting(crAccountMulti, drAccountMulti, posting.Commodity, a),
-				},
+				Postings: PostingBuilder{
+					Credit:    crAccountMulti,
+					Debit:     drAccountMulti,
+					Commodity: posting.Commodity,
+					Amount:    a,
+				}.Singleton(),
 			}.Build())
 		}
 	}
@@ -277,9 +271,12 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 			Date:        t.Date,
 			Tags:        t.Tags,
 			Description: t.Description,
-			Postings: []*Posting{
-				NewPosting(crAccountSingle, drAccountSingle, posting.Commodity, posting.Amount),
-			},
+			Postings: PostingBuilder{
+				Credit:    crAccountSingle,
+				Debit:     drAccountSingle,
+				Commodity: posting.Commodity,
+				Amount:    posting.Amount,
+			}.Singleton(),
 		}.Build())
 
 	}

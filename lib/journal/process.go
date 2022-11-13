@@ -5,13 +5,14 @@ import (
 	"strings"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/set"
 	"github.com/shopspring/decimal"
 )
 
-type DayFn func(*Day, func(*Day)) error
+type DayFn = func(*Day, func(*Day)) error
 
 func NoOp[T any](d T, next func(T)) error {
 	next(d)
@@ -58,7 +59,7 @@ func ComputePrices(v *Commodity) DayFn {
 	}
 }
 
-// Balance balances the
+// Balance balances the journal.
 func Balance(jctx Context) DayFn {
 	amounts := make(Amounts)
 	accounts := set.New[*Account]()
@@ -95,7 +96,13 @@ func Balance(jctx Context) DayFn {
 				return Error{v, "account is not open"}
 			}
 			valAcc := jctx.ValuationAccountFor(v.Account)
-			p := PostingWithTargets(valAcc, v.Account, v.Commodity, v.Amount.Sub(amounts.Amount(AccountCommodityKey(v.Account, v.Commodity))), []*Commodity{v.Commodity})
+			p := PostingBuilder{
+				Credit:    valAcc,
+				Debit:     v.Account,
+				Commodity: v.Commodity,
+				Amount:    v.Amount.Sub(amounts.Amount(AccountCommodityKey(v.Account, v.Commodity))),
+				Targets:   []*Commodity{v.Commodity},
+			}.Build()
 			d.Transactions = append(d.Transactions, TransactionBuilder{
 				Date:        v.Date,
 				Description: fmt.Sprintf("Valuation adjustment for %s in %s", v.Commodity.Name(), v.Account.Name()),
@@ -162,6 +169,65 @@ func Balance(jctx Context) DayFn {
 	}
 }
 
+// Balance balances the journal.
+func CloseAccounts(jctx Context, dates date.Partition) DayFn {
+	amounts, values := make(Amounts), make(Amounts)
+	closingDates := dates.ClosingDates()
+	var current int
+
+	processTransactions := func(d *Day) {
+		for _, t := range d.Transactions {
+			for _, p := range t.Postings {
+				amounts.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
+				amounts.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
+				values.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Value.Neg())
+				values.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Value)
+			}
+		}
+		d.Amounts = amounts.Clone()
+		d.Value = values.Clone()
+	}
+
+	closeEI := func(d *Day) {
+		for k, amt := range amounts {
+			if !k.Account.IsIE() {
+				continue
+			}
+			d.Transactions = append(d.Transactions, TransactionBuilder{
+				Date:        closingDates[current],
+				Description: fmt.Sprintf("Closing account %s in %s", k.Account.Name(), k.Commodity.Name()),
+				Postings: PostingBuilder{
+					Credit:    k.Account,
+					Debit:     jctx.Account("Equity:RetainedEarnings"),
+					Commodity: k.Commodity,
+					Amount:    amt,
+					Value:     values[k],
+				}.Singleton(),
+			}.Build())
+		}
+	}
+
+	return func(d *Day, next func(*Day)) error {
+		for current < len(closingDates) && closingDates[current].Before(d.Date) {
+			bd := &Day{Date: closingDates[current]}
+			closeEI(bd)
+			current++
+			processTransactions(bd)
+			next(bd)
+		}
+		if current < len(closingDates) && closingDates[current].Equal(d.Date) {
+			closeEI(d)
+			current++
+			processTransactions(d)
+			next(d)
+			return nil
+		}
+		processTransactions(d)
+		next(d)
+		return nil
+	}
+}
+
 // Valuate valuates the
 func Valuate(jctx Context, v *Commodity) DayFn {
 	if v == nil {
@@ -208,9 +274,13 @@ func Valuate(jctx Context, v *Commodity) DayFn {
 			d.Transactions = append(d.Transactions, TransactionBuilder{
 				Date:        d.Date,
 				Description: fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity.Name(), pos.Account.Name()),
-				Postings: []*Posting{
-					NewValuePosting(credit, pos.Account, pos.Commodity, gain, []*Commodity{pos.Commodity}),
-				},
+				Postings: PostingBuilder{
+					Credit:    credit,
+					Debit:     pos.Account,
+					Commodity: pos.Commodity,
+					Value:     gain,
+					Targets:   []*Commodity{pos.Commodity},
+				}.Singleton(),
 			}.Build())
 			values.Add(pos, gain)
 			values.Add(AccountCommodityKey(credit, pos.Commodity), gain.Neg())

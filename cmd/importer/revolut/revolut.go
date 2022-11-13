@@ -213,8 +213,18 @@ func (p *parser) parseBooking(r []string) error {
 			return err
 		}
 		t.Postings = []*journal.Posting{
-			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, p.currency, amount),
-			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, otherCommodity, otherAmount),
+			journal.PostingBuilder{
+				Credit:    p.ast.Context.ValuationAccount(),
+				Debit:     p.account,
+				Commodity: p.currency,
+				Amount:    amount,
+			}.Build(),
+			journal.PostingBuilder{
+				Credit:    p.ast.Context.ValuationAccount(),
+				Debit:     p.account,
+				Commodity: otherCommodity,
+				Amount:    otherAmount,
+			}.Build(),
 		}
 	case fxBuyRegex.MatchString(r[bfReference]):
 		otherCommodity, otherAmount, err := p.parseCombiField(r[bfExchangeIn])
@@ -222,12 +232,27 @@ func (p *parser) parseBooking(r []string) error {
 			return err
 		}
 		t.Postings = []*journal.Posting{
-			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, p.currency, amount),
-			journal.NewPosting(p.ast.Context.ValuationAccount(), p.account, otherCommodity, otherAmount.Neg()),
+			journal.PostingBuilder{
+				Credit:    p.ast.Context.ValuationAccount(),
+				Debit:     p.account,
+				Commodity: p.currency,
+				Amount:    amount,
+			}.Build(),
+			journal.PostingBuilder{
+				Credit:    p.ast.Context.ValuationAccount(),
+				Debit:     p.account,
+				Commodity: otherCommodity,
+				Amount:    otherAmount.Neg(),
+			}.Build(),
 		}
 	default:
 		t.Postings = []*journal.Posting{
-			journal.NewPosting(p.ast.Context.TBDAccount(), p.account, p.currency, amount),
+			journal.PostingBuilder{
+				Credit:    p.ast.Context.TBDAccount(),
+				Debit:     p.account,
+				Commodity: p.currency,
+				Amount:    amount,
+			}.Build(),
 		}
 	}
 	p.ast.AddTransaction(t.Build())

@@ -1,7 +1,6 @@
 package slice
 
 import (
-	"context"
 	"testing"
 )
 
@@ -15,23 +14,26 @@ func TestParallel(t *testing.T) {
 	for i := 0; i < size; i++ {
 		list = append(list, &input{i, i + 1, i + 2})
 	}
-	fnA := func(in *input) error {
+	fnA := func(in *input, next func(*input)) error {
 		in.a++
+		next(in)
 		return nil
 	}
-	fnB := func(in *input) error {
+	fnB := func(in *input, next func(*input)) error {
 		in.b = in.a + in.b
+		next(in)
 		return nil
 	}
-	fnC := func(in *input) error {
+	fnC := func(in *input, next func(*input)) error {
 		in.c = in.c + in.b
+		next(in)
 		return nil
 	}
-	if err := Parallel(context.Background(), list, fnA, fnB, fnC); err != nil {
+	got, err := Parallel(list, fnA, fnB, fnC)
+	if err != nil {
 		t.Fatalf("Parallel() returned unexpected error: %v", err)
 	}
-	for i, l := range list {
-
+	for i, l := range got {
 		if l.a != i+1 || l.b != 2*(i+1) || l.c != 3*i+4 {
 			t.Fatalf("invalid test[%d]: %v", i, l)
 		}

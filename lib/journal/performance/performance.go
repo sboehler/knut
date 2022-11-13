@@ -17,13 +17,14 @@ type Calculator struct {
 }
 
 // Process computes portfolio performance.
-func (calc Calculator) Process(d *journal.Day) error {
+func (calc Calculator) Process(d *journal.Day, next func(*journal.Day)) error {
 	var prev pcv
 	dpr := calc.computeFlows(d)
 	dpr.V0 = prev
 	dpr.V1 = calc.valueByCommodity(d)
 	prev = dpr.V1
 	d.Performance = dpr
+	next(d)
 	return nil
 }
 

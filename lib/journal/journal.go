@@ -110,21 +110,9 @@ func (ast *Journal) Max() time.Time {
 	return ast.max
 }
 
-func (ast *Journal) Process(fs ...func(*Day) error) (*Ledger, error) {
+func (ast *Journal) Process(fs ...func(*Day, func(*Day)) error) (*Ledger, error) {
 	ds := dict.SortedValues(ast.Days, CompareDays)
-	err := slice.Parallel(context.Background(), ds, fs...)
-	if err != nil {
-		return nil, err
-	}
-	return &Ledger{
-		Context: ast.Context,
-		Days:    ds,
-	}, nil
-}
-
-func (ast *Journal) Process2(fs ...func(*Day) ([]*Day, error)) (*Ledger, error) {
-	ds := dict.SortedValues(ast.Days, CompareDays)
-	ds, err := slice.Parallel2(context.Background(), ds, fs...)
+	ds, err := slice.Parallel(ds, fs...)
 	if err != nil {
 		return nil, err
 	}

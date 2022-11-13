@@ -7,48 +7,21 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func Parallel[T any](ctx context.Context, ts []T, fs ...func(T) error) error {
-	if len(fs) == 0 {
-		return nil
-	}
-	wg, ctx := errgroup.WithContext(ctx)
-	firstCh := make(chan T)
-	ch := firstCh
-	wg.Go(func() error {
-		defer close(firstCh)
-		for _, t := range ts {
-			if err := cpr.Push(ctx, firstCh, t); err != nil {
-				return err
-			}
+func Adapt[T any](f func(t T) error) func(T, func(T)) error {
+	return func(t T, next func(T)) error {
+		if err := f(t); err != nil {
+			return err
 		}
+		next(t)
 		return nil
-	})
-	for _, f := range fs[:len(fs)-1] {
-		inCh, f := ch, f
-		outCh := make(chan T)
-		ch = outCh
-		wg.Go(func() error {
-			defer close(outCh)
-			return cpr.Consume(ctx, inCh, func(t T) error {
-				if err := f(t); err != nil {
-					return err
-				}
-				return cpr.Push(ctx, outCh, t)
-			})
-		})
 	}
-	wg.Go(func() error {
-		return cpr.Consume(ctx, ch, fs[len(fs)-1])
-	})
-	return wg.Wait()
 }
 
-func Parallel2[T any](ctx context.Context, ts []T, fs ...func(T) ([]T, error)) ([]T, error) {
-	if len(fs) == 0 {
-		return ts, nil
-	}
-	wg, ctx := errgroup.WithContext(ctx)
-	firstCh := make(chan T)
+const bufSize = 100
+
+func Parallel[T any](ts []T, fs ...func(T, func(T)) error) ([]T, error) {
+	wg, ctx := errgroup.WithContext(context.Background())
+	firstCh := make(chan T, bufSize)
 	ch := firstCh
 	wg.Go(func() error {
 		defer close(firstCh)
@@ -61,16 +34,15 @@ func Parallel2[T any](ctx context.Context, ts []T, fs ...func(T) ([]T, error)) (
 	})
 	for _, f := range fs {
 		inCh, f := ch, f
-		outCh := make(chan T)
+		outCh := make(chan T, bufSize)
 		ch = outCh
 		wg.Go(func() error {
 			defer close(outCh)
+			next := func(t T) {
+				cpr.Push(ctx, outCh, t)
+			}
 			return cpr.Consume(ctx, inCh, func(t T) error {
-				ts, err := f(t)
-				if err != nil {
-					return err
-				}
-				return cpr.Push(ctx, outCh, ts...)
+				return f(t, next)
 			})
 		})
 	}
@@ -82,13 +54,4 @@ func Parallel2[T any](ctx context.Context, ts []T, fs ...func(T) ([]T, error)) (
 		})
 	})
 	return res, wg.Wait()
-}
-
-func Adapt[T any](f func(t T) error) func(t T) ([]T, error) {
-	return func(t T) ([]T, error) {
-		if err := f(t); err != nil {
-			return nil, err
-		}
-		return []T{t}, nil
-	}
 }

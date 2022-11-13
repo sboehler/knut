@@ -173,7 +173,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 	agg := journal.Aggregate(m, f, valuation, rep)
 	for _, d := range l.Days {
-		if err := agg(d); err != nil {
+		if err := agg(d, func(*journal.Day) {}); err != nil {
 			return err
 		}
 	}

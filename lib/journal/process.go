@@ -11,9 +11,10 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type DayFn func(*Day) error
+type DayFn func(*Day, func(*Day)) error
 
-func NoOp[T any](_ T) error {
+func NoOp[T any](d T, next func(T)) error {
+	next(d)
 	return nil
 }
 
@@ -42,7 +43,7 @@ func ComputePrices(v *Commodity) DayFn {
 	}
 	var previous NormalizedPrices
 	prc := make(Prices)
-	return func(day *Day) error {
+	return func(day *Day, next func(*Day)) error {
 		if len(day.Prices) == 0 {
 			day.Normalized = previous
 		} else {
@@ -52,6 +53,7 @@ func ComputePrices(v *Commodity) DayFn {
 			day.Normalized = prc.Normalize(v)
 			previous = day.Normalized
 		}
+		next(day)
 		return nil
 	}
 }
@@ -138,7 +140,7 @@ func Balance(jctx Context) DayFn {
 		return nil
 	}
 
-	return func(d *Day) error {
+	return func(d *Day, next func(*Day)) error {
 		if err := processOpenings(d); err != nil {
 			return err
 		}
@@ -155,6 +157,7 @@ func Balance(jctx Context) DayFn {
 			return err
 		}
 		d.Amounts = amounts.Clone()
+		next(d)
 		return nil
 	}
 }
@@ -216,7 +219,7 @@ func Valuate(jctx Context, v *Commodity) DayFn {
 
 	}
 
-	return func(d *Day) error {
+	return func(d *Day, next func(*Day)) error {
 		if err := valuateTransactions(d); err != nil {
 			return err
 		}
@@ -224,14 +227,16 @@ func Valuate(jctx Context, v *Commodity) DayFn {
 			return err
 		}
 		d.Value = values.Clone()
+		next(d)
 		return nil
 	}
 }
 
 // Sort sorts the directives in this day.
 func Sort() DayFn {
-	return func(d *Day) error {
+	return func(d *Day, next func(*Day)) error {
 		compare.Sort(d.Transactions, CompareTransactions)
+		next(d)
 		return nil
 	}
 }
@@ -247,7 +252,7 @@ func Aggregate(m mapper.Mapper[Key], f filter.Filter[Key], v *Commodity, c Colle
 	if m == nil {
 		m = mapper.Identity[Key]
 	}
-	return func(d *Day) error {
+	return func(d *Day, next func(*Day)) error {
 		for _, t := range d.Transactions {
 			for _, b := range t.Postings {
 				amt := b.Amount
@@ -278,6 +283,7 @@ func Aggregate(m mapper.Mapper[Key], f filter.Filter[Key], v *Commodity, c Colle
 				}
 			}
 		}
+		next(d)
 		return nil
 	}
 }

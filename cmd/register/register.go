@@ -135,13 +135,13 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		dates = date.CreatePartition(from, to, r.interval.Value(), r.last)
 		rep   = register.NewReport(jctx)
 		f     = filter.And(
-			journal.FilterDates(date.Between(from, to)),
+			journal.FilterDates(dates.Contain),
 			journal.FilterAccount(r.accounts.Value()),
 			journal.FilterOther(r.others.Value()),
 			journal.FilterCommodity(r.commodities.Value()),
 		)
 		m = journal.KeyMapper{
-			Date:    date.Map(dates),
+			Date:    dates.MapToEndOfPeriod,
 			Account: am,
 			Other: mapper.Combine(
 				journal.RemapAccount(jctx, r.remap.Value()),

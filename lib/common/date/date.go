@@ -17,8 +17,6 @@ package date
 import (
 	"sort"
 	"time"
-
-	"github.com/sboehler/knut/lib/common/filter"
 )
 
 // Interval is a time interval.
@@ -116,11 +114,6 @@ type Period struct {
 	Start, End time.Time
 }
 
-// Less defines an ordering for periods.
-func (p Period) Less(p2 Period) bool {
-	return p.End.Before(p2.End)
-}
-
 // Periods returns a series of periods in the given interval,
 // which contains both t0 and t1.
 func Periods(t0, t1 time.Time, p Interval) []Period {
@@ -141,77 +134,66 @@ func Periods(t0, t1 time.Time, p Interval) []Period {
 	return res
 }
 
-// Contains returns whether the period contains the given
-func (p Period) Contains(t time.Time) bool {
-	return !p.Start.After(t) && !p.End.Before(t)
+// Partition is a partition of the timeline.
+// Invariants:
+// - t1 is always the last element of ends.
+// - len(ends) > 0
+type Partition struct {
+	t0, t1 time.Time
+	ends   []time.Time
 }
 
-// Periods returns a series of periods in the given interval,
-// which contains both t0 and t1.
-func PeriodsN(t0, t1 time.Time, p Interval, n int) []Period {
-	var res []Period
+func CreatePartition(t0, t1 time.Time, p Interval, n int) Partition {
 	if p == Once {
-		if t0.Before(t1) {
-			res = append(res, Period{t0, t1})
+		return Partition{
+			t0:   t0,
+			t1:   t1,
+			ends: []time.Time{t1},
 		}
-	} else {
-		for t := t1; !t.Before(t0); t = StartOf(t, p).AddDate(0, 0, -1) {
-			sd := StartOf(t, p)
-			if sd.Before(t0) {
-				sd = t0
-			}
-			res = append(res, Period{sd, t})
-			if len(res) == n {
-				break
-			}
-		}
-		reverse(res)
 	}
-	return res
-}
-
-func reverse(ps []Period) {
-	for i := 0; i < len(ps)/2; i++ {
-		ps[i], ps[len(ps)-i-1] = ps[len(ps)-i-1], ps[i]
-	}
-}
-
-func Map(part []time.Time) func(time.Time) time.Time {
-	return func(t time.Time) time.Time {
-		index := sort.Search(len(part), func(i int) bool {
-			// t <= part[i]
-			return !part[i].Before(t)
-		})
-		if index < len(part) {
-			return part[index]
-		}
-		return time.Time{}
-	}
-}
-
-func CreatePartition(t0, t1 time.Time, p Interval, n int) []time.Time {
 	var res []time.Time
-	if p == Once {
-		if t0.Before(t1) {
-			res = append(res, t1)
+	for t := t0; !t.After(t1); t = EndOf(t, p).AddDate(0, 0, 1) {
+		ed := EndOf(t, p)
+		if ed.After(t1) {
+			ed = t1
 		}
-	} else {
-		for t := t0; !t.After(t1); t = EndOf(t, p).AddDate(0, 0, 1) {
-			ed := EndOf(t, p)
-			if ed.After(t1) {
-				ed = t1
-			}
-			res = append(res, ed)
-		}
+		res = append(res, ed)
 	}
 	if n > 0 && len(res) > n {
 		res = res[len(res)-n:]
 	}
+	return Partition{
+		t0:   t0,
+		t1:   t1,
+		ends: res,
+	}
+}
+
+func (p *Partition) MapToEndOfPeriod(t time.Time) time.Time {
+	index := sort.Search(len(p.ends), func(i int) bool {
+		// find first i where p.ends[i] >= t
+		return !p.ends[i].Before(t)
+	})
+	if index < len(p.ends) {
+		return p.ends[index]
+	}
+	return time.Time{}
+}
+
+func (p *Partition) ClosingDates() []time.Time {
+	var res []time.Time
+	for _, d := range p.ends[:len(p.ends)-1] {
+		res = append(res, d.AddDate(0, 0, 1))
+	}
 	return res
 }
 
-func Between(t0, t1 time.Time) filter.Filter[time.Time] {
-	return func(t time.Time) bool {
-		return !t.Before(t0) && !t.After(t1)
-	}
+func (p *Partition) EndDates() []time.Time {
+	res := make([]time.Time, len(p.ends))
+	copy(res, p.ends)
+	return res
+}
+
+func (p *Partition) Contain(t time.Time) bool {
+	return !t.Before(p.t0) && !t.After(p.t1)
 }

@@ -125,7 +125,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		from, to = r.from.ValueOr(j.Min()), r.to.ValueOr(date.Today())
 		dates    = date.CreatePartition(from, to, r.interval.Value(), r.last)
 		f        = filter.And(
-			journal.FilterDates(date.Between(from, to)),
+			journal.FilterDates(dates.Contain),
 			filter.Or(
 				journal.FilterAccount(r.accounts.Value()),
 				journal.FilterOther(r.accounts.Value()),
@@ -133,7 +133,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			journal.FilterCommodity(r.commodities.Value()),
 		)
 		m = journal.KeyMapper{
-			Date: date.Map(dates),
+			Date: dates.MapToEndOfPeriod,
 			Account: mapper.Combine(
 				journal.RemapAccount(jctx, r.remap.Value()),
 				journal.ShortenAccount(jctx, r.mapping.Value()),
@@ -146,7 +146,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		reportRenderer = report.Renderer{
 			ShowCommodities:    r.showCommodities,
 			SortAlphabetically: r.sortAlphabetically,
-			Dates:              dates,
+			Dates:              dates.EndDates(),
 			Diff:               r.diff,
 		}
 		tableRenderer = table.TextRenderer{

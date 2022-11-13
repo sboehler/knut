@@ -15,7 +15,6 @@
 package journal
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -64,20 +63,12 @@ func (ctx Context) Commodity(name string) *Commodity {
 
 // ValuationAccount returns the account for automatic valuation bookings.
 func (ctx Context) ValuationAccount() *Account {
-	res, err := ctx.accounts.Get("Income:CapitalGain")
-	if err != nil {
-		panic(fmt.Sprintf("could not create valuation account: %v", err))
-	}
-	return res
+	return ctx.Account("Income:CapitalGain")
 }
 
 // TBDAccount returns the TBD account.
 func (ctx Context) TBDAccount() *Account {
-	tbdAccount, err := ctx.accounts.Get("Expenses:TBD")
-	if err != nil {
-		panic(fmt.Sprintf("could not create Expenses:TBD account: %v", err))
-	}
-	return tbdAccount
+	return ctx.Account("Expenses:TBD")
 }
 
 // ValuationAccountFor returns the valuation account which corresponds to

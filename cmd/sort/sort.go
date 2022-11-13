@@ -82,12 +82,12 @@ func execute(cmd *cobra.Command, args []string) error {
 
 func sortFile(target string) error {
 	jctx := journal.NewContext()
-	ast, err := readDirectives(jctx, target)
+	j, err := readDirectives(jctx, target)
 	if err != nil {
 		return err
 	}
 	var buf bytes.Buffer
-	_, err = journal.NewPrinter().PrintLedger(&buf, ast.SortedDays())
+	_, err = journal.NewPrinter().PrintLedger(&buf, j.SortedDays())
 	if err != nil {
 		return err
 	}

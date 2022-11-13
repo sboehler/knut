@@ -70,8 +70,8 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	p := parser{
-		reader: csv.NewReader(f),
-		ast:    journal.New(ctx),
+		reader:  csv.NewReader(f),
+		journal: journal.New(ctx),
 	}
 	if p.account, err = r.account.Value(ctx); err != nil {
 		return err
@@ -81,14 +81,14 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintLedger(out, p.ast.SortedDays())
+	_, err = journal.NewPrinter().PrintLedger(out, p.journal.SortedDays())
 	return err
 }
 
 type parser struct {
 	reader   *csv.Reader
 	account  *journal.Account
-	ast      *journal.Journal
+	journal  *journal.Journal
 	currency *journal.Commodity
 	date     time.Time
 }
@@ -146,7 +146,7 @@ func (p *parser) parseHeader(r []string) error {
 		return fmt.Errorf("could not extract currency from header field: %q", r[bfPaidOut])
 	}
 	var err error
-	p.currency, err = p.ast.Context.GetCommodity(groups[1])
+	p.currency, err = p.journal.Context.GetCommodity(groups[1])
 	return err
 }
 
@@ -169,7 +169,7 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		p.ast.AddAssertion(&journal.Assertion{
+		p.journal.AddAssertion(&journal.Assertion{
 			Date:      date,
 			Account:   p.account,
 			Amount:    balance,
@@ -214,13 +214,13 @@ func (p *parser) parseBooking(r []string) error {
 		}
 		t.Postings = []*journal.Posting{
 			journal.PostingBuilder{
-				Credit:    p.ast.Context.ValuationAccount(),
+				Credit:    p.journal.Context.ValuationAccount(),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Amount:    amount,
 			}.Build(),
 			journal.PostingBuilder{
-				Credit:    p.ast.Context.ValuationAccount(),
+				Credit:    p.journal.Context.ValuationAccount(),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Amount:    otherAmount,
@@ -233,13 +233,13 @@ func (p *parser) parseBooking(r []string) error {
 		}
 		t.Postings = []*journal.Posting{
 			journal.PostingBuilder{
-				Credit:    p.ast.Context.ValuationAccount(),
+				Credit:    p.journal.Context.ValuationAccount(),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Amount:    amount,
 			}.Build(),
 			journal.PostingBuilder{
-				Credit:    p.ast.Context.ValuationAccount(),
+				Credit:    p.journal.Context.ValuationAccount(),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Amount:    otherAmount.Neg(),
@@ -248,14 +248,14 @@ func (p *parser) parseBooking(r []string) error {
 	default:
 		t.Postings = []*journal.Posting{
 			journal.PostingBuilder{
-				Credit:    p.ast.Context.TBDAccount(),
+				Credit:    p.journal.Context.TBDAccount(),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Amount:    amount,
 			}.Build(),
 		}
 	}
-	p.ast.AddTransaction(t.Build())
+	p.journal.AddTransaction(t.Build())
 	return nil
 }
 
@@ -269,7 +269,7 @@ func (p *parser) parseCombiField(f string) (*journal.Commodity, decimal.Decimal,
 		otherAmount    decimal.Decimal
 		err            error
 	)
-	if otherCommodity, err = p.ast.Context.GetCommodity(fs[0]); err != nil {
+	if otherCommodity, err = p.journal.Context.GetCommodity(fs[0]); err != nil {
 		return nil, decimal.Decimal{}, err
 	}
 	if otherAmount, err = parseDecimal(fs[1]); err != nil {

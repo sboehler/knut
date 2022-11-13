@@ -70,8 +70,8 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		p := parser{
-			reader: csv.NewReader(f),
-			ast:    a,
+			reader:  csv.NewReader(f),
+			journal: a,
 		}
 		if p.account, err = r.account.Value(ctx); err != nil {
 			return err
@@ -92,7 +92,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 type parser struct {
 	reader              *csv.Reader
 	account, feeAccount *journal.Account
-	ast                 *journal.Journal
+	journal             *journal.Journal
 	balance             journal.Amounts
 }
 
@@ -158,7 +158,7 @@ func (p *parser) parseBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid started date in row %v: %w", r, err)
 	}
-	c, err := p.ast.Context.GetCommodity(r[bfCurrency])
+	c, err := p.journal.Context.GetCommodity(r[bfCurrency])
 	if err != nil {
 		return fmt.Errorf("invalid commodity in row %v: %v", r, err)
 	}
@@ -170,7 +170,7 @@ func (p *parser) parseBooking() error {
 		Date:        d,
 		Description: r[bfDescription],
 		Postings: journal.PostingBuilder{
-			Credit:    p.ast.Context.TBDAccount(),
+			Credit:    p.journal.Context.TBDAccount(),
 			Debit:     p.account,
 			Commodity: c,
 			Amount:    amt,
@@ -188,7 +188,7 @@ func (p *parser) parseBooking() error {
 			Amount:    fee,
 		}.Build())
 	}
-	p.ast.AddTransaction(t.Build())
+	p.journal.AddTransaction(t.Build())
 	bal, err := decimal.NewFromString(r[bfBalance])
 	if err != nil {
 		return fmt.Errorf("invalid balance in row %v: %v", r, err)
@@ -199,7 +199,7 @@ func (p *parser) parseBooking() error {
 
 func (p *parser) addBalances() {
 	for k, bal := range p.balance {
-		p.ast.AddAssertion(&journal.Assertion{
+		p.journal.AddAssertion(&journal.Assertion{
 			Date:      k.Date,
 			Commodity: k.Commodity,
 			Amount:    bal,

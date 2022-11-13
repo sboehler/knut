@@ -45,79 +45,79 @@ func New(ctx Context) *Journal {
 }
 
 // day returns the day for the given date.
-func (ast *Journal) day(d time.Time) *Day {
-	return dict.GetDefault(ast.Days, d, func() *Day { return &Day{Date: d} })
+func (j *Journal) day(d time.Time) *Day {
+	return dict.GetDefault(j.Days, d, func() *Day { return &Day{Date: d} })
 }
 
-func (ast *Journal) SortedDays() *Ledger {
-	ds := dict.SortedValues(ast.Days, CompareDays)
+func (j *Journal) SortedDays() *Ledger {
+	ds := dict.SortedValues(j.Days, CompareDays)
 	for _, day := range ds {
 		compare.Sort(day.Transactions, CompareTransactions)
 	}
 	return &Ledger{
-		Context: ast.Context,
+		Context: j.Context,
 		Days:    ds,
 	}
 }
 
 // AddOpen adds an Open directive.
-func (ast *Journal) AddOpen(o *Open) {
-	d := ast.day(o.Date)
+func (j *Journal) AddOpen(o *Open) {
+	d := j.day(o.Date)
 	d.Openings = append(d.Openings, o)
 }
 
 // AddPrice adds an Price directive.
-func (ast *Journal) AddPrice(p *Price) {
-	d := ast.day(p.Date)
+func (j *Journal) AddPrice(p *Price) {
+	d := j.day(p.Date)
 	d.Prices = append(d.Prices, p)
 }
 
 // AddTransaction adds an Transaction directive.
-func (ast *Journal) AddTransaction(t *Transaction) {
-	d := ast.day(t.Date)
-	if ast.max.Before(d.Date) {
-		ast.max = d.Date
+func (j *Journal) AddTransaction(t *Transaction) {
+	d := j.day(t.Date)
+	if j.max.Before(d.Date) {
+		j.max = d.Date
 	}
-	if ast.min.After(t.Date) {
-		ast.min = d.Date
+	if j.min.After(t.Date) {
+		j.min = d.Date
 	}
 	d.Transactions = append(d.Transactions, t)
 }
 
 // AddValue adds an Value directive.
-func (ast *Journal) AddValue(v *Value) {
-	d := ast.day(v.Date)
+func (j *Journal) AddValue(v *Value) {
+	d := j.day(v.Date)
 	d.Values = append(d.Values, v)
 }
 
 // AddAssertion adds an Assertion directive.
-func (ast *Journal) AddAssertion(a *Assertion) {
-	d := ast.day(a.Date)
+func (j *Journal) AddAssertion(a *Assertion) {
+	d := j.day(a.Date)
 	d.Assertions = append(d.Assertions, a)
 }
 
 // AddClose adds an Close directive.
-func (ast *Journal) AddClose(c *Close) {
-	d := ast.day(c.Date)
+func (j *Journal) AddClose(c *Close) {
+	d := j.day(c.Date)
 	d.Closings = append(d.Closings, c)
 }
 
-func (ast *Journal) Min() time.Time {
-	return ast.min
+func (j *Journal) Min() time.Time {
+	return j.min
 }
 
-func (ast *Journal) Max() time.Time {
-	return ast.max
+func (j *Journal) Max() time.Time {
+	return j.max
 }
 
-func (ast *Journal) Process(fs ...func(*Day, func(*Day)) error) (*Ledger, error) {
-	ds := dict.SortedValues(ast.Days, CompareDays)
+func (j *Journal) Process(fs ...func(*Day, func(*Day)) error) (*Ledger, error) {
+	ds := dict.SortedValues(j.Days, CompareDays)
 	ds, err := slice.Parallel(ds, fs...)
 	if err != nil {
 		return nil, err
 	}
 	return &Ledger{
-		Context: ast.Context,
+		Context: j.Context,
 		Days:    ds,
 	}, nil
 }

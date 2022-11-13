@@ -67,8 +67,8 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	var p = Parser{
-		reader: csv.NewReader(reader),
-		ast:    journal.New(ctx),
+		reader:  csv.NewReader(reader),
+		journal: journal.New(ctx),
 	}
 	if p.account, err = r.accountFlag.Value(ctx); err != nil {
 		return err
@@ -78,7 +78,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintLedger(out, p.ast.SortedDays())
+	_, err = journal.NewPrinter().PrintLedger(out, p.journal.SortedDays())
 	return err
 }
 
@@ -90,7 +90,7 @@ func init() {
 type Parser struct {
 	reader  *csv.Reader
 	account *journal.Account
-	ast     *journal.Journal
+	journal *journal.Journal
 
 	currency *journal.Commodity
 }
@@ -141,7 +141,7 @@ func (p *Parser) readHeaderLine(l []string) error {
 	var err error
 	if currencyHeaders.Has(l[hfHeader]) {
 		sym := strings.Trim(l[hfData], "=\"")
-		if p.currency, err = p.ast.Context.GetCommodity(sym); err != nil {
+		if p.currency, err = p.journal.Context.GetCommodity(sym); err != nil {
 			return err
 		}
 	}
@@ -174,11 +174,11 @@ func (p *Parser) readBookingLine(l []string) error {
 	if amount, err = parseAmount(l); err != nil {
 		return err
 	}
-	p.ast.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: strings.TrimSpace(l[bfAvisierungstext]),
 		Postings: journal.PostingBuilder{
-			Credit:    p.ast.Context.TBDAccount(),
+			Credit:    p.journal.Context.TBDAccount(),
 			Debit:     p.account,
 			Commodity: p.currency,
 			Amount:    amount,

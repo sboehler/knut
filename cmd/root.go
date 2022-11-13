@@ -34,7 +34,7 @@ import (
 
 // CreateCmd creates the command.
 func CreateCmd(version string) *cobra.Command {
-	var c = &cobra.Command{
+	c := &cobra.Command{
 		Use:     "knut",
 		Short:   "knut is a plain text accounting tool",
 		Long:    `knut is a plain text accounting tool for tracking personal finances and investments.`,

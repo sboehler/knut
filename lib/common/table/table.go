@@ -55,7 +55,7 @@ func (t *Table) AddRow() *Row {
 
 // AddSeparatorRow adds a separator row.
 func (t *Table) AddSeparatorRow() {
-	var r = t.AddRow()
+	r := t.AddRow()
 	for i := 0; i < t.Width(); i++ {
 		r.addCell(SeparatorCell{})
 	}
@@ -63,7 +63,7 @@ func (t *Table) AddSeparatorRow() {
 
 // AddEmptyRow adds a separator row.
 func (t *Table) AddEmptyRow() {
-	var r = t.AddRow()
+	r := t.AddRow()
 	for i := 0; i < t.Width(); i++ {
 		r.addCell(emptyCell{})
 	}

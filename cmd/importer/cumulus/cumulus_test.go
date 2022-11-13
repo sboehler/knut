@@ -25,7 +25,7 @@ import (
 )
 
 func TestGolden(t *testing.T) {
-	var tests = []string{
+	tests := []string{
 		"example1",
 	}
 	for _, test := range tests {

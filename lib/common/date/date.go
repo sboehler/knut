@@ -69,7 +69,7 @@ func StartOf(d time.Time, p Interval) time.Time {
 	case Daily:
 		return d
 	case Weekly:
-		var x = (int(d.Weekday()) + 6) % 7
+		x := (int(d.Weekday()) + 6) % 7
 		return d.AddDate(0, 0, -x)
 	case Monthly:
 		return Date(d.Year(), d.Month(), 1)
@@ -90,7 +90,7 @@ func EndOf(d time.Time, p Interval) time.Time {
 	case Daily:
 		return d
 	case Weekly:
-		var x = (7 - int(d.Weekday())) % 7
+		x := (7 - int(d.Weekday())) % 7
 		return d.AddDate(0, 0, x)
 	case Monthly:
 		return StartOf(d, Monthly).AddDate(0, 1, -1)

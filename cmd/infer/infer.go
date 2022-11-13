@@ -35,7 +35,7 @@ import (
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
 	var r runner
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "infer",
 		Short: "Auto-assign accounts in a journal",
 		Long: `Build a Bayes model using the supplied training file and apply it to replace

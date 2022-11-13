@@ -148,7 +148,7 @@ func (cf MappingFlag) Type() string {
 
 // Set implements pflag.Value.
 func (cf *MappingFlag) Set(v string) error {
-	var s = strings.SplitN(v, ",", 2)
+	s := strings.SplitN(v, ",", 2)
 	l, err := strconv.Atoi(s[0])
 	if err != nil {
 		return fmt.Errorf("expected integer level, got %q (error: %v)", s[0], err)

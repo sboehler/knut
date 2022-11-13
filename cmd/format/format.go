@@ -97,7 +97,7 @@ func formatFile(target string) error {
 	if tmpDestFile, err = os.CreateTemp(path.Dir(target), "format-"); err != nil {
 		return multierr.Append(err, srcFile.Close())
 	}
-	var dest = bufio.NewWriter(tmpDestFile)
+	dest := bufio.NewWriter(tmpDestFile)
 	err = format.Format(directives, bufio.NewReader(srcFile), dest)
 	err = multierr.Combine(err, srcFile.Close(), dest.Flush(), tmpDestFile.Close())
 	if err != nil {

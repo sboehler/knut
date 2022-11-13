@@ -34,7 +34,7 @@ import (
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
 	var r runner
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "ch.swissquote",
 		Short: "Import Swissquote account reports",
 		Long:  `Parses CSV files from Swissquote's transactions overview.`,
@@ -78,7 +78,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if f, err = flags.OpenFile(args[0]); err != nil {
 		return err
 	}
-	var p = parser{
+	p := parser{
 		reader:  csv.NewReader(f),
 		builder: journal.New(ctx),
 	}
@@ -379,7 +379,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 }
 
 func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
-	var w = set.Of(
+	w := set.Of(
 		"Einzahlung",
 		"Auszahlung",
 		"Vergütung",

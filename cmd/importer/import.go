@@ -20,7 +20,7 @@ import (
 
 // CreateCmd is the import command.
 func CreateCmd() *cobra.Command {
-	var cmd = cobra.Command{
+	cmd := cobra.Command{
 		Use:   "import",
 		Short: "Import financial account statements",
 	}

@@ -35,7 +35,7 @@ import (
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
 	var r runner
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "ch.supercard",
 		Short: "Import Supercard credit card statements",
 		Long:  `Download the CSV file from their account management tool.`,
@@ -70,7 +70,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if f, err = flags.OpenFile(args[0]); err != nil {
 		return err
 	}
-	var p = parser{
+	p := parser{
 		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)),
 		builder: journal.New(ctx),
 	}
@@ -115,7 +115,7 @@ func (p *parser) parse() error {
 }
 
 func (p *parser) checkFirstLine() error {
-	var fpr = p.reader.FieldsPerRecord
+	fpr := p.reader.FieldsPerRecord
 	defer func() {
 		p.reader.FieldsPerRecord = fpr
 	}()
@@ -211,7 +211,7 @@ func (p *parser) parseCurrency(r []string) string {
 var space = regexp.MustCompile(`\s+`)
 
 func (p *parser) parseWords(r []string) string {
-	var words = strings.Join([]string{r[fieldBuchungstext], r[fieldBranche]}, " ")
+	words := strings.Join([]string{r[fieldBuchungstext], r[fieldBranche]}, " ")
 	return space.ReplaceAllString(words, " ")
 }
 

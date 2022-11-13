@@ -38,7 +38,7 @@ func CreateCmd() *cobra.Command {
 	var r runner
 
 	// Cmd is the balance command.
-	var c = &cobra.Command{
+	c := &cobra.Command{
 		Use:    "register",
 		Short:  "create a register sheet",
 		Long:   `Compute a register report.`,

@@ -33,7 +33,7 @@ func CreateCmd() *cobra.Command {
 
 	var r runner
 	// Cmd is the balance command.
-	var c = &cobra.Command{
+	c := &cobra.Command{
 		Use:   "portfolio",
 		Short: "compute portfolio returns",
 		Long:  `Compute portfolio returns.`,

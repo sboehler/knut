@@ -36,7 +36,7 @@ func CreateCmd() *cobra.Command {
 
 	var r runner
 
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "ch.postfinance",
 		Short: "Import Postfinance CSV account statements",
 
@@ -66,7 +66,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if reader, err = flags.OpenFile(args[0]); err != nil {
 		return err
 	}
-	var p = Parser{
+	p := Parser{
 		reader:  csv.NewReader(reader),
 		journal: journal.New(ctx),
 	}
@@ -101,7 +101,7 @@ func (p *Parser) parse() error {
 	p.reader.TrimLeadingSpace = true
 	p.reader.Comma = ';'
 	for {
-		var err = p.readLine()
+		err := p.readLine()
 		if err == io.EOF {
 			return nil
 		}

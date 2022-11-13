@@ -81,7 +81,7 @@ func createURL(rootURL, sym string, t0, t1 time.Time) (*url.URL, error) {
 // decodeResponse takes a reader for the response and returns
 // the parsed quotes.
 func decodeResponse(r io.ReadCloser) ([]Quote, error) {
-	var csvReader = csv.NewReader(r)
+	csvReader := csv.NewReader(r)
 	csvReader.FieldsPerRecord = 7
 	// skip header
 	if _, err := csvReader.Read(); err != nil {

@@ -35,7 +35,7 @@ import (
 var version = "development"
 
 func main() {
-	var c = cmd.CreateCmd(version)
+	c := cmd.CreateCmd(version)
 	if err := c.Execute(); err != nil {
 		fmt.Fprintln(c.ErrOrStderr(), err)
 		os.Exit(1)

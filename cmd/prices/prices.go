@@ -55,12 +55,12 @@ func run(cmd *cobra.Command, args []string) {
 const concurrency = 5
 
 func execute(cmd *cobra.Command, args []string) error {
-	var ctx = journal.NewContext()
+	ctx := journal.NewContext()
 	configs, err := readConfig(args[0])
 	if err != nil {
 		return err
 	}
-	var errCh = make(chan error)
+	errCh := make(chan error)
 	go func() {
 		defer close(errCh)
 
@@ -92,7 +92,7 @@ func execute(cmd *cobra.Command, args []string) error {
 }
 
 func fetch(jctx journal.Context, f string, cfg config) error {
-	var absPath = filepath.Join(filepath.Dir(f), cfg.File)
+	absPath := filepath.Join(filepath.Dir(f), cfg.File)
 	l, err := readFile(jctx, absPath)
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func readConfig(path string) ([]config, error) {
 		return nil, err
 	}
 	defer f.Close()
-	var dec = yaml.NewDecoder(f)
+	dec := yaml.NewDecoder(f)
 	dec.SetStrict(true)
 	var t []config
 	if err := dec.Decode(&t); err != nil {
@@ -172,7 +172,7 @@ func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[
 }
 
 func writeFile(ctx journal.Context, prices map[time.Time]*journal.Price, filepath string) error {
-	var b = journal.New(ctx)
+	b := journal.New(ctx)
 	for _, price := range prices {
 		b.AddPrice(price)
 	}

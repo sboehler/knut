@@ -89,7 +89,7 @@ func execute(cmd *cobra.Command, args []string) error {
 		files = append(files, j)
 	} else {
 		for i := 0; i < c.includes; i++ {
-			var name = fmt.Sprintf("include%d.knut", i)
+			name := fmt.Sprintf("include%d.knut", i)
 			include, close, err := createFile(filepath.Join(c.path, name))
 			if err != nil {
 				return err

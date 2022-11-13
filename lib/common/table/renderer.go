@@ -43,7 +43,7 @@ func (r *TextRenderer) Render(t *Table, w io.Writer) error {
 	r.table = t
 	color.NoColor = !r.Color
 
-	var widths = make([]int, r.table.Width())
+	widths := make([]int, r.table.Width())
 	for _, row := range r.table.rows {
 		for i, c := range row.cells {
 			if widths[i] < r.minLengthCell(c) {
@@ -51,7 +51,7 @@ func (r *TextRenderer) Render(t *Table, w io.Writer) error {
 			}
 		}
 	}
-	var groups = make(map[int]int)
+	groups := make(map[int]int)
 	for i, w := range widths {
 		if groups[r.table.columns[i]] < w {
 			groups[r.table.columns[i]] = w
@@ -204,7 +204,7 @@ func (r *TextRenderer) numToString(d decimal.Decimal) string {
 }
 
 func addThousandsSep(e string) string {
-	var index = strings.Index(e, ".")
+	index := strings.Index(e, ".")
 	if index < 0 {
 		index = len(e)
 	}

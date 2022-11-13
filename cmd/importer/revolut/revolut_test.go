@@ -41,7 +41,7 @@ func TestGolden(t *testing.T) {
 				}
 			)
 
-			var got = cmdtest.Run(t, CreateCmd(), args)
+			got := cmdtest.Run(t, CreateCmd(), args)
 
 			g.Assert(t, test, got)
 		})

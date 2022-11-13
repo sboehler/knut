@@ -32,7 +32,7 @@ func TestGolden(t *testing.T) {
 		test := test
 		t.Run(test, func(t *testing.T) {
 			t.Parallel()
-			var args = []string{
+			args := []string{
 				"--account", "Assets:Swissquote",
 				"--dividend", "Income:Dividends",
 				"--fee", "Expenses:Fees",
@@ -42,7 +42,7 @@ func TestGolden(t *testing.T) {
 				path.Join("testdata", fmt.Sprintf("%s.input", test)),
 			}
 
-			var got = cmdtest.Run(t, CreateCmd(), args)
+			got := cmdtest.Run(t, CreateCmd(), args)
 
 			goldie.New(t).Assert(t, test, got)
 		})

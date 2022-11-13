@@ -23,7 +23,7 @@ import (
 )
 
 func TestStartOf(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		date   time.Time
 		result map[Interval]time.Time
 	}{
@@ -75,7 +75,7 @@ func TestStartOf(t *testing.T) {
 }
 
 func TestEndOf(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		date   time.Time
 		result map[Interval]time.Time
 	}{
@@ -127,7 +127,7 @@ func TestEndOf(t *testing.T) {
 }
 
 func TestCreatePartition(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		t0       time.Time
 		t1       time.Time
 		interval Interval

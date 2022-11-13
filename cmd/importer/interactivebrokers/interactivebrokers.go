@@ -34,7 +34,7 @@ import (
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
 	var r runner
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "us.interactivebrokers",
 		Short: "Import Interactive Brokers account reports",
 		Long: `In the account manager web UI, go to "Reports" and download an "Activity" statement for the
@@ -79,7 +79,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	var p = parser{
+	p := parser{
 		reader:  csv.NewReader(f),
 		builder: journal.New(ctx),
 	}
@@ -360,7 +360,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
-	var postings = []*journal.Posting{
+	postings := []*journal.Posting{
 		journal.PostingBuilder{
 			Credit:    p.trading,
 			Debit:     p.account,
@@ -503,7 +503,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 var dividendSymbolRegex = regexp.MustCompile("[A-Za-z0-9]+")
 
 func parseDividendSymbol(s string) (string, error) {
-	var symbol = dividendSymbolRegex.FindString(s)
+	symbol := dividendSymbolRegex.FindString(s)
 	if symbol == "" {
 		return symbol, fmt.Errorf("invalid symbol name %s", s)
 	}

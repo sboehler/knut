@@ -141,7 +141,7 @@ func (p *parser) parseHeader(r []string) error {
 	if len(r) != 9 {
 		return fmt.Errorf("expected record with 9 items, got %v", r)
 	}
-	var groups = re.FindStringSubmatch(r[bfPaidOut])
+	groups := re.FindStringSubmatch(r[bfPaidOut])
 	if len(groups) != 2 {
 		return fmt.Errorf("could not extract currency from header field: %q", r[bfPaidOut])
 	}
@@ -202,7 +202,7 @@ func (p *parser) parseBooking(r []string) error {
 		return err
 	}
 	amount = amount.Mul(sign)
-	var t = journal.TransactionBuilder{
+	t := journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 	}
@@ -260,7 +260,7 @@ func (p *parser) parseBooking(r []string) error {
 }
 
 func (p *parser) parseCombiField(f string) (*journal.Commodity, decimal.Decimal, error) {
-	var fs = strings.Fields(f)
+	fs := strings.Fields(f)
 	if len(fs) != 2 {
 		return nil, decimal.Decimal{}, fmt.Errorf("expected currency and amount, got %s", f)
 	}

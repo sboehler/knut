@@ -32,7 +32,7 @@ func CreateCmd() *cobra.Command {
 	var r runner
 
 	// Cmd is the balance command.
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "transcode",
 		Short: "transcode to beancount",
 		Long: `Transcode the given journal to beancount, to leverage their amazing tooling. This command requires a valuation commodity, so` +

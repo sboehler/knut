@@ -34,7 +34,7 @@ import (
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
 	var r runner
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "ch.swisscard",
 		Short: "Import Swisscard credit card statements",
 		Long:  `Download the CSV file from their account management tool.`,
@@ -70,7 +70,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if f, err = flags.OpenFile(args[0]); err != nil {
 		return err
 	}
-	var p = parser{
+	p := parser{
 		reader:  csv.NewReader(f),
 		builder: journal.New(ctx),
 	}

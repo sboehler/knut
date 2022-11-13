@@ -34,7 +34,7 @@ import (
 // CreateCmd creates the command.
 func CreateCmd() *cobra.Command {
 	var r runner
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "ch.cumulus",
 		Short: "Import Cumulus credit card statements",
 		Long: `Download a PDF account statement and run it through tabula (https://tabula.technology/),
@@ -225,7 +225,7 @@ func (p *parser) parseFXComment(r []string) (bool, error) {
 	if len(p.transactions) == 0 {
 		return false, fmt.Errorf("fx comment but no previous transaction")
 	}
-	var t = &p.transactions[len(p.transactions)-1]
+	t := &p.transactions[len(p.transactions)-1]
 	t.Description = fmt.Sprintf("%s %s", t.Description, r[bfBeschreibung])
 	return true, nil
 }

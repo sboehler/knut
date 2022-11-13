@@ -253,7 +253,7 @@ func (p *Printer) Initialize(directive []Directive) {
 
 func (p *Printer) updatePadding(t *Transaction) {
 	for _, pt := range t.Postings {
-		var cr, dr = utf8.RuneCountInString(pt.Credit.String()), utf8.RuneCountInString(pt.Debit.String())
+		cr, dr := utf8.RuneCountInString(pt.Credit.String()), utf8.RuneCountInString(pt.Debit.String())
 		if p.Padding < cr {
 			p.Padding = cr
 		}

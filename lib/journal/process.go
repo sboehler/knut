@@ -172,10 +172,26 @@ func Balance(jctx Context) DayFn {
 // Balance balances the journal.
 func CloseAccounts(jctx Context, dates date.Partition) DayFn {
 	amounts, values := make(Amounts), make(Amounts)
-	closingDates := dates.ClosingDates()
-	var current int
 
-	processTransactions := func(d *Day) {
+	return func(d *Day, next func(*Day)) error {
+		if d.CloseToEquity {
+			for k, amt := range amounts {
+				if !k.Account.IsIE() {
+					continue
+				}
+				d.Transactions = append(d.Transactions, TransactionBuilder{
+					Date:        d.Date,
+					Description: fmt.Sprintf("Closing account %s in %s", k.Account.Name(), k.Commodity.Name()),
+					Postings: PostingBuilder{
+						Credit:    k.Account,
+						Debit:     jctx.Account("Equity:Equity"),
+						Commodity: k.Commodity,
+						Amount:    amt,
+						Value:     values[k],
+					}.Singleton(),
+				}.Build())
+			}
+		}
 		for _, t := range d.Transactions {
 			for _, p := range t.Postings {
 				amounts.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
@@ -186,43 +202,6 @@ func CloseAccounts(jctx Context, dates date.Partition) DayFn {
 		}
 		d.Amounts = amounts.Clone()
 		d.Value = values.Clone()
-	}
-
-	closeEI := func(d *Day) {
-		for k, amt := range amounts {
-			if !k.Account.IsIE() {
-				continue
-			}
-			d.Transactions = append(d.Transactions, TransactionBuilder{
-				Date:        closingDates[current],
-				Description: fmt.Sprintf("Closing account %s in %s", k.Account.Name(), k.Commodity.Name()),
-				Postings: PostingBuilder{
-					Credit:    k.Account,
-					Debit:     jctx.Account("Equity:Equity"),
-					Commodity: k.Commodity,
-					Amount:    amt,
-					Value:     values[k],
-				}.Singleton(),
-			}.Build())
-		}
-	}
-
-	return func(d *Day, next func(*Day)) error {
-		for current < len(closingDates) && closingDates[current].Before(d.Date) {
-			bd := &Day{Date: closingDates[current]}
-			closeEI(bd)
-			current++
-			processTransactions(bd)
-			next(bd)
-		}
-		if current < len(closingDates) && closingDates[current].Equal(d.Date) {
-			closeEI(d)
-			current++
-			processTransactions(d)
-			next(d)
-			return nil
-		}
-		processTransactions(d)
 		next(d)
 		return nil
 	}

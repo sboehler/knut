@@ -156,15 +156,16 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Round:     r.digits,
 		}
 	)
+	if r.close {
+		j.CloseToEquity(partition.ClosingDates()...)
+	}
 	processors := []journal.DayFn{
 		journal.Balance(jctx),
 	}
 	if valuation != nil {
 		processors = append(processors, journal.ComputePrices(valuation), journal.Valuate(jctx, valuation))
 	}
-	if r.close {
-		processors = append(processors, journal.CloseAccounts(jctx, partition))
-	}
+	processors = append(processors, journal.CloseAccounts(jctx, partition))
 	l, err := j.Process(processors...)
 	if err != nil {
 		return err

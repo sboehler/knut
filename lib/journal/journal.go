@@ -60,6 +60,13 @@ func (j *Journal) SortedDays() *Ledger {
 	}
 }
 
+func (j *Journal) CloseToEquity(ds ...time.Time) {
+	for _, d := range ds {
+		d := j.day(d)
+		d.CloseToEquity = true
+	}
+}
+
 // AddOpen adds an Open directive.
 func (j *Journal) AddOpen(o *Open) {
 	d := j.day(o.Date)
@@ -188,6 +195,8 @@ type Day struct {
 	Openings     []*Open
 	Transactions []*Transaction
 	Closings     []*Close
+
+	CloseToEquity bool
 
 	Amounts, Value Amounts
 

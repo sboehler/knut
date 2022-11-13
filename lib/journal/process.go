@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/sboehler/knut/lib/common/compare"
-	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/set"
@@ -170,7 +169,7 @@ func Balance(jctx Context) DayFn {
 }
 
 // Balance balances the journal.
-func CloseAccounts(jctx Context, dates date.Partition) DayFn {
+func CloseAccounts(jctx Context) DayFn {
 	amounts, values := make(Amounts), make(Amounts)
 
 	return func(d *Day, next func(*Day)) error {

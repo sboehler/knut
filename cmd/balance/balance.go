@@ -165,7 +165,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if valuation != nil {
 		processors = append(processors, journal.ComputePrices(valuation), journal.Valuate(jctx, valuation))
 	}
-	processors = append(processors, journal.CloseAccounts(jctx, partition))
+	processors = append(processors, journal.CloseAccounts(jctx))
 	l, err := j.Process(processors...)
 	if err != nil {
 		return err

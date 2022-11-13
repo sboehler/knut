@@ -109,31 +109,6 @@ func Today() time.Time {
 	return Date(now.Year(), now.Month(), now.Day())
 }
 
-// Period represents a time period
-type Period struct {
-	Start, End time.Time
-}
-
-// Periods returns a series of periods in the given interval,
-// which contains both t0 and t1.
-func Periods(t0, t1 time.Time, p Interval) []Period {
-	var res []Period
-	if p == Once {
-		if t0.Before(t1) {
-			res = append(res, Period{t0, t1})
-		}
-	} else {
-		for t := t0; !t.After(t1); t = EndOf(t, p).AddDate(0, 0, 1) {
-			ed := EndOf(t, p)
-			if ed.After(t1) {
-				ed = t1
-			}
-			res = append(res, Period{StartOf(t, p), ed})
-		}
-	}
-	return res
-}
-
 // Partition is a partition of the timeline.
 // Invariants:
 // - t1 is always the last element of ends.
@@ -169,7 +144,7 @@ func CreatePartition(t0, t1 time.Time, p Interval, n int) Partition {
 	}
 }
 
-func (p *Partition) MapToEndOfPeriod(t time.Time) time.Time {
+func (p Partition) MapToEndOfPeriod(t time.Time) time.Time {
 	index := sort.Search(len(p.ends), func(i int) bool {
 		// find first i where p.ends[i] >= t
 		return !p.ends[i].Before(t)
@@ -180,7 +155,7 @@ func (p *Partition) MapToEndOfPeriod(t time.Time) time.Time {
 	return time.Time{}
 }
 
-func (p *Partition) ClosingDates() []time.Time {
+func (p Partition) ClosingDates() []time.Time {
 	var res []time.Time
 	for _, d := range p.ends[:len(p.ends)-1] {
 		res = append(res, d.AddDate(0, 0, 1))
@@ -188,7 +163,7 @@ func (p *Partition) ClosingDates() []time.Time {
 	return res
 }
 
-func (p *Partition) EndDates() []time.Time {
+func (p Partition) EndDates() []time.Time {
 	res := make([]time.Time, len(p.ends))
 	copy(res, p.ends)
 	return res

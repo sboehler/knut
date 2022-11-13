@@ -240,22 +240,22 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 		drAccountSingle = posting.Debit
 	}
 	var (
-		periods     = date.Periods(a.T0, a.T1, a.Interval)
-		amount, rem = posting.Amount.QuoRem(decimal.NewFromInt(int64(len(periods))), 1)
+		dates       = date.CreatePartition(a.T0, a.T1, a.Interval, 0).EndDates()
+		amount, rem = posting.Amount.QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
 
 		result []*Transaction
 	)
 	if crAccountMulti != drAccountMulti {
-		for i, period := range periods {
-			var a = amount
+		for i, dt := range dates {
+			a := amount
 			if i == 0 {
 				a = a.Add(rem)
 			}
 			result = append(result, TransactionBuilder{
 				Range:       t.Position(),
-				Date:        period.End,
+				Date:        dt,
 				Tags:        t.Tags,
-				Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description, i+1, len(periods)),
+				Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description, i+1, len(dates)),
 				Postings: PostingBuilder{
 					Credit:    crAccountMulti,
 					Debit:     drAccountMulti,

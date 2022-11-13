@@ -126,69 +126,89 @@ func TestEndOf(t *testing.T) {
 	}
 }
 
-func TestPeriods(t *testing.T) {
+func TestCreatePartition(t *testing.T) {
 	var tests = []struct {
 		t0       time.Time
 		t1       time.Time
 		interval Interval
-		result   []Period
+		result   Partition
 	}{
 		{
 			t0:       Date(2020, 5, 19),
 			t1:       Date(2020, 5, 22),
 			interval: Once,
-			result: []Period{
-				{Date(2020, 5, 19), Date(2020, 5, 22)},
+			result: Partition{
+				t0:   Date(2020, 5, 19),
+				t1:   Date(2020, 5, 22),
+				ends: []time.Time{Date(2020, 5, 22)},
 			},
 		},
 		{
 			t0:       Date(2020, 5, 19),
 			t1:       Date(2020, 5, 22),
 			interval: Daily,
-			result: []Period{
-				{Date(2020, 5, 19), Date(2020, 5, 19)},
-				{Date(2020, 5, 20), Date(2020, 5, 20)},
-				{Date(2020, 5, 21), Date(2020, 5, 21)},
-				{Date(2020, 5, 22), Date(2020, 5, 22)},
+			result: Partition{
+				t0: Date(2020, 5, 19),
+				t1: Date(2020, 5, 22),
+				ends: []time.Time{
+					Date(2020, 5, 19),
+					Date(2020, 5, 20),
+					Date(2020, 5, 21),
+					Date(2020, 5, 22),
+				},
 			},
 		},
 		{
 			t0:       Date(2020, 1, 1),
 			t1:       Date(2020, 1, 31),
 			interval: Weekly,
-			result: []Period{
-				{Date(2019, 12, 30), Date(2020, 1, 5)},
-				{Date(2020, 1, 6), Date(2020, 1, 12)},
-				{Date(2020, 1, 13), Date(2020, 1, 19)},
-				{Date(2020, 1, 20), Date(2020, 1, 26)},
-				{Date(2020, 1, 27), Date(2020, 1, 31)},
+			result: Partition{
+				t0: Date(2020, 1, 1),
+				t1: Date(2020, 1, 31),
+				ends: []time.Time{
+					Date(2020, 1, 5),
+					Date(2020, 1, 12),
+					Date(2020, 1, 19),
+					Date(2020, 1, 26),
+					Date(2020, 1, 31),
+				},
 			},
 		},
 		{
 			t0:       Date(2019, 12, 31),
 			t1:       Date(2020, 1, 31),
 			interval: Monthly,
-			result: []Period{
-				{Date(2019, 12, 1), Date(2019, 12, 31)},
-				{Date(2020, 1, 1), Date(2020, 1, 31)},
+			result: Partition{
+				t0: Date(2019, 12, 31),
+				t1: Date(2020, 1, 31),
+				ends: []time.Time{
+					Date(2019, 12, 31),
+					Date(2020, 1, 31),
+				},
 			},
 		},
 		{
 			t0:       Date(2020, 1, 1),
 			t1:       Date(2020, 1, 31),
 			interval: Monthly,
-			result: []Period{
-				{Date(2020, 1, 1), Date(2020, 1, 31)},
+			result: Partition{
+				t0:   Date(2020, 1, 1),
+				t1:   Date(2020, 1, 31),
+				ends: []time.Time{Date(2020, 1, 31)},
 			},
 		},
 		{
 			t0:       Date(2017, 4, 1),
 			t1:       Date(2019, 3, 3),
 			interval: Yearly,
-			result: []Period{
-				{Date(2017, 1, 1), Date(2017, 12, 31)},
-				{Date(2018, 1, 1), Date(2018, 12, 31)},
-				{Date(2019, 1, 1), Date(2019, 3, 3)},
+			result: Partition{
+				t0: Date(2017, 4, 1),
+				t1: Date(2019, 3, 3),
+				ends: []time.Time{
+					Date(2017, 12, 31),
+					Date(2018, 12, 31),
+					Date(2019, 3, 3),
+				},
 			},
 		},
 	}
@@ -196,9 +216,9 @@ func TestPeriods(t *testing.T) {
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
 
-			got := Periods(test.t0, test.t1, test.interval)
+			got := CreatePartition(test.t0, test.t1, test.interval, 0)
 
-			if diff := cmp.Diff(test.result, got); diff != "" {
+			if diff := cmp.Diff(test.result, got, cmp.AllowUnexported(Partition{})); diff != "" {
 				t.Fatalf("Periods(%s, %s, %v): unexpected diff (+got/-want):\n%s", test.t0.Format("2006-01-02"), test.t1.Format("2006-01-02"), test.interval, diff)
 			}
 		})

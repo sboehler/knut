@@ -156,23 +156,14 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Round:     r.digits,
 		}
 	)
-	if r.close {
-		j.CloseToEquity(partition.ClosingDates()...)
-	}
 	processors := []journal.DayFn{
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
-		journal.CloseAccounts(jctx),
+		journal.CloseAccounts(j, partition),
+		journal.Aggregate(m, f, valuation, rep),
 	}
-	l, err := j.Process(processors...)
-	if err != nil {
+	if _, err := j.Process(processors...); err != nil {
 		return err
-	}
-	agg := journal.Aggregate(m, f, valuation, rep)
-	for _, d := range l.Days {
-		if err := agg(d); err != nil {
-			return err
-		}
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()

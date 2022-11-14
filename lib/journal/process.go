@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/set"
@@ -235,11 +236,19 @@ func Balance(jctx Context, v *Commodity) DayFn {
 }
 
 // Balance balances the journal.
-func CloseAccounts(jctx Context) DayFn {
-	amounts, values := make(Amounts), make(Amounts)
-
+func CloseAccounts(j *Journal, partition date.Partition) DayFn {
+	var (
+		closingDays     []*Day
+		index           int
+		amounts, values = make(Amounts), make(Amounts)
+	)
+	ds := partition.EndDates()
+	for _, d := range ds[:len(ds)-1] {
+		closingDays = append(closingDays, j.Day(d.AddDate(0, 0, 1)))
+	}
 	return func(d *Day) error {
-		if d.CloseToEquity {
+		if index < len(closingDays) && d == closingDays[index] {
+			index++
 			for k, amt := range amounts {
 				if !k.Account.IsIE() {
 					continue
@@ -249,7 +258,7 @@ func CloseAccounts(jctx Context) DayFn {
 					Description: fmt.Sprintf("Closing account %s in %s", k.Account.Name(), k.Commodity.Name()),
 					Postings: PostingBuilder{
 						Credit:    k.Account,
-						Debit:     jctx.Account("Equity:Equity"),
+						Debit:     j.Context.Account("Equity:Equity"),
 						Commodity: k.Commodity,
 						Amount:    amt,
 						Value:     values[k],

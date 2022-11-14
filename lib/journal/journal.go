@@ -44,8 +44,8 @@ func New(ctx Context) *Journal {
 	}
 }
 
-// day returns the day for the given date.
-func (j *Journal) day(d time.Time) *Day {
+// Day returns the Day for the given date.
+func (j *Journal) Day(d time.Time) *Day {
 	return dict.GetDefault(j.Days, d, func() *Day { return &Day{Date: d} })
 }
 
@@ -60,28 +60,21 @@ func (j *Journal) SortedDays() *Ledger {
 	}
 }
 
-func (j *Journal) CloseToEquity(ds ...time.Time) {
-	for _, d := range ds {
-		d := j.day(d)
-		d.CloseToEquity = true
-	}
-}
-
 // AddOpen adds an Open directive.
 func (j *Journal) AddOpen(o *Open) {
-	d := j.day(o.Date)
+	d := j.Day(o.Date)
 	d.Openings = append(d.Openings, o)
 }
 
 // AddPrice adds an Price directive.
 func (j *Journal) AddPrice(p *Price) {
-	d := j.day(p.Date)
+	d := j.Day(p.Date)
 	d.Prices = append(d.Prices, p)
 }
 
 // AddTransaction adds an Transaction directive.
 func (j *Journal) AddTransaction(t *Transaction) {
-	d := j.day(t.Date)
+	d := j.Day(t.Date)
 	if j.max.Before(d.Date) {
 		j.max = d.Date
 	}
@@ -93,19 +86,19 @@ func (j *Journal) AddTransaction(t *Transaction) {
 
 // AddValue adds an Value directive.
 func (j *Journal) AddValue(v *Value) {
-	d := j.day(v.Date)
+	d := j.Day(v.Date)
 	d.Values = append(d.Values, v)
 }
 
 // AddAssertion adds an Assertion directive.
 func (j *Journal) AddAssertion(a *Assertion) {
-	d := j.day(a.Date)
+	d := j.Day(a.Date)
 	d.Assertions = append(d.Assertions, a)
 }
 
 // AddClose adds an Close directive.
 func (j *Journal) AddClose(c *Close) {
-	d := j.day(c.Date)
+	d := j.Day(c.Date)
 	d.Closings = append(d.Closings, c)
 }
 
@@ -195,8 +188,6 @@ type Day struct {
 	Openings     []*Open
 	Transactions []*Transaction
 	Closings     []*Close
-
-	CloseToEquity bool
 
 	Value Amounts
 

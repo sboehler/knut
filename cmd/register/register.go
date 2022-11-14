@@ -133,7 +133,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		from  = r.from.ValueOr(j.Min())
 		to    = r.to.ValueOr(date.Today())
 		dates = date.CreatePartition(from, to, r.interval.Value(), r.last)
-		rep   = register.NewReport(jctx)
 		f     = filter.And(
 			journal.FilterDates(dates.Contains),
 			journal.FilterAccount(r.accounts.Regex()),
@@ -151,6 +150,17 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Valuation:   journal.MapCommodity(valuation != nil),
 			Description: mapper.If[string](r.showDescriptions),
 		}.Build()
+		rep        = register.NewReport(jctx)
+		processors = []journal.DayFn{
+			journal.ComputePrices(valuation),
+			journal.Balance(jctx, valuation),
+			journal.Aggregate(m, f, valuation, rep),
+		}
+	)
+	if _, err := j.Process(processors...); err != nil {
+		return err
+	}
+	var (
 		reportRenderer = register.Renderer{
 			ShowCommodities:    r.showCommodities,
 			ShowDescriptions:   r.showDescriptions,
@@ -162,22 +172,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Thousands: r.thousands,
 			Round:     r.digits,
 		}
+		out = bufio.NewWriter(cmd.OutOrStdout())
 	)
-	l, err := j.Process(
-		journal.ComputePrices(valuation),
-		journal.Balance(jctx, valuation),
-	)
-	if err != nil {
-		return err
-	}
-	agg := journal.Aggregate(m, f, valuation, rep)
-	for _, d := range l.Days {
-		if err := agg(d); err != nil {
-			return err
-		}
-	}
-
-	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 	return tableRenderer.Render(reportRenderer.Render(rep), out)
 }

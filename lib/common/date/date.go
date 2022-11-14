@@ -155,14 +155,6 @@ func (p Partition) MapToEndOfPeriod(t time.Time) time.Time {
 	return time.Time{}
 }
 
-func (p Partition) ClosingDates() []time.Time {
-	var res []time.Time
-	for _, d := range p.ends[:len(p.ends)-1] {
-		res = append(res, d.AddDate(0, 0, 1))
-	}
-	return res
-}
-
 func (p Partition) EndDates() []time.Time {
 	res := make([]time.Time, len(p.ends))
 	copy(res, p.ends)

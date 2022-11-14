@@ -14,10 +14,13 @@ type Calculator struct {
 	Valuation       *journal.Commodity
 	AccountFilter   filter.Filter[*journal.Account]
 	CommodityFilter filter.Filter[*journal.Commodity]
+	Values          pcv
 }
 
 // Process computes portfolio performance.
 func (calc Calculator) Process(d *journal.Day) error {
+	// TODO: doesn't work, needs work :-)
+	calc.updateValues(d)
 	var prev pcv
 	dpr := calc.computeFlows(d)
 	dpr.V0 = prev
@@ -27,6 +30,23 @@ func (calc Calculator) Process(d *journal.Day) error {
 	return nil
 }
 
+func (calc Calculator) updateValues(d *journal.Day) {
+	for _, t := range d.Transactions {
+		for _, p := range t.Postings {
+			if !calc.CommodityFilter(p.Commodity) {
+				continue
+			}
+			valF, _ := p.Value.Float64()
+			if p.Credit.IsAL() && calc.AccountFilter(p.Credit) {
+				calc.Values[p.Commodity] -= valF
+			}
+			if p.Debit.IsAL() && calc.AccountFilter(p.Debit) {
+				calc.Values[p.Commodity] += valF
+			}
+		}
+	}
+}
+
 // Sink implements Sink.
 func (calc Calculator) Sink(d *journal.Day) {
 	fmt.Printf("%v: %.1f%%\n", d.Date.Format("2006-01-02"), 100*(Performance(d.Performance)-1))
@@ -34,15 +54,8 @@ func (calc Calculator) Sink(d *journal.Day) {
 
 func (calc *Calculator) valueByCommodity(d *journal.Day) pcv {
 	res := make(pcv)
-	for pos, val := range d.Value {
-		if !pos.Account.IsAL() {
-			continue
-		}
-		if !calc.AccountFilter(pos.Account) || !calc.CommodityFilter(pos.Commodity) {
-			continue
-		}
-		valF, _ := val.Float64()
-		res[pos.Commodity] = res[pos.Commodity] + valF
+	for c, val := range calc.Values {
+		res[c] += val
 	}
 	return res
 }

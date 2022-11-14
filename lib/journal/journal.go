@@ -183,8 +183,6 @@ type Day struct {
 	Transactions []*Transaction
 	Closings     []*Close
 
-	Value Amounts
-
 	Normalized NormalizedPrices
 
 	Performance *Performance

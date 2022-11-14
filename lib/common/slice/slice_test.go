@@ -14,19 +14,16 @@ func TestParallel(t *testing.T) {
 	for i := 0; i < size; i++ {
 		list = append(list, &input{i, i + 1, i + 2})
 	}
-	fnA := func(in *input, next func(*input)) error {
+	fnA := func(in *input) error {
 		in.a++
-		next(in)
 		return nil
 	}
-	fnB := func(in *input, next func(*input)) error {
+	fnB := func(in *input) error {
 		in.b = in.a + in.b
-		next(in)
 		return nil
 	}
-	fnC := func(in *input, next func(*input)) error {
+	fnC := func(in *input) error {
 		in.c = in.c + in.b
-		next(in)
 		return nil
 	}
 	got, err := Parallel(list, fnA, fnB, fnC)

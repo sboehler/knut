@@ -117,7 +117,7 @@ func (j *Journal) Max() time.Time {
 	return j.max
 }
 
-func (j *Journal) Process(fs ...func(*Day, func(*Day)) error) (*Ledger, error) {
+func (j *Journal) Process(fs ...func(*Day) error) (*Ledger, error) {
 	ds := dict.SortedValues(j.Days, CompareDays)
 	ds, err := slice.Parallel(ds, fs...)
 	if err != nil {

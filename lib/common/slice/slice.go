@@ -19,7 +19,7 @@ func Adapt[T any](f func(t T) error) func(T, func(T)) error {
 
 const bufSize = 100
 
-func Parallel[T any](ts []T, fs ...func(T, func(T)) error) ([]T, error) {
+func Parallel[T any](ts []T, fs ...func(T) error) ([]T, error) {
 	wg, ctx := errgroup.WithContext(context.Background())
 	firstCh := make(chan T, bufSize)
 	ch := firstCh
@@ -38,11 +38,12 @@ func Parallel[T any](ts []T, fs ...func(T, func(T)) error) ([]T, error) {
 		ch = outCh
 		wg.Go(func() error {
 			defer close(outCh)
-			next := func(t T) {
-				cpr.Push(ctx, outCh, t)
-			}
 			return cpr.Consume(ctx, inCh, func(t T) error {
-				return f(t, next)
+				if err := f(t); err != nil {
+					return err
+				}
+				cpr.Push(ctx, outCh, t)
+				return nil
 			})
 		})
 	}

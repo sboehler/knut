@@ -82,13 +82,13 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if trx, err = p.parse(reader); err != nil {
 		return err
 	}
-	builder := journal.New(ctx)
+	j := journal.New(ctx)
 	for _, trx := range trx {
-		builder.AddTransaction(trx)
+		j.AddTransaction(trx)
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintLedger(out, builder.SortedDays())
+	_, err = journal.NewPrinter().PrintLedger(out, j.ToLedger())
 	return err
 }
 

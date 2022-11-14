@@ -179,7 +179,7 @@ func writeFile(ctx journal.Context, prices map[time.Time]*journal.Price, filepat
 	r, w := io.Pipe()
 	go func() {
 		defer w.Close()
-		_, err := journal.NewPrinter().PrintLedger(w, b.SortedDays())
+		_, err := journal.NewPrinter().PrintLedger(w, b.ToLedger())
 		if err != nil {
 			panic(err)
 		}

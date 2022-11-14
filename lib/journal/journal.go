@@ -49,15 +49,9 @@ func (j *Journal) Day(d time.Time) *Day {
 	return dict.GetDefault(j.Days, d, func() *Day { return &Day{Date: d} })
 }
 
-func (j *Journal) SortedDays() *Ledger {
-	ds := dict.SortedValues(j.Days, CompareDays)
-	for _, day := range ds {
-		compare.Sort(day.Transactions, CompareTransactions)
-	}
-	return &Ledger{
-		Context: j.Context,
-		Days:    ds,
-	}
+func (j *Journal) ToLedger() *Ledger {
+	l, _ := j.Process(Sort())
+	return l
 }
 
 // AddOpen adds an Open directive.

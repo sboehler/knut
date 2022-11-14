@@ -105,7 +105,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintLedger(out, p.builder.SortedDays())
+	_, err = journal.NewPrinter().PrintLedger(out, p.builder.ToLedger())
 	return err
 }
 

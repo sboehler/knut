@@ -198,7 +198,7 @@ type Day struct {
 
 	CloseToEquity bool
 
-	Amounts, Value Amounts
+	Value Amounts
 
 	Normalized NormalizedPrices
 

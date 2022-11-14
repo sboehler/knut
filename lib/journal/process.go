@@ -59,8 +59,8 @@ func ComputePrices(v *Commodity) DayFn {
 }
 
 // Balance balances the journal.
-func Balance(jctx Context) DayFn {
-	amounts := make(Amounts)
+func Balance(jctx Context, v *Commodity) DayFn {
+	amounts, values := make(Amounts), make(Amounts)
 	accounts := set.New[*Account]()
 
 	processOpenings := func(d *Day) error {
@@ -82,8 +82,12 @@ func Balance(jctx Context) DayFn {
 				if !accounts.Has(p.Debit) {
 					return Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)}
 				}
-				amounts.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
-				amounts.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
+				if p.Credit.IsAL() {
+					amounts.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
+				}
+				if p.Debit.IsAL() {
+					amounts.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
+				}
 			}
 		}
 		return nil
@@ -146,73 +150,6 @@ func Balance(jctx Context) DayFn {
 		return nil
 	}
 
-	return func(d *Day, next func(*Day)) error {
-		if err := processOpenings(d); err != nil {
-			return err
-		}
-		if err := processTransactions(d); err != nil {
-			return err
-		}
-		if err := processValues(d); err != nil {
-			return err
-		}
-		if err := processAssertions(d); err != nil {
-			return err
-		}
-		if err := processClosings(d); err != nil {
-			return err
-		}
-		d.Amounts = amounts.Clone()
-		next(d)
-		return nil
-	}
-}
-
-// Balance balances the journal.
-func CloseAccounts(jctx Context) DayFn {
-	amounts, values := make(Amounts), make(Amounts)
-
-	return func(d *Day, next func(*Day)) error {
-		if d.CloseToEquity {
-			for k, amt := range amounts {
-				if !k.Account.IsIE() {
-					continue
-				}
-				d.Transactions = append(d.Transactions, TransactionBuilder{
-					Date:        d.Date,
-					Description: fmt.Sprintf("Closing account %s in %s", k.Account.Name(), k.Commodity.Name()),
-					Postings: PostingBuilder{
-						Credit:    k.Account,
-						Debit:     jctx.Account("Equity:Equity"),
-						Commodity: k.Commodity,
-						Amount:    amt,
-						Value:     values[k],
-					}.Singleton(),
-				}.Build())
-			}
-		}
-		for _, t := range d.Transactions {
-			for _, p := range t.Postings {
-				amounts.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
-				amounts.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
-				values.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Value.Neg())
-				values.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Value)
-			}
-		}
-		d.Amounts = amounts.Clone()
-		d.Value = values.Clone()
-		next(d)
-		return nil
-	}
-}
-
-// Valuate valuates the
-func Valuate(jctx Context, v *Commodity) DayFn {
-	if v == nil {
-		return NoOp[*Day]
-	}
-	values := make(Amounts)
-
 	valuateTransactions := func(d *Day) error {
 		for _, t := range d.Transactions {
 			for _, posting := range t.Postings {
@@ -225,15 +162,19 @@ func Valuate(jctx Context, v *Commodity) DayFn {
 				} else {
 					posting.Value = posting.Amount
 				}
-				values.Add(AccountCommodityKey(posting.Credit, posting.Commodity), posting.Value.Neg())
-				values.Add(AccountCommodityKey(posting.Debit, posting.Commodity), posting.Value)
+				if posting.Credit.IsAL() {
+					values.Add(AccountCommodityKey(posting.Credit, posting.Commodity), posting.Value.Neg())
+				}
+				if posting.Debit.IsAL() {
+					values.Add(AccountCommodityKey(posting.Debit, posting.Commodity), posting.Value)
+				}
 			}
 		}
 		return nil
 	}
 
 	valuateGains := func(d *Day) error {
-		for pos, amt := range d.Amounts {
+		for pos, amt := range amounts {
 			if pos.Commodity == v {
 				continue
 			}
@@ -268,13 +209,69 @@ func Valuate(jctx Context, v *Commodity) DayFn {
 	}
 
 	return func(d *Day, next func(*Day)) error {
-		if err := valuateTransactions(d); err != nil {
+		if err := processOpenings(d); err != nil {
 			return err
 		}
-		if err := valuateGains(d); err != nil {
+		if err := processTransactions(d); err != nil {
 			return err
 		}
-		d.Value = values.Clone()
+		if err := processValues(d); err != nil {
+			return err
+		}
+		if err := processAssertions(d); err != nil {
+			return err
+		}
+		if v != nil {
+			if err := valuateTransactions(d); err != nil {
+				return err
+			}
+			if err := valuateGains(d); err != nil {
+				return err
+			}
+		}
+		if err := processClosings(d); err != nil {
+			return err
+		}
+		next(d)
+		return nil
+	}
+}
+
+// Balance balances the journal.
+func CloseAccounts(jctx Context) DayFn {
+	amounts, values := make(Amounts), make(Amounts)
+
+	return func(d *Day, next func(*Day)) error {
+		if d.CloseToEquity {
+			for k, amt := range amounts {
+				if !k.Account.IsIE() {
+					continue
+				}
+				d.Transactions = append(d.Transactions, TransactionBuilder{
+					Date:        d.Date,
+					Description: fmt.Sprintf("Closing account %s in %s", k.Account.Name(), k.Commodity.Name()),
+					Postings: PostingBuilder{
+						Credit:    k.Account,
+						Debit:     jctx.Account("Equity:Equity"),
+						Commodity: k.Commodity,
+						Amount:    amt,
+						Value:     values[k],
+					}.Singleton(),
+				}.Build())
+			}
+		}
+		for _, t := range d.Transactions {
+			for _, p := range t.Postings {
+				if p.Credit.IsIE() {
+					amounts.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
+					values.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Value.Neg())
+				}
+				if p.Debit.IsIE() {
+					amounts.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
+					values.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Value)
+				}
+			}
+		}
 		next(d)
 		return nil
 	}

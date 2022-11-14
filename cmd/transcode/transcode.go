@@ -75,9 +75,8 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 		return err
 	}
 	l, err := j.Process(
-		journal.Balance(jctx),
 		journal.ComputePrices(valuation),
-		journal.Valuate(jctx, valuation),
+		journal.Balance(jctx, valuation),
 	)
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer func() { err = multierr.Append(err, w.Flush()) }()

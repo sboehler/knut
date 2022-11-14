@@ -242,8 +242,7 @@ func CloseAccounts(j *Journal, partition date.Partition) DayFn {
 		index           int
 		amounts, values = make(Amounts), make(Amounts)
 	)
-	ds := partition.EndDates()
-	for _, d := range ds[:len(ds)-1] {
+	for _, d := range partition.EndDates() {
 		closingDays = append(closingDays, j.Day(d.AddDate(0, 0, 1)))
 	}
 	return func(d *Day) error {

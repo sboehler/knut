@@ -108,7 +108,6 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
 	var (
-		ctx       = cmd.Context()
 		jctx      = journal.NewContext()
 		valuation *journal.Commodity
 		err       error
@@ -117,45 +116,31 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	r.showCommodities = r.showCommodities || valuation == nil
-
-	j, err := journal.FromPath(ctx, jctx, args[0])
+	j, err := journal.FromPath(cmd.Context(), jctx, args[0])
 	if err != nil {
 		return err
 	}
-	var (
-		from, to  = r.from.ValueOr(j.Min()), r.to.ValueOr(date.Today())
-		partition = date.CreatePartition(from, to, r.interval.Value(), r.last)
-		f         = filter.And(
-			journal.FilterDates(partition.Contains),
-			filter.Or(
-				journal.FilterAccount(r.accounts.Regex()),
-				journal.FilterOther(r.accounts.Regex()),
-			),
-			journal.FilterCommodity(r.commodities.Regex()),
-		)
-		m = journal.KeyMapper{
-			Date: partition.MapToEndOfPeriod,
-			Account: mapper.Combine(
-				journal.RemapAccount(jctx, r.remap.Regex()),
-				journal.ShortenAccount(jctx, r.mapping.Value()),
-			),
-			Other:     mapper.Identity[*journal.Account],
-			Commodity: journal.MapCommodity(r.showCommodities),
-			Valuation: journal.MapCommodity(valuation != nil),
-		}.Build()
-		rep            = report.NewReport(jctx)
-		reportRenderer = report.Renderer{
-			ShowCommodities:    r.showCommodities,
-			SortAlphabetically: r.sortAlphabetically,
-			Dates:              partition.EndDates(),
-			Diff:               r.diff,
-		}
-		tableRenderer = table.TextRenderer{
-			Color:     r.color,
-			Thousands: r.thousands,
-			Round:     r.digits,
-		}
+	from, to := r.from.ValueOr(j.Min()), r.to.ValueOr(date.Today())
+	partition := date.CreatePartition(from, to, r.interval.Value(), r.last)
+	f := filter.And(
+		journal.FilterDates(partition.Contains),
+		filter.Or(
+			journal.FilterAccount(r.accounts.Regex()),
+			journal.FilterOther(r.accounts.Regex()),
+		),
+		journal.FilterCommodity(r.commodities.Regex()),
 	)
+	m := journal.KeyMapper{
+		Date: partition.MapToEndOfPeriod,
+		Account: mapper.Combine(
+			journal.RemapAccount(jctx, r.remap.Regex()),
+			journal.ShortenAccount(jctx, r.mapping.Value()),
+		),
+		Other:     mapper.Identity[*journal.Account],
+		Commodity: journal.MapCommodity(r.showCommodities),
+		Valuation: journal.MapCommodity(valuation != nil),
+	}.Build()
+	rep := report.NewReport(jctx)
 	processors := []journal.DayFn{
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
@@ -164,6 +149,17 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 	if _, err := j.Process(processors...); err != nil {
 		return err
+	}
+	reportRenderer := report.Renderer{
+		ShowCommodities:    r.showCommodities,
+		SortAlphabetically: r.sortAlphabetically,
+		Dates:              partition.EndDates(),
+		Diff:               r.diff,
+	}
+	tableRenderer := table.TextRenderer{
+		Color:     r.color,
+		Thousands: r.thousands,
+		Round:     r.digits,
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()

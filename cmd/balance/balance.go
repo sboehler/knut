@@ -137,7 +137,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			journal.ShortenAccount(jctx, r.mapping.Value()),
 		),
 		Other:     mapper.Identity[*journal.Account],
-		Commodity: journal.MapCommodity(r.showCommodities),
+		Commodity: mapper.Identity[*journal.Commodity],
 		Valuation: journal.MapCommodity(valuation != nil),
 	}.Build()
 	rep := report.NewReport(jctx)

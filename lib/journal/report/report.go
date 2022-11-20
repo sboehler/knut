@@ -1,8 +1,6 @@
 package report
 
 import (
-	"time"
-
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/dict"
@@ -49,13 +47,13 @@ func (r *Report) ComputeWeights() {
 	)()
 }
 
-func (r *Report) Totals() (journal.Amounts, journal.Amounts) {
-	res1, res2 := make(journal.Amounts), make(journal.Amounts)
+func (r *Report) Totals(m mapper.Mapper[journal.Key]) (journal.Amounts, journal.Amounts) {
+	al, eie := make(journal.Amounts), make(journal.Amounts)
 	cpr.Parallel(
-		func() { r.AL.computeTotals(res1) },
-		func() { r.EIE.computeTotals(res2) },
+		func() { r.AL.computeTotals(al, m) },
+		func() { r.EIE.computeTotals(eie, m) },
 	)()
-	return res1, res2
+	return al, eie
 }
 
 type Node struct {
@@ -121,12 +119,9 @@ func (n *Node) computeWeights() {
 	}
 }
 
-func (n *Node) computeTotals(m journal.Amounts) {
+func (n *Node) computeTotals(res journal.Amounts, m mapper.Mapper[journal.Key]) {
 	for _, ch := range n.children {
-		ch.computeTotals(m)
+		ch.computeTotals(res, m)
 	}
-	n.Amounts.SumIntoBy(m, nil, journal.KeyMapper{
-		Date:      mapper.Identity[time.Time],
-		Commodity: mapper.Identity[*journal.Commodity],
-	}.Build())
+	n.Amounts.SumIntoBy(res, nil, m)
 }

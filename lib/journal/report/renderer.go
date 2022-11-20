@@ -52,7 +52,10 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	}
 	tbl.AddSeparatorRow()
 
-	totalAL, totalEIE := r.Totals()
+	totalAL, totalEIE := r.Totals(journal.KeyMapper{
+		Date:      mapper.Identity[time.Time],
+		Commodity: journal.MapCommodity(rn.ShowCommodities),
+	}.Build())
 
 	for _, n := range r.AL.Children() {
 		rn.renderNode(tbl, 0, n)
@@ -77,7 +80,7 @@ func (rn *Renderer) renderNode(t *table.Table, indent int, n *Node) {
 	if n.Account != nil {
 		vals := n.Amounts.SumBy(nil, journal.KeyMapper{
 			Date:      mapper.Identity[time.Time],
-			Commodity: mapper.Identity[*journal.Commodity],
+			Commodity: journal.MapCommodity(rn.ShowCommodities),
 		}.Build())
 		rn.render(t, indent, n.Account.Segment(), !n.Account.IsAL(), vals)
 	}

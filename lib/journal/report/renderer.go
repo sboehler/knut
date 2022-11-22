@@ -27,27 +27,29 @@ import (
 type Renderer struct {
 	ShowCommodities    bool
 	SortAlphabetically bool
-	Dates              []time.Time
 	Diff               bool
+
+	dates []time.Time
 }
 
 // Render renders a report.
 func (rn *Renderer) Render(r *Report) *table.Table {
+	rn.dates = r.Dates
 	if !rn.SortAlphabetically {
 		r.ComputeWeights()
 	}
 	var tbl *table.Table
 	if rn.ShowCommodities {
-		tbl = table.New(1, 1, len(rn.Dates))
+		tbl = table.New(1, 1, len(rn.dates))
 	} else {
-		tbl = table.New(1, len(rn.Dates))
+		tbl = table.New(1, len(rn.dates))
 	}
 	tbl.AddSeparatorRow()
 	header := tbl.AddRow().AddText("Account", table.Center)
 	if rn.ShowCommodities {
 		header.AddText("Comm", table.Center)
 	}
-	for _, d := range rn.Dates {
+	for _, d := range rn.dates {
 		header.AddText(d.Format("2006-01-02"), table.Center)
 	}
 	tbl.AddSeparatorRow()
@@ -105,7 +107,7 @@ func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, va
 			row.AddText(c.Name(), table.Left)
 		}
 		var total decimal.Decimal
-		for _, d := range rn.Dates {
+		for _, d := range rn.dates {
 			v := vals[journal.DateCommodityKey(d, c)]
 			if !rn.Diff {
 				total = total.Add(v)

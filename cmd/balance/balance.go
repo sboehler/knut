@@ -122,6 +122,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 	from, to := r.from.ValueOr(j.Min()), r.to.ValueOr(date.Today())
 	partition := date.CreatePartition(from, to, r.interval.Value(), r.last)
+	rep := report.NewReport(jctx, partition.EndDates())
 	f := filter.And(
 		journal.FilterDates(partition.Contains),
 		filter.Or(
@@ -140,7 +141,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		Commodity: mapper.Identity[*journal.Commodity],
 		Valuation: journal.MapCommodity(valuation != nil),
 	}.Build()
-	rep := report.NewReport(jctx)
 	processors := []journal.DayFn{
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
@@ -153,7 +153,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	reportRenderer := report.Renderer{
 		ShowCommodities:    r.showCommodities,
 		SortAlphabetically: r.sortAlphabetically,
-		Dates:              partition.EndDates(),
 		Diff:               r.diff,
 	}
 	tableRenderer := table.TextRenderer{

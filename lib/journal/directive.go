@@ -215,7 +215,7 @@ type Value struct {
 type Accrual struct {
 	Range
 	Interval date.Interval
-	T0, T1   time.Time
+	Period   date.Period
 	Account  *Account
 }
 
@@ -240,7 +240,7 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 		drAccountSingle = posting.Debit
 	}
 	var (
-		dates       = date.Period{Start: a.T0, End: a.T1}.Dates(a.Interval, 0)
+		dates       = a.Period.Dates(a.Interval, 0)
 		amount, rem = posting.Amount.QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
 
 		result []*Transaction

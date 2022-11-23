@@ -265,8 +265,7 @@ func (p *Parser) parseAddOn() (*Accrual, error) {
 	}
 	return &Accrual{
 		Range:    p.getRange(),
-		T0:       dateFrom,
-		T1:       dateTo,
+		Period:   date.Period{Start: dateFrom, End: dateTo},
 		Interval: interval,
 		Account:  account,
 	}, nil

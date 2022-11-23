@@ -3,9 +3,9 @@ package journal
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
-	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/set"
@@ -236,13 +236,13 @@ func Balance(jctx Context, v *Commodity) DayFn {
 }
 
 // Balance balances the journal.
-func CloseAccounts(j *Journal, partition date.Partition) DayFn {
+func CloseAccounts(j *Journal, ds []time.Time) DayFn {
 	var (
 		closingDays     []*Day
 		index           int
 		amounts, values = make(Amounts), make(Amounts)
 	)
-	for _, d := range partition.EndDates() {
+	for _, d := range ds {
 		closingDays = append(closingDays, j.Day(d.AddDate(0, 0, 1)))
 	}
 	return func(d *Day) error {

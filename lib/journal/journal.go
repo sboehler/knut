@@ -49,6 +49,16 @@ func (j *Journal) Day(d time.Time) *Day {
 	return dict.GetDefault(j.Days, d, func() *Day { return &Day{Date: d} })
 }
 
+func (j *Journal) Partition(from, to time.Time, interval date.Interval, n int) date.Partition {
+	if from.IsZero() {
+		from = j.Min()
+	}
+	if to.IsZero() {
+		to = date.Today()
+	}
+	return date.CreatePartition(from, to, interval, n)
+}
+
 func (j *Journal) ToLedger() *Ledger {
 	l, _ := j.Process(Sort())
 	return l

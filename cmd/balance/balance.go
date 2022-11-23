@@ -99,6 +99,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 }
 
 func (r *runner) setupFlags(c *cobra.Command) {
+	r.to = flags.DateFlag(date.Today())
 	c.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
 	c.Flags().Var(&r.from, "from", "from date")
 	c.Flags().Var(&r.to, "to", "to date")
@@ -132,9 +133,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	from := r.from.ValueOr(j.Min())
-	to := r.to.ValueOr(date.Today())
-	partition := date.CreatePartition(from, to, r.interval.Value(), r.last)
+	partition := j.Partition(r.from.Value(), r.to.Value(), r.interval.Value(), r.last)
 	rep := report.NewReport(jctx, partition.EndDates())
 	f := filter.And(
 		journal.FilterDates(partition.Contains),
@@ -157,7 +156,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	processors := []journal.DayFn{
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
-		journal.CloseAccounts(j, partition),
+		journal.CloseAccounts(j, partition.EndDates()),
 		journal.Query(m, f, valuation, rep),
 	}
 	if _, err := j.Process(processors...); err != nil {

@@ -34,7 +34,7 @@ type Renderer struct {
 
 // Render renders a report.
 func (rn *Renderer) Render(r *Report) *table.Table {
-	rn.dates = r.Dates
+	rn.dates = r.dates
 	if !rn.SortAlphabetically {
 		r.ComputeWeights()
 	}

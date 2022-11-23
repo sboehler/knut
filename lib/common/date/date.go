@@ -17,6 +17,8 @@ package date
 import (
 	"sort"
 	"time"
+
+	"github.com/sboehler/knut/lib/common/mapper"
 )
 
 // Interval is a time interval.
@@ -109,58 +111,51 @@ func Today() time.Time {
 	return Date(now.Year(), now.Month(), now.Day())
 }
 
-// Partition is a partition of the timeline.
-// Invariants:
-// - t1 is always the last element of ends.
-// - len(ends) > 0
-type Partition struct {
-	t0, t1 time.Time
-	ends   []time.Time
+type Period struct {
+	Start, End time.Time
 }
 
-func CreatePartition(t0, t1 time.Time, p Interval, n int) Partition {
+func (p Period) Clip(p2 Period) Period {
+	if p2.Start.After(p.Start) {
+		p.Start = p2.Start
+	}
+	if p2.End.Before(p.End) {
+		p.End = p2.End
+	}
+	return p
+}
+
+func (period Period) Dates(p Interval, n int) []time.Time {
 	if p == Once {
-		return Partition{
-			t0:   t0,
-			t1:   t1,
-			ends: []time.Time{t1},
-		}
+		return []time.Time{period.End}
 	}
 	var res []time.Time
-	for t := t0; !t.After(t1); t = EndOf(t, p).AddDate(0, 0, 1) {
+	for t := period.Start; !t.After(period.End); t = EndOf(t, p).AddDate(0, 0, 1) {
 		ed := EndOf(t, p)
-		if ed.After(t1) {
-			ed = t1
+		if ed.After(period.End) {
+			ed = period.End
 		}
 		res = append(res, ed)
 	}
 	if n > 0 && len(res) > n {
 		res = res[len(res)-n:]
 	}
-	return Partition{
-		t0:   t0,
-		t1:   t1,
-		ends: res,
-	}
-}
-
-func (p Partition) MapToEndOfPeriod(t time.Time) time.Time {
-	index := sort.Search(len(p.ends), func(i int) bool {
-		// find first i where p.ends[i] >= t
-		return !p.ends[i].Before(t)
-	})
-	if index < len(p.ends) {
-		return p.ends[index]
-	}
-	return time.Time{}
-}
-
-func (p Partition) EndDates() []time.Time {
-	res := make([]time.Time, len(p.ends))
-	copy(res, p.ends)
 	return res
 }
 
-func (p *Partition) Contains(t time.Time) bool {
-	return !t.Before(p.t0) && !t.After(p.t1)
+func (p Period) Contains(t time.Time) bool {
+	return !t.Before(p.Start) && !t.After(p.End)
+}
+
+func Align(ds []time.Time) mapper.Mapper[time.Time] {
+	return func(d time.Time) time.Time {
+		index := sort.Search(len(ds), func(i int) bool {
+			// find first i where ds[i] >= t
+			return !ds[i].Before(d)
+		})
+		if index < len(ds) {
+			return ds[index]
+		}
+		return time.Time{}
+	}
 }

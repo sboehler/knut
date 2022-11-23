@@ -240,7 +240,7 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 		drAccountSingle = posting.Debit
 	}
 	var (
-		dates       = date.CreatePartition(a.T0, a.T1, a.Interval, 0).EndDates()
+		dates       = date.Period{Start: a.T0, End: a.T1}.Dates(a.Interval, 0)
 		amount, rem = posting.Amount.QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
 
 		result []*Transaction

@@ -55,7 +55,7 @@ type runner struct {
 	cpuprofile string
 
 	// transformations
-	from, to                      flags.DateFlag
+	period                        flags.PeriodFlag
 	last                          int
 	interval                      flags.IntervalFlags
 	showCommodities               bool
@@ -90,8 +90,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 
 func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
-	c.Flags().Var(&r.from, "from", "from date")
-	c.Flags().Var(&r.to, "to", "to date")
+	r.period.Setup(c, date.Period{End: date.Today()})
 	c.Flags().IntVar(&r.last, "last", 0, "last n periods")
 	r.interval.Setup(c, date.Daily)
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "s", false, "Sort accounts alphabetically")
@@ -129,18 +128,17 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if r.showSource {
 		am = journal.RemapAccount(jctx, r.remap.Regex())
 	}
+	period := r.period.Value().Clip(j.Period())
 	var (
-		from  = r.from.ValueOr(j.Min())
-		to    = r.to.ValueOr(date.Today())
-		dates = date.CreatePartition(from, to, r.interval.Value(), r.last)
+		dates = period.Dates(r.interval.Value(), r.last)
 		f     = filter.And(
-			journal.FilterDates(dates.Contains),
+			journal.FilterDates(period.Contains),
 			journal.FilterAccount(r.accounts.Regex()),
 			journal.FilterOther(r.others.Regex()),
 			journal.FilterCommodity(r.commodities.Regex()),
 		)
 		m = journal.KeyMapper{
-			Date:    dates.MapToEndOfPeriod,
+			Date:    date.Align(dates),
 			Account: am,
 			Other: mapper.Combine(
 				journal.RemapAccount(jctx, r.remap.Regex()),

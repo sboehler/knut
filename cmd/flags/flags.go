@@ -117,7 +117,6 @@ func (pf *IntervalFlags) Setup(cmd *cobra.Command, def date.Interval) {
 	cmd.Flags().BoolVar(&pf.flags[date.Yearly], "years", false, "years")
 	cmd.MarkFlagsMutuallyExclusive("days", "weeks", "months", "quarters", "years")
 	pf.def = def
-
 }
 
 // Value returns the period.
@@ -128,6 +127,21 @@ func (pf IntervalFlags) Value() date.Interval {
 		}
 	}
 	return pf.def
+}
+
+type PeriodFlag struct {
+	start, end DateFlag
+}
+
+func (pf *PeriodFlag) Setup(cmd *cobra.Command, def date.Period) {
+	pf.start = DateFlag(def.Start)
+	pf.end = DateFlag(def.End)
+	cmd.Flags().Var(&pf.start, "from", "from date")
+	cmd.Flags().Var(&pf.end, "to", "to date")
+}
+
+func (pf *PeriodFlag) Value() date.Period {
+	return date.Period{Start: pf.start.Value(), End: pf.end.Value()}
 }
 
 // MappingFlag manages a flag of type -c1,<regex>.

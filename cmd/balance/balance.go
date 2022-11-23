@@ -59,7 +59,7 @@ type runner struct {
 	valuation flags.CommodityFlag
 
 	// alignment
-	from, to flags.DateFlag
+	period   flags.PeriodFlag
 	last     int
 	interval flags.IntervalFlags
 
@@ -99,10 +99,8 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 }
 
 func (r *runner) setupFlags(c *cobra.Command) {
-	r.to = flags.DateFlag(date.Today())
 	c.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
-	c.Flags().Var(&r.from, "from", "from date")
-	c.Flags().Var(&r.to, "to", "to date")
+	r.period.Setup(c, date.Period{End: date.Today()})
 	c.Flags().IntVar(&r.last, "last", 0, "last n periods")
 	c.Flags().BoolVarP(&r.diff, "diff", "d", false, "diff")
 	c.Flags().BoolVar(&r.close, "close", true, "close")
@@ -133,10 +131,12 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	partition := j.Partition(r.from.Value(), r.to.Value(), r.interval.Value(), r.last)
-	rep := report.NewReport(jctx, partition.EndDates())
+	period := r.period.Value().Clip(j.Period())
+	// partition := date.CreatePartition(period, r.interval.Value(), r.last)
+	dates := period.Dates(r.interval.Value(), r.last)
+	rep := report.NewReport(jctx, dates)
 	f := filter.And(
-		journal.FilterDates(partition.Contains),
+		journal.FilterDates(period.Contains),
 		filter.Or(
 			journal.FilterAccount(r.accounts.Regex()),
 			journal.FilterOther(r.accounts.Regex()),
@@ -144,7 +144,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		journal.FilterCommodity(r.commodities.Regex()),
 	)
 	m := journal.KeyMapper{
-		Date: partition.MapToEndOfPeriod,
+		Date: date.Align(dates),
 		Account: mapper.Combine(
 			journal.RemapAccount(jctx, r.remap.Regex()),
 			journal.ShortenAccount(jctx, r.mapping.Value()),
@@ -156,7 +156,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	processors := []journal.DayFn{
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
-		journal.CloseAccounts(j, partition.EndDates()),
+		journal.CloseAccounts(j, dates),
 		journal.Query(m, f, valuation, rep),
 	}
 	if _, err := j.Process(processors...); err != nil {

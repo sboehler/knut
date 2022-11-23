@@ -132,7 +132,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	period := r.period.Value().Clip(j.Period())
-	// partition := date.CreatePartition(period, r.interval.Value(), r.last)
 	dates := period.Dates(r.interval.Value(), r.last)
 	rep := report.NewReport(jctx, dates)
 	f := filter.And(

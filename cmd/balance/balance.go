@@ -54,20 +54,32 @@ type runner struct {
 	// internal
 	cpuprofile string
 
-	// transformations
-	from, to                     flags.DateFlag
-	last                         int
-	interval                     flags.IntervalFlags
-	diff, showCommodities, close bool
-	mapping                      flags.MappingFlag
-	remap                        flags.RegexFlag
-	valuation                    flags.CommodityFlag
-	accounts, commodities        flags.RegexFlag
+	// journal structure
+	close     bool
+	valuation flags.CommodityFlag
+
+	// alignment
+	from, to flags.DateFlag
+	last     int
+	interval flags.IntervalFlags
+
+	// mapping
+	mapping flags.MappingFlag
+	remap   flags.RegexFlag
+
+	// filters
+	accounts    flags.RegexFlag
+	commodities flags.RegexFlag
+
+	// report structure
+	diff               bool
+	showCommodities    bool
+	sortAlphabetically bool
 
 	// formatting
-	thousands, color   bool
-	sortAlphabetically bool
-	digits             int32
+	thousands bool
+	color     bool
+	digits    int32
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) {
@@ -120,7 +132,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	from, to := r.from.ValueOr(j.Min()), r.to.ValueOr(date.Today())
+	from := r.from.ValueOr(j.Min())
+	to := r.to.ValueOr(date.Today())
 	partition := date.CreatePartition(from, to, r.interval.Value(), r.last)
 	rep := report.NewReport(jctx, partition.EndDates())
 	f := filter.And(

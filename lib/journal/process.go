@@ -293,7 +293,7 @@ type Collection interface {
 	Insert(k Key, v decimal.Decimal)
 }
 
-func Query(m mapper.Mapper[Key], f filter.Filter[Key], v *Commodity, c Collection) DayFn {
+func Query(f filter.Filter[Key], m mapper.Mapper[Key], v *Commodity, c Collection) DayFn {
 	if f == nil {
 		f = filter.AllowAll[Key]
 	}

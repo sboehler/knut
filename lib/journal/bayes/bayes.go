@@ -65,7 +65,7 @@ func newCountByAccount() countByAccount {
 // P(A | T1 & T2 & ... & Tn) ~ P(A) * P(T1|A) * P(T2|A) * ... * P(Tn|A)
 func (m *Model) Infer(t *journal.Transaction, tbd *journal.Account) {
 	def := math.Log(1.0 / float64(m.count))
-	for _, posting := range t.Postings {
+	for i, posting := range t.Postings {
 		if posting.Account != tbd {
 			continue
 		}
@@ -95,6 +95,11 @@ func (m *Model) Infer(t *journal.Transaction, tbd *journal.Account) {
 			}
 		}
 		posting.Account = selected
+		if i%2 == 0 {
+			t.Postings[i+1].Other = selected
+		} else {
+			t.Postings[i-1].Other = selected
+		}
 	}
 }
 

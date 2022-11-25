@@ -106,7 +106,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().BoolVar(&r.close, "close", true, "close")
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "s", false, "Show commodities on their own rows")
-	r.interval.Setup(c, date.Once)
+	r.interval.Setup(c, date.Yearly)
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	c.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
 	c.Flags().VarP(&r.remap, "remap", "r", "<regex>")

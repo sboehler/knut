@@ -63,6 +63,9 @@ func (j *Journal) AddOpen(o *Open) {
 // AddPrice adds an Price directive.
 func (j *Journal) AddPrice(p *Price) {
 	d := j.Day(p.Date)
+	if j.max.Before(d.Date) {
+		j.max = d.Date
+	}
 	d.Prices = append(d.Prices, p)
 }
 
@@ -81,6 +84,9 @@ func (j *Journal) AddTransaction(t *Transaction) {
 // AddValue adds an Value directive.
 func (j *Journal) AddValue(v *Value) {
 	d := j.Day(v.Date)
+	if j.max.Before(d.Date) {
+		j.max = d.Date
+	}
 	d.Values = append(d.Values, v)
 }
 

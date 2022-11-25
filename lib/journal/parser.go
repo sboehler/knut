@@ -331,14 +331,14 @@ func (p *Parser) parsePostings() ([]*Posting, error) {
 				}
 			}
 		}
-		postings = append(postings, &Posting{
+		postings = append(postings, PostingBuilder{
 			Credit:    credit,
 			Debit:     debit,
 			Amount:    amount,
 			Commodity: commodity,
 			Targets:   targets,
 			Lot:       lot,
-		})
+		}.Singleton()...)
 		if err = p.consumeRestOfWhitespaceLine(); err != nil {
 			return nil, err
 		}

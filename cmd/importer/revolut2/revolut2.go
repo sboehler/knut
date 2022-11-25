@@ -186,7 +186,7 @@ func (p *parser) parseBooking() error {
 			Debit:     p.feeAccount,
 			Commodity: c,
 			Amount:    fee,
-		}.Build())
+		}.Singleton()...)
 	}
 	p.journal.AddTransaction(t.Build())
 	bal, err := decimal.NewFromString(r[bfBalance])

@@ -6,6 +6,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
+	"github.com/sboehler/knut/lib/common/slice"
 	"github.com/sboehler/knut/lib/journal/scanner"
 	"github.com/shopspring/decimal"
 )
@@ -54,10 +55,11 @@ type Close struct {
 // Posting represents a posting.
 type Posting struct {
 	Amount, Value decimal.Decimal
-	Credit, Debit *Account
-	Commodity     *Commodity
-	Targets       []*Commodity
-	Lot           *Lot
+	//Credit, Debit *Account
+	Account, Other *Account
+	Commodity      *Commodity
+	Targets        []*Commodity
+	Lot            *Lot
 }
 
 type PostingBuilder struct {
@@ -68,37 +70,42 @@ type PostingBuilder struct {
 	Lot           *Lot
 }
 
-func (pb PostingBuilder) Build() *Posting {
+func (pb PostingBuilder) Build() [2]*Posting {
 	if pb.Amount.IsNegative() || pb.Amount.IsZero() && pb.Value.IsNegative() {
-		pb.Value = pb.Value.Neg()
-		pb.Amount = pb.Amount.Neg()
-		pb.Credit, pb.Debit = pb.Debit, pb.Credit
+		pb.Credit, pb.Debit, pb.Amount, pb.Value = pb.Debit, pb.Credit, pb.Amount.Neg(), pb.Value.Neg()
 	}
-	return &Posting{
-		Credit:    pb.Credit,
-		Debit:     pb.Debit,
-		Commodity: pb.Commodity,
-		Amount:    pb.Amount,
-		Value:     pb.Value,
-		Targets:   pb.Targets,
-		Lot:       pb.Lot,
+	return [2]*Posting{
+		{
+			Account:   pb.Credit,
+			Other:     pb.Debit,
+			Commodity: pb.Commodity,
+			Amount:    pb.Amount.Neg(),
+			Value:     pb.Value.Neg(),
+			Targets:   pb.Targets,
+			Lot:       pb.Lot,
+		},
+		{
+			Account:   pb.Debit,
+			Other:     pb.Credit,
+			Commodity: pb.Commodity,
+			Amount:    pb.Amount,
+			Value:     pb.Value,
+			Targets:   pb.Targets,
+			Lot:       pb.Lot,
+		},
 	}
 }
 
 func (pb PostingBuilder) Singleton() []*Posting {
-	return []*Posting{pb.Build()}
-}
-
-func (pst *Posting) Accounts() []*Account {
-	return []*Account{pst.Credit, pst.Debit}
+	return slice.Concat(pb.Build())
 }
 
 // Less determines an order on postings.
 func ComparePostings(p, p2 *Posting) compare.Order {
-	if o := CompareAccounts(p.Credit, p2.Credit); o != compare.Equal {
+	if o := CompareAccounts(p.Account, p2.Account); o != compare.Equal {
 		return o
 	}
-	if o := CompareAccounts(p.Debit, p2.Debit); o != compare.Equal {
+	if o := CompareAccounts(p.Other, p2.Other); o != compare.Equal {
 		return o
 	}
 	if o := compare.Decimal(p.Amount, p2.Amount); o != compare.Equal {
@@ -167,7 +174,7 @@ type TransactionBuilder struct {
 
 // Build builds a transactions.
 func (tb TransactionBuilder) Build() *Transaction {
-	compare.Sort(tb.Postings, ComparePostings)
+	// compare.Sort(tb.Postings, ComparePostings)
 	return &Transaction{
 		Range:       tb.Range,
 		Date:        tb.Date,
@@ -222,63 +229,45 @@ type Accrual struct {
 // Expand expands an accrual transaction.
 func (a Accrual) Expand(t *Transaction) []*Transaction {
 	var (
-		posting                                                          = t.Postings[0]
-		crAccountSingle, drAccountSingle, crAccountMulti, drAccountMulti = a.Account, a.Account, a.Account, a.Account
-	)
-	switch {
-	case posting.Credit.IsAL() && posting.Debit.IsIE():
-		crAccountSingle = posting.Credit
-		drAccountMulti = posting.Debit
-	case posting.Credit.IsIE() && posting.Debit.IsAL():
-		crAccountMulti = posting.Credit
-		drAccountSingle = posting.Debit
-	case posting.Credit.IsIE() && posting.Debit.IsIE():
-		crAccountMulti = posting.Credit
-		drAccountMulti = posting.Debit
-	default:
-		crAccountSingle = posting.Credit
-		drAccountSingle = posting.Debit
-	}
-	var (
-		dates       = a.Period.Dates(a.Interval, 0)
-		amount, rem = posting.Amount.QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
-
 		result []*Transaction
 	)
-	if crAccountMulti != drAccountMulti {
-		for i, dt := range dates {
-			a := amount
-			if i == 0 {
-				a = a.Add(rem)
-			}
+	for _, p := range t.Postings {
+		if p.Account.IsAL() {
 			result = append(result, TransactionBuilder{
 				Range:       t.Position(),
-				Date:        dt,
+				Date:        t.Date,
 				Tags:        t.Tags,
-				Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description, i+1, len(dates)),
+				Description: t.Description,
 				Postings: PostingBuilder{
-					Credit:    crAccountMulti,
-					Debit:     drAccountMulti,
-					Commodity: posting.Commodity,
-					Amount:    a,
+					Credit:    t.Accrual.Account,
+					Debit:     p.Account,
+					Commodity: p.Commodity,
+					Amount:    p.Amount,
 				}.Singleton(),
 			}.Build())
 		}
-	}
-	if crAccountSingle != drAccountSingle {
-		result = append(result, TransactionBuilder{
-			Range:       t.Position(),
-			Date:        t.Date,
-			Tags:        t.Tags,
-			Description: t.Description,
-			Postings: PostingBuilder{
-				Credit:    crAccountSingle,
-				Debit:     drAccountSingle,
-				Commodity: posting.Commodity,
-				Amount:    posting.Amount,
-			}.Singleton(),
-		}.Build())
-
+		if p.Account.IsIE() {
+			dates := a.Period.Dates(a.Interval, 0)
+			amount, rem := p.Amount.QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
+			for i, dt := range dates {
+				a := amount
+				if i == 0 {
+					a = a.Add(rem)
+				}
+				result = append(result, TransactionBuilder{
+					Range:       t.Position(),
+					Date:        dt,
+					Tags:        t.Tags,
+					Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description, i+1, len(dates)),
+					Postings: PostingBuilder{
+						Credit:    t.Accrual.Account,
+						Debit:     p.Account,
+						Commodity: p.Commodity,
+						Amount:    a,
+					}.Singleton(),
+				}.Build())
+			}
+		}
 	}
 	return result
 }

@@ -8,14 +8,14 @@ Income:Dividends Assets:IB                10 USD (AAPL)
 Assets:IB        Expenses:Tax           1.23 USD (AAPL)
 
 2020-03-21 "Sell -459 CHF @ 1.03371 USD"
-Assets:IB        Expenses:Fees           1.1 EUR (CHF,USD)
 Assets:IB        Expenses:Trading        459 CHF (CHF,USD)
 Expenses:Trading Assets:IB            449.39 USD (CHF,USD)
+Assets:IB        Expenses:Fees           1.1 EUR (CHF,USD)
 
 2020-04-12 "Buy 7 AAPL @ 10 USD"
-Assets:IB        Expenses:Fees             1 USD (AAPL,USD)
-Assets:IB        Expenses:Trading          1 USD (AAPL,USD)
 Expenses:Trading Assets:IB                 7 AAPL (AAPL,USD)
+Assets:IB        Expenses:Trading          1 USD (AAPL,USD)
+Assets:IB        Expenses:Fees             1 USD (AAPL,USD)
 
 2020-04-22 balance Assets:IB 10 AAPL
 2020-04-22 balance Assets:IB 320.07 CHF

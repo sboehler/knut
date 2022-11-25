@@ -29,18 +29,18 @@ option "operating_currency" "CHF"
   Assets:Portfolio 1000 CHF
 
 2020-01-06 * "Buy 3 AAPL shares"
+  Equity:Equity -873.74907696 CHF
+  Assets:Portfolio 873.74907696 CHF
   Assets:Portfolio -874.332 CHF
   Equity:Equity 874.332 CHF
   Assets:Portfolio -3.88592 CHF
   Expenses:Fees 3.88592 CHF
-  Equity:Equity -873.74907696 CHF
-  Assets:Portfolio 873.74907696 CHF
 
 2020-01-06 * "Currency exchange"
-  Assets:Portfolio -969 CHF
-  Equity:Equity 969 CHF
   Equity:Equity -972.45148 CHF
   Assets:Portfolio 972.45148 CHF
+  Assets:Portfolio -969 CHF
+  Equity:Equity 969 CHF
 
 2020-01-07 * "Adjust value of AAPL in account Assets:Portfolio"
   Assets:Portfolio -6.77688552 CHF

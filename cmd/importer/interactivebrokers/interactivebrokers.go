@@ -28,6 +28,7 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
+	"github.com/sboehler/knut/lib/common/slice"
 	"github.com/sboehler/knut/lib/journal"
 )
 
@@ -290,7 +291,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
-		Postings: []*journal.Posting{
+		Postings: slice.Concat(
 			journal.PostingBuilder{
 				Credit:    p.trading,
 				Debit:     p.account,
@@ -312,7 +313,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 				Amount:    fee,
 				Targets:   []*journal.Commodity{stock, currency},
 			}.Build(),
-		},
+		),
 	}.Build())
 	return true, nil
 }
@@ -360,7 +361,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
-	postings := []*journal.Posting{
+	postings := slice.Concat(
 		journal.PostingBuilder{
 			Credit:    p.trading,
 			Debit:     p.account,
@@ -375,7 +376,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 			Amount:    proceeds,
 			Targets:   []*journal.Commodity{stock, currency},
 		}.Build(),
-	}
+	)
 	if !fee.IsZero() {
 		postings = append(postings, journal.PostingBuilder{
 			Credit:    p.fee,
@@ -383,7 +384,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 			Commodity: p.baseCurrency,
 			Amount:    fee,
 			Targets:   []*journal.Commodity{stock, currency},
-		}.Build())
+		}.Singleton()...)
 	}
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,

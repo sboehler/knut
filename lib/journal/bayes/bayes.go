@@ -44,15 +44,13 @@ func NewModel(exclude *journal.Account) *Model {
 // Update updates the model with the given transaction.
 func (m *Model) Update(t *journal.Transaction) {
 	for _, p := range t.Postings {
-		for _, acc := range p.Accounts() {
-			if acc == m.exclude {
-				continue
-			}
-			m.count++
-			m.countByAccount[acc]++
-			for token := range tokenize(t.Description, p, acc) {
-				dict.GetDefault(m.countByTokenAndAccount, token, newCountByAccount)[acc]++
-			}
+		if p.Account == m.exclude {
+			continue
+		}
+		m.count++
+		m.countByAccount[p.Account]++
+		for token := range tokenize(t.Description, p) {
+			dict.GetDefault(m.countByTokenAndAccount, token, newCountByAccount)[p.Account]++
 		}
 	}
 }
@@ -68,13 +66,13 @@ func newCountByAccount() countByAccount {
 func (m *Model) Infer(t *journal.Transaction, tbd *journal.Account) {
 	def := math.Log(1.0 / float64(m.count))
 	for _, posting := range t.Postings {
-		if posting.Credit != tbd && posting.Debit != tbd {
+		if posting.Account != tbd {
 			continue
 		}
 		scores := make(map[*journal.Account]float64)
-		tokens := tokenize(t.Description, posting, tbd)
+		tokens := tokenize(t.Description, posting)
 		for a, total := range m.countByAccount {
-			if a == posting.Credit || a == posting.Debit {
+			if a == tbd || a == posting.Other {
 				// ignore both TBD and the other account of this posting
 				continue
 			}
@@ -96,23 +94,12 @@ func (m *Model) Infer(t *journal.Transaction, tbd *journal.Account) {
 				max = score
 			}
 		}
-		if posting.Credit == tbd {
-			posting.Credit = selected
-		}
-		if posting.Debit == tbd {
-			posting.Debit = selected
-		}
+		posting.Account = selected
 	}
 }
 
-func tokenize(desc string, posting *journal.Posting, account *journal.Account) set.Set[string] {
-	tokens := append(strings.Fields(desc), posting.Commodity.Name(), posting.Amount.String())
-	switch account {
-	case posting.Credit:
-		tokens = append(tokens, "__knut_credit", posting.Debit.Name())
-	case posting.Debit:
-		tokens = append(tokens, "__knut_debit", posting.Credit.Name())
-	}
+func tokenize(desc string, posting *journal.Posting) set.Set[string] {
+	tokens := append(strings.Fields(desc), posting.Commodity.Name(), posting.Amount.String(), posting.Other.Name())
 	result := set.New[string]()
 	for _, token := range tokens {
 		result.Add(strings.ToLower(token))

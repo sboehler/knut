@@ -11,14 +11,14 @@ Expenses:TBD      Assets:Swissquote    3656.89 USD
 Assets:Swissquote Expenses:Fees          45.52 CHF ()
 
 2020-10-09 "76396333 Kauf 8 x VWRL Vanguard All World ETF Dist IE00B3RBWM25 @ 87.6 CHF"
-Assets:Swissquote Expenses:Fees           12.9 CHF (VWRL,CHF)
-Assets:Swissquote Expenses:Trading       700.8 CHF (VWRL,CHF)
 Expenses:Trading  Assets:Swissquote          8 VWRL (VWRL,CHF)
+Assets:Swissquote Expenses:Trading       700.8 CHF (VWRL,CHF)
+Assets:Swissquote Expenses:Fees           12.9 CHF (VWRL,CHF)
 
 2020-10-09 "Dividende VWRL Vanguard All World ETF Dist IE00B3RBWM25"
 Income:Dividends  Assets:Swissquote       23.8 USD (VWRL)
 
 2020-10-09 "Forex-Gutschrift 830.07 CHF / Forex-Belastung -918 USD"
-Assets:Swissquote Expenses:Trading         918 USD (CHF,USD)
 Expenses:Trading  Assets:Swissquote     830.07 CHF (CHF,USD)
+Assets:Swissquote Expenses:Trading         918 USD (CHF,USD)
 

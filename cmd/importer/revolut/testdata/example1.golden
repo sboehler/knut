@@ -1,6 +1,6 @@
 2020-08-05 "Bought EUR from CHF FX-rate € 1 = CHF 1.0777 General"
-Assets:Accounts:Revolut Income:CapitalGain         1293.25 CHF
 Income:CapitalGain      Assets:Accounts:Revolut       1200 EUR
+Assets:Accounts:Revolut Income:CapitalGain         1293.25 CHF
 
 2020-08-05 balance Assets:Accounts:Revolut 1200 EUR
 

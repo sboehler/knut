@@ -49,18 +49,9 @@ func Transcode(w io.Writer, l []*journal.Day, c *journal.Commodity) error {
 
 		for _, trx := range day.Transactions {
 			for _, pst := range trx.Postings {
-				if strings.HasPrefix(pst.Credit.Name(), "Equity:Valuation:") && !openValAccounts.Has(pst.Credit) {
-					openValAccounts.Add(pst.Credit)
-					if _, err := p.PrintDirective(w, &journal.Open{Date: trx.Date, Account: pst.Credit}); err != nil {
-						return err
-					}
-					if _, err := io.WriteString(w, "\n\n"); err != nil {
-						return err
-					}
-				}
-				if strings.HasPrefix(pst.Debit.Name(), "Equity:Valuation:") && !openValAccounts.Has(pst.Debit) {
-					openValAccounts.Add(pst.Debit)
-					if _, err := p.PrintDirective(w, &journal.Open{Date: trx.Date, Account: pst.Debit}); err != nil {
+				if strings.HasPrefix(pst.Account.Name(), "Equity:Valuation:") && !openValAccounts.Has(pst.Account) {
+					openValAccounts.Add(pst.Account)
+					if _, err := p.PrintDirective(w, &journal.Open{Date: trx.Date, Account: pst.Account}); err != nil {
 						return err
 					}
 					if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -115,14 +106,7 @@ func writePosting(w io.Writer, p *journal.Posting, c *journal.Commodity) error {
 	} else {
 		amt = p.Value
 	}
-	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Credit.Name(), amt.Neg(), stripNonAlphanum(c)); err != nil {
-		return err
-	}
-	if _, err := io.WriteString(w, "\n"); err != nil {
-		return err
-	}
-
-	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Debit.Name(), amt, stripNonAlphanum(c)); err != nil {
+	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Account.Name(), amt, stripNonAlphanum(c)); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n"); err != nil {

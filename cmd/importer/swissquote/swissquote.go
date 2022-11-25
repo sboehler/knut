@@ -28,6 +28,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/common/set"
+	"github.com/sboehler/knut/lib/common/slice"
 	"github.com/sboehler/knut/lib/journal"
 )
 
@@ -260,7 +261,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
-		Postings: []*journal.Posting{
+		Postings: slice.Concat(
 			journal.PostingBuilder{
 				Credit:    p.trading,
 				Debit:     p.account,
@@ -282,7 +283,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 				Amount:    fee,
 				Targets:   []*journal.Commodity{r.symbol, r.currency},
 			}.Build(),
-		},
+		),
 	}.Build())
 	return true, nil
 }
@@ -308,7 +309,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
-		Postings: []*journal.Posting{
+		Postings: slice.Concat(
 			journal.PostingBuilder{
 				Credit:    p.trading,
 				Debit:     p.account,
@@ -321,7 +322,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 				Commodity: r.currency,
 				Amount:    r.netAmount, Targets: []*journal.Commodity{p.last.currency, r.currency},
 			}.Build(),
-		},
+		),
 	}.Build())
 	p.last = nil
 	return true, nil
@@ -350,7 +351,7 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 			Commodity: r.currency,
 			Amount:    r.fee,
 			Targets:   []*journal.Commodity{r.symbol},
-		}.Build())
+		}.Singleton()...)
 	}
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,

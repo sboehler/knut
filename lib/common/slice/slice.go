@@ -56,3 +56,11 @@ func Parallel[T any](ts []T, fs ...func(T) error) ([]T, error) {
 	})
 	return res, wg.Wait()
 }
+
+func Concat[T any](tss ...[2]T) []T {
+	res := make([]T, 0, 2*len(tss))
+	for _, ts := range tss {
+		res = append(res, ts[:]...)
+	}
+	return res
+}

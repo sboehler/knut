@@ -77,6 +77,9 @@ func (p Printer) printTransaction(w io.Writer, t *Transaction) (n int, err error
 		return n, err
 	}
 	for _, po := range t.Postings {
+		if po.Amount.IsNegative() {
+			continue
+		}
 		d, err := p.printPosting(w, po)
 		n += d
 		if err != nil {
@@ -96,7 +99,7 @@ func (p Printer) printAccrual(w io.Writer, a *Accrual) (n int, err error) {
 
 func (p Printer) printPosting(w io.Writer, t *Posting) (int, error) {
 	var n int
-	c, err := fmt.Fprintf(w, "%s %s %s %s", p.rightPad(t.Credit), p.rightPad(t.Debit), leftPad(10, t.Amount.String()), t.Commodity.Name())
+	c, err := fmt.Fprintf(w, "%s %s %s %s", p.rightPad(t.Other), p.rightPad(t.Account), leftPad(10, t.Amount.String()), t.Commodity.Name())
 	n += c
 	if err != nil {
 		return n, err
@@ -253,7 +256,7 @@ func (p *Printer) Initialize(directive []Directive) {
 
 func (p *Printer) updatePadding(t *Transaction) {
 	for _, pt := range t.Postings {
-		cr, dr := utf8.RuneCountInString(pt.Credit.String()), utf8.RuneCountInString(pt.Debit.String())
+		cr, dr := utf8.RuneCountInString(pt.Account.String()), utf8.RuneCountInString(pt.Other.String())
 		if p.Padding < cr {
 			p.Padding = cr
 		}

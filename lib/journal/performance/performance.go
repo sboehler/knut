@@ -37,11 +37,8 @@ func (calc Calculator) updateValues(d *journal.Day) {
 				continue
 			}
 			valF, _ := p.Value.Float64()
-			if p.Credit.IsAL() && calc.AccountFilter(p.Credit) {
+			if p.Account.IsAL() && calc.AccountFilter(p.Account) {
 				calc.Values[p.Commodity] -= valF
-			}
-			if p.Debit.IsAL() && calc.AccountFilter(p.Debit) {
-				calc.Values[p.Commodity] += valF
 			}
 		}
 	}
@@ -78,25 +75,15 @@ func (calc *Calculator) computeFlows(day *journal.Day) *journal.Performance {
 
 		for _, pst := range trx.Postings {
 			value, _ := pst.Amount.Float64()
-			var otherAccount *journal.Account
 
-			if calc.isPortfolioAccount(pst.Credit) && !calc.isPortfolioAccount(pst.Debit) {
-				// portfolio outflow
-				otherAccount = pst.Debit
-				value = -value
-			} else if !calc.isPortfolioAccount(pst.Credit) && calc.isPortfolioAccount(pst.Debit) {
-				// portfolio inflow
-				otherAccount = pst.Credit
-			} else {
-				// nothing to do, as the posting does not affect the portfolio
+			if !calc.isPortfolioAccount(pst.Account) || calc.isPortfolioAccount(pst.Other) {
 				continue
 			}
-
 			// tgts contains the commodities among which the performance effects of this
 			// transaction should be split: non-currencies > currencies > valuation currency.
 			tgts := calc.pickTargets(pst.Targets)
 
-			if otherAccount.IsAL() || tgts == nil {
+			if tgts == nil {
 				// no effect: regular flow into or out of the portfolio
 				get(&flows)[pst.Commodity] += value
 				continue

@@ -75,17 +75,11 @@ func Balance(jctx Context, v *Commodity) DayFn {
 	processTransactions := func(d *Day) error {
 		for _, t := range d.Transactions {
 			for _, p := range t.Postings {
-				if !accounts.Has(p.Credit) {
-					return Error{t, fmt.Sprintf("credit account %s is not open", p.Credit)}
+				if !accounts.Has(p.Account) {
+					return Error{t, fmt.Sprintf("account %s is not open", p.Account)}
 				}
-				if !accounts.Has(p.Debit) {
-					return Error{t, fmt.Sprintf("debit account %s is not open", p.Debit)}
-				}
-				if p.Credit.IsAL() {
-					amounts.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
-				}
-				if p.Debit.IsAL() {
-					amounts.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
+				if p.Account.IsAL() {
+					amounts.Add(AccountCommodityKey(p.Account, p.Commodity), p.Amount)
 				}
 			}
 		}
@@ -98,20 +92,20 @@ func Balance(jctx Context, v *Commodity) DayFn {
 				return Error{v, "account is not open"}
 			}
 			valAcc := jctx.ValuationAccountFor(v.Account)
-			p := PostingBuilder{
+			amount := v.Amount.Sub(amounts.Amount(AccountCommodityKey(v.Account, v.Commodity)))
+			ps := PostingBuilder{
 				Credit:    valAcc,
 				Debit:     v.Account,
 				Commodity: v.Commodity,
-				Amount:    v.Amount.Sub(amounts.Amount(AccountCommodityKey(v.Account, v.Commodity))),
+				Amount:    amount,
 				Targets:   []*Commodity{v.Commodity},
-			}.Build()
+			}.Singleton()
 			d.Transactions = append(d.Transactions, TransactionBuilder{
 				Date:        v.Date,
 				Description: fmt.Sprintf("Valuation adjustment for %s in %s", v.Commodity.Name(), v.Account.Name()),
-				Postings:    []*Posting{p},
+				Postings:    ps,
 			}.Build())
-			amounts.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
-			amounts.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
+			amounts.Add(AccountCommodityKey(v.Account, v.Commodity), amount)
 		}
 		compare.Sort(d.Transactions, CompareTransactions)
 		return nil
@@ -161,11 +155,8 @@ func Balance(jctx Context, v *Commodity) DayFn {
 				} else {
 					posting.Value = posting.Amount
 				}
-				if posting.Credit.IsAL() {
-					values.Add(AccountCommodityKey(posting.Credit, posting.Commodity), posting.Value.Neg())
-				}
-				if posting.Debit.IsAL() {
-					values.Add(AccountCommodityKey(posting.Debit, posting.Commodity), posting.Value)
+				if posting.Account.IsAL() {
+					values.Add(AccountCommodityKey(posting.Account, posting.Commodity), posting.Value)
 				}
 			}
 		}
@@ -267,13 +258,9 @@ func CloseAccounts(j *Journal, ds []time.Time) DayFn {
 		}
 		for _, t := range d.Transactions {
 			for _, p := range t.Postings {
-				if p.Credit.IsIE() {
-					amounts.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Amount.Neg())
-					values.Add(AccountCommodityKey(p.Credit, p.Commodity), p.Value.Neg())
-				}
-				if p.Debit.IsIE() {
-					amounts.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Amount)
-					values.Add(AccountCommodityKey(p.Debit, p.Commodity), p.Value)
+				if p.Account.IsIE() {
+					amounts.Add(AccountCommodityKey(p.Account, p.Commodity), p.Amount)
+					values.Add(AccountCommodityKey(p.Account, p.Commodity), p.Value)
 				}
 			}
 		}
@@ -309,25 +296,14 @@ func Query(f filter.Filter[Key], m mapper.Mapper[Key], v *Commodity, c Collectio
 				}
 				kc := Key{
 					Date:        t.Date,
-					Account:     b.Credit,
-					Other:       b.Debit,
+					Account:     b.Account,
+					Other:       b.Other,
 					Commodity:   b.Commodity,
 					Valuation:   v,
 					Description: t.Description,
 				}
 				if f(kc) {
-					c.Insert(m(kc), amt.Neg())
-				}
-				kd := Key{
-					Date:        t.Date,
-					Account:     b.Debit,
-					Other:       b.Credit,
-					Commodity:   b.Commodity,
-					Valuation:   v,
-					Description: t.Description,
-				}
-				if f(kd) {
-					c.Insert(m(kd), amt)
+					c.Insert(m(kc), amt)
 				}
 			}
 		}

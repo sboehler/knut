@@ -229,16 +229,14 @@ func Balance(jctx Context, v *Commodity) DayFn {
 // Balance balances the journal.
 func CloseAccounts(j *Journal, ds []time.Time) DayFn {
 	var (
-		closingDays     []*Day
-		index           int
+		closingDays     = set.New[*Day]()
 		amounts, values = make(Amounts), make(Amounts)
 	)
 	for _, d := range ds {
-		closingDays = append(closingDays, j.Day(d.AddDate(0, 0, 1)))
+		closingDays.Add(j.Day(d.AddDate(0, 0, 1)))
 	}
 	return func(d *Day) error {
-		if index < len(closingDays) && d == closingDays[index] {
-			index++
+		if closingDays.Has(d) {
 			for k, amt := range amounts {
 				if !k.Account.IsIE() {
 					continue

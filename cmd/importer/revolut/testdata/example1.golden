@@ -1,88 +1,88 @@
 2020-08-05 "Bought EUR from CHF FX-rate € 1 = CHF 1.0777 General"
-Income:CapitalGain      Assets:Accounts:Revolut       1200 EUR
-Assets:Accounts:Revolut Income:CapitalGain         1293.25 CHF
+Income:Investments:CapitalGain Assets:Accounts:Revolut              1200 EUR
+Assets:Accounts:Revolut        Income:Investments:CapitalGain    1293.25 CHF
 
 2020-08-05 balance Assets:Accounts:Revolut 1200 EUR
 
 2020-08-06 "Desc20 Groceries"
-Assets:Accounts:Revolut Expenses:TBD                   5.6 EUR
+Assets:Accounts:Revolut        Expenses:TBD                          5.6 EUR
 
 2020-08-06 "Desc21 Restaurants"
-Assets:Accounts:Revolut Expenses:TBD                   9.8 EUR
+Assets:Accounts:Revolut        Expenses:TBD                          9.8 EUR
 
 2020-08-06 "Desc22 Travel"
-Assets:Accounts:Revolut Expenses:TBD                    84 EUR
+Assets:Accounts:Revolut        Expenses:TBD                           84 EUR
 
 2020-08-06 balance Assets:Accounts:Revolut 1100.6 EUR
 
 2020-08-07 "Desc17 Restaurants"
-Assets:Accounts:Revolut Expenses:TBD                   180 EUR
+Assets:Accounts:Revolut        Expenses:TBD                          180 EUR
 
 2020-08-07 "Desc18 Restaurants"
-Assets:Accounts:Revolut Expenses:TBD                   7.7 EUR
+Assets:Accounts:Revolut        Expenses:TBD                          7.7 EUR
 
 2020-08-07 "Desc19 Entertainment"
-Assets:Accounts:Revolut Expenses:TBD                    61 EUR
+Assets:Accounts:Revolut        Expenses:TBD                           61 EUR
 
 2020-08-07 balance Assets:Accounts:Revolut 851.9 EUR
 
 2020-08-09 "Desc13 Groceries"
-Assets:Accounts:Revolut Expenses:TBD                     5 EUR
+Assets:Accounts:Revolut        Expenses:TBD                            5 EUR
 
 2020-08-09 "Desc14 Transport"
-Assets:Accounts:Revolut Expenses:TBD                     3 EUR
+Assets:Accounts:Revolut        Expenses:TBD                            3 EUR
 
 2020-08-09 "Desc15 Transport"
-Assets:Accounts:Revolut Expenses:TBD                    20 EUR
+Assets:Accounts:Revolut        Expenses:TBD                           20 EUR
 
 2020-08-09 "Desc16 Restaurants"
-Assets:Accounts:Revolut Expenses:TBD                   145 EUR
+Assets:Accounts:Revolut        Expenses:TBD                          145 EUR
 
 2020-08-09 balance Assets:Accounts:Revolut 678.9 EUR
 
 2020-08-10 "Desc10 Transport"
-Assets:Accounts:Revolut Expenses:TBD                     2 EUR
+Assets:Accounts:Revolut        Expenses:TBD                            2 EUR
 
 2020-08-10 "Desc11 Shopping"
-Assets:Accounts:Revolut Expenses:TBD                    20 EUR
+Assets:Accounts:Revolut        Expenses:TBD                           20 EUR
 
 2020-08-10 "Desc12 Groceries"
-Assets:Accounts:Revolut Expenses:TBD                   3.3 EUR
+Assets:Accounts:Revolut        Expenses:TBD                          3.3 EUR
 
 2020-08-10 "Desc8 Groceries"
-Assets:Accounts:Revolut Expenses:TBD                 26.02 EUR
+Assets:Accounts:Revolut        Expenses:TBD                        26.02 EUR
 
 2020-08-10 "Desc9 Groceries"
-Assets:Accounts:Revolut Expenses:TBD                 98.53 EUR
+Assets:Accounts:Revolut        Expenses:TBD                        98.53 EUR
 
 2020-08-10 balance Assets:Accounts:Revolut 529.05 EUR
 
 2020-08-17 "Desc1 Transport"
-Assets:Accounts:Revolut Expenses:TBD                 81.64 EUR
+Assets:Accounts:Revolut        Expenses:TBD                        81.64 EUR
 
 2020-08-17 "Desc2 Travel"
-Assets:Accounts:Revolut Expenses:TBD                    18 EUR
+Assets:Accounts:Revolut        Expenses:TBD                           18 EUR
 
 2020-08-17 "Desc3 Restaurants"
-Assets:Accounts:Revolut Expenses:TBD                   3.6 EUR
+Assets:Accounts:Revolut        Expenses:TBD                          3.6 EUR
 
 2020-08-17 "Desc4 Travel"
-Assets:Accounts:Revolut Expenses:TBD                 63.37 EUR
+Assets:Accounts:Revolut        Expenses:TBD                        63.37 EUR
 
 2020-08-17 "Desc5 Groceries"
-Assets:Accounts:Revolut Expenses:TBD                 14.67 EUR
+Assets:Accounts:Revolut        Expenses:TBD                        14.67 EUR
 
 2020-08-17 "Desc6 Transport"
-Assets:Accounts:Revolut Expenses:TBD                 62.09 EUR
+Assets:Accounts:Revolut        Expenses:TBD                        62.09 EUR
 
 2020-08-17 "Desc7 Services"
-Assets:Accounts:Revolut Expenses:TBD                   0.7 EUR
+Assets:Accounts:Revolut        Expenses:TBD                          0.7 EUR
 
 2020-08-17 balance Assets:Accounts:Revolut 284.98 EUR
 
 2020-11-26 "Sold EUR to CHF FX-rate € 1 = CHF 1.0809 General"
-Assets:Accounts:Revolut Income:CapitalGain          184.98 EUR
-Income:CapitalGain      Assets:Accounts:Revolut     199.95 CHF
+Assets:Accounts:Revolut        Income:Investments:CapitalGain     184.98 EUR
+Income:Investments:CapitalGain Assets:Accounts:Revolut            199.95 CHF
 
 2020-11-26 balance Assets:Accounts:Revolut 100 EUR
 

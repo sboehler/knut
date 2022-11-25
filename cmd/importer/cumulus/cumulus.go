@@ -182,7 +182,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 			Debit:     p.account,
 			Commodity: chf,
 			Amount:    amount,
-		}.Singleton(),
+		}.Build(),
 	})
 	return true, nil
 }
@@ -270,7 +270,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 			Debit:     p.account,
 			Commodity: chf,
 			Amount:    amount,
-		}.Singleton(),
+		}.Build(),
 	})
 	return true, nil
 }

@@ -99,7 +99,7 @@ func Balance(jctx Context, v *Commodity) DayFn {
 				Commodity: v.Commodity,
 				Amount:    amount,
 				Targets:   []*Commodity{v.Commodity},
-			}.Singleton()
+			}.Build()
 			d.Transactions = append(d.Transactions, TransactionBuilder{
 				Date:        v.Date,
 				Description: fmt.Sprintf("Valuation adjustment for %s in %s", v.Commodity.Name(), v.Account.Name()),
@@ -189,7 +189,7 @@ func Balance(jctx Context, v *Commodity) DayFn {
 					Commodity: pos.Commodity,
 					Value:     gain,
 					Targets:   []*Commodity{pos.Commodity},
-				}.Singleton(),
+				}.Build(),
 			}.Build())
 			values.Add(pos, gain)
 			values.Add(AccountCommodityKey(credit, pos.Commodity), gain.Neg())
@@ -252,7 +252,7 @@ func CloseAccounts(j *Journal, ds []time.Time) DayFn {
 						Commodity: k.Commodity,
 						Amount:    amt,
 						Value:     values[k],
-					}.Singleton(),
+					}.Build(),
 				}.Build())
 			}
 		}

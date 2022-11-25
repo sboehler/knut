@@ -6,7 +6,6 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/common/slice"
 	"github.com/sboehler/knut/lib/journal/scanner"
 	"github.com/shopspring/decimal"
 )
@@ -54,8 +53,7 @@ type Close struct {
 
 // Posting represents a posting.
 type Posting struct {
-	Amount, Value decimal.Decimal
-	//Credit, Debit *Account
+	Amount, Value  decimal.Decimal
 	Account, Other *Account
 	Commodity      *Commodity
 	Targets        []*Commodity
@@ -70,11 +68,11 @@ type PostingBuilder struct {
 	Lot           *Lot
 }
 
-func (pb PostingBuilder) Build() [2]*Posting {
+func (pb PostingBuilder) Build() []*Posting {
 	if pb.Amount.IsNegative() || pb.Amount.IsZero() && pb.Value.IsNegative() {
 		pb.Credit, pb.Debit, pb.Amount, pb.Value = pb.Debit, pb.Credit, pb.Amount.Neg(), pb.Value.Neg()
 	}
-	return [2]*Posting{
+	return []*Posting{
 		{
 			Account:   pb.Credit,
 			Other:     pb.Debit,
@@ -96,8 +94,14 @@ func (pb PostingBuilder) Build() [2]*Posting {
 	}
 }
 
-func (pb PostingBuilder) Singleton() []*Posting {
-	return slice.Concat(pb.Build())
+type PostingBuilders []PostingBuilder
+
+func (pbs PostingBuilders) Build() []*Posting {
+	res := make([]*Posting, 0, 2*len(pbs))
+	for _, pb := range pbs {
+		res = append(res, pb.Build()...)
+	}
+	return res
 }
 
 // Less determines an order on postings.
@@ -174,7 +178,6 @@ type TransactionBuilder struct {
 
 // Build builds a transactions.
 func (tb TransactionBuilder) Build() *Transaction {
-	// compare.Sort(tb.Postings, ComparePostings)
 	return &Transaction{
 		Range:       tb.Range,
 		Date:        tb.Date,
@@ -243,7 +246,7 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 					Debit:     p.Account,
 					Commodity: p.Commodity,
 					Amount:    p.Amount,
-				}.Singleton(),
+				}.Build(),
 			}.Build())
 		}
 		if p.Account.IsIE() {
@@ -264,7 +267,7 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 						Debit:     p.Account,
 						Commodity: p.Commodity,
 						Amount:    a,
-					}.Singleton(),
+					}.Build(),
 				}.Build())
 			}
 		}

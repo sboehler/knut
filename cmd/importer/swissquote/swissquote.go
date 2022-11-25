@@ -28,7 +28,6 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/common/set"
-	"github.com/sboehler/knut/lib/common/slice"
 	"github.com/sboehler/knut/lib/journal"
 )
 
@@ -261,29 +260,29 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
-		Postings: slice.Concat(
-			journal.PostingBuilder{
+		Postings: journal.PostingBuilders{
+			{
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: r.symbol,
 				Amount:    qty,
 				Targets:   []*journal.Commodity{r.symbol, r.currency},
-			}.Build(),
-			journal.PostingBuilder{
+			},
+			{
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: r.currency,
 				Amount:    proceeds,
 				Targets:   []*journal.Commodity{r.symbol, r.currency},
-			}.Build(),
-			journal.PostingBuilder{
+			},
+			{
 				Credit:    p.fee,
 				Debit:     p.account,
 				Commodity: r.currency,
 				Amount:    fee,
 				Targets:   []*journal.Commodity{r.symbol, r.currency},
-			}.Build(),
-		),
+			},
+		}.Build(),
 	}.Build())
 	return true, nil
 }
@@ -309,20 +308,20 @@ func (p *parser) parseForex(r *record) (bool, error) {
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
-		Postings: slice.Concat(
-			journal.PostingBuilder{
+		Postings: journal.PostingBuilders{
+			{
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: p.last.currency,
 				Amount:    p.last.netAmount, Targets: []*journal.Commodity{p.last.currency, r.currency},
-			}.Build(),
-			journal.PostingBuilder{
+			},
+			{
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: r.currency,
 				Amount:    r.netAmount, Targets: []*journal.Commodity{p.last.currency, r.currency},
-			}.Build(),
-		),
+			},
+		}.Build(),
 	}.Build())
 	p.last = nil
 	return true, nil
@@ -337,13 +336,15 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 	if !w.Has(r.trxType) {
 		return false, nil
 	}
-	postings := journal.PostingBuilder{
-		Credit:    p.dividend,
-		Debit:     p.account,
-		Commodity: r.currency,
-		Amount:    r.price,
-		Targets:   []*journal.Commodity{r.symbol},
-	}.Singleton()
+	postings := journal.PostingBuilders{
+		{
+			Credit:    p.dividend,
+			Debit:     p.account,
+			Commodity: r.currency,
+			Amount:    r.price,
+			Targets:   []*journal.Commodity{r.symbol},
+		},
+	}
 	if !r.fee.IsZero() {
 		postings = append(postings, journal.PostingBuilder{
 			Credit:    p.account,
@@ -351,12 +352,12 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 			Commodity: r.currency,
 			Amount:    r.fee,
 			Targets:   []*journal.Commodity{r.symbol},
-		}.Singleton()...)
+		})
 	}
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol.Name(), r.name, r.isin),
-		Postings:    postings,
+		Postings:    postings.Build(),
 	}.Build())
 	return true, nil
 }
@@ -374,7 +375,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 			Commodity: r.currency,
 			Amount:    r.netAmount,
 			Targets:   make([]*journal.Commodity, 0),
-		}.Singleton(),
+		}.Build(),
 	}.Build())
 	return true, nil
 }
@@ -397,7 +398,7 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 			Debit:     p.account,
 			Commodity: r.currency,
 			Amount:    r.netAmount,
-		}.Singleton(),
+		}.Build(),
 	}.Build())
 	return true, nil
 }
@@ -415,7 +416,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 			Commodity: r.currency,
 			Amount:    r.netAmount,
 			Targets:   []*journal.Commodity{r.currency},
-		}.Singleton(),
+		}.Build(),
 	}.Build())
 	return true, nil
 }
@@ -429,7 +430,7 @@ func (p *parser) parseCatchall(r *record) (bool, error) {
 			Debit:     p.account,
 			Commodity: r.currency,
 			Amount:    r.netAmount,
-		}.Singleton(),
+		}.Build(),
 	}.Build())
 	return true, nil
 }

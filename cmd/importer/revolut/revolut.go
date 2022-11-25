@@ -28,7 +28,6 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/common/slice"
 	"github.com/sboehler/knut/lib/journal"
 )
 
@@ -213,48 +212,47 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		t.Postings = slice.Concat(
-			journal.PostingBuilder{
+		t.Postings = journal.PostingBuilders{
+			{
 				Credit:    p.journal.Context.ValuationAccount(),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Amount:    amount,
-			}.Build(),
-			journal.PostingBuilder{
+			},
+			{
 				Credit:    p.journal.Context.ValuationAccount(),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Amount:    otherAmount,
-			}.Build(),
-		)
+			},
+		}.Build()
 	case fxBuyRegex.MatchString(r[bfReference]):
 		otherCommodity, otherAmount, err := p.parseCombiField(r[bfExchangeIn])
 		if err != nil {
 			return err
 		}
-		t.Postings = slice.Concat(
-			journal.PostingBuilder{
+		t.Postings = journal.PostingBuilders{
+			{
 				Credit:    p.journal.Context.ValuationAccount(),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Amount:    amount,
-			}.Build(),
-			journal.PostingBuilder{
+			},
+			{
 				Credit:    p.journal.Context.ValuationAccount(),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Amount:    otherAmount.Neg(),
-			}.Build(),
-		)
+			},
+		}.Build()
 	default:
-		t.Postings = slice.Concat(
-			journal.PostingBuilder{
-				Credit:    p.journal.Context.TBDAccount(),
-				Debit:     p.account,
-				Commodity: p.currency,
-				Amount:    amount,
-			}.Build(),
-		)
+		t.Postings = journal.PostingBuilder{
+
+			Credit:    p.journal.Context.TBDAccount(),
+			Debit:     p.account,
+			Commodity: p.currency,
+			Amount:    amount,
+		}.Build()
 	}
 	p.journal.AddTransaction(t.Build())
 	return nil

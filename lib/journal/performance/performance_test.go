@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/sboehler/knut/lib/common/filter"
-	"github.com/sboehler/knut/lib/common/slice"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
 )
@@ -44,7 +43,7 @@ func TestComputeFlows(t *testing.T) {
 						Debit:     acc2,
 						Amount:    decimal.NewFromInt(1),
 						Commodity: usd,
-					}.Singleton(),
+					}.Build(),
 				}.Build(),
 				want: &journal.Performance{Outflow: pcv{usd: -1.0}},
 			},
@@ -56,7 +55,7 @@ func TestComputeFlows(t *testing.T) {
 						Debit:     portfolio,
 						Amount:    decimal.NewFromInt(1),
 						Commodity: usd,
-					}.Singleton(),
+					}.Build(),
 				}.Build(),
 				want: &journal.Performance{Inflow: pcv{usd: 1.0}},
 			},
@@ -69,7 +68,7 @@ func TestComputeFlows(t *testing.T) {
 						Amount:    decimal.NewFromInt(1),
 						Commodity: usd,
 						Targets:   []*journal.Commodity{aapl, usd},
-					}.Singleton(),
+					}.Build(),
 				}.Build(),
 				want: &journal.Performance{
 					InternalInflow:  pcv{usd: 1.0},
@@ -85,7 +84,7 @@ func TestComputeFlows(t *testing.T) {
 						Amount:    decimal.NewFromInt(1),
 						Commodity: usd,
 						Targets:   []*journal.Commodity{aapl, usd},
-					}.Singleton(),
+					}.Build(),
 				}.Build(),
 				want: &journal.Performance{
 					InternalInflow:  pcv{aapl: 1.0},
@@ -101,7 +100,7 @@ func TestComputeFlows(t *testing.T) {
 						Amount:    decimal.NewFromInt(1),
 						Commodity: usd,
 						Targets:   make([]*journal.Commodity, 0),
-					}.Singleton(),
+					}.Build(),
 				}.Build(),
 				want: &journal.Performance{
 					InternalOutflow: pcv{usd: -1.0},
@@ -112,22 +111,22 @@ func TestComputeFlows(t *testing.T) {
 				desc: "stock purchase",
 				trx: journal.TransactionBuilder{
 
-					Postings: slice.Concat(
-						journal.PostingBuilder{
+					Postings: journal.PostingBuilders{
+						{
 							Credit:    portfolio,
 							Debit:     equity,
 							Amount:    decimal.NewFromInt(1010),
 							Commodity: usd,
 							Targets:   []*journal.Commodity{usd, aapl},
-						}.Build(),
-						journal.PostingBuilder{
+						},
+						{
 							Credit:    equity,
 							Debit:     portfolio,
 							Amount:    decimal.NewFromInt(1000),
 							Commodity: aapl,
 							Targets:   []*journal.Commodity{usd, aapl},
-						}.Build(),
-					),
+						},
+					}.Build(),
 				}.Build(),
 				want: &journal.Performance{
 					InternalInflow:  pcv{aapl: 1010.0},
@@ -137,29 +136,29 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "stock purchase with fee",
 				trx: journal.TransactionBuilder{
-					Postings: slice.Concat(
-						journal.PostingBuilder{
+					Postings: journal.PostingBuilders{
+						{
 							Credit:    portfolio,
 							Debit:     equity,
 							Amount:    decimal.NewFromInt(1010),
 							Commodity: usd,
 							Targets:   []*journal.Commodity{usd, aapl},
-						}.Build(),
-						journal.PostingBuilder{
+						},
+						{
 							Credit:    equity,
 							Debit:     portfolio,
 							Amount:    decimal.NewFromInt(1000),
 							Commodity: aapl,
 							Targets:   []*journal.Commodity{usd, aapl},
-						}.Build(),
-						journal.PostingBuilder{
+						},
+						{
 							Credit:    portfolio,
 							Debit:     equity,
 							Amount:    decimal.NewFromInt(10),
 							Commodity: usd,
 							Targets:   []*journal.Commodity{usd, aapl},
-						}.Build(),
-					),
+						},
+					}.Build(),
 				}.Build(),
 				want: &journal.Performance{
 					InternalInflow:  pcv{aapl: 1020.0},
@@ -169,22 +168,22 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "stock sale",
 				trx: journal.TransactionBuilder{
-					Postings: slice.Concat(
-						journal.PostingBuilder{
+					Postings: journal.PostingBuilders{
+						{
 							Credit:    portfolio,
 							Debit:     equity,
 							Amount:    decimal.NewFromInt(1000),
 							Commodity: aapl,
 							Targets:   []*journal.Commodity{usd, aapl},
-						}.Build(),
-						journal.PostingBuilder{
+						},
+						{
 							Credit:    equity,
 							Debit:     portfolio,
 							Amount:    decimal.NewFromInt(990),
 							Commodity: usd,
 							Targets:   []*journal.Commodity{usd, aapl},
-						}.Build(),
-					),
+						},
+					}.Build(),
 				}.Build(),
 				want: &journal.Performance{
 					InternalInflow:  pcv{usd: 990.0},
@@ -195,22 +194,22 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "forex without fee",
 				trx: journal.TransactionBuilder{
-					Postings: slice.Concat(
-						journal.PostingBuilder{
+					Postings: journal.PostingBuilders{
+						{
 							Credit:    portfolio,
 							Debit:     equity,
 							Amount:    decimal.NewFromInt(1400),
 							Commodity: gbp,
 							Targets:   []*journal.Commodity{usd, gbp},
-						}.Build(),
-						journal.PostingBuilder{
+						},
+						{
 							Credit:    equity,
 							Debit:     portfolio,
 							Amount:    decimal.NewFromInt(1350),
 							Commodity: usd,
 							Targets:   []*journal.Commodity{usd, gbp},
-						}.Build(),
-					),
+						},
+					}.Build(),
 				}.Build(),
 				want: &journal.Performance{
 					InternalOutflow: pcv{gbp: -1375.0},
@@ -220,29 +219,29 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "forex with fee",
 				trx: journal.TransactionBuilder{
-					Postings: slice.Concat(
-						journal.PostingBuilder{
+					Postings: journal.PostingBuilders{
+						{
 							Credit:    portfolio,
 							Debit:     equity,
 							Amount:    decimal.NewFromInt(1400),
 							Commodity: gbp,
 							Targets:   []*journal.Commodity{usd, gbp},
-						}.Build(),
-						journal.PostingBuilder{
+						},
+						{
 							Credit:    equity,
 							Debit:     portfolio,
 							Amount:    decimal.NewFromInt(1350),
 							Commodity: usd,
 							Targets:   []*journal.Commodity{usd, gbp},
-						}.Build(),
-						journal.PostingBuilder{
+						},
+						{
 							Credit:    portfolio,
 							Debit:     expense,
 							Amount:    decimal.NewFromInt(10),
 							Commodity: chf,
 							Targets:   []*journal.Commodity{usd, gbp},
-						}.Build(),
-					),
+						},
+					}.Build(),
 				}.Build(),
 				want: &journal.Performance{
 					InternalOutflow: pcv{gbp: -1370.0, chf: -10},
@@ -252,29 +251,29 @@ func TestComputeFlows(t *testing.T) {
 			{
 				desc: "forex with native fee",
 				trx: journal.TransactionBuilder{
-					Postings: slice.Concat(
-						journal.PostingBuilder{
+					Postings: journal.PostingBuilders{
+						{
 							Credit:    portfolio,
 							Debit:     equity,
 							Amount:    decimal.NewFromInt(1400),
 							Commodity: gbp,
 							Targets:   []*journal.Commodity{usd, gbp},
-						}.Build(),
-						journal.PostingBuilder{
+						},
+						{
 							Credit:    equity,
 							Debit:     portfolio,
 							Amount:    decimal.NewFromInt(1350),
 							Commodity: usd,
 							Targets:   []*journal.Commodity{usd, gbp},
-						}.Build(),
-						journal.PostingBuilder{
+						},
+						{
 							Credit:    portfolio,
 							Debit:     expense,
 							Amount:    decimal.NewFromInt(10),
 							Commodity: usd,
 							Targets:   []*journal.Commodity{usd, gbp},
-						}.Build(),
-					),
+						},
+					}.Build(),
 				}.Build(),
 				want: &journal.Performance{
 					InternalOutflow: pcv{gbp: -1370.0},

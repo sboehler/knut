@@ -158,7 +158,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 			Debit:     p.builder.Context.TBDAccount(),
 			Commodity: chf,
 			Amount:    amt,
-		}.Singleton(),
+		}.Build(),
 	}.Build())
 	return true, nil
 }

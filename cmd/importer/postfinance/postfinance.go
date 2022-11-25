@@ -182,7 +182,7 @@ func (p *Parser) readBookingLine(l []string) error {
 			Debit:     p.account,
 			Commodity: p.currency,
 			Amount:    amount,
-		}.Singleton(),
+		}.Build(),
 	}.Build())
 	return nil
 }

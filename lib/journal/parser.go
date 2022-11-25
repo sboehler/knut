@@ -272,7 +272,7 @@ func (p *Parser) parseAddOn() (*Accrual, error) {
 }
 
 func (p *Parser) parsePostings() ([]*Posting, error) {
-	var postings []*Posting
+	var postings PostingBuilders
 	for !unicode.IsSpace(p.current()) && p.current() != scanner.EOF {
 		var (
 			credit, debit *Account
@@ -338,12 +338,12 @@ func (p *Parser) parsePostings() ([]*Posting, error) {
 			Commodity: commodity,
 			Targets:   targets,
 			Lot:       lot,
-		}.Singleton()...)
+		})
 		if err = p.consumeRestOfWhitespaceLine(); err != nil {
 			return nil, err
 		}
 	}
-	return postings, nil
+	return postings.Build(), nil
 }
 
 func (p *Parser) parseOpen(d time.Time) (*Open, error) {

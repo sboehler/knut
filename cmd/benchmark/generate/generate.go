@@ -203,7 +203,7 @@ func (c *config) generateTransactions(cs []*journal.Commodity, as []*journal.Acc
 				Debit:     as[rand.Intn(len(as))],
 				Commodity: cs[rand.Intn(len(cs))],
 				Amount:    decimal.NewFromFloat(rand.Float64() * 1000).Round(4),
-			}.Singleton(),
+			}.Build(),
 		}.Build())
 	}
 	return trx

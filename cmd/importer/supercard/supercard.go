@@ -199,7 +199,7 @@ func (p *parser) parseBooking(r []string) error {
 			Debit:     p.account,
 			Commodity: commodity,
 			Amount:    amount,
-		}.Singleton(),
+		}.Build(),
 	}.Build())
 	return nil
 }

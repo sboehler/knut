@@ -76,8 +76,8 @@ func (p Printer) printTransaction(w io.Writer, t *Transaction) (n int, err error
 	if err != nil {
 		return n, err
 	}
-	for _, po := range t.Postings {
-		if po.Amount.IsNegative() {
+	for i, po := range t.Postings {
+		if i%2 == 0 {
 			continue
 		}
 		d, err := p.printPosting(w, po)

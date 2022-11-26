@@ -14,8 +14,8 @@ import (
 	pb "github.com/sboehler/knut/server/proto"
 )
 
-// Test with:
-// grpcurl --plaintext -d '{"name":"foobar"}'  localhost:7777 knut.service.KnutService/Hello
+// Start REPL with:
+// evans --proto proto/service.proto --host localhost --port 7777 --web
 
 // NewServer runs the GRPC server.
 func NewServer(address string) error {

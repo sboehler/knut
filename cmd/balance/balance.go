@@ -39,12 +39,11 @@ func CreateCmd() *cobra.Command {
 
 	// Cmd is the balance command.
 	c := &cobra.Command{
-		Use:    "balance",
-		Short:  "create a balance sheet",
-		Long:   `Compute a balance for a date or set of dates.`,
-		Args:   cobra.ExactValidArgs(1),
-		Run:    r.run,
-		Hidden: true,
+		Use:   "balance",
+		Short: "create a balance sheet",
+		Long:  `Compute a balance for a date or set of dates.`,
+		Args:  cobra.ExactValidArgs(1),
+		Run:   r.run,
 	}
 	r.setupFlags(c)
 	return c

@@ -155,7 +155,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	processors := []journal.DayFn{
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
-		journal.CloseAccounts(j, dates),
+		journal.CloseAccounts(j, r.close, dates),
 		journal.Query(f, m, valuation, rep),
 	}
 	if _, err := j.Process(processors...); err != nil {

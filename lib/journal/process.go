@@ -227,7 +227,10 @@ func Balance(jctx Context, v *Commodity) DayFn {
 }
 
 // Balance balances the journal.
-func CloseAccounts(j *Journal, ds []time.Time) DayFn {
+func CloseAccounts(j *Journal, enable bool, ds []time.Time) DayFn {
+	if !enable {
+		return func(d *Day) error { return nil }
+	}
 	var (
 		closingDays     = set.New[*Day]()
 		amounts, values = make(Amounts), make(Amounts)

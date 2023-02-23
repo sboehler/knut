@@ -15,7 +15,7 @@ require (
 	go.uber.org/multierr v1.8.0
 	golang.org/x/exp v0.0.0-20220909182711-5c715a9e8561
 	golang.org/x/sync v0.0.0-20220907140024-f12130a52804
-	golang.org/x/text v0.3.7
+	golang.org/x/text v0.3.8
 	google.golang.org/grpc v1.49.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/yaml.v2 v2.4.0

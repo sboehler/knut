@@ -15,7 +15,7 @@ require (
 	go.uber.org/multierr v1.8.0
 	golang.org/x/exp v0.0.0-20220909182711-5c715a9e8561
 	golang.org/x/sync v0.0.0-20220907140024-f12130a52804
-	golang.org/x/text v0.3.7
+	golang.org/x/text v0.7.0
 	google.golang.org/grpc v1.49.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/yaml.v2 v2.4.0
@@ -36,8 +36,8 @@ require (
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
-	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
-	golang.org/x/sys v0.0.0-20220909162455-aba9fc2a8ff2 // indirect
+	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20210126160654-44e461bb6506 // indirect
 	nhooyr.io/websocket v1.8.6 // indirect
 )

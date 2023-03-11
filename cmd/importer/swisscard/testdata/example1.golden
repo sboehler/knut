@@ -1,18 +1,18 @@
-2020-01-14 "1234 RÜCKVERGÜTUNG RECHNUNGSGEBÜHR 45"
-Expenses:TBD           Liabilities:CreditCard        0.5 CHF
+1970-01-01 "HANDLING FEE FOR PAPER STATEMENT"
+Liabilities:CreditCard Expenses:TBD                 1.95 CHF
 
-2020-01-18 "1234 desc4 ZURICH CHE 8003 44"
-Liabilities:CreditCard Expenses:TBD                   14 CHF
+1970-02-02 "ANNUAL FEE"
+Liabilities:CreditCard Expenses:TBD                  120 CHF
 
-2020-02-06 "1234 IHRE ZAHLUNG . BESTEN DANK 43"
-Expenses:TBD           Liabilities:CreditCard     2000.5 CHF
+1970-03-03 "THRIFT SHOP / MISCELLANEOUS AND SPECIALTY RETAIL STORES"
+Liabilities:CreditCard Expenses:TBD                 16.9 CHF
 
-2020-02-12 "1234 desc1 desc2 CHE 1111 42"
-Liabilities:CreditCard Expenses:TBD                34.65 CHF
+1970-04-04 "GITHUB / COMPUTER SOFTWARE STORES"
+Expenses:TBD           Liabilities:CreditCard          1 CHF
 
-2020-02-12 "1234 desc3 town CHE 1111 42"
-Liabilities:CreditCard Expenses:TBD                 64.6 CHF
+1970-05-05 "SBB / PASSENGER RAILWAYS"
+Liabilities:CreditCard Expenses:TBD                   18 CHF
 
-2020-02-14 "1234 desc0"
-Liabilities:CreditCard Expenses:TBD                  0.5 CHF
+1970-06-06 "GITHUB / COMPUTER SOFTWARE STORES"
+Liabilities:CreditCard Expenses:TBD                 1.05 CHF
 

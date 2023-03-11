@@ -19,7 +19,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"regexp"
 	"strings"
 	"time"
 
@@ -52,11 +51,15 @@ func init() {
 }
 
 type runner struct {
-	account flags.AccountFlag
+	account       flags.AccountFlag
+	addCardTag    bool
+	cardTagPrefix string
 }
 
 func (r *runner) setupFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(&r.account, "account", "a", "account name")
+	cmd.Flags().BoolVar(&r.addCardTag, "add-card-tag", false, "add card number to every transaction as a tag")
+	cmd.Flags().StringVar(&r.cardTagPrefix, "card-tag-prefix", "card:", "prefix of the card number tag")
 	cmd.MarkFlagRequired("account")
 
 }
@@ -71,8 +74,10 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	p := parser{
-		reader:  csv.NewReader(f),
-		builder: journal.New(ctx),
+		reader:        csv.NewReader(f),
+		builder:       journal.New(ctx),
+		addCardTag:    r.addCardTag,
+		cardTagPrefix: r.cardTagPrefix,
 	}
 	if p.account, err = r.account.Value(ctx); err != nil {
 		return err
@@ -87,78 +92,102 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 }
 
 type parser struct {
-	reader  *csv.Reader
-	account *journal.Account
-	builder *journal.Journal
+	reader        *csv.Reader
+	account       *journal.Account
+	builder       *journal.Journal
+	addCardTag    bool
+	cardTagPrefix string
 }
 
 func (p *parser) parse() error {
 	p.reader.TrimLeadingSpace = true
+	p.reader.FieldsPerRecord = len(fieldHeaders)
+	firstLine := true // First line contains field names so it requires special treatment.
 	for {
-		err := p.readLine()
+		err := p.readLine(firstLine)
 		if err == io.EOF {
 			return nil
 		}
 		if err != nil {
 			return err
 		}
+		firstLine = false
 	}
 }
 
-func (p *parser) readLine() error {
+var fieldHeaders = []string{
+	"Transaction date",
+	"Description",
+	"Card number",
+	"Currency",
+	"Amount",
+	"Debit/Credit",
+	"Status",
+	"Category",
+}
+
+func (p *parser) readLine(firstLine bool) error {
 	r, err := p.reader.Read()
 	if err != nil {
 		return err
 	}
-	if ok, err := p.parseBooking(r); ok || err != nil {
-		return err
+	if !firstLine {
+		return p.parseBooking(r)
+	}
+	for i, expected := range fieldHeaders {
+		if r[i] != expected {
+			return fmt.Errorf("unexpected CSV header (column %d): wanted %q, got %q", i+1, expected, r[i])
+		}
 	}
 	return nil
 }
 
-var dateRegex = regexp.MustCompile(`\d\d.\d\d.\d\d\d\d`)
+func (p *parser) parseBooking(r []string) error {
+	date, err := time.Parse("02.01.2006", r[0])
+	if err != nil {
+		return err
+	}
 
-var replacer = strings.NewReplacer("CHF", "", "'", "")
+	desc := strings.TrimSpace(r[1])
 
-func (p *parser) parseBooking(r []string) (bool, error) {
-	if !dateRegex.MatchString(r[0]) || !dateRegex.MatchString(r[1]) {
-		return false, nil
+	tags := []journal.Tag{}
+	cardNo := strings.ReplaceAll(r[2], " ", "")
+	if p.addCardTag && cardNo != "" {
+		tags = append(tags, journal.Tag(p.cardTagPrefix+cardNo))
 	}
-	if len(r) != 11 {
-		return false, fmt.Errorf("expected 11 items, got %v", r)
+
+	commodity, err := p.builder.Context.GetCommodity(r[3])
+	if err != nil {
+		return err
 	}
-	var words []string
-	for _, i := range []int{2, 4, 5, 6, 7, 8} {
-		s := strings.TrimSpace(r[i])
-		if len(s) > 0 {
-			words = append(words, s)
-		}
+
+	amount, err := decimal.NewFromString(r[4])
+	if err != nil {
+		return err
 	}
-	var (
-		err  error
-		desc = strings.Join(words, " ")
-		chf  *journal.Commodity
-		amt  decimal.Decimal
-		d    time.Time
-	)
-	if d, err = time.Parse("02.01.2006", r[0]); err != nil {
-		return false, err
+
+	if (r[5] == "Debit" && !amount.IsPositive()) || (r[5] == "Credit" && !amount.IsNegative()) {
+		return fmt.Errorf("%s transaction should be %s, not %s", r[5], amount.Neg(), amount)
 	}
-	if amt, err = decimal.NewFromString(replacer.Replace(r[3])); err != nil {
-		return false, err
+
+	// r[6] ("Status") field is ignored
+
+	category := strings.TrimSpace(r[7])
+	if category != "" {
+		desc += " / " + category
 	}
-	if chf, err = p.builder.Context.GetCommodity("CHF"); err != nil {
-		return false, err
-	}
+
 	p.builder.AddTransaction(journal.TransactionBuilder{
-		Date:        d,
+		Date:        date,
 		Description: desc,
 		Postings: journal.PostingBuilder{
 			Credit:    p.account,
 			Debit:     p.builder.Context.TBDAccount(),
-			Commodity: chf,
-			Amount:    amt,
+			Amount:    amount,
+			Commodity: commodity,
 		}.Build(),
+		Tags: tags,
 	}.Build())
-	return true, nil
+
+	return nil
 }

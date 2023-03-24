@@ -1,0 +1,9 @@
+Transaktionsdatum,Beschreibung,Kartennummer,Währung,Betrag,Debit/Kredit,Status,Kategorie
+"21.03.2023","a","1234","CHF","13.90","Belastung","Ausstehend","FAST FOOD RESTAURANTS"
+"20.03.2023","b","1234","EUR","0.10","Belastung","Ausstehend","TRAVEL AGENCIES"
+"20.03.2023","c","1234","CHF","0.70","Belastung","Ausstehend","DEPARTMENT STORES"
+"20.03.2023","d","1234","CHF","5.50","Belastung","Ausstehend","CANDY, NUT, CONFECTIONERY STORES"
+"19.03.2023","e","1234","CHF","51.20","Belastung","Gebucht","BAKERIES"
+"19.03.2023","f","1234","CHF","9.80","Belastung","Gebucht","PASSENGER RAILWAYS"
+"19.03.2023","g","1234","CHF","177.40","Belastung","Gebucht","EATING PLACES, RESTAURANTS"
+"18.03.2023","h","1234","CHF","27.50","Belastung","Gebucht","CARD, GIFT AND NOVELTY STORES"

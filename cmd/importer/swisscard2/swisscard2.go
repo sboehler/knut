@@ -144,7 +144,7 @@ func (p *parser) parseBooking(r []string) error {
 	}
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        d,
-		Description: fmt.Sprintf("%s %s", r[beschreibung], r[kartennummer]),
+		Description: fmt.Sprintf("%s / %s / %s / %s", r[beschreibung], r[kartennummer], r[kategorie], r[debitKredit]),
 		Postings: journal.PostingBuilder{
 			Credit:    p.account,
 			Debit:     p.builder.Context.TBDAccount(),

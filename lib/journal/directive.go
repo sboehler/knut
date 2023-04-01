@@ -231,9 +231,7 @@ type Accrual struct {
 
 // Expand expands an accrual transaction.
 func (a Accrual) Expand(t *Transaction) []*Transaction {
-	var (
-		result []*Transaction
-	)
+	var result []*Transaction
 	for _, p := range t.Postings {
 		if p.Account.IsAL() {
 			result = append(result, TransactionBuilder{

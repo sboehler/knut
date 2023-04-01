@@ -131,8 +131,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	period := r.period.Value().Clip(j.Period())
-	dates := period.Dates(r.interval.Value(), r.last)
-	rep := report.NewReport(jctx, dates)
 	f := filter.And(
 		journal.FilterDates(period.Contains),
 		filter.Or(
@@ -141,6 +139,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		),
 		journal.FilterCommodity(r.commodities.Regex()),
 	)
+	dates := period.Dates(r.interval.Value(), r.last)
 	m := journal.KeyMapper{
 		Date: date.Align(dates),
 		Account: mapper.Combine(
@@ -151,6 +150,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		Commodity: mapper.Identity[*journal.Commodity],
 		Valuation: journal.MapCommodity(valuation != nil),
 	}.Build()
+	rep := report.NewReport(jctx, dates)
 	processors := []journal.DayFn{
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),

@@ -13,11 +13,7 @@ jobs:
     - uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.go-version }}
-    - uses: actions/setup-node@v3
-      with:
-        node-version: 18
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - run: cd web && npm install && npm run build
     - run: go test ./...

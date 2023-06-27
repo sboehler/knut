@@ -29,7 +29,9 @@ func Run(t *testing.T, cmd *cobra.Command, args []string) []byte {
 	cmd.SetArgs(args)
 	var b bytes.Buffer
 	cmd.SetOut(&b)
-	cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
 	out, err := ioutil.ReadAll(&b)
 	if err != nil {
 		t.Fatal(err)

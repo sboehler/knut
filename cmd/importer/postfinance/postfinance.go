@@ -19,15 +19,17 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/dimchansky/utfbom"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/slices"
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal"
 )
 
@@ -42,7 +44,7 @@ func CreateCmd() *cobra.Command {
 
 		Args: cobra.ExactValidArgs(1),
 
-		RunE: r.run,
+		Run: r.run,
 	}
 	r.setupFlags(cmd)
 	return cmd
@@ -57,7 +59,14 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("account")
 }
 
-func (r *runner) run(cmd *cobra.Command, args []string) error {
+func (r *runner) run(cmd *cobra.Command, args []string) {
+	if err := r.runE(cmd, args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func (r *runner) runE(cmd *cobra.Command, args []string) error {
 	var (
 		reader *bufio.Reader
 		ctx    = journal.NewContext()
@@ -67,7 +76,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	p := Parser{
-		reader:  csv.NewReader(reader),
+		reader:  csv.NewReader(utfbom.SkipOnly(reader)),
 		journal: journal.New(ctx),
 	}
 	if p.account, err = r.accountFlag.Value(ctx); err != nil {
@@ -96,12 +105,39 @@ type Parser struct {
 }
 
 func (p *Parser) parse() error {
-	p.reader.FieldsPerRecord = -1
 	p.reader.LazyQuotes = true
 	p.reader.TrimLeadingSpace = true
 	p.reader.Comma = ';'
+	p.reader.FieldsPerRecord = -1
+
+	if _, err := p.readHeader("Buchungsart:"); err != nil {
+		return err
+	}
+	if _, err := p.readHeader("Konto:"); err != nil {
+		return err
+	}
+	if s, err := p.readHeader("Währung:"); err != nil {
+		return err
+	} else {
+		sym := strings.Trim(s, "=\"")
+		if p.currency, err = p.journal.Context.GetCommodity(sym); err != nil {
+			return err
+		}
+	}
+	if err := p.readHeaders(); err != nil {
+		return err
+	}
 	for {
-		err := p.readLine()
+		ok, err := p.readBookingLine()
+		if err != nil {
+			return err
+		}
+		if !ok {
+			break
+		}
+	}
+	for {
+		err := p.readDisclaimer()
 		if err == io.EOF {
 			return nil
 		}
@@ -111,41 +147,20 @@ func (p *Parser) parse() error {
 	}
 }
 
-func (p *Parser) readLine() error {
-	var (
-		line []string
-		err  error
-	)
-	if line, err = p.reader.Read(); err != nil {
-		return err
+func (p *Parser) readHeader(header ...string) (string, error) {
+	rec, err := p.reader.Read()
+	if err != nil {
+		return "", err
 	}
-	switch len(line) {
-	case 2:
-		return p.readHeaderLine(line)
-	case 6:
-		return p.readBookingLine(line)
-	default:
-		return nil
+	if !slices.Contains(header, rec[0]) {
+		return "", fmt.Errorf("got %q, want one of %#v", rec[0], header)
 	}
+	return rec[1], nil
 }
 
-type headerField int
-
-const (
-	hfHeader headerField = iota
-	hfData
-)
-
-func (p *Parser) readHeaderLine(l []string) error {
-	currencyHeaders := set.Of("Währung:", "Currency:")
-	var err error
-	if currencyHeaders.Has(l[hfHeader]) {
-		sym := strings.Trim(l[hfData], "=\"")
-		if p.currency, err = p.journal.Context.GetCommodity(sym); err != nil {
-			return err
-		}
-	}
-	return nil
+func (p *Parser) readHeaders() error {
+	_, err := p.reader.Read()
+	return err
 }
 
 type bookingField int
@@ -159,24 +174,25 @@ const (
 	bfSaldoInCHF
 )
 
-func (p *Parser) readBookingLine(l []string) error {
-	if isHeader(l) {
-		return nil
+func (p *Parser) readBookingLine() (bool, error) {
+	rec, err := p.reader.Read()
+	if err != nil {
+		return false, err
 	}
-	var (
-		date   time.Time
-		amount decimal.Decimal
-		err    error
-	)
-	if date, err = time.Parse("02.01.2006", l[bfBuchungsdatum]); err != nil {
-		return err
+	if len(rec) < 5 || len(rec) > 6 {
+		return false, nil
 	}
-	if amount, err = parseAmount(l); err != nil {
-		return err
+	date, err := time.Parse("02.01.2006", rec[bfBuchungsdatum])
+	if err != nil {
+		return false, err
+	}
+	amount, err := parseAmount(rec[bfGutschriftInCHF], rec[bfLastschriftInCHF])
+	if err != nil {
+		return false, err
 	}
 	p.journal.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
-		Description: strings.TrimSpace(l[bfAvisierungstext]),
+		Description: strings.TrimSpace(rec[bfAvisierungstext]),
 		Postings: journal.PostingBuilder{
 			Credit:    p.journal.Context.TBDAccount(),
 			Debit:     p.account,
@@ -184,25 +200,27 @@ func (p *Parser) readBookingLine(l []string) error {
 			Amount:    amount,
 		}.Build(),
 	}.Build())
-	return nil
+	return true, nil
 }
 
-func parseAmount(l []string) (decimal.Decimal, error) {
-	var (
-		amount decimal.Decimal
-		field  bookingField
-	)
-	switch {
-	case len(l[bfGutschriftInCHF]) > 0 && len(l[bfLastschriftInCHF]) == 0:
-		field = bfGutschriftInCHF
-	case len(l[bfGutschriftInCHF]) == 0 && len(l[bfLastschriftInCHF]) > 0:
-		field = bfLastschriftInCHF
-	default:
-		return amount, fmt.Errorf("invalid amount fields %q %q", l[bfGutschriftInCHF], l[bfLastschriftInCHF])
+func (p *Parser) readDisclaimer() error {
+	rec, err := p.reader.Read()
+	if err != nil {
+		return err
 	}
-	return decimal.NewFromString(l[field])
+	if len(rec) != 1 {
+		return fmt.Errorf("expected one field, got %#v", rec)
+	}
+	return err
 }
 
-func isHeader(s []string) bool {
-	return s[bfBuchungsdatum] == "Buchungsdatum"
+func parseAmount(gutschrift, lastschrift string) (decimal.Decimal, error) {
+	switch {
+	case len(gutschrift) > 0 && len(lastschrift) == 0:
+		return decimal.NewFromString(gutschrift)
+	case len(gutschrift) == 0 && len(lastschrift) > 0:
+		return decimal.NewFromString(lastschrift)
+	default:
+		return decimal.Zero, fmt.Errorf("invalid amount fields %q %q", gutschrift, lastschrift)
+	}
 }

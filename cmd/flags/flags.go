@@ -110,6 +110,7 @@ type IntervalFlags struct {
 
 // Setup configures the flags.
 func (pf *IntervalFlags) Setup(cmd *cobra.Command, def date.Interval) {
+	cmd.Flags().BoolVar(&pf.flags[date.Once], "once", false, "once")
 	cmd.Flags().BoolVar(&pf.flags[date.Daily], "days", false, "days")
 	cmd.Flags().BoolVar(&pf.flags[date.Weekly], "weeks", false, "weeks")
 	cmd.Flags().BoolVar(&pf.flags[date.Monthly], "months", false, "months")

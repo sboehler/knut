@@ -15,8 +15,6 @@
 package postfinance
 
 import (
-	"fmt"
-	"path"
 	"testing"
 
 	"github.com/sebdah/goldie/v2"
@@ -25,20 +23,12 @@ import (
 )
 
 func TestGolden(t *testing.T) {
-	tests := []string{
-		"example1",
+	args := []string{
+		"--account",
+		"Assets:Postfinance",
+		"testdata/example1.input",
 	}
-	for _, test := range tests {
-		test := test
-		t.Run(test, func(t *testing.T) {
-			t.Parallel()
-			args := []string{
-				"--account",
-				"Assets:Postfinance",
-				path.Join("testdata", fmt.Sprintf("%s.input", test)),
-			}
-			got := cmdtest.Run(t, CreateCmd(), args)
-			goldie.New(t).Assert(t, test, got)
-		})
-	}
+	got := cmdtest.Run(t, CreateCmd(), args)
+	goldie.New(t).Assert(t, "example1", got)
+
 }

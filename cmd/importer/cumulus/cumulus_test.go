@@ -15,8 +15,6 @@
 package cumulus
 
 import (
-	"fmt"
-	"path"
 	"testing"
 
 	"github.com/sboehler/knut/cmd/cmdtest"
@@ -25,23 +23,13 @@ import (
 )
 
 func TestGolden(t *testing.T) {
-	tests := []string{
-		"example1",
+	args := []string{
+		"--account",
+		"Liabilities:Cumulus",
+		"testdata/example1.input",
 	}
-	for _, test := range tests {
-		test := test
-		t.Run(test, func(t *testing.T) {
-			t.Parallel()
-			var (
-				g    = goldie.New(t)
-				args = []string{
-					"--account",
-					"Liabilities:Cumulus",
-					path.Join("testdata", fmt.Sprintf("%s.input", test)),
-				}
-				got = cmdtest.Run(t, CreateCmd(), args)
-			)
-			g.Assert(t, test, got)
-		})
-	}
+
+	got := cmdtest.Run(t, CreateCmd(), args)
+
+	goldie.New(t).Assert(t, "example1", got)
 }

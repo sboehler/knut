@@ -15,8 +15,6 @@
 package revolut
 
 import (
-	"fmt"
-	"path"
 	"testing"
 
 	"github.com/sebdah/goldie/v2"
@@ -25,25 +23,14 @@ import (
 )
 
 func TestGolden(t *testing.T) {
-	tests := []string{
-		"example1",
+	args := []string{
+		"--account",
+		"Assets:Accounts:Revolut",
+		"testdata/example1.input",
 	}
-	for _, test := range tests {
-		test := test
-		t.Run(test, func(t *testing.T) {
-			t.Parallel()
-			var (
-				g    = goldie.New(t)
-				args = []string{
-					"--account",
-					"Assets:Accounts:Revolut",
-					path.Join("testdata", fmt.Sprintf("%s.input", test)),
-				}
-			)
 
-			got := cmdtest.Run(t, CreateCmd(), args)
+	got := cmdtest.Run(t, CreateCmd(), args)
 
-			g.Assert(t, test, got)
-		})
-	}
+	goldie.New(t).Assert(t, "example1", got)
+
 }

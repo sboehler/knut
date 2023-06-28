@@ -29,6 +29,7 @@ import (
 	_ "github.com/sboehler/knut/cmd/importer/revolut2"
 	_ "github.com/sboehler/knut/cmd/importer/supercard"
 	_ "github.com/sboehler/knut/cmd/importer/swisscard"
+	_ "github.com/sboehler/knut/cmd/importer/swisscard2"
 	_ "github.com/sboehler/knut/cmd/importer/swissquote"
 	_ "github.com/sboehler/knut/cmd/importer/viac"
 )
@@ -110,8 +111,6 @@ func generate(c *config) error {
 }
 
 func run(args []string) string {
-	c := cmd.CreateCmd("development")
-	c.SetArgs(args)
 	var b strings.Builder
 	b.WriteString("$ knut")
 	for _, a := range args {
@@ -119,8 +118,12 @@ func run(args []string) string {
 		b.WriteString(a)
 	}
 	b.WriteRune('\n')
+
+	c := cmd.CreateCmd("development")
+	c.SetArgs(args)
 	c.SetOut(&b)
-	//c.SetErr(&b)
-	c.Execute()
+	if err := c.Execute(); err != nil {
+		panic(err)
+	}
 	return b.String()
 }

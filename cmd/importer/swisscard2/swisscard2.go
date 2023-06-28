@@ -34,7 +34,7 @@ func CreateCmd() *cobra.Command {
 	var r runner
 	cmd := &cobra.Command{
 		Use:   "ch.swisscard2",
-		Short: "Import Swisscard credit card statements",
+		Short: "Import Swisscard credit card statements (from mid 2023)",
 		Long:  `Download the CSV file from their account management tool.`,
 
 		Args: cobra.ExactValidArgs(1),
@@ -60,20 +60,19 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
-	var (
-		ctx = journal.NewContext()
-		f   *bufio.Reader
-		err error
-	)
-	if f, err = flags.OpenFile(args[0]); err != nil {
+	ctx := journal.NewContext()
+	f, err := flags.OpenFile(args[0])
+	if err != nil {
+		return err
+	}
+	account, err := r.account.Value(ctx)
+	if err != nil {
 		return err
 	}
 	p := parser{
 		reader:  csv.NewReader(f),
 		builder: journal.New(ctx),
-	}
-	if p.account, err = r.account.Value(ctx); err != nil {
-		return err
+		account: account,
 	}
 	if err = p.parse(); err != nil {
 		return err
@@ -92,11 +91,13 @@ type parser struct {
 
 func (p *parser) parse() error {
 	p.reader.TrimLeadingSpace = true
+	p.reader.FieldsPerRecord = 8
+
 	if err := p.readHeader(); err != nil {
 		return err
 	}
 	for {
-		err := p.readLine()
+		err := p.readBooking()
 		if err == io.EOF {
 			return nil
 		}
@@ -124,15 +125,11 @@ func (p *parser) readHeader() error {
 	return err
 }
 
-func (p *parser) readLine() error {
+func (p *parser) readBooking() error {
 	r, err := p.reader.Read()
 	if err != nil {
 		return err
 	}
-	return p.parseBooking(r)
-}
-
-func (p *parser) parseBooking(r []string) error {
 	d, err := time.Parse("02.01.2006", r[transaktionsdatum])
 	if err != nil {
 		return fmt.Errorf("invalid date in record %v: %w", r, err)

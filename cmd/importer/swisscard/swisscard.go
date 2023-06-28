@@ -36,7 +36,7 @@ func CreateCmd() *cobra.Command {
 	var r runner
 	cmd := &cobra.Command{
 		Use:   "ch.swisscard",
-		Short: "Import Swisscard credit card statements",
+		Short: "Import Swisscard credit card statements (before mid 2023)",
 		Long:  `Download the CSV file from their account management tool.`,
 
 		Args: cobra.ExactValidArgs(1),

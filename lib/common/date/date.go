@@ -176,8 +176,6 @@ func NewPartition(period Period, interval Interval, last int) Partition {
 			counter++
 		}
 	}
-	// append the initial period
-	periods = append(periods, Period{End: period.Start.AddDate(0, 0, -1)})
 	// reverse the slice
 	for i, j := 0, len(periods)-1; i < j; i, j = i+1, j-1 {
 		periods[i], periods[j] = periods[j], periods[i]
@@ -189,7 +187,7 @@ func NewPartition(period Period, interval Interval, last int) Partition {
 	}
 }
 func (part Partition) Size() int {
-	return len(part.periods) - 1
+	return len(part.periods)
 }
 
 func (part Partition) Align() mapper.Mapper[time.Time] {
@@ -207,7 +205,7 @@ func (part Partition) Align() mapper.Mapper[time.Time] {
 
 func (part Partition) StartDates() []time.Time {
 	var res []time.Time
-	for _, p := range part.periods[1:] {
+	for _, p := range part.periods {
 		res = append(res, p.Start)
 	}
 	return res
@@ -215,7 +213,7 @@ func (part Partition) StartDates() []time.Time {
 
 func (part Partition) EndDates() []time.Time {
 	var res []time.Time
-	for _, p := range part.periods[1:] {
+	for _, p := range part.periods {
 		res = append(res, p.End)
 	}
 	return res

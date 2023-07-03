@@ -248,9 +248,9 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 			}.Build())
 		}
 		if p.Account.IsIE() {
-			dates := a.Period.Dates(a.Interval, 0)
-			amount, rem := p.Amount.QuoRem(decimal.NewFromInt(int64(len(dates))), 1)
-			for i, dt := range dates {
+			partition := date.NewPartition(a.Period, a.Interval, 0)
+			amount, rem := p.Amount.QuoRem(decimal.NewFromInt(int64(partition.Size())), 1)
+			for i, dt := range partition.EndDates() {
 				a := amount
 				if i == 0 {
 					a = a.Add(rem)
@@ -259,7 +259,7 @@ func (a Accrual) Expand(t *Transaction) []*Transaction {
 					Range:       t.Position(),
 					Date:        dt,
 					Tags:        t.Tags,
-					Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description, i+1, len(dates)),
+					Description: fmt.Sprintf("%s (accrual %d/%d)", t.Description, i+1, partition.Size()),
 					Postings: PostingBuilder{
 						Credit:    t.Accrual.Account,
 						Debit:     p.Account,

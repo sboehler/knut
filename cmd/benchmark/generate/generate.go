@@ -193,10 +193,10 @@ func (c *config) generateOpenings(as []*journal.Account) []*journal.Open {
 
 func (c *config) generateTransactions(cs []*journal.Commodity, as []*journal.Account) []*journal.Transaction {
 	var trx []*journal.Transaction
-	dates := c.period.Value().Dates(date.Daily, 0)
+	partition := date.NewPartition(c.period.Value(), date.Daily, 0)
 	for i := 0; i < c.transactions; i++ {
 		trx = append(trx, journal.TransactionBuilder{
-			Date:        dates[rand.Intn(len(dates))],
+			Date:        partition.EndDates()[rand.Intn(partition.Size())],
 			Description: c.generateIdentifier(200),
 			Postings: journal.PostingBuilder{
 				Credit:    as[rand.Intn(len(as))],
@@ -215,7 +215,7 @@ func (c *config) generatePrices(cs []*journal.Commodity) []*journal.Price {
 	var prices []*journal.Price
 	for _, commodity := range cs[1:] {
 		price := decimal.NewFromFloat(1.0 + 200*rand.Float64())
-		for _, d := range c.period.Value().Dates(date.Daily, 0) {
+		for _, d := range date.NewPartition(c.period.Value(), date.Daily, 0).EndDates() {
 			price = price.Mul(decimal.NewFromFloat(1 + rand.NormFloat64()*stdev)).Truncate(4)
 			prices = append(prices, &journal.Price{
 				Date:      d,

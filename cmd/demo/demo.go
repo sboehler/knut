@@ -90,7 +90,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 		r.seed = time.Now().UnixNano()
 	}
 	period := r.period.Value()
-	monthEndDates := period.Dates(date.Monthly, 0)
+	monthEndDates := date.NewPartition(period, date.Monthly, 0).EndDates()
 	prevDate := period.Start.AddDate(0, 0, -1)
 	jctx := journal.NewContext()
 	j := journal.New(jctx)
@@ -190,7 +190,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 			j.AddTransaction(t)
 		}
 
-		ds := date.Period{Start: som, End: eom}.Dates(date.Daily, 0)
+		ds := date.NewPartition(date.Period{Start: som, End: eom}, date.Daily, 0).EndDates()
 		for _, d := range ds {
 
 			if rnd.Intn(100) < 20 {

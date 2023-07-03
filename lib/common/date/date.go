@@ -125,24 +125,6 @@ func (p Period) Clip(p2 Period) Period {
 	return p
 }
 
-func (period Period) Dates(p Interval, n int) []time.Time {
-	if p == Once {
-		return []time.Time{period.End}
-	}
-	var res []time.Time
-	for t := period.Start; !t.After(period.End); t = EndOf(t, p).AddDate(0, 0, 1) {
-		ed := EndOf(t, p)
-		if ed.After(period.End) {
-			ed = period.End
-		}
-		res = append(res, ed)
-	}
-	if n > 0 && len(res) > n {
-		res = res[len(res)-n:]
-	}
-	return res
-}
-
 func (p Period) Contains(t time.Time) bool {
 	return !t.Before(p.Start) && !t.After(p.End)
 }

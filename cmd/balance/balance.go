@@ -131,17 +131,16 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	period := r.period.Value().Clip(j.Period())
-	f := filter.And(
-		journal.FilterDates(period.Contains),
+	partition := date.NewPartition(period, r.interval.Value(), r.last)
+	queryFilter := filter.And(
 		filter.Or(
 			journal.FilterAccount(r.accounts.Regex()),
 			journal.FilterOther(r.accounts.Regex()),
 		),
 		journal.FilterCommodity(r.commodities.Regex()),
 	)
-	dates := period.Dates(r.interval.Value(), r.last)
-	m := journal.KeyMapper{
-		Date: date.Align(dates),
+	queryMapper := journal.KeyMapper{
+		Date: partition.Align(),
 		Account: mapper.Combine(
 			journal.RemapAccount(jctx, r.remap.Regex()),
 			journal.ShortenAccount(jctx, r.mapping.Value()),
@@ -150,13 +149,13 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		Commodity: mapper.Identity[*journal.Commodity],
 		Valuation: journal.MapCommodity(valuation != nil),
 	}.Build()
-	rep := report.NewReport(jctx, dates)
+	rep := report.NewReport(jctx, partition)
 	processors := []journal.DayFn{
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
-		journal.Filter(period),
-		journal.CloseAccounts(j, r.close, period.Dates(r.interval.Value(), 0)),
-		journal.Query(f, m, valuation, rep),
+		journal.Filter(partition),
+		journal.CloseAccounts(j, r.close, partition),
+		journal.Query(queryFilter, queryMapper, valuation, rep),
 	}
 	if _, err := j.Process(processors...); err != nil {
 		return err

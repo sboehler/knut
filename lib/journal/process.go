@@ -3,7 +3,6 @@ package journal
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
@@ -227,9 +226,9 @@ func Balance(jctx Context, v *Commodity) DayFn {
 	}
 }
 
-func Filter(period date.Period) DayFn {
+func Filter(part date.Partition) DayFn {
 	return func(d *Day) error {
-		if !period.Contains(d.Date) {
+		if !part.Contains(d.Date) {
 			d.Transactions = nil
 		}
 		return nil
@@ -237,16 +236,16 @@ func Filter(period date.Period) DayFn {
 }
 
 // Balance balances the journal.
-func CloseAccounts(j *Journal, enable bool, ds []time.Time) DayFn {
+func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 	if !enable {
 		return func(d *Day) error { return nil }
 	}
 
 	amounts, values := make(Amounts), make(Amounts)
 	closingDays := set.New[*Day]()
-	for _, d := range ds {
+	for _, d := range partition.StartDates() {
 		// j.Day creates the entry for the given date as a side effect.
-		closingDays.Add(j.Day(d.AddDate(0, 0, 1)))
+		closingDays.Add(j.Day(d))
 	}
 	return func(d *Day) error {
 		if closingDays.Has(d) {

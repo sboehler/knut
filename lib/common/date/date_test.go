@@ -193,3 +193,72 @@ func TestPeriodDates(t *testing.T) {
 		})
 	}
 }
+
+func TestPartitionEndDates(t *testing.T) {
+	tests := []struct {
+		period   Period
+		interval Interval
+		result   []time.Time
+	}{
+		{
+			period:   Period{Start: Date(2020, 5, 19), End: Date(2020, 5, 22)},
+			interval: Once,
+			result:   []time.Time{Date(2020, 5, 22)},
+		},
+		{
+			period:   Period{Start: Date(2020, 5, 19), End: Date(2020, 5, 22)},
+			interval: Daily,
+			result: []time.Time{
+				Date(2020, 5, 19),
+				Date(2020, 5, 20),
+				Date(2020, 5, 21),
+				Date(2020, 5, 22),
+			},
+		},
+		{
+			period:   Period{Start: Date(2020, 1, 1), End: Date(2020, 1, 31)},
+			interval: Weekly,
+			result: []time.Time{
+				Date(2020, 1, 5),
+				Date(2020, 1, 12),
+				Date(2020, 1, 19),
+				Date(2020, 1, 26),
+				Date(2020, 1, 31),
+			},
+		},
+		{
+			period:   Period{Start: Date(2019, 12, 31), End: Date(2020, 1, 31)},
+			interval: Monthly,
+			result: []time.Time{
+				Date(2019, 12, 31),
+				Date(2020, 1, 31),
+			},
+		},
+		{
+			period:   Period{Start: Date(2020, 1, 1), End: Date(2020, 1, 31)},
+			interval: Monthly,
+			result:   []time.Time{Date(2020, 1, 31)},
+		},
+		{
+			period:   Period{Start: Date(2017, 4, 1), End: Date(2019, 3, 3)},
+			interval: Yearly,
+			result: []time.Time{
+				Date(2017, 12, 31),
+				Date(2018, 12, 31),
+				Date(2019, 3, 3),
+			},
+		},
+	}
+
+	for i, test := range tests {
+		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
+			part := NewPartition(test.period, test.interval, 0)
+
+			got := part.EndDates()
+
+			if diff := cmp.Diff(test.result, got); diff != "" {
+				t.Fatalf("Periods(%v, %v): unexpected diff (+got/-want):\n%s", test.period, test.interval, diff)
+			}
+		})
+	}
+}

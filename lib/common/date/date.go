@@ -147,15 +147,76 @@ func (p Period) Contains(t time.Time) bool {
 	return !t.Before(p.Start) && !t.After(p.End)
 }
 
-func Align(ds []time.Time) mapper.Mapper[time.Time] {
+type Partition struct {
+	span     Period
+	interval Interval
+	periods  []Period
+}
+
+func (part Partition) Contains(d time.Time) bool {
+	return part.span.Contains(d)
+}
+
+func NewPartition(period Period, interval Interval, last int) Partition {
+	if period.Start.IsZero() {
+		panic("can't create partition with zero time")
+	}
+	var periods []Period
+	if interval == Once {
+		periods = append(periods, period)
+	} else {
+		var start time.Time
+		var counter int
+		for end := period.End; !end.Before(period.Start) && !(counter >= last && last > 0); end = start.AddDate(0, 0, -1) {
+			start = StartOf(end, interval)
+			if start.Before(period.Start) {
+				start = period.Start
+			}
+			periods = append(periods, Period{Start: start, End: end})
+			counter++
+		}
+	}
+	// append the initial period
+	periods = append(periods, Period{End: period.Start.AddDate(0, 0, -1)})
+	// reverse the slice
+	for i, j := 0, len(periods)-1; i < j; i, j = i+1, j-1 {
+		periods[i], periods[j] = periods[j], periods[i]
+	}
+	return Partition{
+		span:     period,
+		interval: interval,
+		periods:  periods,
+	}
+}
+func (part Partition) Size() int {
+	return len(part.periods) - 1
+}
+
+func (part Partition) Align() mapper.Mapper[time.Time] {
 	return func(d time.Time) time.Time {
-		index := sort.Search(len(ds), func(i int) bool {
+		index := sort.Search(len(part.periods), func(i int) bool {
 			// find first i where ds[i] >= t
-			return !ds[i].Before(d)
+			return !part.periods[i].End.Before(d)
 		})
-		if index < len(ds) {
-			return ds[index]
+		if index < len(part.periods) {
+			return part.periods[index].End
 		}
 		return time.Time{}
 	}
+}
+
+func (part Partition) StartDates() []time.Time {
+	var res []time.Time
+	for _, p := range part.periods[1:] {
+		res = append(res, p.Start)
+	}
+	return res
+}
+
+func (part Partition) EndDates() []time.Time {
+	var res []time.Time
+	for _, p := range part.periods[1:] {
+		res = append(res, p.End)
+	}
+	return res
 }

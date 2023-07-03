@@ -128,17 +128,15 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if r.showSource {
 		am = journal.RemapAccount(jctx, r.remap.Regex())
 	}
-	period := r.period.Value().Clip(j.Period())
+	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), r.last)
 	var (
-		dates = period.Dates(r.interval.Value(), r.last)
-		f     = filter.And(
-			journal.FilterDates(period.Contains),
+		f = filter.And(
 			journal.FilterAccount(r.accounts.Regex()),
 			journal.FilterOther(r.others.Regex()),
 			journal.FilterCommodity(r.commodities.Regex()),
 		)
 		m = journal.KeyMapper{
-			Date:    date.Align(dates),
+			Date:    partition.Align(),
 			Account: am,
 			Other: mapper.Combine(
 				journal.RemapAccount(jctx, r.remap.Regex()),
@@ -152,6 +150,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		processors = []journal.DayFn{
 			journal.ComputePrices(valuation),
 			journal.Balance(jctx, valuation),
+			journal.Filter(partition),
 			journal.Query(f, m, valuation, rep),
 		}
 	)

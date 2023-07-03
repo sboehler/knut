@@ -17,6 +17,7 @@ package report
 import (
 	"time"
 
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
@@ -29,27 +30,27 @@ type Renderer struct {
 	SortAlphabetically bool
 	Diff               bool
 
-	dates []time.Time
+	partition date.Partition
 }
 
 // Render renders a report.
 func (rn *Renderer) Render(r *Report) *table.Table {
-	rn.dates = r.dates
+	rn.partition = r.dates
 	if !rn.SortAlphabetically {
 		r.ComputeWeights()
 	}
 	var tbl *table.Table
 	if rn.ShowCommodities {
-		tbl = table.New(1, 1, len(rn.dates))
+		tbl = table.New(1, 1, rn.partition.Size())
 	} else {
-		tbl = table.New(1, len(rn.dates))
+		tbl = table.New(1, rn.partition.Size())
 	}
 	tbl.AddSeparatorRow()
 	header := tbl.AddRow().AddText("Account", table.Center)
 	if rn.ShowCommodities {
 		header.AddText("Comm", table.Center)
 	}
-	for _, d := range rn.dates {
+	for _, d := range rn.partition.EndDates() {
 		header.AddText(d.Format("2006-01-02"), table.Center)
 	}
 	tbl.AddSeparatorRow()
@@ -107,7 +108,7 @@ func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, va
 			row.AddText(c.Name(), table.Left)
 		}
 		var total decimal.Decimal
-		for _, d := range rn.dates {
+		for _, d := range rn.partition.EndDates() {
 			v := vals[journal.DateCommodityKey(d, c)]
 			if !rn.Diff {
 				total = total.Add(v)

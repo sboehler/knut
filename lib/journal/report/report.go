@@ -1,10 +1,9 @@
 package report
 
 import (
-	"time"
-
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/journal"
@@ -15,12 +14,12 @@ type Report struct {
 	Context journal.Context
 	AL, EIE *Node
 	cache   nodeCache
-	dates   []time.Time
+	dates   date.Partition
 }
 
 type nodeCache map[*journal.Account]*Node
 
-func NewReport(jctx journal.Context, ds []time.Time) *Report {
+func NewReport(jctx journal.Context, ds date.Partition) *Report {
 	return &Report{
 		Context: jctx,
 		AL:      newNode(nil),

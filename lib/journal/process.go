@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/set"
@@ -226,22 +227,34 @@ func Balance(jctx Context, v *Commodity) DayFn {
 	}
 }
 
+func Filter(period date.Period) DayFn {
+	return func(d *Day) error {
+		if !period.Contains(d.Date) {
+			d.Transactions = nil
+		}
+		return nil
+	}
+}
+
 // Balance balances the journal.
 func CloseAccounts(j *Journal, enable bool, ds []time.Time) DayFn {
 	if !enable {
 		return func(d *Day) error { return nil }
 	}
-	var (
-		closingDays     = set.New[*Day]()
-		amounts, values = make(Amounts), make(Amounts)
-	)
+
+	amounts, values := make(Amounts), make(Amounts)
+	closingDays := set.New[*Day]()
 	for _, d := range ds {
+		// j.Day creates the entry for the given date as a side effect.
 		closingDays.Add(j.Day(d.AddDate(0, 0, 1)))
 	}
 	return func(d *Day) error {
 		if closingDays.Has(d) {
 			for k, amt := range amounts {
 				if !k.Account.IsIE() {
+					continue
+				}
+				if amt.IsZero() && values[k].IsZero() {
 					continue
 				}
 				d.Transactions = append(d.Transactions, TransactionBuilder{

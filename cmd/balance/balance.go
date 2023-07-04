@@ -150,10 +150,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				Valuation: journal.MapCommodity(valuation != nil),
 			}.Build(),
 			Filter: filter.And(
-				filter.Or(
-					journal.FilterAccount(r.accounts.Regex()),
-					journal.FilterOther(r.accounts.Regex()),
-				),
+				journal.FilterAccount(r.accounts.Regex()),
 				journal.FilterCommodity(r.commodities.Regex()),
 			),
 			Valuation: valuation,

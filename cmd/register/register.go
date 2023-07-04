@@ -129,31 +129,31 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		am = journal.RemapAccount(jctx, r.remap.Regex())
 	}
 	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), r.last)
-	var (
-		f = filter.And(
-			journal.FilterAccount(r.accounts.Regex()),
-			journal.FilterOther(r.others.Regex()),
-			journal.FilterCommodity(r.commodities.Regex()),
-		)
-		m = journal.KeyMapper{
-			Date:    partition.Align(),
-			Account: am,
-			Other: mapper.Combine(
-				journal.RemapAccount(jctx, r.remap.Regex()),
-				journal.ShortenAccount(jctx, r.mapping.Value()),
+	rep := register.NewReport(jctx)
+	processors := []journal.DayFn{
+		journal.ComputePrices(valuation),
+		journal.Balance(jctx, valuation),
+		journal.Filter(partition),
+		journal.Query{
+			Filter: filter.And(
+				journal.FilterAccount(r.accounts.Regex()),
+				journal.FilterOther(r.others.Regex()),
+				journal.FilterCommodity(r.commodities.Regex()),
 			),
-			Commodity:   journal.MapCommodity(r.showCommodities),
-			Valuation:   journal.MapCommodity(valuation != nil),
-			Description: mapper.If[string](r.showDescriptions),
-		}.Build()
-		rep        = register.NewReport(jctx)
-		processors = []journal.DayFn{
-			journal.ComputePrices(valuation),
-			journal.Balance(jctx, valuation),
-			journal.Filter(partition),
-			journal.Query(f, m, valuation, rep),
-		}
-	)
+			Mapper: journal.KeyMapper{
+				Date:    partition.Align(),
+				Account: am,
+				Other: mapper.Combine(
+					journal.RemapAccount(jctx, r.remap.Regex()),
+					journal.ShortenAccount(jctx, r.mapping.Value()),
+				),
+				Commodity:   journal.MapCommodity(r.showCommodities),
+				Valuation:   journal.MapCommodity(valuation != nil),
+				Description: mapper.If[string](r.showDescriptions),
+			}.Build(),
+			Valuation: valuation,
+		}.Execute(rep),
+	}
 	if _, err := j.Process(processors...); err != nil {
 		return err
 	}

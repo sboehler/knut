@@ -293,18 +293,24 @@ type Collection interface {
 	Insert(k Key, v decimal.Decimal)
 }
 
-func Query(f filter.Filter[Key], m mapper.Mapper[Key], v *Commodity, c Collection) DayFn {
-	if f == nil {
-		f = filter.AllowAll[Key]
+type Query struct {
+	Mapper    mapper.Mapper[Key]
+	Filter    filter.Filter[Key]
+	Valuation *Commodity
+}
+
+func (query Query) Execute(c Collection) DayFn {
+	if query.Filter == nil {
+		query.Filter = filter.AllowAll[Key]
 	}
-	if m == nil {
-		m = mapper.Identity[Key]
+	if query.Mapper == nil {
+		query.Mapper = mapper.Identity[Key]
 	}
 	return func(d *Day) error {
 		for _, t := range d.Transactions {
 			for _, b := range t.Postings {
 				amt := b.Amount
-				if v != nil {
+				if query.Valuation != nil {
 					amt = b.Value
 				}
 				kc := Key{
@@ -312,11 +318,11 @@ func Query(f filter.Filter[Key], m mapper.Mapper[Key], v *Commodity, c Collectio
 					Account:     b.Account,
 					Other:       b.Other,
 					Commodity:   b.Commodity,
-					Valuation:   v,
+					Valuation:   query.Valuation,
 					Description: t.Description,
 				}
-				if f(kc) {
-					c.Insert(m(kc), amt)
+				if query.Filter(kc) {
+					c.Insert(query.Mapper(kc), amt)
 				}
 			}
 		}

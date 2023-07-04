@@ -135,6 +135,11 @@ func (am Amounts) SumIntoBy(as Amounts, f func(k Key) bool, m func(k Key) Key) {
 		kn := m(k)
 		as[kn] = as[kn].Add(v)
 	}
+	for k, v := range as {
+		if v.IsZero() {
+			delete(as, k)
+		}
+	}
 }
 
 func (am Amounts) SumOver(f func(k Key) bool) decimal.Decimal {

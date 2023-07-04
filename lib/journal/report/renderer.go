@@ -19,6 +19,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/mapper"
+	"github.com/sboehler/knut/lib/common/regex"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/shopspring/decimal"
@@ -26,28 +27,31 @@ import (
 
 // Renderer renders a report.
 type Renderer struct {
-	ShowCommodities    bool
+	Valuation          *journal.Commodity
+	CommodityDetails   regex.Regexes
 	SortAlphabetically bool
 	Diff               bool
 
-	partition date.Partition
+	commoditiesColumn bool
+	partition         date.Partition
 }
 
 // Render renders a report.
 func (rn *Renderer) Render(r *Report) *table.Table {
+	rn.commoditiesColumn = rn.Valuation == nil || len(rn.CommodityDetails) > 0
 	rn.partition = r.dates
 	if !rn.SortAlphabetically {
 		r.ComputeWeights()
 	}
 	var tbl *table.Table
-	if rn.ShowCommodities {
+	if rn.commoditiesColumn {
 		tbl = table.New(1, 1, rn.partition.Size())
 	} else {
 		tbl = table.New(1, rn.partition.Size())
 	}
 	tbl.AddSeparatorRow()
 	header := tbl.AddRow().AddText("Account", table.Center)
-	if rn.ShowCommodities {
+	if rn.commoditiesColumn {
 		header.AddText("Comm", table.Center)
 	}
 	for _, d := range rn.partition.EndDates() {
@@ -57,7 +61,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 
 	totalAL, totalEIE := r.Totals(journal.KeyMapper{
 		Date:      mapper.Identity[time.Time],
-		Commodity: journal.MapCommodity(rn.ShowCommodities),
+		Commodity: journal.MapCommodity(rn.Valuation == nil),
 	}.Build())
 
 	for _, n := range r.AL.Children() {
@@ -81,9 +85,10 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 
 func (rn *Renderer) renderNode(t *table.Table, indent int, n *Node) {
 	if n.Account != nil {
+		showCommodities := rn.Valuation == nil || rn.CommodityDetails.MatchString(n.Account.Name())
 		vals := n.Amounts.SumBy(nil, journal.KeyMapper{
 			Date:      mapper.Identity[time.Time],
-			Commodity: journal.MapCommodity(rn.ShowCommodities),
+			Commodity: journal.MapCommodity(showCommodities),
 		}.Build())
 		rn.render(t, indent, n.Account.Segment(), !n.Account.IsAL(), vals)
 	}
@@ -104,8 +109,15 @@ func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, va
 		} else {
 			row.AddEmpty()
 		}
-		if rn.ShowCommodities {
-			row.AddText(c.Name(), table.Left)
+		if rn.commoditiesColumn {
+
+			if c != nil {
+				row.AddText(c.Name(), table.Left)
+			} else if rn.Valuation != nil {
+				row.AddText(rn.Valuation.Name(), table.Left)
+			} else {
+				row.AddEmpty()
+			}
 		}
 		var total decimal.Decimal
 		for _, d := range rn.partition.EndDates() {

@@ -72,7 +72,7 @@ type runner struct {
 
 	// report structure
 	diff               bool
-	showCommodities    bool
+	showCommodities    flags.RegexFlag
 	sortAlphabetically bool
 
 	// formatting
@@ -104,7 +104,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().BoolVarP(&r.diff, "diff", "d", false, "diff")
 	c.Flags().BoolVar(&r.close, "close", true, "close")
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
-	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "s", false, "Show commodities on their own rows")
+	c.Flags().VarP(&r.showCommodities, "show-commodities", "s", "<regex>")
 	r.interval.Setup(c, date.Once)
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	c.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
@@ -125,7 +125,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if valuation, err = r.valuation.Value(jctx); err != nil {
 		return err
 	}
-	r.showCommodities = r.showCommodities || valuation == nil
 	j, err := journal.FromPath(cmd.Context(), jctx, args[0])
 	if err != nil {
 		return err
@@ -160,7 +159,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	reportRenderer := report.Renderer{
-		ShowCommodities:    r.showCommodities,
+		Valuation:          valuation,
+		CommodityDetails:   r.showCommodities.Regex(),
 		SortAlphabetically: r.sortAlphabetically,
 		Diff:               r.diff,
 	}

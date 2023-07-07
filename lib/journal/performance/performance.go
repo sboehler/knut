@@ -1,7 +1,6 @@
 package performance
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/sboehler/knut/lib/common/filter"
@@ -14,45 +13,39 @@ type Calculator struct {
 	Valuation       *journal.Commodity
 	AccountFilter   filter.Filter[*journal.Account]
 	CommodityFilter filter.Filter[*journal.Commodity]
-	Values          pcv
+	Values          journal.Amounts
 }
 
 // Process computes portfolio performance.
-func (calc Calculator) Process(d *journal.Day) error {
-	// TODO: doesn't work, needs work :-)
-	calc.updateValues(d)
+func (calc *Calculator) Process() func(d *journal.Day) error {
 	var prev pcv
-	dpr := calc.computeFlows(d)
-	dpr.V0 = prev
-	dpr.V1 = calc.valueByCommodity(d)
-	prev = dpr.V1
-	d.Performance = dpr
-	return nil
+	calc.Values = make(journal.Amounts)
+	return func(d *journal.Day) error {
+		dpr := calc.computeFlows(d)
+		dpr.V0 = prev
+		dpr.V1 = calc.updateValues(d)
+		prev = dpr.V1
+		d.Performance = dpr
+		return nil
+	}
 }
 
-func (calc Calculator) updateValues(d *journal.Day) {
+func (calc Calculator) updateValues(d *journal.Day) pcv {
 	for _, t := range d.Transactions {
 		for _, p := range t.Postings {
 			if !calc.CommodityFilter(p.Commodity) {
 				continue
 			}
-			valF, _ := p.Value.Float64()
-			if p.Account.IsAL() && calc.AccountFilter(p.Account) {
-				calc.Values[p.Commodity] -= valF
+			if !calc.isPortfolioAccount(p.Account) {
+				continue
 			}
+			calc.Values.Add(journal.CommodityKey(p.Commodity), p.Value)
 		}
 	}
-}
-
-// Sink implements Sink.
-func (calc Calculator) Sink(d *journal.Day) {
-	fmt.Printf("%v: %.1f%%\n", d.Date.Format("2006-01-02"), 100*(Performance(d.Performance)-1))
-}
-
-func (calc *Calculator) valueByCommodity(d *journal.Day) pcv {
 	res := make(pcv)
-	for c, val := range calc.Values {
-		res[c] += val
+	for k, v := range calc.Values {
+		f, _ := v.Float64()
+		res[k.Commodity] += f
 	}
 	return res
 }

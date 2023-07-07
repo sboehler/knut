@@ -77,31 +77,26 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 }
 
 func (r *runner) execute(cmd *cobra.Command, args []string) error {
-	var (
-		ctx       = cmd.Context()
-		jctx      = journal.NewContext()
-		valuation *journal.Commodity
-		err       error
-	)
-	if valuation, err = r.valuation.Value(jctx); err != nil {
+	ctx := cmd.Context()
+	jctx := journal.NewContext()
+	valuation, err := r.valuation.Value(jctx)
+	if err != nil {
 		return err
 	}
 	j, err := journal.FromPath(ctx, jctx, args[0])
 	if err != nil {
 		return err
 	}
-	var (
-		calculator = &performance.Calculator{
-			Context:         jctx,
-			Valuation:       valuation,
-			AccountFilter:   filter.ByName[*journal.Account](r.accounts.Regex()),
-			CommodityFilter: filter.ByName[*journal.Commodity](r.commodities.Regex()),
-		}
-	)
+	calculator := &performance.Calculator{
+		Context:         jctx,
+		Valuation:       valuation,
+		AccountFilter:   filter.ByName[*journal.Account](r.accounts.Regex()),
+		CommodityFilter: filter.ByName[*journal.Commodity](r.commodities.Regex()),
+	}
 	l, err := j.Process(
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
-		calculator.Process,
+		calculator.Process(),
 	)
 	if err != nil {
 		return err

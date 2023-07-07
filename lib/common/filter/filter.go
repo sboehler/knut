@@ -26,6 +26,9 @@ type Named interface {
 }
 
 func ByName[T Named](rxs regex.Regexes) Filter[T] {
+	if len(rxs) == 0 {
+		return AllowAll[T]
+	}
 	return func(t T) bool {
 		return rxs.MatchString(t.Name())
 	}

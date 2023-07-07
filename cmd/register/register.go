@@ -109,17 +109,13 @@ func (r *runner) setupFlags(c *cobra.Command) {
 }
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
-	var (
-		ctx       = cmd.Context()
-		jctx      = journal.NewContext()
-		valuation *journal.Commodity
-		err       error
-	)
-	if valuation, err = r.valuation.Value(jctx); err != nil {
+	ctx := cmd.Context()
+	jctx := journal.NewContext()
+	valuation, err := r.valuation.Value(jctx)
+	if err != nil {
 		return err
 	}
 	r.showCommodities = r.showCommodities || valuation == nil
-
 	j, err := journal.FromPath(ctx, jctx, args[0])
 	if err != nil {
 		return err
@@ -130,7 +126,7 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	}
 	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), r.last)
 	rep := register.NewReport(jctx)
-	processors := []journal.DayFn{
+	_, err = j.Process(
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
 		journal.Filter(partition),
@@ -153,24 +149,22 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			}.Build(),
 			Valuation: valuation,
 		}.Execute(rep),
-	}
-	if _, err := j.Process(processors...); err != nil {
+	)
+	if err != nil {
 		return err
 	}
-	var (
-		reportRenderer = register.Renderer{
-			ShowCommodities:    r.showCommodities,
-			ShowDescriptions:   r.showDescriptions,
-			ShowSource:         r.showSource,
-			SortAlphabetically: r.sortAlphabetically,
-		}
-		tableRenderer = table.TextRenderer{
-			Color:     r.color,
-			Thousands: r.thousands,
-			Round:     r.digits,
-		}
-		out = bufio.NewWriter(cmd.OutOrStdout())
-	)
+	reportRenderer := register.Renderer{
+		ShowCommodities:    r.showCommodities,
+		ShowDescriptions:   r.showDescriptions,
+		ShowSource:         r.showSource,
+		SortAlphabetically: r.sortAlphabetically,
+	}
+	tableRenderer := table.TextRenderer{
+		Color:     r.color,
+		Thousands: r.thousands,
+		Round:     r.digits,
+	}
+	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 	return tableRenderer.Render(reportRenderer.Render(rep), out)
 }

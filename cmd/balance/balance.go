@@ -117,22 +117,18 @@ func (r *runner) setupFlags(c *cobra.Command) {
 }
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
-	var (
-		jctx      = journal.NewContext()
-		valuation *journal.Commodity
-		err       error
-	)
-	if valuation, err = r.valuation.Value(jctx); err != nil {
+	jctx := journal.NewContext()
+	valuation, err := r.valuation.Value(jctx)
+	if err != nil {
 		return err
 	}
 	j, err := journal.FromPath(cmd.Context(), jctx, args[0])
 	if err != nil {
 		return err
 	}
-	period := r.period.Value().Clip(j.Period())
-	partition := date.NewPartition(period, r.interval.Value(), r.last)
+	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), r.last)
 	rep := report.NewReport(jctx, partition)
-	processors := []journal.DayFn{
+	_, err = j.Process(
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
 		journal.Filter(partition),
@@ -144,7 +140,6 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 					journal.RemapAccount(jctx, r.remap.Regex()),
 					journal.ShortenAccount(jctx, r.mapping.Value()),
 				),
-				Other:     mapper.Identity[*journal.Account],
 				Commodity: mapper.Identity[*journal.Commodity],
 				Valuation: journal.MapCommodity(valuation != nil),
 			}.Build(),
@@ -154,8 +149,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			),
 			Valuation: valuation,
 		}.Execute(rep),
-	}
-	if _, err := j.Process(processors...); err != nil {
+	)
+	if err != nil {
 		return err
 	}
 	reportRenderer := report.Renderer{

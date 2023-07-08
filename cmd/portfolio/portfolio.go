@@ -96,7 +96,8 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	l, err := j.Process(
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
-		calculator.Process(),
+		calculator.ComputeFlows(),
+		calculator.ComputeValues(),
 	)
 	if err != nil {
 		return err

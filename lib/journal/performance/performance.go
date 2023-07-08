@@ -16,99 +16,105 @@ type Calculator struct {
 	Values          journal.Amounts
 }
 
-// Process computes portfolio performance.
-func (calc *Calculator) Process() func(d *journal.Day) error {
+// ComputeValues computes portfolio performance.
+func (calc *Calculator) ComputeValues() func(d *journal.Day) error {
 	var prev pcv
-	calc.Values = make(journal.Amounts)
+	values := make(journal.Amounts)
 	return func(d *journal.Day) error {
-		dpr := calc.computeFlows(d)
-		dpr.V0 = prev
-		dpr.V1 = calc.updateValues(d)
-		prev = dpr.V1
-		d.Performance = dpr
+		if d.Performance == nil {
+			d.Performance = new(journal.Performance)
+		}
+		d.Performance.V0 = prev
+
+		for _, t := range d.Transactions {
+			for _, p := range t.Postings {
+				if !calc.CommodityFilter(p.Commodity) {
+					continue
+				}
+				if !calc.isPortfolioAccount(p.Account) {
+					continue
+				}
+				k := journal.CommodityKey(p.Commodity)
+				values.Add(k, p.Value)
+				if values[k].IsZero() {
+					delete(values, k)
+				}
+			}
+		}
+		if len(values) == 0 {
+			return nil
+		}
+		prev = nil
+		for k, v := range values {
+			f, _ := v.Float64()
+			get(&prev)[k.Commodity] += f
+		}
+		d.Performance.V1 = prev
 		return nil
 	}
-}
-
-func (calc Calculator) updateValues(d *journal.Day) pcv {
-	for _, t := range d.Transactions {
-		for _, p := range t.Postings {
-			if !calc.CommodityFilter(p.Commodity) {
-				continue
-			}
-			if !calc.isPortfolioAccount(p.Account) {
-				continue
-			}
-			calc.Values.Add(journal.CommodityKey(p.Commodity), p.Value)
-		}
-	}
-	res := make(pcv)
-	for k, v := range calc.Values {
-		f, _ := v.Float64()
-		res[k.Commodity] += f
-	}
-	return res
 }
 
 // pcv is a per-commodity value.
 type pcv map[*journal.Commodity]float64
 
-func (calc *Calculator) computeFlows(day *journal.Day) *journal.Performance {
+func (calc *Calculator) ComputeFlows() journal.DayFn {
+	return func(day *journal.Day) error {
+		var (
+			internalInflows, internalOutflows, inflows, outflows pcv
+			portfolioFlows                                       float64
+		)
+		for _, trx := range day.Transactions {
 
-	var (
-		internalInflows, internalOutflows, inflows, outflows pcv
-		portfolioFlows                                       float64
-	)
+			// We make the convention that flows per transaction and commodity are
+			// either positive or negative, but not both.
+			var flows, internalFlows pcv
 
-	for _, trx := range day.Transactions {
+			for _, pst := range trx.Postings {
+				value, _ := pst.Amount.Float64()
 
-		// We make the convention that flows per transaction and commodity are
-		// either positive or negative, but not both.
-		var flows, internalFlows pcv
+				if !calc.isPortfolioAccount(pst.Account) || calc.isPortfolioAccount(pst.Other) {
+					continue
+				}
+				// tgts contains the commodities among which the performance effects of this
+				// transaction should be split: non-currencies > currencies > valuation currency.
+				tgts := calc.pickTargets(pst.Targets)
 
-		for _, pst := range trx.Postings {
-			value, _ := pst.Amount.Float64()
-
-			if !calc.isPortfolioAccount(pst.Account) || calc.isPortfolioAccount(pst.Other) {
-				continue
-			}
-			// tgts contains the commodities among which the performance effects of this
-			// transaction should be split: non-currencies > currencies > valuation currency.
-			tgts := calc.pickTargets(pst.Targets)
-
-			if tgts == nil {
-				// no effect: regular flow into or out of the portfolio
-				get(&flows)[pst.Commodity] += value
-				continue
-			}
-			if len(tgts) == 1 && tgts[0] == pst.Commodity {
-				// performance effect on native commodity
-				continue
-			}
-			intf := get(&internalFlows)
-			intf[pst.Commodity] += value
-			if len(tgts) == 0 {
-				// performance effect on portfolio, not allocated to a specific commodity
-				portfolioFlows -= value
-			} else {
-				// effect on multiple commodities: re-allocate the flows among the target commodities
-				l := float64(len(tgts))
-				for _, com := range tgts {
-					intf[com] -= value / l
+				if tgts == nil {
+					// no effect: regular flow into or out of the portfolio
+					get(&flows)[pst.Commodity] += value
+					continue
+				}
+				if len(tgts) == 1 && tgts[0] == pst.Commodity {
+					// performance effect on native commodity
+					continue
+				}
+				intf := get(&internalFlows)
+				intf[pst.Commodity] += value
+				if len(tgts) == 0 {
+					// performance effect on portfolio, not allocated to a specific commodity
+					portfolioFlows -= value
+				} else {
+					// effect on multiple commodities: re-allocate the flows among the target commodities
+					l := float64(len(tgts))
+					for _, com := range tgts {
+						intf[com] -= value / l
+					}
 				}
 			}
-		}
 
-		split(flows, &inflows, &outflows)
-		split(internalFlows, &internalInflows, &internalOutflows)
-	}
-	return &journal.Performance{
-		InternalInflow:   internalInflows,
-		InternalOutflow:  internalOutflows,
-		Inflow:           inflows,
-		Outflow:          outflows,
-		PortfolioInflow:  math.Max(0, portfolioFlows),
-		PortfolioOutflow: math.Min(0, portfolioFlows),
+			split(flows, &inflows, &outflows)
+			split(internalFlows, &internalInflows, &internalOutflows)
+		}
+		if day.Performance == nil {
+			day.Performance = new(journal.Performance)
+		}
+		day.Performance.InternalInflow = internalInflows
+		day.Performance.InternalOutflow = internalOutflows
+		day.Performance.Inflow = inflows
+		day.Performance.Outflow = outflows
+		day.Performance.PortfolioInflow = math.Max(0, portfolioFlows)
+		day.Performance.PortfolioOutflow = math.Min(0, portfolioFlows)
+		return nil
 	}
 }
 

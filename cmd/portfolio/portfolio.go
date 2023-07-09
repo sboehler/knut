@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/performance"
@@ -52,6 +53,7 @@ type runner struct {
 	cpuprofile            string
 	valuation             flags.CommodityFlag
 	accounts, commodities flags.RegexFlag
+	period                flags.PeriodFlag
 }
 
 func (r *runner) setupFlags(cmd *cobra.Command) {
@@ -59,6 +61,8 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	cmd.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
 	cmd.Flags().Var(&r.commodities, "commodity", "filter commodities with a regex")
+	r.period.Setup(cmd, date.Period{End: date.Today()})
+
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) {
@@ -87,6 +91,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	// partition := date.NewPartition(r.period.Value().Clip(j.Period()), date.Once, 0)
 	calculator := &performance.Calculator{
 		Context:         jctx,
 		Valuation:       valuation,
@@ -96,8 +101,8 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	l, err := j.Process(
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
-		calculator.ComputeFlows(),
 		calculator.ComputeValues(),
+		calculator.ComputeFlows(),
 	)
 	if err != nil {
 		return err

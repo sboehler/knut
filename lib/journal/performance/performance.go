@@ -13,7 +13,6 @@ type Calculator struct {
 	Valuation       *journal.Commodity
 	AccountFilter   filter.Filter[*journal.Account]
 	CommodityFilter filter.Filter[*journal.Commodity]
-	Values          journal.Amounts
 }
 
 // ComputeValues computes portfolio performance.
@@ -70,22 +69,23 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 			var flows, internalFlows pcv
 
 			for _, pst := range trx.Postings {
-				value, _ := pst.Amount.Float64()
 
 				if !calc.isPortfolioAccount(pst.Account) || calc.isPortfolioAccount(pst.Other) {
 					continue
 				}
 				// tgts contains the commodities among which the performance effects of this
 				// transaction should be split: non-currencies > currencies > valuation currency.
-				tgts := calc.pickTargets(pst.Targets)
+				tgts := pickTargets(calc.Valuation, pst.Targets)
 
+				if len(tgts) == 1 && tgts[0] == pst.Commodity {
+					// performance effect on native commodity
+					continue
+				}
+
+				value, _ := pst.Amount.Float64()
 				if tgts == nil {
 					// no effect: regular flow into or out of the portfolio
 					get(&flows)[pst.Commodity] += value
-					continue
-				}
-				if len(tgts) == 1 && tgts[0] == pst.Commodity {
-					// performance effect on native commodity
 					continue
 				}
 				intf := get(&internalFlows)
@@ -135,7 +135,7 @@ func get(m *pcv) pcv {
 	return *m
 }
 
-func (calc Calculator) pickTargets(tgts []*journal.Commodity) []*journal.Commodity {
+func pickTargets(valuation *journal.Commodity, tgts []*journal.Commodity) []*journal.Commodity {
 	if len(tgts) == 0 {
 		return tgts
 	}
@@ -153,7 +153,7 @@ func (calc Calculator) pickTargets(tgts []*journal.Commodity) []*journal.Commodi
 
 	// collect currencies != valuation
 	for _, c := range tgts {
-		if c != calc.Valuation {
+		if c != valuation {
 			res = append(res, c)
 		}
 	}

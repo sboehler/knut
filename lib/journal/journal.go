@@ -17,6 +17,7 @@ package journal
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
@@ -208,4 +209,27 @@ func CompareDays(d *Day, d2 *Day) compare.Order {
 type Performance struct {
 	V0, V1, Inflow, Outflow, InternalInflow, InternalOutflow map[*Commodity]float64
 	PortfolioInflow, PortfolioOutflow                        float64
+}
+
+func (p Performance) String() string {
+	var buf strings.Builder
+	for c, v := range p.V0 {
+		fmt.Fprintf(&buf, "V0: %20s %f\n", c, v)
+	}
+	for c, f := range p.Inflow {
+		fmt.Fprintf(&buf, "Inflow: %20s %f\n", c, f)
+	}
+	for c, f := range p.Outflow {
+		fmt.Fprintf(&buf, "Outflow: %20s %f\n", c, f)
+	}
+	for c, f := range p.InternalInflow {
+		fmt.Fprintf(&buf, "InternalInflow: %20s %f\n", c, f)
+	}
+	for c, f := range p.InternalOutflow {
+		fmt.Fprintf(&buf, "InternalOutflow: %20s %f\n", c, f)
+	}
+	for c, v := range p.V1 {
+		fmt.Fprintf(&buf, "V1: %20s %f\n", c, v)
+	}
+	return buf.String()
 }

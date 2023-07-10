@@ -54,6 +54,7 @@ type runner struct {
 	valuation             flags.CommodityFlag
 	accounts, commodities flags.RegexFlag
 	period                flags.PeriodFlag
+	interval              flags.IntervalFlags
 }
 
 func (r *runner) setupFlags(cmd *cobra.Command) {
@@ -62,6 +63,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
 	cmd.Flags().Var(&r.commodities, "commodity", "filter commodities with a regex")
 	r.period.Setup(cmd, date.Period{End: date.Today()})
+	r.interval.Setup(cmd, date.Once)
 
 }
 
@@ -91,24 +93,19 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	// partition := date.NewPartition(r.period.Value().Clip(j.Period()), date.Once, 0)
+	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), 0)
 	calculator := &performance.Calculator{
 		Context:         jctx,
 		Valuation:       valuation,
 		AccountFilter:   filter.ByName[*journal.Account](r.accounts.Regex()),
 		CommodityFilter: filter.ByName[*journal.Commodity](r.commodities.Regex()),
 	}
-	l, err := j.Process(
+	_, err = j.Process(
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
 		calculator.ComputeValues(),
 		calculator.ComputeFlows(),
+		performance.Perf(j, partition),
 	)
-	if err != nil {
-		return err
-	}
-	for _, d := range l.Days {
-		fmt.Printf("%v: %.1f%%\n", d.Date.Format("2006-01-02"), 100*(performance.Performance(d.Performance)-1))
-	}
-	return nil
+	return err
 }

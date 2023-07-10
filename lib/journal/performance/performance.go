@@ -1,9 +1,12 @@
 package performance
 
 import (
+	"fmt"
 	"math"
 
+	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
+	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal"
 )
 
@@ -88,9 +91,10 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 					continue
 				}
 
-				value, _ := pst.Amount.Float64()
+				value, _ := pst.Value.Float64()
 				if tgts == nil {
 					// regular flow into or out of the portfolio
+					// fmt.Println()
 					get(&flows)[pst.Commodity] += value
 					continue
 				}
@@ -199,4 +203,23 @@ func Performance(dpv *journal.Performance) float64 {
 		return 1
 	}
 	return (v1 - outflow) / (v0 + inflow)
+}
+
+func Perf(j *journal.Journal, part date.Partition) journal.DayFn {
+	ds := set.New[*journal.Day]()
+	for _, d := range part.EndDates() {
+		ds.Add(j.Day(d))
+	}
+	running := 1.0
+	return func(d *journal.Day) error {
+		if !part.Contains(d.Date) {
+			return nil
+		}
+		running *= Performance(d.Performance)
+		if ds.Has(d) {
+			fmt.Printf("%v: %0.1f%%\n", d.Date, 100*(running-1))
+			running = 1.0
+		}
+		return nil
+	}
 }

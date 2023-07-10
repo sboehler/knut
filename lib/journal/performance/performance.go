@@ -70,7 +70,13 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 
 			for _, pst := range trx.Postings {
 
-				if !calc.isPortfolioAccount(pst.Account) || calc.isPortfolioAccount(pst.Other) {
+				if !calc.isPortfolioAccount(pst.Account) {
+					// not a portfolio booking - no performance impact.
+					continue
+				}
+
+				if calc.isPortfolioAccount(pst.Other) {
+					// transfer between portfolio accounts - no performance impact.
 					continue
 				}
 				// tgts contains the commodities among which the performance effects of this
@@ -84,7 +90,7 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 
 				value, _ := pst.Amount.Float64()
 				if tgts == nil {
-					// no effect: regular flow into or out of the portfolio
+					// regular flow into or out of the portfolio
 					get(&flows)[pst.Commodity] += value
 					continue
 				}

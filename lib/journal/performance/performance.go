@@ -57,14 +57,14 @@ func (calc *Calculator) ComputeValues() func(d *journal.Day) error {
 }
 
 // pcv is a per-commodity value.
-type pcv map[*journal.Commodity]float64
+type pcv = map[*journal.Commodity]float64
 
 func (calc *Calculator) ComputeFlows() journal.DayFn {
 	return func(day *journal.Day) error {
-		var (
-			internalInflows, internalOutflows, inflows, outflows pcv
-			portfolioFlows                                       float64
-		)
+		var portfolioFlows float64
+		if day.Performance == nil {
+			day.Performance = new(journal.Performance)
+		}
 		for _, trx := range day.Transactions {
 
 			// We make the convention that flows per transaction and commodity are
@@ -112,16 +112,9 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 				}
 			}
 
-			split(flows, &inflows, &outflows)
-			split(internalFlows, &internalInflows, &internalOutflows)
+			split(flows, &day.Performance.Inflow, &day.Performance.Outflow)
+			split(internalFlows, &day.Performance.InternalInflow, &day.Performance.InternalOutflow)
 		}
-		if day.Performance == nil {
-			day.Performance = new(journal.Performance)
-		}
-		day.Performance.InternalInflow = internalInflows
-		day.Performance.InternalOutflow = internalOutflows
-		day.Performance.Inflow = inflows
-		day.Performance.Outflow = outflows
 		day.Performance.PortfolioInflow = math.Max(0, portfolioFlows)
 		day.Performance.PortfolioOutflow = math.Min(0, portfolioFlows)
 		return nil

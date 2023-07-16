@@ -86,31 +86,6 @@ func Balance(jctx Context, v *Commodity) DayFn {
 		return nil
 	}
 
-	processValues := func(d *Day) error {
-		for _, v := range d.Values {
-			if !accounts.Has(v.Account) {
-				return Error{v, "account is not open"}
-			}
-			valAcc := jctx.ValuationAccountFor(v.Account)
-			amount := v.Amount.Sub(amounts.Amount(AccountCommodityKey(v.Account, v.Commodity)))
-			ps := PostingBuilder{
-				Credit:    valAcc,
-				Debit:     v.Account,
-				Commodity: v.Commodity,
-				Amount:    amount,
-				Targets:   []*Commodity{v.Commodity},
-			}.Build()
-			d.Transactions = append(d.Transactions, TransactionBuilder{
-				Date:        v.Date,
-				Description: fmt.Sprintf("Valuation adjustment for %s in %s", v.Commodity.Name(), v.Account.Name()),
-				Postings:    ps,
-			}.Build())
-			amounts.Add(AccountCommodityKey(v.Account, v.Commodity), amount)
-		}
-		compare.Sort(d.Transactions, CompareTransactions)
-		return nil
-	}
-
 	processAssertions := func(d *Day) error {
 		for _, a := range d.Assertions {
 			if !accounts.Has(a.Account) {
@@ -203,9 +178,6 @@ func Balance(jctx Context, v *Commodity) DayFn {
 			return err
 		}
 		if err := processTransactions(d); err != nil {
-			return err
-		}
-		if err := processValues(d); err != nil {
 			return err
 		}
 		if err := processAssertions(d); err != nil {

@@ -46,8 +46,6 @@ func (p Printer) PrintDirective(w io.Writer, directive Directive) (n int, err er
 		return p.printInclude(w, d)
 	case *Price:
 		return p.printPrice(w, d)
-	case *Value:
-		return p.printValue(w, d)
 	}
 	return 0, fmt.Errorf("unknown directive: %v", directive)
 }
@@ -172,10 +170,6 @@ func (p Printer) printAssertion(w io.Writer, a *Assertion) (int, error) {
 	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity.Name())
 }
 
-func (p Printer) printValue(w io.Writer, v *Value) (int, error) {
-	return fmt.Fprintf(w, "%s value %s %s %s", v.Date.Format("2006-01-02"), v.Account, v.Amount, v.Commodity.Name())
-}
-
 // PrintLedger prints a Ledger.
 func (p *Printer) PrintLedger(w io.Writer, l *Ledger) (int, error) {
 	for _, day := range l.Days {
@@ -207,16 +201,6 @@ func (p *Printer) PrintLedger(w io.Writer, l *Ledger) (int, error) {
 		}
 		for _, t := range day.Transactions {
 			if err := p.writeLn(w, t, &n); err != nil {
-				return n, err
-			}
-		}
-		for _, v := range day.Values {
-			if err := p.writeLn(w, v, &n); err != nil {
-				return n, err
-			}
-		}
-		if len(day.Values) > 0 {
-			if err := p.newline(w, &n); err != nil {
 				return n, err
 			}
 		}

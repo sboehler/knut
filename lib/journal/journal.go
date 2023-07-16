@@ -82,15 +82,6 @@ func (j *Journal) AddTransaction(t *Transaction) {
 	d.Transactions = append(d.Transactions, t)
 }
 
-// AddValue adds an Value directive.
-func (j *Journal) AddValue(v *Value) {
-	d := j.Day(v.Date)
-	if j.max.Before(d.Date) {
-		j.max = d.Date
-	}
-	d.Values = append(d.Values, v)
-}
-
 // AddAssertion adds an Assertion directive.
 func (j *Journal) AddAssertion(a *Assertion) {
 	d := j.Day(a.Date)
@@ -158,9 +149,6 @@ func FromPath(ctx context.Context, jctx Context, path string) (*Journal, error) 
 		case *Assertion:
 			j.AddAssertion(t)
 
-		case *Value:
-			j.AddValue(t)
-
 		case *Close:
 			j.AddClose(t)
 
@@ -189,7 +177,6 @@ type Day struct {
 	Date         time.Time
 	Prices       []*Price
 	Assertions   []*Assertion
-	Values       []*Value
 	Openings     []*Open
 	Transactions []*Transaction
 	Closings     []*Close

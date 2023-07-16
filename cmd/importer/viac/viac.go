@@ -50,19 +50,19 @@ func init() {
 
 func (r *runner) setupFlags(cmd *cobra.Command) {
 	cmd.Flags().VarP(&r.from, "from", "f", "YYYY-MM-DD - ignore entries before this date")
-	cmd.Flags().VarP(&r.account, "account", "a", "account name")
+	cmd.Flags().VarP(&r.account, "commodity", "a", "commodity name")
 }
 
 type runner struct {
 	from    flags.DateFlag
-	account flags.AccountFlag
+	account flags.CommodityFlag
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
 		ctx     = journal.NewContext()
 		f       *bufio.Reader
-		account *journal.Account
+		account *journal.Commodity
 		err     error
 	)
 
@@ -96,11 +96,14 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		builder.AddValue(&journal.Value{
+		if a.IsZero() {
+			continue
+		}
+		builder.AddPrice(&journal.Price{
 			Date:      d,
-			Account:   account,
-			Amount:    a.Round(2),
-			Commodity: commodity,
+			Commodity: account,
+			Price:     a.Round(2),
+			Target:    commodity,
 		})
 	}
 

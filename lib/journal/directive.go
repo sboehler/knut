@@ -34,7 +34,6 @@ var (
 	_ Directive = (*Open)(nil)
 	_ Directive = (*Price)(nil)
 	_ Directive = (*Transaction)(nil)
-	_ Directive = (*Value)(nil)
 )
 
 // Open represents an open command.
@@ -205,15 +204,6 @@ type Include struct {
 
 // Assertion represents a balance assertion.
 type Assertion struct {
-	Range
-	Date      time.Time
-	Account   *Account
-	Amount    decimal.Decimal
-	Commodity *Commodity
-}
-
-// Value represents a value directive.
-type Value struct {
 	Range
 	Date      time.Time
 	Account   *Account

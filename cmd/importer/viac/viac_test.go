@@ -24,8 +24,8 @@ import (
 
 func TestGolden(t *testing.T) {
 	args := []string{
-		"--account",
-		"Assets:VIAC",
+		"--commodity",
+		"Viac",
 		"testdata/example1.input",
 	}
 

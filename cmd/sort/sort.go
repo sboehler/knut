@@ -125,9 +125,6 @@ func readDirectives(jctx journal.Context, target string) (*journal.Journal, erro
 		case *journal.Assertion:
 			res.AddAssertion(t)
 
-		case *journal.Value:
-			res.AddValue(t)
-
 		case *journal.Close:
 			res.AddClose(t)
 

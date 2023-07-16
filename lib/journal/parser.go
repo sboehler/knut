@@ -160,8 +160,6 @@ func (p *Parser) parseDirective(a *Accrual) (Directive, error) {
 		result, err = p.parsePrice(d)
 	case 'b':
 		result, err = p.parseBalanceAssertion(d)
-	case 'v':
-		result, err = p.parseValue(d)
 	default:
 		return nil, fmt.Errorf("expected directive, got %q", p.current())
 	}
@@ -443,40 +441,6 @@ func (p *Parser) parseBalanceAssertion(d time.Time) (*Assertion, error) {
 		return nil, err
 	}
 	return &Assertion{
-		Range:     p.getRange(),
-		Date:      d,
-		Account:   account,
-		Amount:    amount,
-		Commodity: commodity,
-	}, nil
-}
-
-func (p *Parser) parseValue(d time.Time) (*Value, error) {
-	if err := p.scanner.ParseString("value"); err != nil {
-		return nil, err
-	}
-	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
-	}
-	account, err := p.parseAccount()
-	if err != nil {
-		return nil, err
-	}
-	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
-	}
-	amount, err := p.parseDecimal()
-	if err != nil {
-		return nil, err
-	}
-	if err := p.consumeWhitespace1(); err != nil {
-		return nil, err
-	}
-	commodity, err := p.parseCommodity()
-	if err != nil {
-		return nil, err
-	}
-	return &Value{
 		Range:     p.getRange(),
 		Date:      d,
 		Account:   account,

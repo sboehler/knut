@@ -11,9 +11,9 @@ import (
 type Order int
 
 const (
-	Smaller Order = iota
-	Equal
-	Greater
+	Smaller Order = -1
+	Equal   Order = 0
+	Greater Order = 1
 )
 
 type Compare[T any] func(t1, t2 T) Order

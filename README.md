@@ -82,6 +82,7 @@ Available Commands:
   help        Help about any command
   import      Import financial account statements
   infer       Auto-assign accounts in a journal
+  print       print the journal
   sort        sort the given files
   transcode   transcode to beancount
 
@@ -225,25 +226,18 @@ $ knut balance --color=false -v CHF --months --from 2020-01-01 --to 2020-04-01 -
 |     Account     | 2020-01-31 | 2020-02-29 | 2020-03-31 | 2020-04-01 |
 +-----------------+------------+------------+------------+------------+
 | Assets          |            |            |            |            |
-|   BankAccount   |     -1,000 |            |            |            |
 |   Portfolio     |      1,025 |       -106 |        -63 |        -37 |
 |                 |            |            |            |            |
-| Total (A+L)     |         25 |       -106 |        -63 |        -37 |
+| Total (A+L)     |      1,025 |       -106 |        -63 |        -37 |
 +-----------------+------------+------------+------------+------------+
-| Equity          |            |            |            |            |
-|   Equity        |          3 |         26 |       -106 |        -63 |
-|                 |            |            |            |            |
 | Income          |            |            |            |            |
 |   Investments   |            |            |            |            |
 |     CapitalGain |            |            |            |            |
 |       Portfolio |         26 |       -132 |         43 |         26 |
 |                 |            |            |            |            |
-| Expenses        |            |            |            |            |
-|   Fees          |         -4 |            |            |            |
-|                 |            |            |            |            |
-| Total (E+I+E)   |         25 |       -106 |        -63 |        -37 |
+| Total (E+I+E)   |         26 |       -132 |         43 |         26 |
 +-----------------+------------+------------+------------+------------+
-| Delta           |            |            |            |            |
+| Delta           |        999 |         26 |       -106 |        -63 |
 +-----------------+------------+------------+------------+------------+
 
 

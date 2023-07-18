@@ -71,6 +71,10 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 			// either positive or negative, but not both.
 			var flows, internalFlows pcv
 
+			// tgts contains the commodities among which the performance effects of this
+			// transaction should be split: non-currencies > currencies > valuation currency.
+			tgts := pickTargets(calc.Valuation, trx.Targets)
+
 			for _, pst := range trx.Postings {
 
 				if !calc.isPortfolioAccount(pst.Account) {
@@ -82,9 +86,6 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 					// transfer between portfolio accounts - no performance impact.
 					continue
 				}
-				// tgts contains the commodities among which the performance effects of this
-				// transaction should be split: non-currencies > currencies > valuation currency.
-				tgts := pickTargets(calc.Valuation, trx.Targets)
 
 				if len(tgts) == 1 && tgts[0] == pst.Commodity {
 					// performance effect on native commodity
@@ -94,7 +95,6 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 				value, _ := pst.Value.Float64()
 				if tgts == nil {
 					// regular flow into or out of the portfolio
-					// fmt.Println()
 					get(&flows)[pst.Commodity] += value
 					continue
 				}

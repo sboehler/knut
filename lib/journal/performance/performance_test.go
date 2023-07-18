@@ -61,12 +61,12 @@ func TestComputeFlows(t *testing.T) {
 		{
 			desc: "dividend",
 			trx: journal.TransactionBuilder{
+				Targets: []*journal.Commodity{aapl, usd},
 				Postings: journal.PostingBuilder{
 					Credit:    dividend,
 					Debit:     portfolio,
 					Value:     decimal.NewFromInt(1),
 					Commodity: usd,
-					Targets:   []*journal.Commodity{aapl, usd},
 				}.Build(),
 			}.Build(),
 			want: &journal.Performance{
@@ -77,12 +77,12 @@ func TestComputeFlows(t *testing.T) {
 		{
 			desc: "expense",
 			trx: journal.TransactionBuilder{
+				Targets: []*journal.Commodity{aapl, usd},
 				Postings: journal.PostingBuilder{
 					Credit:    portfolio,
 					Debit:     expense,
 					Value:     decimal.NewFromInt(1),
 					Commodity: usd,
-					Targets:   []*journal.Commodity{aapl, usd},
 				}.Build(),
 			}.Build(),
 			want: &journal.Performance{
@@ -93,12 +93,12 @@ func TestComputeFlows(t *testing.T) {
 		{
 			desc: "expense with effect on porfolio",
 			trx: journal.TransactionBuilder{
+				Targets: make([]*journal.Commodity, 0),
 				Postings: journal.PostingBuilder{
 					Credit:    portfolio,
 					Debit:     expense,
 					Value:     decimal.NewFromInt(1),
 					Commodity: usd,
-					Targets:   make([]*journal.Commodity, 0),
 				}.Build(),
 			}.Build(),
 			want: &journal.Performance{
@@ -110,20 +110,19 @@ func TestComputeFlows(t *testing.T) {
 			desc: "stock purchase",
 			trx: journal.TransactionBuilder{
 
+				Targets: []*journal.Commodity{usd, aapl},
 				Postings: journal.PostingBuilders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
 						Value:     decimal.NewFromInt(1010),
 						Commodity: usd,
-						Targets:   []*journal.Commodity{usd, aapl},
 					},
 					{
 						Credit:    equity,
 						Debit:     portfolio,
 						Value:     decimal.NewFromInt(1000),
 						Commodity: aapl,
-						Targets:   []*journal.Commodity{usd, aapl},
 					},
 				}.Build(),
 			}.Build(),
@@ -135,27 +134,25 @@ func TestComputeFlows(t *testing.T) {
 		{
 			desc: "stock purchase with fee",
 			trx: journal.TransactionBuilder{
+				Targets: []*journal.Commodity{usd, aapl},
 				Postings: journal.PostingBuilders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
 						Value:     decimal.NewFromInt(1010),
 						Commodity: usd,
-						Targets:   []*journal.Commodity{usd, aapl},
 					},
 					{
 						Credit:    equity,
 						Debit:     portfolio,
 						Value:     decimal.NewFromInt(1000),
 						Commodity: aapl,
-						Targets:   []*journal.Commodity{usd, aapl},
 					},
 					{
 						Credit:    portfolio,
 						Debit:     equity,
 						Value:     decimal.NewFromInt(10),
 						Commodity: usd,
-						Targets:   []*journal.Commodity{usd, aapl},
 					},
 				}.Build(),
 			}.Build(),
@@ -167,20 +164,19 @@ func TestComputeFlows(t *testing.T) {
 		{
 			desc: "stock sale",
 			trx: journal.TransactionBuilder{
+				Targets: []*journal.Commodity{usd, aapl},
 				Postings: journal.PostingBuilders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
 						Value:     decimal.NewFromInt(1000),
 						Commodity: aapl,
-						Targets:   []*journal.Commodity{usd, aapl},
 					},
 					{
 						Credit:    equity,
 						Debit:     portfolio,
 						Value:     decimal.NewFromInt(990),
 						Commodity: usd,
-						Targets:   []*journal.Commodity{usd, aapl},
 					},
 				}.Build(),
 			}.Build(),
@@ -193,20 +189,19 @@ func TestComputeFlows(t *testing.T) {
 		{
 			desc: "forex without fee",
 			trx: journal.TransactionBuilder{
+				Targets: []*journal.Commodity{usd, gbp},
 				Postings: journal.PostingBuilders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
 						Value:     decimal.NewFromInt(1400),
 						Commodity: gbp,
-						Targets:   []*journal.Commodity{usd, gbp},
 					},
 					{
 						Credit:    equity,
 						Debit:     portfolio,
 						Value:     decimal.NewFromInt(1350),
 						Commodity: usd,
-						Targets:   []*journal.Commodity{usd, gbp},
 					},
 				}.Build(),
 			}.Build(),
@@ -218,27 +213,25 @@ func TestComputeFlows(t *testing.T) {
 		{
 			desc: "forex with fee",
 			trx: journal.TransactionBuilder{
+				Targets: []*journal.Commodity{usd, gbp},
 				Postings: journal.PostingBuilders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
 						Value:     decimal.NewFromInt(1400),
 						Commodity: gbp,
-						Targets:   []*journal.Commodity{usd, gbp},
 					},
 					{
 						Credit:    equity,
 						Debit:     portfolio,
 						Value:     decimal.NewFromInt(1350),
 						Commodity: usd,
-						Targets:   []*journal.Commodity{usd, gbp},
 					},
 					{
 						Credit:    portfolio,
 						Debit:     expense,
 						Value:     decimal.NewFromInt(10),
 						Commodity: chf,
-						Targets:   []*journal.Commodity{usd, gbp},
 					},
 				}.Build(),
 			}.Build(),
@@ -250,27 +243,25 @@ func TestComputeFlows(t *testing.T) {
 		{
 			desc: "forex with native fee",
 			trx: journal.TransactionBuilder{
+				Targets: []*journal.Commodity{usd, gbp},
 				Postings: journal.PostingBuilders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
 						Value:     decimal.NewFromInt(1400),
 						Commodity: gbp,
-						Targets:   []*journal.Commodity{usd, gbp},
 					},
 					{
 						Credit:    equity,
 						Debit:     portfolio,
 						Value:     decimal.NewFromInt(1350),
 						Commodity: usd,
-						Targets:   []*journal.Commodity{usd, gbp},
 					},
 					{
 						Credit:    portfolio,
 						Debit:     expense,
 						Value:     decimal.NewFromInt(10),
 						Commodity: usd,
-						Targets:   []*journal.Commodity{usd, gbp},
 					},
 				}.Build(),
 			}.Build(),

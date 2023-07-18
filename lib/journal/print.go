@@ -113,17 +113,6 @@ func (p Printer) printPosting(w io.Writer, t *Posting) (int, error) {
 	if err != nil {
 		return n, err
 	}
-	if t.Targets != nil {
-		var s []string
-		for _, t := range t.Targets {
-			s = append(s, t.Name())
-		}
-		c, err = fmt.Fprintf(w, " (%s)", strings.Join(s, ","))
-		n += c
-		if err != nil {
-			return n, err
-		}
-	}
 	if t.Lot != nil {
 		c, err = io.WriteString(w, " ")
 		n += c

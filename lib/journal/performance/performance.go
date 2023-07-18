@@ -84,7 +84,7 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 				}
 				// tgts contains the commodities among which the performance effects of this
 				// transaction should be split: non-currencies > currencies > valuation currency.
-				tgts := pickTargets(calc.Valuation, pst.Targets)
+				tgts := pickTargets(calc.Valuation, trx.Targets)
 
 				if len(tgts) == 1 && tgts[0] == pst.Commodity {
 					// performance effect on native commodity

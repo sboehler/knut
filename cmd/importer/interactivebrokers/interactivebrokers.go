@@ -296,23 +296,21 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 				Debit:     p.account,
 				Commodity: stock,
 				Amount:    qty,
-				Targets:   []*journal.Commodity{stock, currency},
 			},
 			{
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: currency,
 				Amount:    proceeds,
-				Targets:   []*journal.Commodity{stock, currency},
 			},
 			{
 				Credit:    p.fee,
 				Debit:     p.account,
 				Commodity: currency,
 				Amount:    fee,
-				Targets:   []*journal.Commodity{stock, currency},
 			},
 		}.Build(),
+		Targets: []*journal.Commodity{stock, currency},
 	}.Build())
 	return true, nil
 }
@@ -366,14 +364,12 @@ func (p *parser) parseForex(r []string) (bool, error) {
 			Debit:     p.account,
 			Commodity: stock,
 			Amount:    qty,
-			Targets:   []*journal.Commodity{stock, currency},
 		},
 		{
 			Credit:    p.trading,
 			Debit:     p.account,
 			Commodity: currency,
 			Amount:    proceeds,
-			Targets:   []*journal.Commodity{stock, currency},
 		},
 	}
 	if !fee.IsZero() {
@@ -382,13 +378,13 @@ func (p *parser) parseForex(r []string) (bool, error) {
 			Debit:     p.account,
 			Commodity: p.baseCurrency,
 			Amount:    fee,
-			Targets:   []*journal.Commodity{stock, currency},
 		})
 	}
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: desc,
 		Postings:    postings.Build(),
+		Targets:     []*journal.Commodity{stock, currency},
 	}.Build())
 	return true, nil
 }
@@ -494,8 +490,8 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 			Debit:     p.account,
 			Commodity: currency,
 			Amount:    amount,
-			Targets:   []*journal.Commodity{security},
 		}.Build(),
+		Targets: []*journal.Commodity{security},
 	}.Build())
 	return true, nil
 }
@@ -559,8 +555,8 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 			Debit:     p.account,
 			Commodity: currency,
 			Amount:    amount,
-			Targets:   []*journal.Commodity{security},
 		}.Build(),
+		Targets: []*journal.Commodity{security},
 	}.Build())
 	return true, nil
 }
@@ -594,8 +590,8 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 			Debit:     p.account,
 			Commodity: currency,
 			Amount:    amount,
-			Targets:   []*journal.Commodity{currency},
 		}.Build(),
+		Targets: []*journal.Commodity{currency},
 	}.Build())
 	return true, nil
 }

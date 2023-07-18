@@ -266,23 +266,21 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 				Debit:     p.account,
 				Commodity: r.symbol,
 				Amount:    qty,
-				Targets:   []*journal.Commodity{r.symbol, r.currency},
 			},
 			{
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: r.currency,
 				Amount:    proceeds,
-				Targets:   []*journal.Commodity{r.symbol, r.currency},
 			},
 			{
 				Credit:    p.fee,
 				Debit:     p.account,
 				Commodity: r.currency,
 				Amount:    fee,
-				Targets:   []*journal.Commodity{r.symbol, r.currency},
 			},
 		}.Build(),
+		Targets: []*journal.Commodity{r.symbol, r.currency},
 	}.Build())
 	return true, nil
 }
@@ -313,15 +311,16 @@ func (p *parser) parseForex(r *record) (bool, error) {
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: p.last.currency,
-				Amount:    p.last.netAmount, Targets: []*journal.Commodity{p.last.currency, r.currency},
+				Amount:    p.last.netAmount,
 			},
 			{
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: r.currency,
-				Amount:    r.netAmount, Targets: []*journal.Commodity{p.last.currency, r.currency},
+				Amount:    r.netAmount,
 			},
 		}.Build(),
+		Targets: []*journal.Commodity{p.last.currency, r.currency},
 	}.Build())
 	p.last = nil
 	return true, nil
@@ -342,7 +341,6 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 			Debit:     p.account,
 			Commodity: r.currency,
 			Amount:    r.price,
-			Targets:   []*journal.Commodity{r.symbol},
 		},
 	}
 	if !r.fee.IsZero() {
@@ -351,13 +349,13 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 			Debit:     p.tax,
 			Commodity: r.currency,
 			Amount:    r.fee,
-			Targets:   []*journal.Commodity{r.symbol},
 		})
 	}
 	p.builder.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol.Name(), r.name, r.isin),
 		Postings:    postings.Build(),
+		Targets:     []*journal.Commodity{r.symbol},
 	}.Build())
 	return true, nil
 }
@@ -374,8 +372,8 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 			Debit:     p.account,
 			Commodity: r.currency,
 			Amount:    r.netAmount,
-			Targets:   make([]*journal.Commodity, 0),
 		}.Build(),
+		Targets: make([]*journal.Commodity, 0),
 	}.Build())
 	return true, nil
 }
@@ -415,8 +413,8 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 			Debit:     p.account,
 			Commodity: r.currency,
 			Amount:    r.netAmount,
-			Targets:   []*journal.Commodity{r.currency},
 		}.Build(),
+		Targets: []*journal.Commodity{r.currency},
 	}.Build())
 	return true, nil
 }

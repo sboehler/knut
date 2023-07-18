@@ -163,8 +163,8 @@ func Balance(jctx Context, v *Commodity) DayFn {
 					Debit:     pos.Account,
 					Commodity: pos.Commodity,
 					Value:     gain,
-					Targets:   []*Commodity{pos.Commodity},
 				}.Build(),
+				Targets: []*Commodity{pos.Commodity},
 			}.Build())
 			values.Add(pos, gain)
 			values.Add(AccountCommodityKey(credit, pos.Commodity), gain.Neg())

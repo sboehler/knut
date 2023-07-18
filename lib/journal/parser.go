@@ -326,7 +326,6 @@ func (p *Parser) parsePostings() ([]*Posting, error) {
 			credit, debit *Account
 			amount        decimal.Decimal
 			commodity     *Commodity
-			targets       []*Commodity
 			lot           *Lot
 
 			err error
@@ -355,28 +354,15 @@ func (p *Parser) parsePostings() ([]*Posting, error) {
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		for p.current() == '{' || p.current() == '(' {
-			switch p.current() {
-			case '{':
-				if lot != nil {
-					return nil, fmt.Errorf("duplicate lot")
-				}
-				if lot, err = p.parseLot(); err != nil {
-					return nil, err
-				}
-				if err = p.consumeWhitespace1(); err != nil {
-					return nil, err
-				}
-			case '(':
-				if targets != nil {
-					return nil, fmt.Errorf("duplicate target commodity declarations")
-				}
-				if targets, err = p.parseTargetCommodities(); err != nil {
-					return nil, err
-				}
-				if err = p.consumeWhitespace1(); err != nil {
-					return nil, err
-				}
+		if p.current() == '{' {
+			if lot != nil {
+				return nil, fmt.Errorf("duplicate lot")
+			}
+			if lot, err = p.parseLot(); err != nil {
+				return nil, err
+			}
+			if err = p.consumeWhitespace1(); err != nil {
+				return nil, err
 			}
 		}
 		postings = append(postings, PostingBuilder{
@@ -384,7 +370,6 @@ func (p *Parser) parsePostings() ([]*Posting, error) {
 			Debit:     debit,
 			Amount:    amount,
 			Commodity: commodity,
-			Targets:   targets,
 			Lot:       lot,
 		})
 		if err = p.consumeRestOfWhitespaceLine(); err != nil {

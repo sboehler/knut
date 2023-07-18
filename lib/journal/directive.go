@@ -55,7 +55,6 @@ type Posting struct {
 	Amount, Value  decimal.Decimal
 	Account, Other *Account
 	Commodity      *Commodity
-	Targets        []*Commodity
 	Lot            *Lot
 }
 
@@ -63,7 +62,6 @@ type PostingBuilder struct {
 	Amount, Value decimal.Decimal
 	Credit, Debit *Account
 	Commodity     *Commodity
-	Targets       []*Commodity
 	Lot           *Lot
 }
 
@@ -78,7 +76,6 @@ func (pb PostingBuilder) Build() []*Posting {
 			Commodity: pb.Commodity,
 			Amount:    pb.Amount.Neg(),
 			Value:     pb.Value.Neg(),
-			Targets:   pb.Targets,
 			Lot:       pb.Lot,
 		},
 		{
@@ -87,7 +84,6 @@ func (pb PostingBuilder) Build() []*Posting {
 			Commodity: pb.Commodity,
 			Amount:    pb.Amount,
 			Value:     pb.Value,
-			Targets:   pb.Targets,
 			Lot:       pb.Lot,
 		},
 	}
@@ -117,10 +113,7 @@ func ComparePostings(p, p2 *Posting) compare.Order {
 	if o := compare.Decimal(p.Value, p2.Value); o != compare.Equal {
 		return o
 	}
-	if o := compare.Ordered(p.Commodity.Name(), p2.Commodity.Name()); o != compare.Equal {
-		return o
-	}
-	return compare.Ordered(len(p.Targets), len(p2.Targets))
+	return compare.Ordered(p.Commodity.Name(), p2.Commodity.Name())
 }
 
 // Lot represents a lot.

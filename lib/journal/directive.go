@@ -142,6 +142,7 @@ type Transaction struct {
 	Tags        []Tag
 	Postings    []*Posting
 	Accrual     *Accrual
+	Targets     []*Commodity
 }
 
 // Position returns the source location.
@@ -172,6 +173,7 @@ type TransactionBuilder struct {
 	Description string
 	Tags        []Tag
 	Postings    []*Posting
+	Targets     []*Commodity
 	Accrual     *Accrual
 }
 
@@ -184,6 +186,7 @@ func (tb TransactionBuilder) Build() *Transaction {
 		Tags:        tb.Tags,
 		Postings:    tb.Postings,
 		Accrual:     tb.Accrual,
+		Targets:     tb.Targets,
 	}
 }
 
@@ -213,7 +216,6 @@ type Assertion struct {
 
 // Accrual represents an accrual.
 type Accrual struct {
-	Range
 	Interval date.Interval
 	Period   date.Period
 	Account  *Account

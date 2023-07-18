@@ -95,7 +95,7 @@ func (p *Parser) Next() (Directive, error) {
 				return nil, p.scanner.ParseError(err)
 			}
 		case p.current() == '@':
-			a, err := p.parseAddOn()
+			a, err := p.parseAddons()
 			if err != nil {
 				return nil, p.scanner.ParseError(err)
 			}
@@ -139,7 +139,7 @@ func (p *Parser) consumeComment() error {
 	return nil
 }
 
-func (p *Parser) parseDirective(a *Accrual) (Directive, error) {
+func (p *Parser) parseDirective(a *addon) (Directive, error) {
 	p.markStart()
 	d, err := p.parseDate()
 	if err != nil {
@@ -169,7 +169,7 @@ func (p *Parser) parseDirective(a *Accrual) (Directive, error) {
 	return result, nil
 }
 
-func (p *Parser) parseTransaction(d time.Time, a *Accrual) (*Transaction, error) {
+func (p *Parser) parseTransaction(d time.Time, a *addon) (*Transaction, error) {
 	desc, err := p.parseQuotedString()
 	if err != nil {
 		return nil, err
@@ -190,9 +190,15 @@ func (p *Parser) parseTransaction(d time.Time, a *Accrual) (*Transaction, error)
 	if err != nil {
 		return nil, err
 	}
-	r := p.getRange()
+	var (
+		accrual *Accrual
+		targets []*Commodity
+		r       = p.getRange()
+	)
 	if a != nil {
 		r.Start = a.Range.Start
+		accrual = a.accrual
+		targets = a.targets
 	}
 	return TransactionBuilder{
 		Range:       r,
@@ -200,16 +206,61 @@ func (p *Parser) parseTransaction(d time.Time, a *Accrual) (*Transaction, error)
 		Description: desc,
 		Tags:        tags,
 		Postings:    postings,
-		Accrual:     a,
+		Accrual:     accrual,
+		Targets:     targets,
 	}.Build(), nil
 
 }
 
-func (p *Parser) parseAddOn() (*Accrual, error) {
+type addon struct {
+	Range
+	accrual *Accrual
+	targets []*Commodity
+}
+
+func (p *Parser) parseAddons() (*addon, error) {
 	p.markStart()
-	if err := p.scanner.ConsumeRune('@'); err != nil {
+	addon := new(addon)
+	for p.scanner.Current() == '@' {
+		if err := p.scanner.ConsumeRune('@'); err != nil {
+			return nil, err
+		}
+		switch p.scanner.Current() {
+		case 'a':
+			accrual, err := p.parseAccrual()
+			if err != nil {
+				return nil, err
+			}
+			addon.accrual = accrual
+		case 'p':
+			targets, err := p.parsePerformance()
+			if err != nil {
+				return nil, err
+			}
+			addon.targets = targets
+		default:
+			return nil, p.scanner.ParseError(fmt.Errorf("unexpected character: %q", p.current()))
+		}
+	}
+	addon.Range = p.getRange()
+	return addon, nil
+}
+
+func (p *Parser) parsePerformance() ([]*Commodity, error) {
+	if err := p.scanner.ParseString("performance"); err != nil {
 		return nil, err
 	}
+	if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
+		return nil, err
+	}
+	tgts, err := p.parseTargetCommodities()
+	if err != nil {
+		return nil, err
+	}
+	return tgts, p.consumeRestOfWhitespaceLine()
+}
+
+func (p *Parser) parseAccrual() (*Accrual, error) {
 	if err := p.scanner.ParseString("accrue"); err != nil {
 		return nil, err
 	}
@@ -262,7 +313,6 @@ func (p *Parser) parseAddOn() (*Accrual, error) {
 		return nil, err
 	}
 	return &Accrual{
-		Range:    p.getRange(),
 		Period:   date.Period{Start: dateFrom, End: dateTo},
 		Interval: interval,
 		Account:  account,

@@ -58,6 +58,17 @@ func (p Printer) printTransaction(w io.Writer, t *Transaction) (n int, err error
 			return n, err
 		}
 	}
+	if t.Targets != nil {
+		var s []string
+		for _, t := range t.Targets {
+			s = append(s, t.Name())
+		}
+		c, err := fmt.Fprintf(w, "@performance(%s)\n", strings.Join(s, ","))
+		n += c
+		if err != nil {
+			return n, err
+		}
+	}
 	c, err := fmt.Fprintf(w, "%s \"%s\"", t.Date.Format("2006-01-02"), t.Description)
 	n += c
 	if err != nil {

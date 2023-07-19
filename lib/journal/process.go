@@ -219,10 +219,14 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 		// j.Day creates the entry for the given date as a side effect.
 		closingDays.Add(j.Day(d))
 	}
+	equityAccount := j.Context.Account("Equity:Equity")
 	return func(d *Day) error {
 		if closingDays.Has(d) {
 			for k, amt := range amounts {
-				if !k.Account.IsIE() {
+				if k.Account.IsAL() {
+					continue
+				}
+				if k.Account == equityAccount {
 					continue
 				}
 				if amt.IsZero() && values[k].IsZero() {
@@ -233,7 +237,7 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 					Description: fmt.Sprintf("Closing account %s in %s", k.Account.Name(), k.Commodity.Name()),
 					Postings: PostingBuilder{
 						Credit:    k.Account,
-						Debit:     j.Context.Account("Equity:Equity"),
+						Debit:     equityAccount,
 						Commodity: k.Commodity,
 						Amount:    amt,
 						Value:     values[k],
@@ -243,7 +247,7 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 		}
 		for _, t := range d.Transactions {
 			for _, p := range t.Postings {
-				if p.Account.IsIE() {
+				if !p.Account.IsAL() && p.Account != equityAccount {
 					amounts.Add(AccountCommodityKey(p.Account, p.Commodity), p.Amount)
 					values.Add(AccountCommodityKey(p.Account, p.Commodity), p.Value)
 				}

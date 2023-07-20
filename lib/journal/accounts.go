@@ -104,11 +104,6 @@ func (a Account) Segment() string {
 	return a.segment
 }
 
-// Level returns the name of this account.
-func (a Account) Level() int {
-	return a.level
-}
-
 // Type returns the account type.
 func (a Account) Type() AccountType {
 	return a.accountType

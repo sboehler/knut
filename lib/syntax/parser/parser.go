@@ -107,7 +107,7 @@ func (p *Parser) parseBooking() (syntax.Booking, error) {
 }
 
 func (p *Parser) finishBooking(b syntax.Booking) syntax.Booking {
-	b.Pos.End = p.Offset()
+	b.End = p.Offset()
 	return b
 }
 

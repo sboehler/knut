@@ -48,7 +48,10 @@ func (p *Parser) parseAccount() (syntax.Account, error) {
 		return syntax.Account(p.Range(start)), err
 	}
 	for {
-		if r, err := p.ReadCharacterOpt(':'); err != nil || r.Empty() {
+		if p.Current() != ':' {
+			return syntax.Account(p.Range(start)), nil
+		}
+		if _, err := p.ReadCharacter(':'); err != nil {
 			return syntax.Account(p.Range(start)), err
 		}
 		if _, err := p.ReadWhile1(isAlphanumeric); err != nil {

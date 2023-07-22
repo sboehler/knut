@@ -127,6 +127,10 @@ type Lot struct {
 // Tag represents a tag for a transaction or booking.
 type Tag string
 
+func (t Tag) String() string {
+	return "#" + string(t)
+}
+
 // Transaction represents a transaction.
 type Transaction struct {
 	Range       Range

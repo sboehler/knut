@@ -23,7 +23,7 @@ import (
 
 // Scanner is a backtracking reader.
 type Scanner struct {
-	text string
+	Text string
 
 	reader io.RuneReader
 
@@ -47,14 +47,13 @@ func New(text, path string) (*Scanner, error) {
 	}
 	return &Scanner{
 		reader:  r,
-		text:    text,
+		Text:    text,
 		current: ch,
 		Path:    path,
 		Location: Location{
 			Line:    1,
 			Column:  1,
 			BytePos: 0,
-			RunePos: 0,
 		},
 	}, nil
 }
@@ -87,7 +86,6 @@ func (s *Scanner) Advance() error {
 		ch = EOF
 	}
 	s.Location.BytePos += utf8.RuneLen(s.current)
-	s.Location.RunePos++
 	if s.current == '\n' {
 		s.Location.Line++
 		s.Location.Column = 1
@@ -101,15 +99,15 @@ func (s *Scanner) Advance() error {
 // EOF is a rune representing the end of a file
 const EOF = rune(0)
 
-// ReadWhile reads runes into the builder while the predicate holds
+// ReadWhile reads a string while the predicate holds
 func (s *Scanner) ReadWhile(pred func(r rune) bool) (string, error) {
 	start := s.Location.BytePos
 	for pred(s.Current()) && s.Current() != EOF {
 		if err := s.Advance(); err != nil {
-			return s.text[start:s.Location.BytePos], err
+			return s.Text[start:s.Location.BytePos], err
 		}
 	}
-	return s.text[start:s.Location.BytePos], nil
+	return s.Text[start:s.Location.BytePos], nil
 }
 
 // ConsumeWhile advances the parser while the predicate holds
@@ -145,7 +143,7 @@ func (s *Scanner) ParseString(str string) error {
 	start := s.Location.BytePos
 	for _, ch := range str {
 		if ch != s.Current() {
-			return fmt.Errorf("expected %v, got %v", str, s.text[start:s.Location.BytePos])
+			return fmt.Errorf("expected %v, got %v", str, s.Text[start:s.Location.BytePos])
 		}
 		if err := s.Advance(); err != nil {
 			return err
@@ -162,12 +160,12 @@ func (s *Scanner) ReadN(n int) (string, error) {
 			return "", err
 		}
 	}
-	return s.text[start:s.Location.BytePos], nil
+	return s.Text[start:s.Location.BytePos], nil
 }
 
 // Location describes a location in the Scanner's stream.
 type Location struct {
-	BytePos, RunePos, Line, Column int
+	BytePos, Line, Column int
 }
 
 func (p Location) String() string {

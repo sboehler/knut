@@ -23,7 +23,6 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 	"unicode"
@@ -690,14 +689,11 @@ func (p *Parser) parseTag() (Tag, error) {
 	if err := p.scanner.ConsumeRune('#'); err != nil {
 		return "", err
 	}
-	var b strings.Builder
-	b.WriteRune('#')
 	i, err := p.parseIdentifier()
 	if err != nil {
 		return "", err
 	}
-	b.WriteString(i)
-	return Tag(b.String()), nil
+	return Tag(i), nil
 }
 
 // parseQuotedString parses a quoted string
@@ -719,29 +715,27 @@ func (p *Parser) parseQuotedString() (string, error) {
 
 // parseIdentifier parses an identifier
 func (p *Parser) parseIdentifier() (string, error) {
-	var s strings.Builder
+	start := p.scanner.Location.BytePos
 	if !(unicode.IsLetter(p.scanner.Current()) || unicode.IsDigit(p.scanner.Current())) {
 		return "", fmt.Errorf("expected identifier, got %q", p.scanner.Current())
 	}
 	for unicode.IsLetter(p.scanner.Current()) || unicode.IsDigit(p.scanner.Current()) {
-		s.WriteRune(p.scanner.Current())
 		if err := p.scanner.Advance(); err != nil {
-			return s.String(), err
+			return p.scanner.Text[start:p.scanner.Location.BytePos], err
 		}
 	}
-	return s.String(), nil
+	return p.scanner.Text[start:p.scanner.Location.BytePos], nil
 }
 
 // parseDecimal parses a decimal number
 func (p *Parser) parseDecimal() (decimal.Decimal, error) {
-	var b strings.Builder
+	start := p.scanner.Location.BytePos
 	for unicode.IsDigit(p.scanner.Current()) || p.scanner.Current() == '.' || p.scanner.Current() == '-' {
-		b.WriteRune(p.scanner.Current())
 		if err := p.scanner.Advance(); err != nil {
 			return decimal.Zero, err
 		}
 	}
-	return decimal.NewFromString(b.String())
+	return decimal.NewFromString(p.scanner.Text[start:p.scanner.Location.BytePos])
 }
 
 // parseDate parses a date as YYYY-MM-DD
@@ -755,14 +749,13 @@ func (p *Parser) parseDate() (time.Time, error) {
 
 // parseFloat parses a floating point number
 func (p *Parser) parseFloat() (float64, error) {
-	var b strings.Builder
+	start := p.scanner.Location.BytePos
 	for unicode.IsDigit(p.scanner.Current()) || p.scanner.Current() == '.' || p.scanner.Current() == '-' {
-		b.WriteRune(p.scanner.Current())
 		if err := p.scanner.Advance(); err != nil {
 			return 0, err
 		}
 	}
-	return strconv.ParseFloat(b.String(), 64)
+	return strconv.ParseFloat(p.scanner.Text[start:p.scanner.Location.BytePos], 64)
 }
 
 // parseCommodity parses a commodity

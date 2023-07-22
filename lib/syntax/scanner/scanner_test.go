@@ -38,15 +38,15 @@ func TestReadN(t *testing.T) {
 	}{
 		{
 			n:    3,
-			want: Range{0, 3},
+			want: Range{Start: 0, End: 3, Text: "foobar"},
 		},
 		{
 			n:    6,
-			want: Range{0, 6},
+			want: Range{Start: 0, End: 6, Text: "foobar"},
 		},
 		{
 			n:       7,
-			want:    Range{0, 6},
+			want:    Range{Start: 0, End: 6, Text: "foobar"},
 			wantErr: true,
 		},
 	} {
@@ -75,19 +75,19 @@ func TestReadString(t *testing.T) {
 	}{
 		{
 			str:  "",
-			want: Range{0, 0},
+			want: Range{Start: 0, End: 0, Text: "foobar"},
 		},
 		{
 			str:  "foo",
-			want: Range{0, 3},
+			want: Range{Start: 0, End: 3, Text: "foobar"},
 		},
 		{
 			str:  "foobar",
-			want: Range{0, 6},
+			want: Range{Start: 0, End: 6, Text: "foobar"},
 		},
 		{
 			str:     "foobarbaz",
-			want:    Range{0, 6},
+			want:    Range{Start: 0, End: 6, Text: "foobar"},
 			wantErr: true,
 		},
 	} {
@@ -116,18 +116,18 @@ func TestReadCharacter(t *testing.T) {
 		{
 			text: "foo",
 			char: 'f',
-			want: Range{0, 1},
+			want: Range{Start: 0, End: 1, Text: "foobar"},
 		},
 		{
 			text:    "foo",
 			char:    'o',
-			want:    Range{0, 0},
+			want:    Range{Start: 0, End: 0, Text: "foobar"},
 			wantErr: true,
 		},
 		{
 			text:    "",
 			char:    'o',
-			want:    Range{0, 0},
+			want:    Range{Start: 0, End: 0, Text: "foobar"},
 			wantErr: true,
 		},
 	} {
@@ -155,17 +155,17 @@ func TestReadWhile(t *testing.T) {
 		{
 			text: "ooobar",
 			pred: func(r rune) bool { return r == 'o' },
-			want: Range{0, 3},
+			want: Range{Start: 0, End: 3, Text: "ooobar"},
 		},
 		{
 			text: "ASDFasdf",
 			pred: unicode.IsUpper,
-			want: Range{0, 4},
+			want: Range{Start: 0, End: 4, Text: "ASDFasdf"},
 		},
 		{
 			text: "ASDF",
 			pred: unicode.IsUpper,
-			want: Range{0, 4},
+			want: Range{Start: 0, End: 4, Text: "ASDF"},
 		},
 	} {
 		t.Run(test.text, func(t *testing.T) {
@@ -188,15 +188,15 @@ func TestReadUntil(t *testing.T) {
 	}{
 		{
 			char: 'r',
-			want: Range{0, 5},
+			want: Range{Start: 0, End: 5, Text: "foobar"},
 		},
 		{
 			char: 'f',
-			want: Range{0, 0},
+			want: Range{Start: 0, End: 0, Text: "foobar"},
 		},
 		{
 			char:    'z',
-			want:    Range{0, 6},
+			want:    Range{Start: 0, End: 6, Text: "foobar"},
 			wantErr: true,
 		},
 	} {

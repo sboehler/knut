@@ -44,6 +44,11 @@ func (s *Scanner) Current() rune {
 	return s.current
 }
 
+// Offset returns the current offset.
+func (s *Scanner) Offset() int {
+	return s.pos
+}
+
 // Advance reads a rune.
 func (s *Scanner) Advance() error {
 	s.pos += s.currentLen
@@ -72,10 +77,10 @@ func (s *Scanner) ReadWhile(pred func(r rune) bool) (Range, error) {
 	start := s.pos
 	for pred(s.Current()) && s.Current() != EOF {
 		if err := s.Advance(); err != nil {
-			return Range{start, s.pos}, err
+			return s.Range(start), err
 		}
 	}
-	return Range{start, s.pos}, nil
+	return s.Range(start), nil
 }
 
 // ReadUntil advances the scanner until the predicate holds.
@@ -83,23 +88,23 @@ func (s *Scanner) ReadUntil(pred func(r rune) bool) (Range, error) {
 	start := s.pos
 	for !pred(s.Current()) {
 		if err := s.Advance(); err != nil {
-			return Range{start, s.pos}, err
+			return s.Range(start), err
 		}
 		if s.Current() == EOF {
-			return Range{start, s.pos}, fmt.Errorf("unexpected end of file")
+			return s.Range(start), fmt.Errorf("unexpected end of file")
 		}
 	}
-	return Range{start, s.pos}, nil
+	return s.Range(start), nil
 }
 
 // ReadCharacter consumes the given rune.
 func (s *Scanner) ReadCharacter(r rune) (Range, error) {
 	if s.Current() != r {
-		return Range{s.pos, s.pos}, fmt.Errorf("expected %c, got %c", r, s.Current())
+		return s.Range(s.pos), fmt.Errorf("expected %c, got %c", r, s.Current())
 	}
 	start := s.pos
 	err := s.Advance()
-	return Range{start, s.pos}, err
+	return s.Range(start), err
 }
 
 // ReadString parses the given string.
@@ -107,13 +112,13 @@ func (s *Scanner) ReadString(str string) (Range, error) {
 	start := s.pos
 	for _, ch := range str {
 		if ch != s.Current() {
-			return Range{start, s.pos}, fmt.Errorf("expected %v, got %v", str, s.text[start:s.pos])
+			return s.Range(start), fmt.Errorf("expected %v, got %v", str, s.text[start:s.pos])
 		}
 		if err := s.Advance(); err != nil {
-			return Range{start, s.pos}, err
+			return s.Range(start), err
 		}
 	}
-	return Range{start, s.pos}, nil
+	return s.Range(start), nil
 }
 
 // ReadN reads a string with n runes.
@@ -121,15 +126,25 @@ func (s *Scanner) ReadN(n int) (Range, error) {
 	start := s.pos
 	for i := 0; i < n; i++ {
 		if s.current == EOF {
-			return Range{start, s.pos}, io.EOF
+			return s.Range(start), io.EOF
 		}
 		if err := s.Advance(); err != nil {
-			return Range{start, s.pos}, err
+			return s.Range(start), err
 		}
 	}
-	return Range{start, s.pos}, nil
+	return s.Range(start), nil
+}
+
+func (s *Scanner) Range(start int) Range {
+	return Range{
+		Start: start,
+		End:   s.Offset(),
+		Path:  s.path,
+		Text:  s.text,
+	}
 }
 
 type Range struct {
 	Start, End int
+	Path, Text string
 }

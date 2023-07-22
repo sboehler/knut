@@ -304,3 +304,31 @@ func TestParseBooking(t *testing.T) {
 		},
 	}.run(t)
 }
+
+func TestParseQuotedString(t *testing.T) {
+	parserTest[syntax.QuotedString]{
+		desc: "p.parseQuotedString()",
+		fn:   func(p *Parser) (syntax.QuotedString, error) { return p.parseQuotedString() },
+		tests: []testcase[syntax.QuotedString]{
+			{
+				text: "\"\"",
+				want: func(s string) syntax.QuotedString {
+					return syntax.QuotedString{Start: 0, End: 2, Text: s}
+				},
+			},
+			{
+				text: "\"foo",
+				want: func(s string) syntax.QuotedString {
+					return syntax.QuotedString{Start: 0, End: 4, Text: s}
+				},
+				wantErr: true,
+			},
+			{
+				text: "\"foo\"",
+				want: func(s string) syntax.QuotedString {
+					return syntax.QuotedString{Start: 0, End: 5, Text: s}
+				},
+			},
+		},
+	}.run(t)
+}

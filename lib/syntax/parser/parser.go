@@ -133,6 +133,18 @@ func (p *Parser) parseDate() (syntax.Date, error) {
 	return syntax.Date(p.Range(start)), nil
 }
 
+func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
+	start := p.Offset()
+	if _, err := p.ReadCharacter('"'); err != nil {
+		return syntax.QuotedString(p.Range(start)), err
+	}
+	if _, err := p.ReadWhile(func(r rune) bool { return r != '"' }); err != nil {
+		return syntax.QuotedString(p.Range(start)), err
+	}
+	_, err := p.ReadCharacter('"')
+	return syntax.QuotedString(p.Range(start)), err
+}
+
 func isAlphanumeric(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }

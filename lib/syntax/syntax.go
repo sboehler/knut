@@ -14,6 +14,8 @@ type Date Pos
 
 type Decimal Pos
 
+type QuotedString Pos
+
 type Booking struct {
 	Pos
 	Credit, Debit           Account

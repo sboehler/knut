@@ -20,7 +20,7 @@ func New(text, path string) *Parser {
 }
 
 func (p *Parser) parseCommodity() (syntax.Commodity, error) {
-	r, err := p.parseIdentifier()
+	r, err := p.ReadWhile1(isAlphanumeric)
 	return syntax.Commodity(r), err
 }
 
@@ -40,10 +40,6 @@ func (p *Parser) parseDecimal() (syntax.Decimal, error) {
 		_, err = p.ReadWhile1(unicode.IsDigit)
 	}
 	return syntax.Decimal(p.Range(start)), err
-}
-
-func (p *Parser) parseIdentifier() (syntax.Pos, error) {
-	return p.ReadWhile1(isAlphanumeric)
 }
 
 func isAlphanumeric(r rune) bool {

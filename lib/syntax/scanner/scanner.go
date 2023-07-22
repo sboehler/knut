@@ -176,3 +176,7 @@ type Range struct {
 	Start, End int
 	Path, Text string
 }
+
+func (r Range) Empty() bool {
+	return r.Start == r.End
+}

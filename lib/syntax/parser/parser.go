@@ -42,6 +42,21 @@ func (p *Parser) parseDecimal() (syntax.Decimal, error) {
 	return syntax.Decimal(p.Range(start)), err
 }
 
+func (p *Parser) parseAccount() (syntax.Account, error) {
+	start := p.Offset()
+	if _, err := p.ReadWhile1(isAlphanumeric); err != nil {
+		return syntax.Account(p.Range(start)), err
+	}
+	for {
+		if r, err := p.ReadCharacterOpt(':'); err != nil || r.Empty() {
+			return syntax.Account(p.Range(start)), err
+		}
+		if _, err := p.ReadWhile1(isAlphanumeric); err != nil {
+			return syntax.Account(p.Range(start)), err
+		}
+	}
+}
+
 func isAlphanumeric(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }

@@ -41,6 +41,52 @@ func TestParseCommodity(t *testing.T) {
 	}
 }
 
+func TestParseAccount(t *testing.T) {
+	for _, test := range []struct {
+		text    string
+		want    syntax.Account
+		wantErr bool
+	}{
+		{
+			text: "foobar",
+			want: syntax.Account{Start: 0, End: 6},
+		},
+		{
+			text:    "",
+			want:    syntax.Account{Start: 0, End: 0},
+			wantErr: true,
+		},
+		{
+			text:    "(foobar)",
+			want:    syntax.Account{Start: 0, End: 0},
+			wantErr: true,
+		},
+		{
+			text:    "ABC:",
+			want:    syntax.Account{Start: 0, End: 4},
+			wantErr: true,
+		},
+		{
+			text: "ABC:B",
+			want: syntax.Account{Start: 0, End: 5},
+		},
+		{
+			text: "ABC:B:C:D",
+			want: syntax.Account{Start: 0, End: 9},
+		},
+	} {
+		t.Run(test.text, func(t *testing.T) {
+			p := setupParser(t, test.text)
+
+			got, err := p.parseAccount()
+
+			if (err != nil) != test.wantErr || !cmp.Equal(got, test.want, cmpopts.IgnoreFields(syntax.Account{}, "Text")) {
+				t.Fatalf("p.parseAccount() = %#v, %#v, want %#v, error presence %t", got, err, test.want, test.wantErr)
+			}
+		})
+	}
+}
+
 func TestParseDecimal(t *testing.T) {
 	for _, test := range []struct {
 		text    string

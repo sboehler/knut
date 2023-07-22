@@ -6,4 +6,6 @@ type Pos = scanner.Range
 
 type Commodity Pos
 
+type Account Pos
+
 type Decimal Pos

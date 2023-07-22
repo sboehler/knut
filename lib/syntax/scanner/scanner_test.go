@@ -158,6 +158,11 @@ func TestReadWhile(t *testing.T) {
 			want: Range{Start: 0, End: 3, Text: "ooobar"},
 		},
 		{
+			text: "",
+			pred: func(r rune) bool { return r == 'o' },
+			want: Range{Start: 0, End: 0, Text: ""},
+		},
+		{
 			text: "ASDFasdf",
 			pred: unicode.IsUpper,
 			want: Range{Start: 0, End: 4, Text: "ASDFasdf"},
@@ -175,6 +180,47 @@ func TestReadWhile(t *testing.T) {
 
 			if err != nil || got != test.want {
 				t.Fatalf("scanner.ReadWhile(pred) = %v, %v, want %v, nil", got, err, test.want)
+			}
+		})
+	}
+}
+
+func TestReadWhile1(t *testing.T) {
+	for _, test := range []struct {
+		text    string
+		pred    func(rune) bool
+		want    Range
+		wantErr bool
+	}{
+		{
+			text: "ooobar",
+			pred: func(r rune) bool { return r == 'o' },
+			want: Range{Start: 0, End: 3, Text: "ooobar"},
+		},
+		{
+			text:    "",
+			pred:    func(r rune) bool { return r == 'o' },
+			want:    Range{Start: 0, End: 0, Text: ""},
+			wantErr: true,
+		},
+		{
+			text: "ASDFasdf",
+			pred: unicode.IsUpper,
+			want: Range{Start: 0, End: 4, Text: "ASDFasdf"},
+		},
+		{
+			text: "ASDF",
+			pred: unicode.IsUpper,
+			want: Range{Start: 0, End: 4, Text: "ASDF"},
+		},
+	} {
+		t.Run(test.text, func(t *testing.T) {
+			scanner := setupScanner(t, test.text)
+
+			got, err := scanner.ReadWhile1(test.pred)
+
+			if test.wantErr != (err != nil) || got != test.want {
+				t.Fatalf("scanner.ReadWhile(pred) = %v, %v, want %v, error presence %t", got, err, test.want, test.wantErr)
 			}
 		})
 	}

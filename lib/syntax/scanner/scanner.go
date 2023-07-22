@@ -83,6 +83,24 @@ func (s *Scanner) ReadWhile(pred func(r rune) bool) (Range, error) {
 	return s.Range(start), nil
 }
 
+// ReadWhile reads a string while the predicate holds. The predicate must be
+// satisfied at least once.
+func (s *Scanner) ReadWhile1(pred func(r rune) bool) (Range, error) {
+	start := s.pos
+	if !pred(s.Current()) {
+		return s.Range(start), fmt.Errorf("unexpected character %c", s.Current())
+	}
+	if s.Current() == EOF {
+		return s.Range(start), fmt.Errorf("unexpected end of file")
+	}
+	for pred(s.Current()) && s.Current() != EOF {
+		if err := s.Advance(); err != nil {
+			return s.Range(start), err
+		}
+	}
+	return s.Range(start), nil
+}
+
 // ReadUntil advances the scanner until the predicate holds.
 func (s *Scanner) ReadUntil(pred func(r rune) bool) (Range, error) {
 	start := s.pos

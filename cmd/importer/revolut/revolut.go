@@ -214,13 +214,13 @@ func (p *parser) parseBooking(r []string) error {
 		}
 		t.Postings = journal.PostingBuilders{
 			{
-				Credit:    p.journal.Context.ValuationAccount(),
+				Credit:    p.journal.Context.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Amount:    amount,
 			},
 			{
-				Credit:    p.journal.Context.ValuationAccount(),
+				Credit:    p.journal.Context.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Amount:    otherAmount,
@@ -233,13 +233,13 @@ func (p *parser) parseBooking(r []string) error {
 		}
 		t.Postings = journal.PostingBuilders{
 			{
-				Credit:    p.journal.Context.ValuationAccount(),
+				Credit:    p.journal.Context.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Amount:    amount,
 			},
 			{
-				Credit:    p.journal.Context.ValuationAccount(),
+				Credit:    p.journal.Context.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Amount:    otherAmount.Neg(),

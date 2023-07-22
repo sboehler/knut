@@ -23,7 +23,10 @@ import (
 
 // Scanner is a backtracking reader.
 type Scanner struct {
+	text string
+
 	reader io.RuneReader
+
 	// current contains the current rune
 	current rune
 	// Path is the file path.
@@ -33,7 +36,8 @@ type Scanner struct {
 }
 
 // New creates a new Scanner.
-func New(r io.RuneReader, path string) (*Scanner, error) {
+func New(text, path string) (*Scanner, error) {
+	r := strings.NewReader(text)
 	ch, _, err := r.ReadRune()
 	if err != nil {
 		if err != io.EOF {
@@ -43,6 +47,7 @@ func New(r io.RuneReader, path string) (*Scanner, error) {
 	}
 	return &Scanner{
 		reader:  r,
+		text:    text,
 		current: ch,
 		Path:    path,
 		Location: Location{
@@ -98,14 +103,13 @@ const EOF = rune(0)
 
 // ReadWhile reads runes into the builder while the predicate holds
 func (s *Scanner) ReadWhile(pred func(r rune) bool) (string, error) {
-	var b strings.Builder
+	start := s.Location.BytePos
 	for pred(s.Current()) && s.Current() != EOF {
-		b.WriteRune(s.Current())
 		if err := s.Advance(); err != nil {
-			return b.String(), err
+			return s.text[start:s.Location.BytePos], err
 		}
 	}
-	return b.String(), nil
+	return s.text[start:s.Location.BytePos], nil
 }
 
 // ConsumeWhile advances the parser while the predicate holds
@@ -138,13 +142,10 @@ func (s *Scanner) ConsumeRune(r rune) error {
 
 // ParseString parses the given string
 func (s *Scanner) ParseString(str string) error {
-	var b strings.Builder
+	start := s.Location.BytePos
 	for _, ch := range str {
-		if _, err := b.WriteRune(s.Current()); err != nil {
-			return err
-		}
 		if ch != s.Current() {
-			return fmt.Errorf("expected %v, got %v", str, b.String())
+			return fmt.Errorf("expected %v, got %v", str, s.text[start:s.Location.BytePos])
 		}
 		if err := s.Advance(); err != nil {
 			return err
@@ -155,14 +156,13 @@ func (s *Scanner) ParseString(str string) error {
 
 // ReadN reads a string with n runes
 func (s *Scanner) ReadN(n int) (string, error) {
-	var b strings.Builder
+	start := s.Location.BytePos
 	for i := 0; i < n; i++ {
-		b.WriteRune(s.Current())
 		if err := s.Advance(); err != nil {
 			return "", err
 		}
 	}
-	return b.String(), nil
+	return s.text[start:s.Location.BytePos], nil
 }
 
 // Location describes a location in the Scanner's stream.
@@ -172,4 +172,26 @@ type Location struct {
 
 func (p Location) String() string {
 	return fmt.Sprintf("%d:%d", p.Line, p.Column)
+}
+
+func FindLocation(text string, pos int) (Location, error) {
+	res := Location{Line: 1, Column: 1}
+	if pos > len(text) {
+		return res, fmt.Errorf("invalid pos %d for string of length %d", pos, len(text))
+	}
+	r := strings.NewReader(text)
+	for offset := 0; offset < pos; {
+		ch, c, err := r.ReadRune()
+		if err != nil {
+			return res, err
+		}
+		if ch == '\n' {
+			res.Line++
+			res.Column = 1
+		} else {
+			res.Column++
+		}
+		offset += c
+	}
+	return res, nil
 }

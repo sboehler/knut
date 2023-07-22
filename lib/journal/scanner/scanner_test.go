@@ -15,12 +15,11 @@
 package scanner
 
 import (
-	"strings"
 	"testing"
 )
 
 func TestNewScanner(t *testing.T) {
-	r, err := New(strings.NewReader(""), "")
+	r, err := New("", "")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -31,7 +30,7 @@ func TestNewScanner(t *testing.T) {
 
 func TestWithoutBacktracking(t *testing.T) {
 	s := "foobar"
-	b, err := New(strings.NewReader(s), "")
+	b, err := New(s, "")
 	if err != nil {
 		t.Fatal(err)
 	}

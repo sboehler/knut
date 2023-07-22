@@ -55,7 +55,11 @@ func (p *Parser) getRange() Range {
 
 // New creates a new parser
 func newParser(ctx Context, path string, r io.RuneReader) (*Parser, error) {
-	s, err := scanner.New(r, path)
+	text, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	s, err := scanner.New(string(text), path)
 	if err != nil {
 		return nil, err
 	}

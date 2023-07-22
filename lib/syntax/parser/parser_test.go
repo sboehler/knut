@@ -175,6 +175,48 @@ func TestParseDecimal(t *testing.T) {
 	}
 }
 
+func TestParseDate(t *testing.T) {
+	for _, test := range []struct {
+		text    string
+		want    func(string) syntax.Date
+		wantErr bool
+	}{
+		{
+			text: "2023-05-31",
+			want: func(s string) syntax.Date {
+				return syntax.Date{Start: 0, End: 10, Text: s}
+			},
+		},
+		{
+			text: "202-05-31",
+			want: func(s string) syntax.Date {
+				return syntax.Date{Start: 0, End: 3, Text: s}
+			},
+			wantErr: true,
+		},
+		{
+			text: "20205-31",
+			want: func(s string) syntax.Date {
+				return syntax.Date{Start: 0, End: 4, Text: s}
+			},
+			wantErr: true,
+		},
+	} {
+		t.Run(test.text, func(t *testing.T) {
+			p := setupParser(t, test.text)
+
+			got, err := p.parseDate()
+
+			if (err != nil) != test.wantErr {
+				t.Fatalf("p.parseDate() returned error %v, want error presence %t", err, test.wantErr)
+			}
+			if diff := cmp.Diff(test.want(test.text), got); diff != "" {
+				t.Fatalf("p.parseDate() returned unexpected diff (-want/+got)\n%s\n", diff)
+			}
+		})
+	}
+}
+
 func TestParseBooking(t *testing.T) {
 	for _, test := range []struct {
 		text    string

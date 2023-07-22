@@ -26,19 +26,21 @@ func (p *Parser) parseCommodity() (syntax.Commodity, error) {
 
 func (p *Parser) parseDecimal() (syntax.Decimal, error) {
 	start := p.Offset()
-	if _, err := p.ReadCharacterOpt('-'); err != nil {
-		return syntax.Decimal(p.Range(start)), err
+	if p.Current() == '-' {
+		if _, err := p.ReadCharacter('-'); err != nil {
+			return syntax.Decimal(p.Range(start)), err
+		}
 	}
 	if _, err := p.ReadWhile1(unicode.IsDigit); err != nil {
 		return syntax.Decimal(p.Range(start)), err
 	}
-	r, err := p.ReadCharacterOpt('.')
-	if err != nil {
+	if p.Current() != '.' {
+		return syntax.Decimal(p.Range(start)), nil
+	}
+	if _, err := p.ReadCharacter('.'); err != nil {
 		return syntax.Decimal(p.Range(start)), err
 	}
-	if !r.Empty() {
-		_, err = p.ReadWhile1(unicode.IsDigit)
-	}
+	_, err := p.ReadWhile1(unicode.IsDigit)
 	return syntax.Decimal(p.Range(start)), err
 }
 
@@ -109,6 +111,26 @@ func (p *Parser) parseBooking() (syntax.Booking, error) {
 func (p *Parser) finishBooking(b syntax.Booking) syntax.Booking {
 	b.End = p.Offset()
 	return b
+}
+
+func (p *Parser) parseDate() (syntax.Date, error) {
+	start := p.Offset()
+	for i := 0; i < 4; i++ {
+		if _, err := p.ReadCharacterWith(unicode.IsDigit); err != nil {
+			return syntax.Date(p.Range(start)), err
+		}
+	}
+	for i := 0; i < 2; i++ {
+		if _, err := p.ReadCharacter('-'); err != nil {
+			return syntax.Date(p.Range(start)), err
+		}
+		for j := 0; j < 2; j++ {
+			if _, err := p.ReadCharacterWith(unicode.IsDigit); err != nil {
+				return syntax.Date(p.Range(start)), err
+			}
+		}
+	}
+	return syntax.Date(p.Range(start)), nil
 }
 
 func isAlphanumeric(r rune) bool {

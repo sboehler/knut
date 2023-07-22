@@ -10,6 +10,8 @@ type Account Pos
 
 type AccountMacro Pos
 
+type Date Pos
+
 type Decimal Pos
 
 type Booking struct {

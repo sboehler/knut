@@ -126,11 +126,11 @@ func (s *Scanner) ReadCharacter(r rune) (Range, error) {
 }
 
 // ReadCharacter optionally consumes the given rune.
-func (s *Scanner) ReadCharacterOpt(r rune) (Range, error) {
-	if s.Current() != r {
-		return s.Range(s.pos), nil
-	}
+func (s *Scanner) ReadCharacterWith(pred func(rune) bool) (Range, error) {
 	start := s.pos
+	if !pred(s.Current()) {
+		return s.Range(start), fmt.Errorf("unexpected character: %c", s.Current())
+	}
 	err := s.Advance()
 	return s.Range(start), err
 }

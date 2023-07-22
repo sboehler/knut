@@ -51,9 +51,9 @@ func New(text, path string) (*Scanner, error) {
 		current: ch,
 		Path:    path,
 		Location: Location{
-			Line:    1,
-			Column:  1,
-			BytePos: 0,
+			Line:   1,
+			Column: 1,
+			Offset: 0,
 		},
 	}, nil
 }
@@ -85,7 +85,7 @@ func (s *Scanner) Advance() error {
 		}
 		ch = EOF
 	}
-	s.Location.BytePos += utf8.RuneLen(s.current)
+	s.Location.Offset += utf8.RuneLen(s.current)
 	if s.current == '\n' {
 		s.Location.Line++
 		s.Location.Column = 1
@@ -101,13 +101,13 @@ const EOF = rune(0)
 
 // ReadWhile reads a string while the predicate holds
 func (s *Scanner) ReadWhile(pred func(r rune) bool) (string, error) {
-	start := s.Location.BytePos
+	start := s.Location.Offset
 	for pred(s.Current()) && s.Current() != EOF {
 		if err := s.Advance(); err != nil {
-			return s.Text[start:s.Location.BytePos], err
+			return s.Text[start:s.Location.Offset], err
 		}
 	}
-	return s.Text[start:s.Location.BytePos], nil
+	return s.Text[start:s.Location.Offset], nil
 }
 
 // ConsumeWhile advances the parser while the predicate holds
@@ -140,10 +140,10 @@ func (s *Scanner) ConsumeRune(r rune) error {
 
 // ParseString parses the given string
 func (s *Scanner) ParseString(str string) error {
-	start := s.Location.BytePos
+	start := s.Location.Offset
 	for _, ch := range str {
 		if ch != s.Current() {
-			return fmt.Errorf("expected %v, got %v", str, s.Text[start:s.Location.BytePos])
+			return fmt.Errorf("expected %v, got %v", str, s.Text[start:s.Location.Offset])
 		}
 		if err := s.Advance(); err != nil {
 			return err
@@ -154,18 +154,18 @@ func (s *Scanner) ParseString(str string) error {
 
 // ReadN reads a string with n runes
 func (s *Scanner) ReadN(n int) (string, error) {
-	start := s.Location.BytePos
+	start := s.Location.Offset
 	for i := 0; i < n; i++ {
 		if err := s.Advance(); err != nil {
 			return "", err
 		}
 	}
-	return s.Text[start:s.Location.BytePos], nil
+	return s.Text[start:s.Location.Offset], nil
 }
 
 // Location describes a location in the Scanner's stream.
 type Location struct {
-	BytePos, Line, Column int
+	Offset, Line, Column int
 }
 
 func (p Location) String() string {

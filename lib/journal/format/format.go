@@ -34,7 +34,7 @@ func Format(directives []journal.Directive, src reader, dest io.Writer) error {
 	)
 	p.Initialize(directives)
 	for _, d := range directives {
-		p0, p1 := d.Position().Start.BytePos, d.Position().End.BytePos
+		p0, p1 := d.Position().Start.Offset, d.Position().End.Offset
 
 		// copy text before directive from src to dest
 		if _, err := io.CopyN(dest, src, int64(p0-srcBytePos)); err != nil {

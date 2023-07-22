@@ -19,3 +19,8 @@ type Booking struct {
 	Amount                  Decimal
 	Commodity               Commodity
 }
+
+func (b Booking) EndAt(offset int) Booking {
+	b.Pos.End = offset
+	return b
+}

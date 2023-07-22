@@ -172,6 +172,15 @@ func (s *Scanner) Range(start int) Range {
 	}
 }
 
+func (s *Scanner) Rng() Range {
+	return Range{
+		Start: s.Offset(),
+		End:   s.Offset(),
+		Path:  s.path,
+		Text:  s.text,
+	}
+}
+
 type Range struct {
 	Start, End int
 	Path, Text string

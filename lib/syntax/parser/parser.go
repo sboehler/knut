@@ -70,52 +70,40 @@ func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
 }
 
 func (p *Parser) parseBooking() (syntax.Booking, error) {
-	start := p.Offset()
-	var (
-		booking syntax.Booking
-		err     error
-	)
+	booking := syntax.Booking{Pos: p.Rng()}
+	var err error
 	if p.Current() == '$' {
 		if booking.CreditMacro, err = p.parseAccountMacro(); err != nil {
-			booking.Pos = p.Range(start)
-			return booking, err
+			return booking.EndAt(p.Offset()), err
 		}
 	} else {
 		if booking.Credit, err = p.parseAccount(); err != nil {
-			booking.Pos = p.Range(start)
-			return booking, err
+			return booking.EndAt(p.Offset()), err
 		}
 	}
 	if _, err := p.ReadWhile1(isWhitespace); err != nil {
-		booking.Pos = p.Range(start)
-		return booking, err
+		return booking.EndAt(p.Offset()), err
 	}
 	if p.Current() == '$' {
 		if booking.DebitMacro, err = p.parseAccountMacro(); err != nil {
-			booking.Pos = p.Range(start)
-			return booking, err
+			return booking.EndAt(p.Offset()), err
 		}
 	} else {
 		if booking.Debit, err = p.parseAccount(); err != nil {
-			booking.Pos = p.Range(start)
-			return booking, err
+			return booking.EndAt(p.Offset()), err
 		}
 	}
 	if _, err := p.ReadWhile1(isWhitespace); err != nil {
-		booking.Pos = p.Range(start)
-		return booking, err
+		return booking.EndAt(p.Offset()), err
 	}
 	if booking.Amount, err = p.parseDecimal(); err != nil {
-		booking.Pos = p.Range(start)
-		return booking, err
+		return booking.EndAt(p.Offset()), err
 	}
 	if _, err := p.ReadWhile1(isWhitespace); err != nil {
-		booking.Pos = p.Range(start)
-		return booking, err
+		return booking.EndAt(p.Offset()), err
 	}
 	booking.Commodity, err = p.parseCommodity()
-	booking.Pos = p.Range(start)
-	return booking, err
+	return booking.EndAt(p.Offset()), err
 }
 
 func isAlphanumeric(r rune) bool {

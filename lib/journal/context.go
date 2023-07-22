@@ -61,11 +61,6 @@ func (ctx Context) Commodity(name string) *Commodity {
 	return c
 }
 
-// ValuationAccount returns the account for automatic valuation bookings.
-func (ctx Context) ValuationAccount() *Account {
-	return ctx.Account("Income")
-}
-
 // TBDAccount returns the TBD account.
 func (ctx Context) TBDAccount() *Account {
 	return ctx.Account("Expenses:TBD")
@@ -75,7 +70,7 @@ func (ctx Context) TBDAccount() *Account {
 // the given Asset or Liability account.
 func (ctx Context) ValuationAccountFor(a *Account) *Account {
 	suffix := a.Split()[1:]
-	segments := append(ctx.ValuationAccount().Split(), suffix...)
+	segments := append(ctx.Account("Income").Split(), suffix...)
 	return ctx.Account(strings.Join(segments, ":"))
 }
 

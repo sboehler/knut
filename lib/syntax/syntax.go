@@ -11,3 +11,11 @@ type Account Pos
 type AccountMacro Pos
 
 type Decimal Pos
+
+type Booking struct {
+	Pos
+	Credit, Debit           Account
+	CreditMacro, DebitMacro AccountMacro
+	Amount                  Decimal
+	Commodity               Commodity
+}

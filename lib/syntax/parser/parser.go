@@ -69,6 +69,59 @@ func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
 	return syntax.AccountMacro(p.Range(start)), err
 }
 
+func (p *Parser) parseBooking() (syntax.Booking, error) {
+	start := p.Offset()
+	var (
+		booking syntax.Booking
+		err     error
+	)
+	if p.Current() == '$' {
+		if booking.CreditMacro, err = p.parseAccountMacro(); err != nil {
+			booking.Pos = p.Range(start)
+			return booking, err
+		}
+	} else {
+		if booking.Credit, err = p.parseAccount(); err != nil {
+			booking.Pos = p.Range(start)
+			return booking, err
+		}
+	}
+	if _, err := p.ReadWhile1(isWhitespace); err != nil {
+		booking.Pos = p.Range(start)
+		return booking, err
+	}
+	if p.Current() == '$' {
+		if booking.DebitMacro, err = p.parseAccountMacro(); err != nil {
+			booking.Pos = p.Range(start)
+			return booking, err
+		}
+	} else {
+		if booking.Debit, err = p.parseAccount(); err != nil {
+			booking.Pos = p.Range(start)
+			return booking, err
+		}
+	}
+	if _, err := p.ReadWhile1(isWhitespace); err != nil {
+		booking.Pos = p.Range(start)
+		return booking, err
+	}
+	if booking.Amount, err = p.parseDecimal(); err != nil {
+		booking.Pos = p.Range(start)
+		return booking, err
+	}
+	if _, err := p.ReadWhile1(isWhitespace); err != nil {
+		booking.Pos = p.Range(start)
+		return booking, err
+	}
+	booking.Commodity, err = p.parseCommodity()
+	booking.Pos = p.Range(start)
+	return booking, err
+}
+
 func isAlphanumeric(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+func isWhitespace(ch rune) bool {
+	return ch == ' ' || ch == '\t' || ch == '\r'
 }

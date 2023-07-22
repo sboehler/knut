@@ -175,6 +175,76 @@ func TestParseDecimal(t *testing.T) {
 	}
 }
 
+func TestParseBooking(t *testing.T) {
+	for _, test := range []struct {
+		text    string
+		want    func(string) syntax.Booking
+		wantErr bool
+	}{
+		{
+			text: "A:B C:D 100.0 CHF",
+			want: func(t string) syntax.Booking {
+				return syntax.Booking{
+					Pos:       syntax.Pos{Start: 0, End: 17, Text: t},
+					Credit:    syntax.Account{Start: 0, End: 3, Text: t},
+					Debit:     syntax.Account{Start: 4, End: 7, Text: t},
+					Amount:    syntax.Decimal{Start: 8, End: 13, Text: t},
+					Commodity: syntax.Commodity{Start: 14, End: 17, Text: t},
+				}
+			},
+		},
+		{
+			text: "$dividend C:D 100.0 CHF",
+			want: func(t string) syntax.Booking {
+				return syntax.Booking{
+					Pos:         syntax.Pos{Start: 0, End: 23, Text: t},
+					CreditMacro: syntax.AccountMacro{Start: 0, End: 9, Text: t},
+					Debit:       syntax.Account{Start: 10, End: 13, Text: t},
+					Amount:      syntax.Decimal{Start: 14, End: 19, Text: t},
+					Commodity:   syntax.Commodity{Start: 20, End: 23, Text: t},
+				}
+			},
+		},
+		{
+			text: "A:B C:D 100.0",
+			want: func(t string) syntax.Booking {
+				return syntax.Booking{
+					Pos:    syntax.Pos{Start: 0, End: 13, Text: t},
+					Credit: syntax.Account{Start: 0, End: 3, Text: t},
+					Debit:  syntax.Account{Start: 4, End: 7, Text: t},
+					Amount: syntax.Decimal{Start: 8, End: 13, Text: t},
+				}
+			},
+			wantErr: true,
+		},
+		{
+			text: "C:D  $dividend  100.0  CHF",
+			want: func(t string) syntax.Booking {
+				return syntax.Booking{
+					Pos:        syntax.Pos{Start: 0, End: 26, Text: t},
+					Credit:     syntax.Account{Start: 0, End: 3, Text: t},
+					DebitMacro: syntax.AccountMacro{Start: 5, End: 14, Text: t},
+					Amount:     syntax.Decimal{Start: 16, End: 21, Text: t},
+					Commodity:  syntax.Commodity{Start: 23, End: 26, Text: t},
+				}
+			},
+		},
+	} {
+		t.Run(test.text, func(t *testing.T) {
+			p := setupParser(t, test.text)
+
+			got, err := p.parseBooking()
+
+			if (err != nil) != test.wantErr {
+				t.Fatalf("p.parseBooking() returned error %v, want error presence %t", err, test.wantErr)
+			}
+			if diff := cmp.Diff(test.want(test.text), got); diff != "" {
+				t.Fatalf("p.parseBooking() returned unexpected diff (-want/+got)\n%s\n", diff)
+			}
+		})
+	}
+}
+
 func setupParser(t *testing.T, text string) *Parser {
 	t.Helper()
 	parser := New(text, "")

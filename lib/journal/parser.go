@@ -37,17 +37,17 @@ import (
 type Parser struct {
 	context  Context
 	scanner  *scanner.Scanner
-	startPos scanner.Location
+	startPos scanner.Pos
 }
 
 func (p *Parser) markStart() {
-	p.startPos = p.scanner.Location
+	p.startPos = p.scanner.Pos
 }
 
 func (p *Parser) getRange() Range {
 	return Range{
 		Start: p.startPos,
-		End:   p.scanner.Location,
+		End:   p.scanner.Pos,
 		Path:  p.scanner.Path,
 	}
 }
@@ -715,27 +715,27 @@ func (p *Parser) parseQuotedString() (string, error) {
 
 // parseIdentifier parses an identifier
 func (p *Parser) parseIdentifier() (string, error) {
-	start := p.scanner.Location.Offset
+	start := p.scanner.Pos.Offset
 	if !(unicode.IsLetter(p.scanner.Current()) || unicode.IsDigit(p.scanner.Current())) {
 		return "", fmt.Errorf("expected identifier, got %q", p.scanner.Current())
 	}
 	for unicode.IsLetter(p.scanner.Current()) || unicode.IsDigit(p.scanner.Current()) {
 		if err := p.scanner.Advance(); err != nil {
-			return p.scanner.Text[start:p.scanner.Location.Offset], err
+			return p.scanner.Text[start:p.scanner.Pos.Offset], err
 		}
 	}
-	return p.scanner.Text[start:p.scanner.Location.Offset], nil
+	return p.scanner.Text[start:p.scanner.Pos.Offset], nil
 }
 
 // parseDecimal parses a decimal number
 func (p *Parser) parseDecimal() (decimal.Decimal, error) {
-	start := p.scanner.Location.Offset
+	start := p.scanner.Pos.Offset
 	for unicode.IsDigit(p.scanner.Current()) || p.scanner.Current() == '.' || p.scanner.Current() == '-' {
 		if err := p.scanner.Advance(); err != nil {
 			return decimal.Zero, err
 		}
 	}
-	return decimal.NewFromString(p.scanner.Text[start:p.scanner.Location.Offset])
+	return decimal.NewFromString(p.scanner.Text[start:p.scanner.Pos.Offset])
 }
 
 // parseDate parses a date as YYYY-MM-DD
@@ -749,13 +749,13 @@ func (p *Parser) parseDate() (time.Time, error) {
 
 // parseFloat parses a floating point number
 func (p *Parser) parseFloat() (float64, error) {
-	start := p.scanner.Location.Offset
+	start := p.scanner.Pos.Offset
 	for unicode.IsDigit(p.scanner.Current()) || p.scanner.Current() == '.' || p.scanner.Current() == '-' {
 		if err := p.scanner.Advance(); err != nil {
 			return 0, err
 		}
 	}
-	return strconv.ParseFloat(p.scanner.Text[start:p.scanner.Location.Offset], 64)
+	return strconv.ParseFloat(p.scanner.Text[start:p.scanner.Pos.Offset], 64)
 }
 
 // parseCommodity parses a commodity

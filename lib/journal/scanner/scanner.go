@@ -31,8 +31,8 @@ type Scanner struct {
 	current rune
 	// Path is the file path.
 	Path string
-	// Location is the current position in the stream.
-	Location Location
+	// Pos is the current position in the stream.
+	Pos Pos
 }
 
 // New creates a new Scanner.
@@ -50,7 +50,7 @@ func New(text, path string) (*Scanner, error) {
 		Text:    text,
 		current: ch,
 		Path:    path,
-		Location: Location{
+		Pos: Pos{
 			Line:   1,
 			Column: 1,
 			Offset: 0,
@@ -73,7 +73,7 @@ func (s *Scanner) Current() rune {
 
 // ParseError creates a new parser error with the current position.
 func (s *Scanner) ParseError(err error) error {
-	return fmt.Errorf("%s:%s: %v", s.Path, s.Location, err)
+	return fmt.Errorf("%s:%s: %v", s.Path, s.Pos, err)
 }
 
 // Advance reads a rune.
@@ -85,12 +85,12 @@ func (s *Scanner) Advance() error {
 		}
 		ch = EOF
 	}
-	s.Location.Offset += utf8.RuneLen(s.current)
+	s.Pos.Offset += utf8.RuneLen(s.current)
 	if s.current == '\n' {
-		s.Location.Line++
-		s.Location.Column = 1
+		s.Pos.Line++
+		s.Pos.Column = 1
 	} else {
-		s.Location.Column++
+		s.Pos.Column++
 	}
 	s.current = ch
 	return nil
@@ -101,13 +101,13 @@ const EOF = rune(0)
 
 // ReadWhile reads a string while the predicate holds
 func (s *Scanner) ReadWhile(pred func(r rune) bool) (string, error) {
-	start := s.Location.Offset
+	start := s.Pos.Offset
 	for pred(s.Current()) && s.Current() != EOF {
 		if err := s.Advance(); err != nil {
-			return s.Text[start:s.Location.Offset], err
+			return s.Text[start:s.Pos.Offset], err
 		}
 	}
-	return s.Text[start:s.Location.Offset], nil
+	return s.Text[start:s.Pos.Offset], nil
 }
 
 // ConsumeWhile advances the parser while the predicate holds
@@ -140,10 +140,10 @@ func (s *Scanner) ConsumeRune(r rune) error {
 
 // ParseString parses the given string
 func (s *Scanner) ParseString(str string) error {
-	start := s.Location.Offset
+	start := s.Pos.Offset
 	for _, ch := range str {
 		if ch != s.Current() {
-			return fmt.Errorf("expected %v, got %v", str, s.Text[start:s.Location.Offset])
+			return fmt.Errorf("expected %v, got %v", str, s.Text[start:s.Pos.Offset])
 		}
 		if err := s.Advance(); err != nil {
 			return err
@@ -154,26 +154,26 @@ func (s *Scanner) ParseString(str string) error {
 
 // ReadN reads a string with n runes
 func (s *Scanner) ReadN(n int) (string, error) {
-	start := s.Location.Offset
+	start := s.Pos.Offset
 	for i := 0; i < n; i++ {
 		if err := s.Advance(); err != nil {
 			return "", err
 		}
 	}
-	return s.Text[start:s.Location.Offset], nil
+	return s.Text[start:s.Pos.Offset], nil
 }
 
-// Location describes a location in the Scanner's stream.
-type Location struct {
+// Pos describes a location in the Scanner's stream.
+type Pos struct {
 	Offset, Line, Column int
 }
 
-func (p Location) String() string {
+func (p Pos) String() string {
 	return fmt.Sprintf("%d:%d", p.Line, p.Column)
 }
 
-func FindLocation(text string, pos int) (Location, error) {
-	res := Location{Line: 1, Column: 1}
+func FindLocation(text string, pos int) (Pos, error) {
+	res := Pos{Line: 1, Column: 1}
 	if pos > len(text) {
 		return res, fmt.Errorf("invalid pos %d for string of length %d", pos, len(text))
 	}

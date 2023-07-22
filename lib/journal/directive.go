@@ -13,7 +13,7 @@ import (
 // Range describes a range of locations in a file.
 type Range struct {
 	Path       string
-	Start, End scanner.Location
+	Start, End scanner.Pos
 }
 
 // Position returns the Range itself.

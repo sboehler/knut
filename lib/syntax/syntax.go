@@ -8,4 +8,6 @@ type Commodity Pos
 
 type Account Pos
 
+type AccountMacro Pos
+
 type Decimal Pos

@@ -87,6 +87,48 @@ func TestParseAccount(t *testing.T) {
 	}
 }
 
+func TestParseAccountMacro(t *testing.T) {
+	for _, test := range []struct {
+		text    string
+		want    syntax.AccountMacro
+		wantErr bool
+	}{
+		{
+			text: "$foobar",
+			want: syntax.AccountMacro{Start: 0, End: 7},
+		},
+		{
+			text: "$foo1",
+			want: syntax.AccountMacro{Start: 0, End: 4},
+		},
+		{
+			text:    "$1foo",
+			want:    syntax.AccountMacro{Start: 0, End: 1},
+			wantErr: true,
+		},
+		{
+			text:    "",
+			want:    syntax.AccountMacro{Start: 0, End: 0},
+			wantErr: true,
+		},
+		{
+			text:    "foobar",
+			want:    syntax.AccountMacro{Start: 0, End: 0},
+			wantErr: true,
+		},
+	} {
+		t.Run(test.text, func(t *testing.T) {
+			p := setupParser(t, test.text)
+
+			got, err := p.parseAccountMacro()
+
+			if (err != nil) != test.wantErr || !cmp.Equal(got, test.want, cmpopts.IgnoreFields(syntax.AccountMacro{}, "Text")) {
+				t.Fatalf("p.parseAccountMacro() = %#v, %#v, want %#v, error presence %t", got, err, test.want, test.wantErr)
+			}
+		})
+	}
+}
+
 func TestParseDecimal(t *testing.T) {
 	for _, test := range []struct {
 		text    string

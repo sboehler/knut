@@ -57,6 +57,15 @@ func (p *Parser) parseAccount() (syntax.Account, error) {
 	}
 }
 
+func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
+	start := p.Offset()
+	if _, err := p.ReadCharacter('$'); err != nil {
+		return syntax.AccountMacro(p.Range(start)), err
+	}
+	_, err := p.ReadWhile1(unicode.IsLetter)
+	return syntax.AccountMacro(p.Range(start)), err
+}
+
 func isAlphanumeric(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }

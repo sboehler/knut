@@ -33,33 +33,33 @@ func TestNewScanner(t *testing.T) {
 func TestReadN(t *testing.T) {
 	for _, test := range []struct {
 		n       int
-		wantEnd int
+		want    Range
 		wantErr bool
 	}{
 		{
-			n:       3,
-			wantEnd: 3,
+			n:    3,
+			want: Range{0, 3},
 		},
 		{
-			n:       6,
-			wantEnd: 6,
+			n:    6,
+			want: Range{0, 6},
 		},
 		{
 			n:       7,
-			wantEnd: 6,
+			want:    Range{0, 6},
 			wantErr: true,
 		},
 	} {
 		t.Run(fmt.Sprintf("n=%d", test.n), func(t *testing.T) {
 			scanner := setupScanner(t, "foobar")
 
-			gotStart, gotEnd, err := scanner.ReadN(test.n)
+			got, err := scanner.ReadN(test.n)
 
 			if (err != nil) != test.wantErr {
 				t.Fatalf("scanner.ReadN(%d) returned error %#v, want error presence %t", test.n, err, test.wantErr)
 			}
-			if gotStart != 0 || gotEnd != test.wantEnd {
-				t.Fatalf("scanner.ReadN(%d) = %d, %d, %v, want %d, %d, nil", test.n, gotStart, gotEnd, err, 0, test.wantEnd)
+			if got != test.want {
+				t.Fatalf("scanner.ReadN(%d) = %v, %v, want %v, nil", test.n, got, err, test.want)
 			}
 		})
 	}
@@ -70,37 +70,37 @@ func TestReadString(t *testing.T) {
 	for _, test := range []struct {
 		text    string
 		str     string
-		wantEnd int
+		want    Range
 		wantErr bool
 	}{
 		{
-			str:     "",
-			wantEnd: 0,
+			str:  "",
+			want: Range{0, 0},
 		},
 		{
-			str:     "foo",
-			wantEnd: 3,
+			str:  "foo",
+			want: Range{0, 3},
 		},
 		{
-			str:     "foobar",
-			wantEnd: 6,
+			str:  "foobar",
+			want: Range{0, 6},
 		},
 		{
 			str:     "foobarbaz",
-			wantEnd: 6,
+			want:    Range{0, 6},
 			wantErr: true,
 		},
 	} {
 		t.Run(test.str, func(t *testing.T) {
 			scanner := setupScanner(t, "foobar")
 
-			gotStart, gotEnd, err := scanner.ReadString(test.str)
+			got, err := scanner.ReadString(test.str)
 
 			if (err != nil) != test.wantErr {
 				t.Fatalf("scanner.ReadString(%s) returned error %#v, want error presence %t", test.str, err, test.wantErr)
 			}
-			if gotStart != 0 || gotEnd != test.wantEnd {
-				t.Fatalf("scanner.ReadString(%s) = %d, %d, %v, want %d, %d, nil", test.str, gotStart, gotEnd, err, 0, test.wantEnd)
+			if got != test.want {
+				t.Fatalf("scanner.ReadString(%s) = %v, %v, want %v, nil", test.str, got, err, test.want)
 			}
 		})
 	}
@@ -110,37 +110,37 @@ func TestReadCharacter(t *testing.T) {
 	for _, test := range []struct {
 		text    string
 		char    rune
-		wantEnd int
+		want    Range
 		wantErr bool
 	}{
 		{
-			text:    "foo",
-			char:    'f',
-			wantEnd: 1,
+			text: "foo",
+			char: 'f',
+			want: Range{0, 1},
 		},
 		{
 			text:    "foo",
 			char:    'o',
-			wantEnd: 0,
+			want:    Range{0, 0},
 			wantErr: true,
 		},
 		{
 			text:    "",
 			char:    'o',
-			wantEnd: 0,
+			want:    Range{0, 0},
 			wantErr: true,
 		},
 	} {
 		t.Run(fmt.Sprintf("ReadChar %c in %s", test.char, test.text), func(t *testing.T) {
 			scanner := setupScanner(t, "foobar")
 
-			gotStart, gotEnd, err := scanner.ReadCharacter(test.char)
+			got, err := scanner.ReadCharacter(test.char)
 
 			if (err != nil) != test.wantErr {
 				t.Fatalf("scanner.ReadChar(%c) returned error %#v, want error presence %t", test.char, err, test.wantErr)
 			}
-			if gotStart != 0 || gotEnd != test.wantEnd {
-				t.Fatalf("scanner.ReadChar(%c) = %d, %d, %v, want %d, %d, nil", test.char, gotStart, gotEnd, err, 0, test.wantEnd)
+			if got != test.want {
+				t.Fatalf("scanner.ReadChar(%c) = %v, %v, want %v, nil", test.char, got, err, test.want)
 			}
 		})
 	}
@@ -150,31 +150,31 @@ func TestReadWhile(t *testing.T) {
 	for _, test := range []struct {
 		text string
 		pred func(rune) bool
-		want int
+		want Range
 	}{
 		{
 			text: "ooobar",
 			pred: func(r rune) bool { return r == 'o' },
-			want: 3,
+			want: Range{0, 3},
 		},
 		{
 			text: "ASDFasdf",
 			pred: unicode.IsUpper,
-			want: 4,
+			want: Range{0, 4},
 		},
 		{
 			text: "ASDF",
 			pred: unicode.IsUpper,
-			want: 4,
+			want: Range{0, 4},
 		},
 	} {
 		t.Run(test.text, func(t *testing.T) {
 			scanner := setupScanner(t, test.text)
 
-			gotStart, gotEnd, err := scanner.ReadWhile(test.pred)
+			got, err := scanner.ReadWhile(test.pred)
 
-			if err != nil || gotStart != 0 || gotEnd != test.want {
-				t.Fatalf("scanner.ReadWhile(pred) = %d, %d, %v, want %d, %d, nil", gotStart, gotEnd, err, 0, test.want)
+			if err != nil || got != test.want {
+				t.Fatalf("scanner.ReadWhile(pred) = %v, %v, want %v, nil", got, err, test.want)
 			}
 		})
 	}
@@ -183,33 +183,33 @@ func TestReadWhile(t *testing.T) {
 func TestReadUntil(t *testing.T) {
 	for _, test := range []struct {
 		char    rune
-		wantEnd int
+		want    Range
 		wantErr bool
 	}{
 		{
-			char:    'r',
-			wantEnd: 5,
+			char: 'r',
+			want: Range{0, 5},
 		},
 		{
-			char:    'f',
-			wantEnd: 0,
+			char: 'f',
+			want: Range{0, 0},
 		},
 		{
 			char:    'z',
-			wantEnd: 6,
+			want:    Range{0, 6},
 			wantErr: true,
 		},
 	} {
 		t.Run(string(test.char), func(t *testing.T) {
 			scanner := setupScanner(t, "foobar")
 
-			gotStart, gotEnd, err := scanner.ReadUntil(func(r rune) bool { return r == test.char })
+			got, err := scanner.ReadUntil(func(r rune) bool { return r == test.char })
 
 			if (err != nil) != test.wantErr {
 				t.Fatalf("scanner.ReadUntil(pred) returned error %#v, want error presence %t", err, test.wantErr)
 			}
-			if gotStart != 0 || gotEnd != test.wantEnd {
-				t.Fatalf("scanner.ReadUntil(pred) = %d, %d, %v, want %d, %d, nil", gotStart, gotEnd, err, 0, test.wantEnd)
+			if got != test.want {
+				t.Fatalf("scanner.ReadUntil(pred) = %v, %v, want %v, nil", got, err, test.want)
 			}
 		})
 	}

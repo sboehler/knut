@@ -68,64 +68,68 @@ func (s *Scanner) Advance() error {
 const EOF = rune(0)
 
 // ReadWhile reads a string while the predicate holds.
-func (s *Scanner) ReadWhile(pred func(r rune) bool) (int, int, error) {
+func (s *Scanner) ReadWhile(pred func(r rune) bool) (Range, error) {
 	start := s.pos
 	for pred(s.Current()) && s.Current() != EOF {
 		if err := s.Advance(); err != nil {
-			return start, s.pos, err
+			return Range{start, s.pos}, err
 		}
 	}
-	return start, s.pos, nil
+	return Range{start, s.pos}, nil
 }
 
 // ReadUntil advances the scanner until the predicate holds.
-func (s *Scanner) ReadUntil(pred func(r rune) bool) (int, int, error) {
+func (s *Scanner) ReadUntil(pred func(r rune) bool) (Range, error) {
 	start := s.pos
 	for !pred(s.Current()) {
 		if err := s.Advance(); err != nil {
-			return start, s.pos, err
+			return Range{start, s.pos}, err
 		}
 		if s.Current() == EOF {
-			return start, s.pos, fmt.Errorf("unexpected end of file")
+			return Range{start, s.pos}, fmt.Errorf("unexpected end of file")
 		}
 	}
-	return start, s.pos, nil
+	return Range{start, s.pos}, nil
 }
 
 // ReadCharacter consumes the given rune.
-func (s *Scanner) ReadCharacter(r rune) (int, int, error) {
+func (s *Scanner) ReadCharacter(r rune) (Range, error) {
 	if s.Current() != r {
-		return s.pos, s.pos, fmt.Errorf("expected %c, got %c", r, s.Current())
+		return Range{s.pos, s.pos}, fmt.Errorf("expected %c, got %c", r, s.Current())
 	}
 	start := s.pos
 	err := s.Advance()
-	return start, s.pos, err
+	return Range{start, s.pos}, err
 }
 
 // ReadString parses the given string.
-func (s *Scanner) ReadString(str string) (int, int, error) {
+func (s *Scanner) ReadString(str string) (Range, error) {
 	start := s.pos
 	for _, ch := range str {
 		if ch != s.Current() {
-			return start, s.pos, fmt.Errorf("expected %v, got %v", str, s.text[start:s.pos])
+			return Range{start, s.pos}, fmt.Errorf("expected %v, got %v", str, s.text[start:s.pos])
 		}
 		if err := s.Advance(); err != nil {
-			return start, s.pos, err
+			return Range{start, s.pos}, err
 		}
 	}
-	return start, s.pos, nil
+	return Range{start, s.pos}, nil
 }
 
 // ReadN reads a string with n runes.
-func (s *Scanner) ReadN(n int) (int, int, error) {
+func (s *Scanner) ReadN(n int) (Range, error) {
 	start := s.pos
 	for i := 0; i < n; i++ {
 		if s.current == EOF {
-			return start, s.pos, io.EOF
+			return Range{start, s.pos}, io.EOF
 		}
 		if err := s.Advance(); err != nil {
-			return start, s.pos, err
+			return Range{start, s.pos}, err
 		}
 	}
-	return start, s.pos, nil
+	return Range{start, s.pos}, nil
+}
+
+type Range struct {
+	Start, End int
 }

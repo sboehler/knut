@@ -24,6 +24,24 @@ func (p *Parser) parseCommodity() (syntax.Commodity, error) {
 	return syntax.Commodity(r), err
 }
 
+func (p *Parser) parseDecimal() (syntax.Decimal, error) {
+	start := p.Offset()
+	if _, err := p.ReadCharacterOpt('-'); err != nil {
+		return syntax.Decimal(p.Range(start)), err
+	}
+	if _, err := p.ReadWhile1(unicode.IsDigit); err != nil {
+		return syntax.Decimal(p.Range(start)), err
+	}
+	r, err := p.ReadCharacterOpt('.')
+	if err != nil {
+		return syntax.Decimal(p.Range(start)), err
+	}
+	if !r.Empty() {
+		_, err = p.ReadWhile1(unicode.IsDigit)
+	}
+	return syntax.Decimal(p.Range(start)), err
+}
+
 func (p *Parser) parseIdentifier() (syntax.Pos, error) {
 	return p.ReadWhile1(isAlphanumeric)
 }

@@ -125,6 +125,16 @@ func (s *Scanner) ReadCharacter(r rune) (Range, error) {
 	return s.Range(start), err
 }
 
+// ReadCharacter optionally consumes the given rune.
+func (s *Scanner) ReadCharacterOpt(r rune) (Range, error) {
+	if s.Current() != r {
+		return s.Range(s.pos), nil
+	}
+	start := s.pos
+	err := s.Advance()
+	return s.Range(start), err
+}
+
 // ReadString parses the given string.
 func (s *Scanner) ReadString(str string) (Range, error) {
 	start := s.pos

@@ -146,6 +146,44 @@ func TestReadCharacter(t *testing.T) {
 	}
 }
 
+func TestReadCharacterOpt(t *testing.T) {
+	for _, test := range []struct {
+		text    string
+		char    rune
+		want    Range
+		wantErr bool
+	}{
+		{
+			text: "foo",
+			char: 'f',
+			want: Range{Start: 0, End: 1, Text: "foobar"},
+		},
+		{
+			text: "foo",
+			char: 'o',
+			want: Range{Start: 0, End: 0, Text: "foobar"},
+		},
+		{
+			text: "",
+			char: 'o',
+			want: Range{Start: 0, End: 0, Text: "foobar"},
+		},
+	} {
+		t.Run(fmt.Sprintf("ReadChar %c in %s", test.char, test.text), func(t *testing.T) {
+			scanner := setupScanner(t, "foobar")
+
+			got, err := scanner.ReadCharacterOpt(test.char)
+
+			if (err != nil) != test.wantErr {
+				t.Fatalf("scanner.ReadChar(%c) returned error %#v, want error presence %t", test.char, err, test.wantErr)
+			}
+			if got != test.want {
+				t.Fatalf("scanner.ReadChar(%c) = %v, %v, want %v, nil", test.char, got, err, test.want)
+			}
+		})
+	}
+}
+
 func TestReadWhile(t *testing.T) {
 	for _, test := range []struct {
 		text string

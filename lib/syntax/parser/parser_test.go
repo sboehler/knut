@@ -33,7 +33,7 @@ func (tests parserTest[T]) run(t *testing.T) {
 			if (err != nil) != test.wantErr {
 				t.Errorf("%s returned error %v, want error presence %t", tests.desc, err, test.wantErr)
 			}
-			if diff := cmp.Diff(got, test.want(test.text)); diff != "" {
+			if diff := cmp.Diff(test.want(test.text), got); diff != "" {
 				t.Errorf("%s returned unexpected diff (-want/+got)\n%s\n", tests.desc, diff)
 			}
 		})

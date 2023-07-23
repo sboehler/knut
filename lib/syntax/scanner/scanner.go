@@ -81,10 +81,10 @@ func (s *Scanner) ReadWhile(pred func(r rune) bool) (Range, error) {
 	rng := s.Range()
 	for pred(s.Current()) && s.Current() != EOF {
 		if err := s.Advance(); err != nil {
-			return updateRange(s, &rng), err
+			return Done(s.Offset(), &rng), err
 		}
 	}
-	return updateRange(s, &rng), nil
+	return Done(s.Offset(), &rng), nil
 }
 
 // ReadWhile reads a string while the predicate holds. The predicate must be
@@ -92,17 +92,17 @@ func (s *Scanner) ReadWhile(pred func(r rune) bool) (Range, error) {
 func (s *Scanner) ReadWhile1(pred func(r rune) bool) (Range, error) {
 	rng := s.Range()
 	if !pred(s.Current()) {
-		return updateRange(s, &rng), fmt.Errorf("unexpected character %c", s.Current())
+		return Done(s.Offset(), &rng), fmt.Errorf("unexpected character %c", s.Current())
 	}
 	if s.Current() == EOF {
-		return updateRange(s, &rng), fmt.Errorf("unexpected end of file")
+		return Done(s.Offset(), &rng), fmt.Errorf("unexpected end of file")
 	}
 	for pred(s.Current()) && s.Current() != EOF {
 		if err := s.Advance(); err != nil {
-			return updateRange(s, &rng), err
+			return Done(s.Offset(), &rng), err
 		}
 	}
-	return updateRange(s, &rng), nil
+	return Done(s.Offset(), &rng), nil
 }
 
 // ReadUntil advances the scanner until the predicate holds.
@@ -110,13 +110,13 @@ func (s *Scanner) ReadUntil(pred func(r rune) bool) (Range, error) {
 	rng := s.Range()
 	for !pred(s.Current()) {
 		if err := s.Advance(); err != nil {
-			return updateRange(s, &rng), err
+			return Done(s.Offset(), &rng), err
 		}
 		if s.Current() == EOF {
-			return updateRange(s, &rng), fmt.Errorf("unexpected end of file")
+			return Done(s.Offset(), &rng), fmt.Errorf("unexpected end of file")
 		}
 	}
-	return updateRange(s, &rng), nil
+	return Done(s.Offset(), &rng), nil
 }
 
 // ReadCharacter consumes the given rune.
@@ -126,17 +126,17 @@ func (s *Scanner) ReadCharacter(r rune) (Range, error) {
 	}
 	rng := s.Range()
 	err := s.Advance()
-	return updateRange(s, &rng), err
+	return Done(s.Offset(), &rng), err
 }
 
 // ReadCharacter optionally consumes the given rune.
 func (s *Scanner) ReadCharacterWith(pred func(rune) bool) (Range, error) {
 	rng := s.Range()
 	if !pred(s.Current()) {
-		return updateRange(s, &rng), fmt.Errorf("unexpected character: %c", s.Current())
+		return Done(s.Offset(), &rng), fmt.Errorf("unexpected character: %c", s.Current())
 	}
 	err := s.Advance()
-	return updateRange(s, &rng), err
+	return Done(s.Offset(), &rng), err
 }
 
 // ReadString parses the given string.
@@ -144,13 +144,13 @@ func (s *Scanner) ReadString(str string) (Range, error) {
 	rng := s.Range()
 	for _, ch := range str {
 		if ch != s.Current() {
-			return updateRange(s, &rng), fmt.Errorf("expected %v, got %v", str, s.text[rng.Start:s.Offset()])
+			return Done(s.Offset(), &rng), fmt.Errorf("expected %v, got %v", str, s.text[rng.Start:s.Offset()])
 		}
 		if err := s.Advance(); err != nil {
-			return updateRange(s, &rng), err
+			return Done(s.Offset(), &rng), err
 		}
 	}
-	return updateRange(s, &rng), nil
+	return Done(s.Offset(), &rng), nil
 }
 
 // ReadN reads a string with n runes.
@@ -158,13 +158,13 @@ func (s *Scanner) ReadN(n int) (Range, error) {
 	rng := s.Range()
 	for i := 0; i < n; i++ {
 		if s.current == EOF {
-			return updateRange(s, &rng), io.EOF
+			return Done(s.Offset(), &rng), io.EOF
 		}
 		if err := s.Advance(); err != nil {
-			return updateRange(s, &rng), err
+			return Done(s.Offset(), &rng), err
 		}
 	}
-	return updateRange(s, &rng), nil
+	return Done(s.Offset(), &rng), nil
 }
 
 func (s *Scanner) Range() Range {
@@ -176,10 +176,10 @@ func (s *Scanner) Range() Range {
 	}
 }
 
-func updateRange[P interface {
+func Done[P interface {
 	*T
 	SetEnd(int)
-}, T any](p *Scanner, b P) T {
-	b.SetEnd(p.Offset())
+}, T any](offset int, b P) T {
+	b.SetEnd(offset)
 	return *b
 }

@@ -22,58 +22,58 @@ func New(text, path string) *Parser {
 
 func (p *Parser) parseCommodity() (syntax.Commodity, error) {
 	r, err := p.ReadWhile1(isAlphanumeric)
-	return syntax.Commodity(r), err
+	return syntax.Commodity{Range: r}, err
 }
 
 func (p *Parser) parseDecimal() (syntax.Decimal, error) {
-	start := p.Offset()
+	decimal := syntax.Decimal{Range: p.Range()}
 	if p.Current() == '-' {
 		if _, err := p.ReadCharacter('-'); err != nil {
-			return syntax.Decimal(p.Range(start)), err
+			return updateRange(p, &decimal), err
 		}
 	}
 	if _, err := p.ReadWhile1(unicode.IsDigit); err != nil {
-		return syntax.Decimal(p.Range(start)), err
+		return updateRange(p, &decimal), err
 	}
 	if p.Current() != '.' {
-		return syntax.Decimal(p.Range(start)), nil
+		return updateRange(p, &decimal), nil
 	}
 	if _, err := p.ReadCharacter('.'); err != nil {
-		return syntax.Decimal(p.Range(start)), err
+		return updateRange(p, &decimal), err
 	}
 	_, err := p.ReadWhile1(unicode.IsDigit)
-	return syntax.Decimal(p.Range(start)), err
+	return updateRange(p, &decimal), err
 }
 
 func (p *Parser) parseAccount() (syntax.Account, error) {
-	start := p.Offset()
+	account := syntax.Account{Range: p.Range()}
 	if _, err := p.ReadWhile1(isAlphanumeric); err != nil {
-		return syntax.Account(p.Range(start)), err
+		return updateRange(p, &account), err
 	}
 	for {
 		if p.Current() != ':' {
-			return syntax.Account(p.Range(start)), nil
+			return updateRange(p, &account), nil
 		}
 		if _, err := p.ReadCharacter(':'); err != nil {
-			return syntax.Account(p.Range(start)), err
+			return updateRange(p, &account), err
 		}
 		if _, err := p.ReadWhile1(isAlphanumeric); err != nil {
-			return syntax.Account(p.Range(start)), err
+			return updateRange(p, &account), err
 		}
 	}
 }
 
 func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
-	start := p.Offset()
+	macro := syntax.AccountMacro{Range: p.Range()}
 	if _, err := p.ReadCharacter('$'); err != nil {
-		return syntax.AccountMacro(p.Range(start)), err
+		return updateRange(p, &macro), err
 	}
 	_, err := p.ReadWhile1(unicode.IsLetter)
-	return syntax.AccountMacro(p.Range(start)), err
+	return updateRange(p, &macro), err
 }
 
 func (p *Parser) parseBooking() (syntax.Booking, error) {
-	booking := syntax.Booking{Range: p.Rng()}
+	booking := syntax.Booking{Range: p.Range()}
 	var err error
 	if p.Current() == '$' {
 		if booking.CreditMacro, err = p.parseAccountMacro(); err != nil {
@@ -118,39 +118,39 @@ func updateRange[P interface {
 }
 
 func (p *Parser) parseDate() (syntax.Date, error) {
-	start := p.Offset()
+	date := syntax.Date{Range: p.Range()}
 	for i := 0; i < 4; i++ {
 		if _, err := p.ReadCharacterWith(unicode.IsDigit); err != nil {
-			return syntax.Date(p.Range(start)), err
+			return updateRange(p, &date), err
 		}
 	}
 	for i := 0; i < 2; i++ {
 		if _, err := p.ReadCharacter('-'); err != nil {
-			return syntax.Date(p.Range(start)), err
+			return updateRange(p, &date), err
 		}
 		for j := 0; j < 2; j++ {
 			if _, err := p.ReadCharacterWith(unicode.IsDigit); err != nil {
-				return syntax.Date(p.Range(start)), err
+				return updateRange(p, &date), err
 			}
 		}
 	}
-	return syntax.Date(p.Range(start)), nil
+	return updateRange(p, &date), nil
 }
 
 func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
-	start := p.Offset()
+	qs := syntax.QuotedString{Range: p.Range()}
 	if _, err := p.ReadCharacter('"'); err != nil {
-		return syntax.QuotedString(p.Range(start)), err
+		return updateRange(p, &qs), err
 	}
 	if _, err := p.ReadWhile(func(r rune) bool { return r != '"' }); err != nil {
-		return syntax.QuotedString(p.Range(start)), err
+		return updateRange(p, &qs), err
 	}
 	_, err := p.ReadCharacter('"')
-	return syntax.QuotedString(p.Range(start)), err
+	return updateRange(p, &qs), err
 }
 
 func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {
-	trx := syntax.Transaction{Range: p.Rng()}
+	trx := syntax.Transaction{Range: p.Range()}
 	var err error
 	if trx.Description, err = p.parseQuotedString(); err != nil {
 		return updateRange(p, &trx), err
@@ -176,18 +176,18 @@ func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.T
 
 func (p *Parser) readWhitespace1() (syntax.Range, error) {
 	if !isWhitespaceOrNewline(p.Current()) && p.Current() != scanner.EOF {
-		return p.Range(p.Offset()), fmt.Errorf("expected whitespace, got %q", p.Current())
+		return p.Range(), fmt.Errorf("expected whitespace, got %q", p.Current())
 	}
 	return p.ReadWhile(isWhitespace)
 }
 
 func (p *Parser) readRestOfWhitespaceLine() (syntax.Range, error) {
-	start := p.Offset()
+	rng := p.Range()
 	if _, err := p.ReadWhile(isWhitespace); err != nil {
-		return p.Range(start), err
+		return updateRange(p, &rng), err
 	}
 	_, err := p.ReadCharacter('\n')
-	return p.Range(start), err
+	return updateRange(p, &rng), err
 }
 
 func isAlphanumeric(r rune) bool {

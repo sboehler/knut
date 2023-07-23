@@ -5,17 +5,17 @@ import (
 	"strings"
 )
 
-type Commodity Range
+type Commodity struct{ Range }
 
-type Account Range
+type Account struct{ Range }
 
-type AccountMacro Range
+type AccountMacro struct{ Range }
 
-type Date Range
+type Date struct{ Range }
 
-type Decimal Range
+type Decimal struct{ Range }
 
-type QuotedString Range
+type QuotedString struct{ Range }
 
 type Booking struct {
 	Range

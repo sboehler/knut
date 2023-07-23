@@ -23,3 +23,30 @@ type Booking struct {
 	Amount                  Decimal
 	Commodity               Commodity
 }
+
+type Performance struct {
+	Pos
+	Targets []Commodity
+}
+
+type Interval Pos
+
+type Accrual struct {
+	Pos
+	Interval   Interval
+	Start, End Date
+}
+
+type Addons struct {
+	Performance *Performance
+	Accrual     *Accrual
+}
+
+type Transaction struct {
+	Pos
+	Date        Date
+	Description QuotedString
+	Bookings    []Booking
+	Accrual     *Accrual
+	Performance *Performance
+}

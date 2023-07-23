@@ -31,10 +31,10 @@ func (tests parserTest[T]) run(t *testing.T) {
 			got, err := tests.fn(parser)
 
 			if (err != nil) != test.wantErr {
-				t.Fatalf("%s returned error %v, want error presence %t", tests.desc, err, test.wantErr)
+				t.Errorf("%s returned error %v, want error presence %t", tests.desc, err, test.wantErr)
 			}
-			if diff := cmp.Diff(test.want(test.text), got); diff != "" {
-				t.Fatalf("%s returned unexpected diff (-want/+got)\n%s\n", tests.desc, diff)
+			if diff := cmp.Diff(got, test.want(test.text)); diff != "" {
+				t.Errorf("%s returned unexpected diff (-want/+got)\n%s\n", tests.desc, diff)
 			}
 		})
 	}
@@ -328,6 +328,147 @@ func TestParseQuotedString(t *testing.T) {
 				want: func(s string) syntax.QuotedString {
 					return syntax.QuotedString{Start: 0, End: 5, Text: s}
 				},
+			},
+		},
+	}.run(t)
+}
+
+func TestParseTransaction(t *testing.T) {
+	parserTest[syntax.Transaction]{
+		tests: []testcase[syntax.Transaction]{
+			{
+				text: "\"foo\"\n" + "A B 1 CHF\n", // 6 + 10
+				want: func(t string) syntax.Transaction {
+					return syntax.Transaction{
+						Pos:         syntax.Pos{Start: 0, End: 16, Text: t},
+						Description: syntax.QuotedString{Start: 0, End: 5, Text: t},
+						Bookings: []syntax.Booking{
+							{
+								Pos:       syntax.Pos{Start: 6, End: 15, Text: t},
+								Credit:    syntax.Account{Start: 6, End: 7, Text: t},
+								Debit:     syntax.Account{Start: 8, End: 9, Text: t},
+								Amount:    syntax.Decimal{Start: 10, End: 11, Text: t},
+								Commodity: syntax.Commodity{Start: 12, End: 15, Text: t},
+							},
+						},
+					}
+				},
+			},
+			{
+				text: "\"foo\"\n" + "A B 1 CHF\n" + "B A 1 CHF\n", // 6 + 10 + 10
+				want: func(t string) syntax.Transaction {
+					return syntax.Transaction{
+						Pos:         syntax.Pos{Start: 0, End: 26, Text: t},
+						Description: syntax.QuotedString{Start: 0, End: 5, Text: t},
+						Bookings: []syntax.Booking{
+							{
+								Pos:       syntax.Pos{Start: 6, End: 15, Text: t},
+								Credit:    syntax.Account{Start: 6, End: 7, Text: t},
+								Debit:     syntax.Account{Start: 8, End: 9, Text: t},
+								Amount:    syntax.Decimal{Start: 10, End: 11, Text: t},
+								Commodity: syntax.Commodity{Start: 12, End: 15, Text: t},
+							},
+							{
+								Pos:       syntax.Pos{Start: 16, End: 25, Text: t},
+								Credit:    syntax.Account{Start: 16, End: 17, Text: t},
+								Debit:     syntax.Account{Start: 18, End: 19, Text: t},
+								Amount:    syntax.Decimal{Start: 20, End: 21, Text: t},
+								Commodity: syntax.Commodity{Start: 22, End: 25, Text: t},
+							},
+						},
+					}
+				},
+			},
+			{
+				text:    "\"foo\"\n" + "A B 1 CHF", // 6 + 10
+				wantErr: true,
+				want: func(t string) syntax.Transaction {
+					return syntax.Transaction{
+						Pos:         syntax.Pos{Start: 0, End: 15, Text: t},
+						Description: syntax.QuotedString{Start: 0, End: 5, Text: t},
+						Bookings: []syntax.Booking{
+							{
+								Pos:       syntax.Pos{Start: 6, End: 15, Text: t},
+								Credit:    syntax.Account{Start: 6, End: 7, Text: t},
+								Debit:     syntax.Account{Start: 8, End: 9, Text: t},
+								Amount:    syntax.Decimal{Start: 10, End: 11, Text: t},
+								Commodity: syntax.Commodity{Start: 12, End: 15, Text: t},
+							},
+						},
+					}
+				},
+			},
+		},
+		desc: "p.parseTransaction()",
+		fn: func(p *Parser) (syntax.Transaction, error) {
+			return p.parseTransaction(syntax.Date{}, syntax.Addons{})
+		},
+	}.run(t)
+}
+
+func TestParseRestOfWhitespaceLine(t *testing.T) {
+	parserTest[syntax.Pos]{
+		desc: "p.parseQuotedString()",
+		fn:   func(p *Parser) (syntax.Pos, error) { return p.readRestOfWhitespaceLine() },
+		tests: []testcase[syntax.Pos]{
+			{
+				text: "\n",
+				want: func(s string) syntax.Pos {
+					return syntax.Pos{Start: 0, End: 1, Text: s}
+				},
+			},
+			{
+				text: " \n",
+				want: func(s string) syntax.Pos {
+					return syntax.Pos{Start: 0, End: 2, Text: s}
+				},
+			},
+			{
+				text: " foo",
+				want: func(s string) syntax.Pos {
+					return syntax.Pos{Start: 0, End: 1, Text: s}
+				},
+				wantErr: true,
+			},
+		},
+	}.run(t)
+}
+
+func TestReadWhitespace1(t *testing.T) {
+	parserTest[syntax.Pos]{
+		desc: "p.readWhitespace1()",
+		fn:   func(p *Parser) (syntax.Pos, error) { return p.readWhitespace1() },
+		tests: []testcase[syntax.Pos]{
+			{
+				text: "\n",
+				want: func(s string) syntax.Pos {
+					return syntax.Pos{Start: 0, End: 0, Text: s}
+				},
+			},
+			{
+				text: " \n",
+				want: func(s string) syntax.Pos {
+					return syntax.Pos{Start: 0, End: 1, Text: s}
+				},
+			},
+			{
+				text: " foo",
+				want: func(s string) syntax.Pos {
+					return syntax.Pos{Start: 0, End: 1, Text: s}
+				},
+			},
+			{
+				text: "   foo",
+				want: func(s string) syntax.Pos {
+					return syntax.Pos{Start: 0, End: 3, Text: s}
+				},
+			},
+			{
+				text: "foo",
+				want: func(s string) syntax.Pos {
+					return syntax.Pos{Start: 0, End: 0, Text: s}
+				},
+				wantErr: true,
 			},
 		},
 	}.run(t)

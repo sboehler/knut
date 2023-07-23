@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"unicode"
 
 	"github.com/sboehler/knut/lib/syntax"
@@ -145,10 +146,63 @@ func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
 	return syntax.QuotedString(p.Range(start)), err
 }
 
+func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {
+	trx := syntax.Transaction{Pos: p.Rng()}
+	var err error
+	if trx.Description, err = p.parseQuotedString(); err != nil {
+		return p.finishTransaction(trx), err
+	}
+	if _, err := p.readRestOfWhitespaceLine(); err != nil {
+		return p.finishTransaction(trx), err
+	}
+	for {
+		b, err := p.parseBooking()
+		if err != nil {
+			return p.finishTransaction(trx), err
+		}
+		trx.Bookings = append(trx.Bookings, b)
+		if _, err := p.readRestOfWhitespaceLine(); err != nil {
+			return p.finishTransaction(trx), err
+		}
+		if isWhitespaceOrNewline(p.Current()) || p.Current() == scanner.EOF {
+			break
+		}
+	}
+	return p.finishTransaction(trx), nil
+}
+
+func (p *Parser) finishTransaction(b syntax.Transaction) syntax.Transaction {
+	b.End = p.Offset()
+	return b
+}
+
+func (p *Parser) readWhitespace1() (syntax.Pos, error) {
+	if !isWhitespaceOrNewline(p.Current()) && p.Current() != scanner.EOF {
+		return p.Rng(), fmt.Errorf("expected whitespace, got %q", p.Current())
+	}
+	return p.ReadWhile(isWhitespace)
+}
+
+func (p *Parser) readRestOfWhitespaceLine() (syntax.Pos, error) {
+	start := p.Offset()
+	if _, err := p.ReadWhile(isWhitespace); err != nil {
+		return p.Range(start), err
+	}
+	_, err := p.ReadCharacter('\n')
+	return p.Range(start), err
+}
+
 func isAlphanumeric(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 func isWhitespace(ch rune) bool {
 	return ch == ' ' || ch == '\t' || ch == '\r'
+}
+func isWhitespaceOrNewline(ch rune) bool {
+	return isNewline(ch) || isWhitespace(ch)
+}
+
+func isNewline(ch rune) bool {
+	return ch == '\n'
 }

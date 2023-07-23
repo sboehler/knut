@@ -139,10 +139,10 @@ func TestReadCharacter(t *testing.T) {
 			got, err := scanner.ReadCharacter(test.char)
 
 			if (err != nil) != test.wantErr {
-				t.Fatalf("scanner.ReadChar(%c) returned error %#v, want error presence %t", test.char, err, test.wantErr)
+				t.Fatalf("scanner.ReadCharacter(%c) returned error %#v, want error presence %t", test.char, err, test.wantErr)
 			}
 			if got != test.want {
-				t.Fatalf("scanner.ReadChar(%c) = %v, %v, want %v, nil", test.char, got, err, test.want)
+				t.Fatalf("scanner.ReadCharacter(%c) = %v, %v, want %v, nil", test.char, got, err, test.want)
 			}
 		})
 	}

@@ -117,19 +117,21 @@ func (l Location) String() string {
 	return fmt.Sprintf("%d:%d", l.Line, l.Col)
 }
 
+var _ error = Error{}
+
 type Error struct {
-	Pos     Range
+	Range
 	Message string
 	Wrapped error
 }
 
 func (e Error) Error() string {
 	var s strings.Builder
-	if len(e.Pos.Path) > 0 {
-		s.WriteString(e.Pos.Path)
+	if len(e.Path) > 0 {
+		s.WriteString(e.Path)
 		s.WriteString(": ")
 	}
-	s.WriteString(e.Pos.Location()[1].String())
+	s.WriteString(e.Location()[1].String())
 	s.WriteString(" ")
 	s.WriteString(e.Message)
 	return s.String()

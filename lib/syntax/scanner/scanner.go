@@ -32,7 +32,7 @@ type Scanner struct {
 	// current contains the current rune
 	current    rune
 	currentLen int
-	pos        int
+	offset     int
 }
 
 // New creates a new Scanner.
@@ -50,24 +50,24 @@ func (s *Scanner) Current() rune {
 
 // Offset returns the current offset.
 func (s *Scanner) Offset() int {
-	return s.pos
+	return s.offset
 }
 
 // Advance reads a rune.
 func (s *Scanner) Advance() error {
-	s.pos += s.currentLen
-	if s.pos == len(s.text) {
+	s.offset += s.currentLen
+	if s.offset == len(s.text) {
 		s.current = EOF
 		s.currentLen = 0
 		return nil
 	}
-	s.current, s.currentLen = utf8.DecodeRuneInString(s.text[s.pos:])
+	s.current, s.currentLen = utf8.DecodeRuneInString(s.text[s.offset:])
 	if s.current == utf8.RuneError {
 		switch s.currentLen {
 		case 0:
-			return fmt.Errorf("unexpected end of file: %s", s.text[s.pos:])
+			return fmt.Errorf("unexpected end of file: %s", s.text[s.offset:])
 		case 1:
-			return fmt.Errorf("invalid string: %s", s.text[s.pos:])
+			return fmt.Errorf("invalid string: %s", s.text[s.offset:])
 		}
 	}
 	return nil

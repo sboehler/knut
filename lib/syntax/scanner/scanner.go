@@ -18,7 +18,11 @@ import (
 	"fmt"
 	"io"
 	"unicode/utf8"
+
+	"github.com/sboehler/knut/lib/syntax"
 )
+
+type Range = syntax.Range
 
 // Scanner is a scanner.
 type Scanner struct {
@@ -179,13 +183,4 @@ func (s *Scanner) Rng() Range {
 		Path:  s.path,
 		Text:  s.text,
 	}
-}
-
-type Range struct {
-	Start, End int
-	Path, Text string
-}
-
-func (r Range) Empty() bool {
-	return r.Start == r.End
 }

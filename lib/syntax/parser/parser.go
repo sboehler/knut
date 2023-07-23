@@ -73,45 +73,48 @@ func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
 }
 
 func (p *Parser) parseBooking() (syntax.Booking, error) {
-	booking := syntax.Booking{Pos: p.Rng()}
+	booking := syntax.Booking{Range: p.Rng()}
 	var err error
 	if p.Current() == '$' {
 		if booking.CreditMacro, err = p.parseAccountMacro(); err != nil {
-			return p.finishBooking(booking), err
+			return updateRange(p, &booking), err
 		}
 	} else {
 		if booking.Credit, err = p.parseAccount(); err != nil {
-			return p.finishBooking(booking), err
+			return updateRange(p, &booking), err
 		}
 	}
 	if _, err := p.ReadWhile1(isWhitespace); err != nil {
-		return p.finishBooking(booking), err
+		return updateRange(p, &booking), err
 	}
 	if p.Current() == '$' {
 		if booking.DebitMacro, err = p.parseAccountMacro(); err != nil {
-			return p.finishBooking(booking), err
+			return updateRange(p, &booking), err
 		}
 	} else {
 		if booking.Debit, err = p.parseAccount(); err != nil {
-			return p.finishBooking(booking), err
+			return updateRange(p, &booking), err
 		}
 	}
 	if _, err := p.ReadWhile1(isWhitespace); err != nil {
-		return p.finishBooking(booking), err
+		return updateRange(p, &booking), err
 	}
 	if booking.Amount, err = p.parseDecimal(); err != nil {
-		return p.finishBooking(booking), err
+		return updateRange(p, &booking), err
 	}
 	if _, err := p.ReadWhile1(isWhitespace); err != nil {
-		return p.finishBooking(booking), err
+		return updateRange(p, &booking), err
 	}
 	booking.Commodity, err = p.parseCommodity()
-	return p.finishBooking(booking), err
+	return updateRange(p, &booking), err
 }
 
-func (p *Parser) finishBooking(b syntax.Booking) syntax.Booking {
-	b.End = p.Offset()
-	return b
+func updateRange[P interface {
+	*T
+	SetEnd(int)
+}, T any](p *Parser, b P) T {
+	b.SetEnd(p.Offset())
+	return *b
 }
 
 func (p *Parser) parseDate() (syntax.Date, error) {
@@ -147,43 +150,38 @@ func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
 }
 
 func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {
-	trx := syntax.Transaction{Pos: p.Rng()}
+	trx := syntax.Transaction{Range: p.Rng()}
 	var err error
 	if trx.Description, err = p.parseQuotedString(); err != nil {
-		return p.finishTransaction(trx), err
+		return updateRange(p, &trx), err
 	}
 	if _, err := p.readRestOfWhitespaceLine(); err != nil {
-		return p.finishTransaction(trx), err
+		return updateRange(p, &trx), err
 	}
 	for {
 		b, err := p.parseBooking()
 		if err != nil {
-			return p.finishTransaction(trx), err
+			return updateRange(p, &trx), err
 		}
 		trx.Bookings = append(trx.Bookings, b)
 		if _, err := p.readRestOfWhitespaceLine(); err != nil {
-			return p.finishTransaction(trx), err
+			return updateRange(p, &trx), err
 		}
 		if isWhitespaceOrNewline(p.Current()) || p.Current() == scanner.EOF {
 			break
 		}
 	}
-	return p.finishTransaction(trx), nil
+	return updateRange(p, &trx), nil
 }
 
-func (p *Parser) finishTransaction(b syntax.Transaction) syntax.Transaction {
-	b.End = p.Offset()
-	return b
-}
-
-func (p *Parser) readWhitespace1() (syntax.Pos, error) {
+func (p *Parser) readWhitespace1() (syntax.Range, error) {
 	if !isWhitespaceOrNewline(p.Current()) && p.Current() != scanner.EOF {
-		return p.Rng(), fmt.Errorf("expected whitespace, got %q", p.Current())
+		return p.Range(p.Offset()), fmt.Errorf("expected whitespace, got %q", p.Current())
 	}
 	return p.ReadWhile(isWhitespace)
 }
 
-func (p *Parser) readRestOfWhitespaceLine() (syntax.Pos, error) {
+func (p *Parser) readRestOfWhitespaceLine() (syntax.Range, error) {
 	start := p.Offset()
 	if _, err := p.ReadWhile(isWhitespace); err != nil {
 		return p.Range(start), err

@@ -253,7 +253,7 @@ func TestParseBooking(t *testing.T) {
 				text: "A:B C:D 100.0 CHF",
 				want: func(t string) syntax.Booking {
 					return syntax.Booking{
-						Pos:       syntax.Pos{Start: 0, End: 17, Text: t},
+						Range:     syntax.Range{Start: 0, End: 17, Text: t},
 						Credit:    syntax.Account{Start: 0, End: 3, Text: t},
 						Debit:     syntax.Account{Start: 4, End: 7, Text: t},
 						Amount:    syntax.Decimal{Start: 8, End: 13, Text: t},
@@ -265,7 +265,7 @@ func TestParseBooking(t *testing.T) {
 				text: "$dividend C:D 100.0 CHF",
 				want: func(t string) syntax.Booking {
 					return syntax.Booking{
-						Pos:         syntax.Pos{Start: 0, End: 23, Text: t},
+						Range:       syntax.Range{Start: 0, End: 23, Text: t},
 						CreditMacro: syntax.AccountMacro{Start: 0, End: 9, Text: t},
 						Debit:       syntax.Account{Start: 10, End: 13, Text: t},
 						Amount:      syntax.Decimal{Start: 14, End: 19, Text: t},
@@ -277,7 +277,7 @@ func TestParseBooking(t *testing.T) {
 				text: "A:B C:D 100.0",
 				want: func(t string) syntax.Booking {
 					return syntax.Booking{
-						Pos:    syntax.Pos{Start: 0, End: 13, Text: t},
+						Range:  syntax.Range{Start: 0, End: 13, Text: t},
 						Credit: syntax.Account{Start: 0, End: 3, Text: t},
 						Debit:  syntax.Account{Start: 4, End: 7, Text: t},
 						Amount: syntax.Decimal{Start: 8, End: 13, Text: t},
@@ -289,7 +289,7 @@ func TestParseBooking(t *testing.T) {
 				text: "C:D  $dividend  100.0  CHF",
 				want: func(t string) syntax.Booking {
 					return syntax.Booking{
-						Pos:        syntax.Pos{Start: 0, End: 26, Text: t},
+						Range:      syntax.Range{Start: 0, End: 26, Text: t},
 						Credit:     syntax.Account{Start: 0, End: 3, Text: t},
 						DebitMacro: syntax.AccountMacro{Start: 5, End: 14, Text: t},
 						Amount:     syntax.Decimal{Start: 16, End: 21, Text: t},
@@ -340,11 +340,11 @@ func TestParseTransaction(t *testing.T) {
 				text: "\"foo\"\n" + "A B 1 CHF\n", // 6 + 10
 				want: func(t string) syntax.Transaction {
 					return syntax.Transaction{
-						Pos:         syntax.Pos{Start: 0, End: 16, Text: t},
+						Range:       syntax.Range{Start: 0, End: 16, Text: t},
 						Description: syntax.QuotedString{Start: 0, End: 5, Text: t},
 						Bookings: []syntax.Booking{
 							{
-								Pos:       syntax.Pos{Start: 6, End: 15, Text: t},
+								Range:     syntax.Range{Start: 6, End: 15, Text: t},
 								Credit:    syntax.Account{Start: 6, End: 7, Text: t},
 								Debit:     syntax.Account{Start: 8, End: 9, Text: t},
 								Amount:    syntax.Decimal{Start: 10, End: 11, Text: t},
@@ -358,18 +358,18 @@ func TestParseTransaction(t *testing.T) {
 				text: "\"foo\"\n" + "A B 1 CHF\n" + "B A 1 CHF\n", // 6 + 10 + 10
 				want: func(t string) syntax.Transaction {
 					return syntax.Transaction{
-						Pos:         syntax.Pos{Start: 0, End: 26, Text: t},
+						Range:       syntax.Range{Start: 0, End: 26, Text: t},
 						Description: syntax.QuotedString{Start: 0, End: 5, Text: t},
 						Bookings: []syntax.Booking{
 							{
-								Pos:       syntax.Pos{Start: 6, End: 15, Text: t},
+								Range:     syntax.Range{Start: 6, End: 15, Text: t},
 								Credit:    syntax.Account{Start: 6, End: 7, Text: t},
 								Debit:     syntax.Account{Start: 8, End: 9, Text: t},
 								Amount:    syntax.Decimal{Start: 10, End: 11, Text: t},
 								Commodity: syntax.Commodity{Start: 12, End: 15, Text: t},
 							},
 							{
-								Pos:       syntax.Pos{Start: 16, End: 25, Text: t},
+								Range:     syntax.Range{Start: 16, End: 25, Text: t},
 								Credit:    syntax.Account{Start: 16, End: 17, Text: t},
 								Debit:     syntax.Account{Start: 18, End: 19, Text: t},
 								Amount:    syntax.Decimal{Start: 20, End: 21, Text: t},
@@ -384,11 +384,11 @@ func TestParseTransaction(t *testing.T) {
 				wantErr: true,
 				want: func(t string) syntax.Transaction {
 					return syntax.Transaction{
-						Pos:         syntax.Pos{Start: 0, End: 15, Text: t},
+						Range:       syntax.Range{Start: 0, End: 15, Text: t},
 						Description: syntax.QuotedString{Start: 0, End: 5, Text: t},
 						Bookings: []syntax.Booking{
 							{
-								Pos:       syntax.Pos{Start: 6, End: 15, Text: t},
+								Range:     syntax.Range{Start: 6, End: 15, Text: t},
 								Credit:    syntax.Account{Start: 6, End: 7, Text: t},
 								Debit:     syntax.Account{Start: 8, End: 9, Text: t},
 								Amount:    syntax.Decimal{Start: 10, End: 11, Text: t},
@@ -407,26 +407,26 @@ func TestParseTransaction(t *testing.T) {
 }
 
 func TestParseRestOfWhitespaceLine(t *testing.T) {
-	parserTest[syntax.Pos]{
+	parserTest[syntax.Range]{
 		desc: "p.parseQuotedString()",
-		fn:   func(p *Parser) (syntax.Pos, error) { return p.readRestOfWhitespaceLine() },
-		tests: []testcase[syntax.Pos]{
+		fn:   func(p *Parser) (syntax.Range, error) { return p.readRestOfWhitespaceLine() },
+		tests: []testcase[syntax.Range]{
 			{
 				text: "\n",
-				want: func(s string) syntax.Pos {
-					return syntax.Pos{Start: 0, End: 1, Text: s}
+				want: func(s string) syntax.Range {
+					return syntax.Range{Start: 0, End: 1, Text: s}
 				},
 			},
 			{
 				text: " \n",
-				want: func(s string) syntax.Pos {
-					return syntax.Pos{Start: 0, End: 2, Text: s}
+				want: func(s string) syntax.Range {
+					return syntax.Range{Start: 0, End: 2, Text: s}
 				},
 			},
 			{
 				text: " foo",
-				want: func(s string) syntax.Pos {
-					return syntax.Pos{Start: 0, End: 1, Text: s}
+				want: func(s string) syntax.Range {
+					return syntax.Range{Start: 0, End: 1, Text: s}
 				},
 				wantErr: true,
 			},
@@ -435,38 +435,38 @@ func TestParseRestOfWhitespaceLine(t *testing.T) {
 }
 
 func TestReadWhitespace1(t *testing.T) {
-	parserTest[syntax.Pos]{
+	parserTest[syntax.Range]{
 		desc: "p.readWhitespace1()",
-		fn:   func(p *Parser) (syntax.Pos, error) { return p.readWhitespace1() },
-		tests: []testcase[syntax.Pos]{
+		fn:   func(p *Parser) (syntax.Range, error) { return p.readWhitespace1() },
+		tests: []testcase[syntax.Range]{
 			{
 				text: "\n",
-				want: func(s string) syntax.Pos {
-					return syntax.Pos{Start: 0, End: 0, Text: s}
+				want: func(s string) syntax.Range {
+					return syntax.Range{Start: 0, End: 0, Text: s}
 				},
 			},
 			{
 				text: " \n",
-				want: func(s string) syntax.Pos {
-					return syntax.Pos{Start: 0, End: 1, Text: s}
+				want: func(s string) syntax.Range {
+					return syntax.Range{Start: 0, End: 1, Text: s}
 				},
 			},
 			{
 				text: " foo",
-				want: func(s string) syntax.Pos {
-					return syntax.Pos{Start: 0, End: 1, Text: s}
+				want: func(s string) syntax.Range {
+					return syntax.Range{Start: 0, End: 1, Text: s}
 				},
 			},
 			{
 				text: "   foo",
-				want: func(s string) syntax.Pos {
-					return syntax.Pos{Start: 0, End: 3, Text: s}
+				want: func(s string) syntax.Range {
+					return syntax.Range{Start: 0, End: 3, Text: s}
 				},
 			},
 			{
 				text: "foo",
-				want: func(s string) syntax.Pos {
-					return syntax.Pos{Start: 0, End: 0, Text: s}
+				want: func(s string) syntax.Range {
+					return syntax.Range{Start: 0, End: 0, Text: s}
 				},
 				wantErr: true,
 			},

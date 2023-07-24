@@ -175,7 +175,7 @@ func TestReadCharacterWith(t *testing.T) {
 			char: 'o',
 			want: Range{Start: 0, End: 0, Text: "foo"},
 			wantErr: syntax.Error{
-				Message: "unexpected character: f",
+				Message: "unexpected character `f`, want character `o`",
 				Range:   Range{Text: "foo"},
 			},
 		},
@@ -184,17 +184,18 @@ func TestReadCharacterWith(t *testing.T) {
 			char: 'o',
 			want: Range{Start: 0, End: 0, Text: ""},
 			wantErr: syntax.Error{
-				Message: "unexpected end of file",
+				Message: "unexpected end of file, want character `o`",
 				Range:   Range{Start: 0, End: 0, Text: ""},
 			},
 		},
 	} {
 		t.Run(fmt.Sprintf("ReadChar %c in %s", test.char, test.text), func(t *testing.T) {
 			scanner := setupScanner(t, test.text)
+			desc := fmt.Sprintf("character `%c`", test.char)
 
-			got, err := scanner.ReadCharacterWith(func(r rune) bool { return r == test.char })
+			got, err := scanner.ReadCharacterWith(desc, func(r rune) bool { return r == test.char })
 
-			assert(t, fmt.Sprintf("scanner.ReadCharacterWith(== %c)", test.char), test.want, got, test.wantErr, err)
+			assert(t, fmt.Sprintf("scanner.ReadCharacterWith(%s)", desc), test.want, got, test.wantErr, err)
 		})
 	}
 }

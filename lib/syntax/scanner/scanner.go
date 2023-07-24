@@ -208,18 +208,18 @@ func (s *Scanner) ReadCharacter(r rune) (Range, error) {
 }
 
 // ReadCharacter consume a rune satisfying the predicate.
-func (s *Scanner) ReadCharacterWith(pred func(rune) bool) (Range, error) {
+func (s *Scanner) ReadCharacterWith(desc string, pred func(rune) bool) (Range, error) {
 	s.RangeStart()
 	defer s.RangeEnd()
 	if s.Current() == EOF {
 		return s.Range(), syntax.Error{
-			Message: "unexpected end of file",
+			Message: fmt.Sprintf("unexpected end of file, want %s", desc),
 			Range:   s.Range(),
 		}
 	}
 	if !pred(s.Current()) {
 		return s.Range(), syntax.Error{
-			Message: fmt.Sprintf("unexpected character: %c", s.Current()),
+			Message: fmt.Sprintf("unexpected character `%c`, want %s", s.Current(), desc),
 			Range:   s.Range(),
 		}
 	}

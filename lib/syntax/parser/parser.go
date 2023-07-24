@@ -26,147 +26,158 @@ func (p *Parser) parseCommodity() (syntax.Commodity, error) {
 }
 
 func (p *Parser) parseDecimal() (syntax.Decimal, error) {
-	decimal := syntax.Decimal{Range: p.Range()}
+	p.Start()
+	defer p.End()
 	if p.Current() == '-' {
 		if _, err := p.ReadCharacter('-'); err != nil {
-			return scanner.Done(p.Offset(), &decimal), err
+			return syntax.Decimal{Range: p.Range()}, err
 		}
 	}
 	if _, err := p.ReadWhile1(unicode.IsDigit); err != nil {
-		return scanner.Done(p.Offset(), &decimal), err
+		return syntax.Decimal{Range: p.Range()}, err
 	}
 	if p.Current() != '.' {
-		return scanner.Done(p.Offset(), &decimal), nil
+		return syntax.Decimal{Range: p.Range()}, nil
 	}
 	if _, err := p.ReadCharacter('.'); err != nil {
-		return scanner.Done(p.Offset(), &decimal), err
+		return syntax.Decimal{Range: p.Range()}, err
 	}
 	_, err := p.ReadWhile1(unicode.IsDigit)
-	return scanner.Done(p.Offset(), &decimal), err
+	return syntax.Decimal{Range: p.Range()}, err
 }
 
 func (p *Parser) parseAccount() (syntax.Account, error) {
-	account := syntax.Account{Range: p.Range()}
+	p.Start()
+	defer p.End()
 	if _, err := p.ReadWhile1(isAlphanumeric); err != nil {
-		return scanner.Done(p.Offset(), &account), err
+		return syntax.Account{Range: p.Range()}, err
 	}
 	for {
 		if p.Current() != ':' {
-			return scanner.Done(p.Offset(), &account), nil
+			return syntax.Account{Range: p.Range()}, nil
 		}
 		if _, err := p.ReadCharacter(':'); err != nil {
-			return scanner.Done(p.Offset(), &account), err
+			return syntax.Account{Range: p.Range()}, err
 		}
 		if _, err := p.ReadWhile1(isAlphanumeric); err != nil {
-			return scanner.Done(p.Offset(), &account), err
+			return syntax.Account{Range: p.Range()}, err
 		}
 	}
 }
 
 func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
-	macro := syntax.AccountMacro{Range: p.Range()}
+	p.Start()
+	defer p.End()
 	if _, err := p.ReadCharacter('$'); err != nil {
-		return scanner.Done(p.Offset(), &macro), err
+		return syntax.AccountMacro{Range: p.Range()}, err
 	}
 	_, err := p.ReadWhile1(unicode.IsLetter)
-	return scanner.Done(p.Offset(), &macro), err
+	return syntax.AccountMacro{Range: p.Range()}, err
 }
 
 func (p *Parser) parseBooking() (syntax.Booking, error) {
-	booking := syntax.Booking{Range: p.Range()}
+	p.Start()
+	defer p.End()
+	booking := syntax.Booking{}
 	var err error
 	if p.Current() == '$' {
 		if booking.CreditMacro, err = p.parseAccountMacro(); err != nil {
-			return scanner.Done(p.Offset(), &booking), err
+			return booking.SetRange(p.Range()), err
 		}
 	} else {
 		if booking.Credit, err = p.parseAccount(); err != nil {
-			return scanner.Done(p.Offset(), &booking), err
+			return booking.SetRange(p.Range()), err
 		}
 	}
 	if _, err := p.ReadWhile1(isWhitespace); err != nil {
-		return scanner.Done(p.Offset(), &booking), err
+		return booking.SetRange(p.Range()), err
 	}
 	if p.Current() == '$' {
 		if booking.DebitMacro, err = p.parseAccountMacro(); err != nil {
-			return scanner.Done(p.Offset(), &booking), err
+			return booking.SetRange(p.Range()), err
 		}
 	} else {
 		if booking.Debit, err = p.parseAccount(); err != nil {
-			return scanner.Done(p.Offset(), &booking), err
+			return booking.SetRange(p.Range()), err
 		}
 	}
 	if _, err := p.ReadWhile1(isWhitespace); err != nil {
-		return scanner.Done(p.Offset(), &booking), err
+		return booking.SetRange(p.Range()), err
 	}
 	if booking.Amount, err = p.parseDecimal(); err != nil {
-		return scanner.Done(p.Offset(), &booking), err
+		return booking.SetRange(p.Range()), err
 	}
 	if _, err := p.ReadWhile1(isWhitespace); err != nil {
-		return scanner.Done(p.Offset(), &booking), err
+		return booking.SetRange(p.Range()), err
 	}
 	booking.Commodity, err = p.parseCommodity()
-	return scanner.Done(p.Offset(), &booking), err
+	return booking.SetRange(p.Range()), err
 }
 
 func (p *Parser) parseDate() (syntax.Date, error) {
-	date := syntax.Date{Range: p.Range()}
+	p.Start()
+	defer p.End()
 	for i := 0; i < 4; i++ {
 		if _, err := p.ReadCharacterWith(unicode.IsDigit); err != nil {
-			return scanner.Done(p.Offset(), &date), err
+			return syntax.Date{Range: p.Range()}, err
 		}
 	}
 	for i := 0; i < 2; i++ {
 		if _, err := p.ReadCharacter('-'); err != nil {
-			return scanner.Done(p.Offset(), &date), err
+			return syntax.Date{Range: p.Range()}, err
 		}
 		for j := 0; j < 2; j++ {
 			if _, err := p.ReadCharacterWith(unicode.IsDigit); err != nil {
-				return scanner.Done(p.Offset(), &date), err
+				return syntax.Date{Range: p.Range()}, err
 			}
 		}
 	}
-	return scanner.Done(p.Offset(), &date), nil
+	return syntax.Date{Range: p.Range()}, nil
 }
 
 func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
-	qs := syntax.QuotedString{Range: p.Range()}
+	p.Start()
+	defer p.End()
 	if _, err := p.ReadCharacter('"'); err != nil {
-		return scanner.Done(p.Offset(), &qs), err
+		return syntax.QuotedString{Range: p.Range()}, err
 	}
 	if _, err := p.ReadWhile(func(r rune) bool { return r != '"' }); err != nil {
-		return scanner.Done(p.Offset(), &qs), err
+		return syntax.QuotedString{Range: p.Range()}, err
 	}
 	_, err := p.ReadCharacter('"')
-	return scanner.Done(p.Offset(), &qs), err
+	return syntax.QuotedString{Range: p.Range()}, err
 }
 
 func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {
-	trx := syntax.Transaction{Range: p.Range()}
+	p.Start()
+	defer p.End()
+	trx := syntax.Transaction{}
 	var err error
 	if trx.Description, err = p.parseQuotedString(); err != nil {
-		return scanner.Done(p.Offset(), &trx), err
+		return trx.SetRange(p.Range()), err
 	}
 	if _, err := p.readRestOfWhitespaceLine(); err != nil {
-		return scanner.Done(p.Offset(), &trx), err
+		return trx.SetRange(p.Range()), err
 	}
 	for {
 		b, err := p.parseBooking()
 		if err != nil {
-			return scanner.Done(p.Offset(), &trx), err
+			return trx.SetRange(p.Range()), err
 		}
 		trx.Bookings = append(trx.Bookings, b)
 		if _, err := p.readRestOfWhitespaceLine(); err != nil {
-			return scanner.Done(p.Offset(), &trx), err
+			return trx.SetRange(p.Range()), err
 		}
 		if isWhitespaceOrNewline(p.Current()) || p.Current() == scanner.EOF {
 			break
 		}
 	}
-	return scanner.Done(p.Offset(), &trx), nil
+	return trx.SetRange(p.Range()), nil
 }
 
 func (p *Parser) readWhitespace1() (syntax.Range, error) {
+	p.Start()
+	defer p.End()
 	if !isWhitespaceOrNewline(p.Current()) && p.Current() != scanner.EOF {
 		return p.Range(), fmt.Errorf("expected whitespace, got %q", p.Current())
 	}
@@ -174,12 +185,13 @@ func (p *Parser) readWhitespace1() (syntax.Range, error) {
 }
 
 func (p *Parser) readRestOfWhitespaceLine() (syntax.Range, error) {
-	rng := p.Range()
+	p.Start()
+	defer p.End()
 	if _, err := p.ReadWhile(isWhitespace); err != nil {
-		return scanner.Done(p.Offset(), &rng), err
+		return p.Range(), err
 	}
 	_, err := p.ReadCharacter('\n')
-	return scanner.Done(p.Offset(), &rng), err
+	return p.Range(), err
 }
 
 func isAlphanumeric(r rune) bool {

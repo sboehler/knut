@@ -15,7 +15,9 @@ type Date struct{ Range }
 
 type Decimal struct{ Range }
 
-type QuotedString struct{ Range }
+type QuotedString struct {
+	Range
+}
 
 type Booking struct {
 	Range
@@ -23,6 +25,11 @@ type Booking struct {
 	CreditMacro, DebitMacro AccountMacro
 	Amount                  Decimal
 	Commodity               Commodity
+}
+
+func (b *Booking) SetRange(r Range) Booking {
+	b.Range = r
+	return *b
 }
 
 type Performance struct {
@@ -52,13 +59,18 @@ type Transaction struct {
 	Performance *Performance
 }
 
+func (t *Transaction) SetRange(r Range) Transaction {
+	t.Range = r
+	return *t
+}
+
 type Range struct {
 	Start, End int
 	Path, Text string
 }
 
-func (r *Range) SetEnd(end int) {
-	r.End = end
+func (r *Range) SetRange(r2 Range) {
+	*r = r2
 }
 
 func (r Range) Empty() bool {

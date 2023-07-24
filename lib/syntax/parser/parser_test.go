@@ -616,8 +616,13 @@ func TestReadWhitespace1(t *testing.T) {
 				want: func(s string) Range {
 					return Range{Start: 0, End: 0, Text: s}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "unexpected character `f`, want whitespace or a newline",
+						Range:   syntax.Range{Text: s},
+					}
+				},
 			},
 		},
-	}.run(t)
+	}.runE(t)
 }

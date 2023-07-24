@@ -43,8 +43,10 @@ func (p *Parser) parseDecimal() (syntax.Decimal, error) {
 	if _, err := p.ReadCharacter('.'); err != nil {
 		return syntax.Decimal{Range: p.Range()}, annotate(err)
 	}
-	_, err := p.ReadWhile1("a digit", unicode.IsDigit)
-	return syntax.Decimal{Range: p.Range()}, annotate(err)
+	if _, err := p.ReadWhile1("a digit", unicode.IsDigit); err != nil {
+		return syntax.Decimal{Range: p.Range()}, annotate(err)
+	}
+	return syntax.Decimal{Range: p.Range()}, nil
 }
 
 func (p *Parser) parseAccount() (syntax.Account, error) {
@@ -206,9 +208,6 @@ func (p *Parser) readRestOfWhitespaceLine() (syntax.Range, error) {
 
 func (p *Parser) AnnotateError(desc string) func(error) error {
 	return func(err error) error {
-		if err == nil {
-			return nil
-		}
 		return syntax.Error{
 			Message: desc,
 			Range:   p.Range(),

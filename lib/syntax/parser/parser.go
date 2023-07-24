@@ -26,8 +26,8 @@ func (p *Parser) parseCommodity() (syntax.Commodity, error) {
 }
 
 func (p *Parser) parseDecimal() (syntax.Decimal, error) {
-	p.Start()
-	defer p.End()
+	p.RangeStart()
+	defer p.RangeEnd()
 	if p.Current() == '-' {
 		if _, err := p.ReadCharacter('-'); err != nil {
 			return syntax.Decimal{Range: p.Range()}, err
@@ -47,8 +47,8 @@ func (p *Parser) parseDecimal() (syntax.Decimal, error) {
 }
 
 func (p *Parser) parseAccount() (syntax.Account, error) {
-	p.Start()
-	defer p.End()
+	p.RangeStart()
+	defer p.RangeEnd()
 	if _, err := p.ReadWhile1(isAlphanumeric); err != nil {
 		return syntax.Account{Range: p.Range()}, err
 	}
@@ -66,8 +66,8 @@ func (p *Parser) parseAccount() (syntax.Account, error) {
 }
 
 func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
-	p.Start()
-	defer p.End()
+	p.RangeStart()
+	defer p.RangeEnd()
 	if _, err := p.ReadCharacter('$'); err != nil {
 		return syntax.AccountMacro{Range: p.Range()}, err
 	}
@@ -76,8 +76,8 @@ func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
 }
 
 func (p *Parser) parseBooking() (syntax.Booking, error) {
-	p.Start()
-	defer p.End()
+	p.RangeStart()
+	defer p.RangeEnd()
 	booking := syntax.Booking{}
 	var err error
 	if p.Current() == '$' {
@@ -115,8 +115,8 @@ func (p *Parser) parseBooking() (syntax.Booking, error) {
 }
 
 func (p *Parser) parseDate() (syntax.Date, error) {
-	p.Start()
-	defer p.End()
+	p.RangeStart()
+	defer p.RangeEnd()
 	for i := 0; i < 4; i++ {
 		if _, err := p.ReadCharacterWith(unicode.IsDigit); err != nil {
 			return syntax.Date{Range: p.Range()}, err
@@ -136,8 +136,8 @@ func (p *Parser) parseDate() (syntax.Date, error) {
 }
 
 func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
-	p.Start()
-	defer p.End()
+	p.RangeStart()
+	defer p.RangeEnd()
 	if _, err := p.ReadCharacter('"'); err != nil {
 		return syntax.QuotedString{Range: p.Range()}, err
 	}
@@ -149,8 +149,8 @@ func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
 }
 
 func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {
-	p.Start()
-	defer p.End()
+	p.RangeStart()
+	defer p.RangeEnd()
 	trx := syntax.Transaction{}
 	var err error
 	if trx.Description, err = p.parseQuotedString(); err != nil {
@@ -176,8 +176,8 @@ func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.T
 }
 
 func (p *Parser) readWhitespace1() (syntax.Range, error) {
-	p.Start()
-	defer p.End()
+	p.RangeStart()
+	defer p.RangeEnd()
 	if !isWhitespaceOrNewline(p.Current()) && p.Current() != scanner.EOF {
 		return p.Range(), fmt.Errorf("expected whitespace, got %q", p.Current())
 	}
@@ -185,8 +185,8 @@ func (p *Parser) readWhitespace1() (syntax.Range, error) {
 }
 
 func (p *Parser) readRestOfWhitespaceLine() (syntax.Range, error) {
-	p.Start()
-	defer p.End()
+	p.RangeStart()
+	defer p.RangeEnd()
 	if _, err := p.ReadWhile(isWhitespace); err != nil {
 		return p.Range(), err
 	}

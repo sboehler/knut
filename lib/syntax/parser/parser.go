@@ -69,11 +69,14 @@ func (p *Parser) parseAccount() (syntax.Account, error) {
 func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
 	p.RangeStart()
 	defer p.RangeEnd()
+	annotate := p.AnnotateError("while parsing account macro")
 	if _, err := p.ReadCharacter('$'); err != nil {
-		return syntax.AccountMacro{Range: p.Range()}, err
+		return syntax.AccountMacro{Range: p.Range()}, annotate(err)
 	}
-	_, err := p.ReadWhile1("a letter", unicode.IsLetter)
-	return syntax.AccountMacro{Range: p.Range()}, err
+	if _, err := p.ReadWhile1("a letter", unicode.IsLetter); err != nil {
+		return syntax.AccountMacro{Range: p.Range()}, annotate(err)
+	}
+	return syntax.AccountMacro{Range: p.Range()}, nil
 }
 
 func (p *Parser) parseBooking() (syntax.Booking, error) {

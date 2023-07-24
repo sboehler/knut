@@ -193,28 +193,54 @@ func TestParseAccountMacro(t *testing.T) {
 				want: func(s string) syntax.AccountMacro {
 					return syntax.AccountMacro{Range: Range{Start: 0, End: 1, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing account macro",
+						Range:   syntax.Range{End: 1, Text: "$1foo"},
+						Wrapped: syntax.Error{
+							Message: "unexpected character `1`, want a letter",
+							Range:   syntax.Range{Start: 1, End: 1, Text: "$1foo"},
+						},
+					}
+				},
 			},
 			{
 				text: "",
 				want: func(s string) syntax.AccountMacro {
 					return syntax.AccountMacro{Range: Range{Start: 0, End: 0, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing account macro",
+						Range:   syntax.Range{Text: s},
+						Wrapped: syntax.Error{
+							Message: "unexpected end of file, want `$`",
+						},
+					}
+				},
 			},
 			{
 				text: "foobar",
 				want: func(s string) syntax.AccountMacro {
 					return syntax.AccountMacro{Range: Range{Start: 0, End: 0, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing account macro",
+						Range:   syntax.Range{Text: "foobar"},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Text: "foobar"},
+							Message: "unexpected character `f`, want `$`",
+						},
+					}
+				},
 			},
 		},
 		desc: "p.parseAccountMacro()",
 		fn: func(p *Parser) (syntax.AccountMacro, error) {
 			return p.parseAccountMacro()
 		},
-	}.run(t)
+	}.runE(t)
 }
 
 func TestParseDecimal(t *testing.T) {

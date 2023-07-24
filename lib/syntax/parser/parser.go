@@ -117,18 +117,26 @@ func (p *Parser) parseBooking() (syntax.Booking, error) {
 func (p *Parser) parseDate() (syntax.Date, error) {
 	p.RangeStart()
 	defer p.RangeEnd()
+	annotateError := func(desc string, err error) error {
+		return syntax.Error{
+			Message: desc,
+			Range:   p.Range(),
+			Wrapped: err,
+		}
+	}
+
 	for i := 0; i < 4; i++ {
-		if _, err := p.ReadCharacterWith(unicode.IsDigit); err != nil {
-			return syntax.Date{Range: p.Range()}, err
+		if _, err := p.ReadCharacterWith("a digit", unicode.IsDigit); err != nil {
+			return syntax.Date{Range: p.Range()}, annotateError("while parsing the date", err)
 		}
 	}
 	for i := 0; i < 2; i++ {
 		if _, err := p.ReadCharacter('-'); err != nil {
-			return syntax.Date{Range: p.Range()}, err
+			return syntax.Date{Range: p.Range()}, annotateError("while parsing the date", err)
 		}
 		for j := 0; j < 2; j++ {
-			if _, err := p.ReadCharacterWith(unicode.IsDigit); err != nil {
-				return syntax.Date{Range: p.Range()}, err
+			if _, err := p.ReadCharacterWith("a digit", unicode.IsDigit); err != nil {
+				return syntax.Date{Range: p.Range()}, annotateError("while parsing the date", err)
 			}
 		}
 	}

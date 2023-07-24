@@ -258,21 +258,39 @@ func TestParseDate(t *testing.T) {
 				want: func(s string) syntax.Date {
 					return syntax.Date{Range: Range{Start: 0, End: 3, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Range:   syntax.Range{End: 3, Text: s},
+						Message: "while parsing the date",
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Start: 3, End: 3, Text: s},
+							Message: "unexpected character `-`, want a digit",
+						},
+					}
+				},
 			},
 			{
 				text: "20205-31",
 				want: func(s string) syntax.Date {
 					return syntax.Date{Range: Range{Start: 0, End: 4, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Range:   syntax.Range{End: 4, Text: s},
+						Message: "while parsing the date",
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Start: 4, End: 4, Text: s},
+							Message: "unexpected character `5`, want `-`",
+						},
+					}
+				},
 			},
 		},
 		desc: "p.parseDate()",
 		fn: func(p *Parser) (syntax.Date, error) {
 			return p.parseDate()
 		},
-	}.run(t)
+	}.runE(t)
 }
 
 func TestParseBooking(t *testing.T) {
@@ -356,7 +374,7 @@ func TestParseQuotedString(t *testing.T) {
 						Range:   Range{Start: 0, End: 4, Text: s},
 						Wrapped: syntax.Error{
 							Range:   Range{Start: 4, End: 4, Text: s},
-							Message: `unexpected end of file, want "`,
+							Message: "unexpected end of file, want `\"`",
 						},
 					}
 				},
@@ -378,7 +396,7 @@ func TestParseQuotedString(t *testing.T) {
 						Range:   Range{Start: 0, End: 0, Text: s},
 						Wrapped: syntax.Error{
 							Range:   Range{Start: 0, End: 0, Text: s},
-							Message: `unexpected character f, want "`,
+							Message: "unexpected character `f`, want `\"`",
 						},
 					}
 				},

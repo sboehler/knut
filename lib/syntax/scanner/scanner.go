@@ -160,7 +160,7 @@ func (s *Scanner) ReadWhile1(desc string, pred func(r rune) bool) (Range, error)
 }
 
 // ReadUntil advances the scanner until the predicate holds.
-func (s *Scanner) ReadUntil(pred func(r rune) bool) (Range, error) {
+func (s *Scanner) ReadUntil(desc string, pred func(r rune) bool) (Range, error) {
 	s.RangeStart()
 	defer s.RangeEnd()
 	for !pred(s.Current()) {
@@ -173,7 +173,7 @@ func (s *Scanner) ReadUntil(pred func(r rune) bool) (Range, error) {
 		}
 		if s.Current() == EOF {
 			return s.Range(), syntax.Error{
-				Message: "unexpected end of file",
+				Message: fmt.Sprintf("unexpected end of file, want %s", desc),
 				Range:   s.Range(),
 			}
 		}

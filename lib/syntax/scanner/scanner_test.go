@@ -313,17 +313,18 @@ func TestReadUntil(t *testing.T) {
 			char: 'z',
 			want: Range{Start: 0, End: 6, Text: "foobar"},
 			wantErr: syntax.Error{
-				Message: "unexpected end of file",
+				Message: "unexpected end of file, want character `z`",
 				Range:   Range{Start: 0, End: 6, Text: "foobar"},
 			},
 		},
 	} {
 		t.Run(string(test.char), func(t *testing.T) {
 			scanner := setupScanner(t, "foobar")
+			desc := fmt.Sprintf("character `%c`", test.char)
 
-			got, err := scanner.ReadUntil(func(r rune) bool { return r == test.char })
+			got, err := scanner.ReadUntil(desc, func(r rune) bool { return r == test.char })
 
-			assert(t, fmt.Sprintf("scanner.ReadUntil(== %c)", test.char), test.want, got, test.wantErr, err)
+			assert(t, fmt.Sprintf("scanner.ReadUntil(%s)", desc), test.want, got, test.wantErr, err)
 		})
 	}
 }

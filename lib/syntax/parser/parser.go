@@ -117,26 +117,20 @@ func (p *Parser) parseBooking() (syntax.Booking, error) {
 func (p *Parser) parseDate() (syntax.Date, error) {
 	p.RangeStart()
 	defer p.RangeEnd()
-	annotateError := func(desc string, err error) error {
-		return syntax.Error{
-			Message: desc,
-			Range:   p.Range(),
-			Wrapped: err,
-		}
-	}
+	annotate := p.AnnotateError("while parsing the date")
 
 	for i := 0; i < 4; i++ {
 		if _, err := p.ReadCharacterWith("a digit", unicode.IsDigit); err != nil {
-			return syntax.Date{Range: p.Range()}, annotateError("while parsing the date", err)
+			return syntax.Date{Range: p.Range()}, annotate(err)
 		}
 	}
 	for i := 0; i < 2; i++ {
 		if _, err := p.ReadCharacter('-'); err != nil {
-			return syntax.Date{Range: p.Range()}, annotateError("while parsing the date", err)
+			return syntax.Date{Range: p.Range()}, annotate(err)
 		}
 		for j := 0; j < 2; j++ {
 			if _, err := p.ReadCharacterWith("a digit", unicode.IsDigit); err != nil {
-				return syntax.Date{Range: p.Range()}, annotateError("while parsing the date", err)
+				return syntax.Date{Range: p.Range()}, annotate(err)
 			}
 		}
 	}
@@ -146,26 +140,15 @@ func (p *Parser) parseDate() (syntax.Date, error) {
 func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
 	p.RangeStart()
 	defer p.RangeEnd()
+	annotate := p.AnnotateError("while parsing quoted string")
 	if _, err := p.ReadCharacter('"'); err != nil {
-		return syntax.QuotedString{Range: p.Range()}, syntax.Error{
-			Message: "while parsing quoted string",
-			Range:   p.Range(),
-			Wrapped: err,
-		}
+		return syntax.QuotedString{Range: p.Range()}, annotate(err)
 	}
 	if _, err := p.ReadWhile(func(r rune) bool { return r != '"' }); err != nil {
-		return syntax.QuotedString{Range: p.Range()}, syntax.Error{
-			Message: "while parsing quoted string",
-			Range:   p.Range(),
-			Wrapped: err,
-		}
+		return syntax.QuotedString{Range: p.Range()}, annotate(err)
 	}
 	if _, err := p.ReadCharacter('"'); err != nil {
-		return syntax.QuotedString{Range: p.Range()}, syntax.Error{
-			Message: "while parsing quoted string",
-			Range:   p.Range(),
-			Wrapped: err,
-		}
+		return syntax.QuotedString{Range: p.Range()}, annotate(err)
 	}
 	return syntax.QuotedString{Range: p.Range()}, nil
 }
@@ -201,7 +184,7 @@ func (p *Parser) readWhitespace1() (syntax.Range, error) {
 	p.RangeStart()
 	defer p.RangeEnd()
 	if !isWhitespaceOrNewline(p.Current()) && p.Current() != scanner.EOF {
-		return p.Range(), fmt.Errorf("expected whitespace, got %q", p.Current())
+		return p.Range(), p.AnnotateError(fmt.Sprintf("unexpected character `%c`, want whitespace or a newline", p.Current()))(nil)
 	}
 	return p.ReadWhile(isWhitespace)
 }
@@ -214,6 +197,16 @@ func (p *Parser) readRestOfWhitespaceLine() (syntax.Range, error) {
 	}
 	_, err := p.ReadCharacter('\n')
 	return p.Range(), err
+}
+
+func (p *Parser) AnnotateError(desc string) func(error) error {
+	return func(err error) error {
+		return syntax.Error{
+			Message: desc,
+			Range:   p.Range(),
+			Wrapped: err,
+		}
+	}
 }
 
 func isAlphanumeric(r rune) bool {

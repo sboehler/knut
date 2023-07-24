@@ -269,28 +269,55 @@ func TestParseDecimal(t *testing.T) {
 				want: func(s string) syntax.Decimal {
 					return syntax.Decimal{Range: Range{Start: 0, End: 4, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing decimal",
+						Range:   syntax.Range{End: 4, Text: s},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Start: 4, End: 4, Text: "-10."},
+							Message: "unexpected end of file, want a digit",
+						},
+					}
+				},
 			},
 			{
 				text: "99.",
 				want: func(s string) syntax.Decimal {
 					return syntax.Decimal{Range: Range{Start: 0, End: 3, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing decimal",
+						Range:   syntax.Range{End: 3, Text: s},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Start: 3, End: 3, Text: "99."},
+							Message: "unexpected end of file, want a digit",
+						},
+					}
+				},
 			},
 			{
 				text: "foo",
 				want: func(s string) syntax.Decimal {
 					return syntax.Decimal{Range: Range{Start: 0, End: 0, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing decimal",
+						Range:   syntax.Range{Text: s},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Text: "foo"},
+							Message: "unexpected character `f`, want a digit",
+						},
+					}
+				},
 			},
 		},
 		desc: "p.parseDecimal()",
 		fn: func(p *Parser) (syntax.Decimal, error) {
 			return p.parseDecimal()
 		},
-	}.run(t)
+	}.runE(t)
 }
 
 func TestParseDate(t *testing.T) {

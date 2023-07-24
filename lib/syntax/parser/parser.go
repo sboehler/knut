@@ -28,22 +28,23 @@ func (p *Parser) parseCommodity() (syntax.Commodity, error) {
 func (p *Parser) parseDecimal() (syntax.Decimal, error) {
 	p.RangeStart()
 	defer p.RangeEnd()
+	annotate := p.AnnotateError("while parsing decimal")
 	if p.Current() == '-' {
 		if _, err := p.ReadCharacter('-'); err != nil {
-			return syntax.Decimal{Range: p.Range()}, err
+			return syntax.Decimal{Range: p.Range()}, annotate(err)
 		}
 	}
 	if _, err := p.ReadWhile1("a digit", unicode.IsDigit); err != nil {
-		return syntax.Decimal{Range: p.Range()}, err
+		return syntax.Decimal{Range: p.Range()}, annotate(err)
 	}
 	if p.Current() != '.' {
 		return syntax.Decimal{Range: p.Range()}, nil
 	}
 	if _, err := p.ReadCharacter('.'); err != nil {
-		return syntax.Decimal{Range: p.Range()}, err
+		return syntax.Decimal{Range: p.Range()}, annotate(err)
 	}
 	_, err := p.ReadWhile1("a digit", unicode.IsDigit)
-	return syntax.Decimal{Range: p.Range()}, err
+	return syntax.Decimal{Range: p.Range()}, annotate(err)
 }
 
 func (p *Parser) parseAccount() (syntax.Account, error) {
@@ -205,6 +206,9 @@ func (p *Parser) readRestOfWhitespaceLine() (syntax.Range, error) {
 
 func (p *Parser) AnnotateError(desc string) func(error) error {
 	return func(err error) error {
+		if err == nil {
+			return nil
+		}
 		return syntax.Error{
 			Message: desc,
 			Range:   p.Range(),

@@ -139,13 +139,27 @@ func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
 	p.RangeStart()
 	defer p.RangeEnd()
 	if _, err := p.ReadCharacter('"'); err != nil {
-		return syntax.QuotedString{Range: p.Range()}, err
+		return syntax.QuotedString{Range: p.Range()}, syntax.Error{
+			Message: "while parsing quoted string",
+			Range:   p.Range(),
+			Wrapped: err,
+		}
 	}
 	if _, err := p.ReadWhile(func(r rune) bool { return r != '"' }); err != nil {
-		return syntax.QuotedString{Range: p.Range()}, err
+		return syntax.QuotedString{Range: p.Range()}, syntax.Error{
+			Message: "while parsing quoted string",
+			Range:   p.Range(),
+			Wrapped: err,
+		}
 	}
-	_, err := p.ReadCharacter('"')
-	return syntax.QuotedString{Range: p.Range()}, err
+	if _, err := p.ReadCharacter('"'); err != nil {
+		return syntax.QuotedString{Range: p.Range()}, syntax.Error{
+			Message: "while parsing quoted string",
+			Range:   p.Range(),
+			Wrapped: err,
+		}
+	}
+	return syntax.QuotedString{Range: p.Range()}, nil
 }
 
 func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {

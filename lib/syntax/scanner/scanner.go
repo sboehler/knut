@@ -187,13 +187,13 @@ func (s *Scanner) ReadCharacter(r rune) (Range, error) {
 	defer s.RangeEnd()
 	if s.Current() == EOF {
 		return s.Range(), syntax.Error{
-			Message: fmt.Sprintf("unexpected end of file, want %c", r),
+			Message: fmt.Sprintf("unexpected end of file, want `%c`", r),
 			Range:   s.Range(),
 		}
 	}
 	if s.Current() != r {
 		return s.Range(), syntax.Error{
-			Message: fmt.Sprintf("unexpected character %c, want %c", s.current, r),
+			Message: fmt.Sprintf("unexpected character `%c`, want `%c`", s.current, r),
 			Range:   s.Range(),
 		}
 	}

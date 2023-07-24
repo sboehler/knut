@@ -134,7 +134,7 @@ func TestReadCharacter(t *testing.T) {
 			char: 'o',
 			want: Range{Start: 0, End: 0, Text: "foo"},
 			wantErr: syntax.Error{
-				Message: "unexpected character f, want o",
+				Message: "unexpected character `f`, want `o`",
 				Range:   Range{Start: 0, End: 0, Text: "foo"},
 			},
 		},
@@ -143,7 +143,7 @@ func TestReadCharacter(t *testing.T) {
 			char: 'o',
 			want: Range{Start: 0, End: 0, Text: ""},
 			wantErr: syntax.Error{
-				Message: "unexpected end of file, want o",
+				Message: "unexpected end of file, want `o`",
 				Range:   Range{Start: 0, End: 0, Text: ""},
 			},
 		},

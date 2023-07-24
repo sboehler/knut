@@ -242,40 +242,55 @@ func TestReadWhile1(t *testing.T) {
 	for _, test := range []struct {
 		text    string
 		pred    func(rune) bool
+		desc    string
 		want    Range
 		wantErr error
 	}{
 		{
 			text: "ooobar",
 			pred: func(r rune) bool { return r == 'o' },
+			desc: "character `o`",
 			want: Range{Start: 0, End: 3, Text: "ooobar"},
 		},
 		{
 			text: "",
 			pred: func(r rune) bool { return r == 'o' },
 			want: Range{Start: 0, End: 0, Text: ""},
+			desc: "character `o`",
 			wantErr: syntax.Error{
-				Message: "unexpected end of file",
+				Message: "unexpected end of file, want character `o`",
 				Range:   Range{},
 			},
 		},
 		{
 			text: "ASDFasdf",
 			pred: unicode.IsUpper,
+			desc: "an upper-case character",
 			want: Range{Start: 0, End: 4, Text: "ASDFasdf"},
 		},
 		{
 			text: "ASDF",
 			pred: unicode.IsUpper,
+			desc: "an upper-case character",
 			want: Range{Start: 0, End: 4, Text: "ASDF"},
+		},
+		{
+			text: "asdf",
+			pred: unicode.IsUpper,
+			desc: "an upper-case character",
+			want: Range{Start: 0, End: 0, Text: "asdf"},
+			wantErr: syntax.Error{
+				Message: "unexpected character `a`, want an upper-case character",
+				Range:   Range{Start: 0, End: 0, Text: "asdf"},
+			},
 		},
 	} {
 		t.Run(test.text, func(t *testing.T) {
 			scanner := setupScanner(t, test.text)
 
-			got, err := scanner.ReadWhile1(test.pred)
+			got, err := scanner.ReadWhile1(test.desc, test.pred)
 
-			assert(t, "scanner.ReadWhile1()", test.want, got, test.wantErr, err)
+			assert(t, fmt.Sprintf("scanner.ReadWhile1(%s)", test.desc), test.want, got, test.wantErr, err)
 		})
 	}
 }

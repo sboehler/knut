@@ -21,7 +21,7 @@ func New(text, path string) *Parser {
 }
 
 func (p *Parser) parseCommodity() (syntax.Commodity, error) {
-	r, err := p.ReadWhile1(isAlphanumeric)
+	r, err := p.ReadWhile1("a letter or a digit", isAlphanumeric)
 	return syntax.Commodity{Range: r}, err
 }
 
@@ -33,7 +33,7 @@ func (p *Parser) parseDecimal() (syntax.Decimal, error) {
 			return syntax.Decimal{Range: p.Range()}, err
 		}
 	}
-	if _, err := p.ReadWhile1(unicode.IsDigit); err != nil {
+	if _, err := p.ReadWhile1("a digit", unicode.IsDigit); err != nil {
 		return syntax.Decimal{Range: p.Range()}, err
 	}
 	if p.Current() != '.' {
@@ -42,14 +42,14 @@ func (p *Parser) parseDecimal() (syntax.Decimal, error) {
 	if _, err := p.ReadCharacter('.'); err != nil {
 		return syntax.Decimal{Range: p.Range()}, err
 	}
-	_, err := p.ReadWhile1(unicode.IsDigit)
+	_, err := p.ReadWhile1("a digit", unicode.IsDigit)
 	return syntax.Decimal{Range: p.Range()}, err
 }
 
 func (p *Parser) parseAccount() (syntax.Account, error) {
 	p.RangeStart()
 	defer p.RangeEnd()
-	if _, err := p.ReadWhile1(isAlphanumeric); err != nil {
+	if _, err := p.ReadWhile1("a letter or a digit", isAlphanumeric); err != nil {
 		return syntax.Account{Range: p.Range()}, err
 	}
 	for {
@@ -59,7 +59,7 @@ func (p *Parser) parseAccount() (syntax.Account, error) {
 		if _, err := p.ReadCharacter(':'); err != nil {
 			return syntax.Account{Range: p.Range()}, err
 		}
-		if _, err := p.ReadWhile1(isAlphanumeric); err != nil {
+		if _, err := p.ReadWhile1("a letter or a digit", isAlphanumeric); err != nil {
 			return syntax.Account{Range: p.Range()}, err
 		}
 	}
@@ -71,7 +71,7 @@ func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
 	if _, err := p.ReadCharacter('$'); err != nil {
 		return syntax.AccountMacro{Range: p.Range()}, err
 	}
-	_, err := p.ReadWhile1(unicode.IsLetter)
+	_, err := p.ReadWhile1("a letter", unicode.IsLetter)
 	return syntax.AccountMacro{Range: p.Range()}, err
 }
 
@@ -89,7 +89,7 @@ func (p *Parser) parseBooking() (syntax.Booking, error) {
 			return booking.SetRange(p.Range()), err
 		}
 	}
-	if _, err := p.ReadWhile1(isWhitespace); err != nil {
+	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
 		return booking.SetRange(p.Range()), err
 	}
 	if p.Current() == '$' {
@@ -101,13 +101,13 @@ func (p *Parser) parseBooking() (syntax.Booking, error) {
 			return booking.SetRange(p.Range()), err
 		}
 	}
-	if _, err := p.ReadWhile1(isWhitespace); err != nil {
+	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
 		return booking.SetRange(p.Range()), err
 	}
 	if booking.Amount, err = p.parseDecimal(); err != nil {
 		return booking.SetRange(p.Range()), err
 	}
-	if _, err := p.ReadWhile1(isWhitespace); err != nil {
+	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
 		return booking.SetRange(p.Range()), err
 	}
 	booking.Commodity, err = p.parseCommodity()

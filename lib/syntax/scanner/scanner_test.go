@@ -16,10 +16,13 @@ package scanner
 
 import (
 	"fmt"
+	"io"
 	"testing"
 	"unicode"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/sboehler/knut/lib/syntax"
 )
 
 func TestNewScanner(t *testing.T) {
@@ -34,9 +37,9 @@ func TestNewScanner(t *testing.T) {
 
 func TestReadN(t *testing.T) {
 	for _, test := range []struct {
-		n       int
-		want    Range
-		wantErr bool
+		n    int
+		want Range
+		err  error
 	}{
 		{
 			n:    3,
@@ -47,9 +50,13 @@ func TestReadN(t *testing.T) {
 			want: Range{Start: 0, End: 6, Text: "foobar"},
 		},
 		{
-			n:       7,
-			want:    Range{Start: 0, End: 6, Text: "foobar"},
-			wantErr: true,
+			n:    7,
+			want: Range{Start: 0, End: 6, Text: "foobar"},
+			err: syntax.Error{
+				Range:   syntax.Range{End: 6, Text: "foobar"},
+				Message: "while reading 6 of 7 characters",
+				Wrapped: io.EOF,
+			},
 		},
 	} {
 		t.Run(fmt.Sprintf("n=%d", test.n), func(t *testing.T) {
@@ -57,15 +64,19 @@ func TestReadN(t *testing.T) {
 
 			got, err := scanner.ReadN(test.n)
 
-			if (err != nil) != test.wantErr {
-				t.Fatalf("scanner.ReadN(%d) returned error %#v, want error presence %t", test.n, err, test.wantErr)
-			}
-			if got != test.want {
-				t.Fatalf("scanner.ReadN(%d) = %v, %v, want %v, nil", test.n, got, err, test.want)
-			}
+			assert(t, fmt.Sprintf("scanner.ReadN(%d)", test.n), test.want, got, test.err, err)
 		})
 	}
+}
 
+func assert(t *testing.T, function, want, got any, wantErr, gotErr error) {
+	t.Helper()
+	if diff := cmp.Diff(wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
+		t.Fatalf("%s returned unexpected diff in err (-want/+got)\n%s\n", function, diff)
+	}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Fatalf("%s returned unexpected diff (-want/+got)\n%s\n", function, diff)
+	}
 }
 
 func TestReadString(t *testing.T) {
@@ -73,7 +84,7 @@ func TestReadString(t *testing.T) {
 		text    string
 		str     string
 		want    Range
-		wantErr bool
+		wantErr error
 	}{
 		{
 			str:  "",
@@ -88,9 +99,12 @@ func TestReadString(t *testing.T) {
 			want: Range{Start: 0, End: 6, Text: "foobar"},
 		},
 		{
-			str:     "foobarbaz",
-			want:    Range{Start: 0, End: 6, Text: "foobar"},
-			wantErr: true,
+			str:  "foobarbaz",
+			want: Range{Start: 0, End: 6, Text: "foobar"},
+			wantErr: syntax.Error{
+				Message: "while reading \"foobarbaz\"",
+				Range:   syntax.Range{End: 6, Text: "foobar"},
+			},
 		},
 	} {
 		t.Run(test.str, func(t *testing.T) {
@@ -98,12 +112,7 @@ func TestReadString(t *testing.T) {
 
 			got, err := scanner.ReadString(test.str)
 
-			if (err != nil) != test.wantErr {
-				t.Fatalf("scanner.ReadString(%s) returned error %#v, want error presence %t", test.str, err, test.wantErr)
-			}
-			if got != test.want {
-				t.Fatalf("scanner.ReadString(%s) = %v, %v, want %v, nil", test.str, got, err, test.want)
-			}
+			assert(t, fmt.Sprintf("scanner.ReadString(%s)", test.str), test.want, got, test.wantErr, err)
 		})
 	}
 }
@@ -113,70 +122,71 @@ func TestReadCharacter(t *testing.T) {
 		text    string
 		char    rune
 		want    Range
-		wantErr bool
+		wantErr error
 	}{
 		{
-			text: "foo",
+			text: "foobar",
 			char: 'f',
 			want: Range{Start: 0, End: 1, Text: "foobar"},
 		},
 		{
-			text:    "foo",
-			char:    'o',
-			want:    Range{Start: 0, End: 0, Text: "foobar"},
-			wantErr: true,
-		},
-		{
-			text:    "",
-			char:    'o',
-			want:    Range{Start: 0, End: 0, Text: "foobar"},
-			wantErr: true,
-		},
-	} {
-		t.Run(fmt.Sprintf("ReadChar %c in %s", test.char, test.text), func(t *testing.T) {
-			scanner := setupScanner(t, "foobar")
-
-			got, err := scanner.ReadCharacter(test.char)
-
-			if (err != nil) != test.wantErr {
-				t.Fatalf("scanner.ReadCharacter(%c) returned error %#v, want error presence %t", test.char, err, test.wantErr)
-			}
-			if got != test.want {
-				t.Fatalf("scanner.ReadCharacter(%c) = %v, %v, want %v, nil", test.char, got, err, test.want)
-			}
-		})
-	}
-}
-
-func TestReadCharacterOpt(t *testing.T) {
-	for _, test := range []struct {
-		text    string
-		char    rune
-		want    func(string) Range
-		wantErr bool
-	}{
-		{
-			text: "foo",
-			char: 'f',
-			want: func(text string) Range {
-				return Range{Start: 0, End: 1, Text: text}
-			},
-		},
-		{
 			text: "foo",
 			char: 'o',
-			want: func(text string) Range {
-				return Range{Start: 0, End: 0, Text: text}
+			want: Range{Start: 0, End: 0, Text: "foo"},
+			wantErr: syntax.Error{
+				Message: "unexpected character f, want o",
+				Range:   Range{Start: 0, End: 0, Text: "foo"},
 			},
-			wantErr: true,
 		},
 		{
 			text: "",
 			char: 'o',
-			want: func(text string) Range {
-				return Range{Start: 0, End: 0, Text: text}
+			want: Range{Start: 0, End: 0, Text: ""},
+			wantErr: syntax.Error{
+				Message: "unexpected end of file, want o",
+				Range:   Range{Start: 0, End: 0, Text: ""},
 			},
-			wantErr: true,
+		},
+	} {
+		t.Run(fmt.Sprintf("ReadChar %c in %s", test.char, test.text), func(t *testing.T) {
+			scanner := setupScanner(t, test.text)
+
+			got, err := scanner.ReadCharacter(test.char)
+
+			assert(t, fmt.Sprintf("scanner.ReadCharacter(%c)", test.char), test.want, got, test.wantErr, err)
+		})
+	}
+}
+
+func TestReadCharacterWith(t *testing.T) {
+	for _, test := range []struct {
+		text    string
+		char    rune
+		want    Range
+		wantErr error
+	}{
+		{
+			text: "foo",
+			char: 'f',
+			want: Range{Start: 0, End: 1, Text: "foo"},
+		},
+		{
+			text: "foo",
+			char: 'o',
+			want: Range{Start: 0, End: 0, Text: "foo"},
+			wantErr: syntax.Error{
+				Message: "unexpected character: f",
+				Range:   Range{Text: "foo"},
+			},
+		},
+		{
+			text: "",
+			char: 'o',
+			want: Range{Start: 0, End: 0, Text: ""},
+			wantErr: syntax.Error{
+				Message: "unexpected end of file",
+				Range:   Range{Start: 0, End: 0, Text: ""},
+			},
 		},
 	} {
 		t.Run(fmt.Sprintf("ReadChar %c in %s", test.char, test.text), func(t *testing.T) {
@@ -184,12 +194,7 @@ func TestReadCharacterOpt(t *testing.T) {
 
 			got, err := scanner.ReadCharacterWith(func(r rune) bool { return r == test.char })
 
-			if (err != nil) != test.wantErr {
-				t.Fatalf("scanner.ReadCharacterWith(%c) returned error %#v, want error presence %t", test.char, err, test.wantErr)
-			}
-			if diff := cmp.Diff(got, test.want(test.text)); diff != "" {
-				t.Fatalf("scanner.ReadCharacterWith(%c) returned unexpected diff (-want/+got):\n%s\n", test.char, diff)
-			}
+			assert(t, fmt.Sprintf("scanner.ReadCharacterWith(== %c)", test.char), test.want, got, test.wantErr, err)
 		})
 	}
 }
@@ -226,9 +231,8 @@ func TestReadWhile(t *testing.T) {
 
 			got, err := scanner.ReadWhile(test.pred)
 
-			if err != nil || got != test.want {
-				t.Fatalf("scanner.ReadWhile(pred) = %v, %v, want %v, nil", got, err, test.want)
-			}
+			assert(t, "scanner.ReadWhile()", test.want, got, nil, err)
+
 		})
 	}
 }
@@ -238,7 +242,7 @@ func TestReadWhile1(t *testing.T) {
 		text    string
 		pred    func(rune) bool
 		want    Range
-		wantErr bool
+		wantErr error
 	}{
 		{
 			text: "ooobar",
@@ -246,10 +250,13 @@ func TestReadWhile1(t *testing.T) {
 			want: Range{Start: 0, End: 3, Text: "ooobar"},
 		},
 		{
-			text:    "",
-			pred:    func(r rune) bool { return r == 'o' },
-			want:    Range{Start: 0, End: 0, Text: ""},
-			wantErr: true,
+			text: "",
+			pred: func(r rune) bool { return r == 'o' },
+			want: Range{Start: 0, End: 0, Text: ""},
+			wantErr: syntax.Error{
+				Message: "unexpected end of file",
+				Range:   Range{},
+			},
 		},
 		{
 			text: "ASDFasdf",
@@ -267,9 +274,7 @@ func TestReadWhile1(t *testing.T) {
 
 			got, err := scanner.ReadWhile1(test.pred)
 
-			if test.wantErr != (err != nil) || got != test.want {
-				t.Fatalf("scanner.ReadWhile(pred) = %v, %v, want %v, error presence %t", got, err, test.want, test.wantErr)
-			}
+			assert(t, "scanner.ReadWhile1()", test.want, got, test.wantErr, err)
 		})
 	}
 }
@@ -278,7 +283,7 @@ func TestReadUntil(t *testing.T) {
 	for _, test := range []struct {
 		char    rune
 		want    Range
-		wantErr bool
+		wantErr error
 	}{
 		{
 			char: 'r',
@@ -289,9 +294,12 @@ func TestReadUntil(t *testing.T) {
 			want: Range{Start: 0, End: 0, Text: "foobar"},
 		},
 		{
-			char:    'z',
-			want:    Range{Start: 0, End: 6, Text: "foobar"},
-			wantErr: true,
+			char: 'z',
+			want: Range{Start: 0, End: 6, Text: "foobar"},
+			wantErr: syntax.Error{
+				Message: "unexpected end of file",
+				Range:   Range{Start: 0, End: 6, Text: "foobar"},
+			},
 		},
 	} {
 		t.Run(string(test.char), func(t *testing.T) {
@@ -299,12 +307,7 @@ func TestReadUntil(t *testing.T) {
 
 			got, err := scanner.ReadUntil(func(r rune) bool { return r == test.char })
 
-			if (err != nil) != test.wantErr {
-				t.Fatalf("scanner.ReadUntil(pred) returned error %#v, want error presence %t", err, test.wantErr)
-			}
-			if got != test.want {
-				t.Fatalf("scanner.ReadUntil(pred) = %v, %v, want %v, nil", got, err, test.want)
-			}
+			assert(t, fmt.Sprintf("scanner.ReadUntil(== %c)", test.char), test.want, got, test.wantErr, err)
 		})
 	}
 }

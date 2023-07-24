@@ -126,13 +126,13 @@ type Error struct {
 }
 
 func (e Error) Error() string {
-	var s strings.Builder
-	if len(e.Path) > 0 {
-		s.WriteString(e.Path)
-		s.WriteString(": ")
-	}
-	s.WriteString(e.Location()[1].String())
-	s.WriteString(" ")
-	s.WriteString(e.Message)
-	return s.String()
+	// var s strings.Builder
+	// if len(e.Path) > 0 {
+	// 	s.WriteString(e.Path)
+	// 	s.WriteString(": ")
+	// }
+	// s.WriteString(e.Location()[1].String())
+	// s.WriteString(" ")
+	// s.WriteString(e.Message)
+	return e.Message
 }

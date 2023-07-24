@@ -102,15 +102,15 @@ func (s *Scanner) ReadWhile(pred func(r rune) bool) (Range, error) {
 // ReadWhile reads a string while the predicate holds. The predicate must be
 // satisfied at least once.
 func (s *Scanner) ReadWhile1(pred func(r rune) bool) (Range, error) {
-	if !pred(s.Current()) {
-		return s.Range(), syntax.Error{
-			Message: fmt.Sprintf("unexpected character %c", s.Current()),
-			Range:   s.Range(),
-		}
-	}
 	if s.Current() == EOF {
 		return s.Range(), syntax.Error{
 			Message: "unexpected end of file",
+			Range:   s.Range(),
+		}
+	}
+	if !pred(s.Current()) {
+		return s.Range(), syntax.Error{
+			Message: fmt.Sprintf("unexpected character %c", s.Current()),
 			Range:   s.Range(),
 		}
 	}
@@ -153,6 +153,12 @@ func (s *Scanner) ReadUntil(pred func(r rune) bool) (Range, error) {
 
 // ReadCharacter consumes the given rune.
 func (s *Scanner) ReadCharacter(r rune) (Range, error) {
+	if s.Current() == EOF {
+		return s.Range(), syntax.Error{
+			Message: fmt.Sprintf("unexpected end of file, want %c", r),
+			Range:   s.Range(),
+		}
+	}
 	if s.Current() != r {
 		return s.Range(), syntax.Error{
 			Message: fmt.Sprintf("unexpected character %c, want %c", s.current, r),
@@ -174,6 +180,12 @@ func (s *Scanner) ReadCharacter(r rune) (Range, error) {
 
 // ReadCharacter consume a rune satisfying the predicate.
 func (s *Scanner) ReadCharacterWith(pred func(rune) bool) (Range, error) {
+	if s.Current() == EOF {
+		return s.Range(), syntax.Error{
+			Message: "unexpected end of file",
+			Range:   s.Range(),
+		}
+	}
 	if !pred(s.Current()) {
 		return s.Range(), syntax.Error{
 			Message: fmt.Sprintf("unexpected character: %c", s.Current()),

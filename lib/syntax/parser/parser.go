@@ -49,18 +49,19 @@ func (p *Parser) parseDecimal() (syntax.Decimal, error) {
 func (p *Parser) parseAccount() (syntax.Account, error) {
 	p.RangeStart()
 	defer p.RangeEnd()
+	annotate := p.AnnotateError("while parsing account")
 	if _, err := p.ReadWhile1("a letter or a digit", isAlphanumeric); err != nil {
-		return syntax.Account{Range: p.Range()}, err
+		return syntax.Account{Range: p.Range()}, annotate(err)
 	}
 	for {
 		if p.Current() != ':' {
 			return syntax.Account{Range: p.Range()}, nil
 		}
 		if _, err := p.ReadCharacter(':'); err != nil {
-			return syntax.Account{Range: p.Range()}, err
+			return syntax.Account{Range: p.Range()}, annotate(err)
 		}
 		if _, err := p.ReadWhile1("a letter or a digit", isAlphanumeric); err != nil {
-			return syntax.Account{Range: p.Range()}, err
+			return syntax.Account{Range: p.Range()}, annotate(err)
 		}
 	}
 }

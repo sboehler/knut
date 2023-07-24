@@ -114,21 +114,44 @@ func TestParseAccount(t *testing.T) {
 				want: func(s string) syntax.Account {
 					return syntax.Account{Range: Range{Start: 0, End: 0, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing account",
+						Wrapped: syntax.Error{Message: "unexpected end of file, want a letter or a digit"},
+					}
+				},
 			},
 			{
 				text: "(foobar)",
 				want: func(s string) syntax.Account {
 					return syntax.Account{Range: Range{Start: 0, End: 0, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing account",
+						Range:   syntax.Range{Text: "(foobar)"},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Text: "(foobar)"},
+							Message: "unexpected character `(`, want a letter or a digit",
+						},
+					}
+				},
 			},
 			{
 				text: "ABC:",
 				want: func(s string) syntax.Account {
 					return syntax.Account{Range: Range{Start: 0, End: 4, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Range:   syntax.Range{End: 4, Text: "ABC:"},
+						Message: "while parsing account",
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Start: 4, End: 4, Text: "ABC:"},
+							Message: "unexpected end of file, want a letter or a digit",
+						},
+					}
+				},
 			},
 			{
 				text: "ABC:B",
@@ -147,7 +170,7 @@ func TestParseAccount(t *testing.T) {
 		fn: func(p *Parser) (syntax.Account, error) {
 			return p.parseAccount()
 		},
-	}.run(t)
+	}.runE(t)
 }
 
 func TestParseAccountMacro(t *testing.T) {

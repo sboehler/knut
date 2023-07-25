@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -554,8 +555,7 @@ func TestParseTransaction(t *testing.T) {
 				},
 			},
 			{
-				text:    "\"foo\"\n" + "A B 1 CHF", // 6 + 10
-				wantErr: true,
+				text: "\"foo\"\n" + "A B 1 CHF", // 6 + 10
 				want: func(t string) syntax.Transaction {
 					return syntax.Transaction{
 						Range:       Range{Start: 0, End: 15, Text: t},
@@ -572,12 +572,42 @@ func TestParseTransaction(t *testing.T) {
 					}
 				},
 			},
+			{
+				text: strings.Join([]string{`"foo"`, "A B"}, "\n"), // 6 + 10
+				want: func(t string) syntax.Transaction {
+					return syntax.Transaction{
+						Range:       Range{Start: 0, End: 9, Text: t},
+						Description: syntax.QuotedString{Range: Range{Start: 0, End: 5, Text: t}},
+						Bookings: []syntax.Booking{
+							{
+								Range:  Range{Start: 6, End: 9, Text: t},
+								Credit: syntax.Account{Range: Range{Start: 6, End: 7, Text: t}},
+								Debit:  syntax.Account{Range: Range{Start: 8, End: 9, Text: t}},
+							},
+						},
+					}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing transaction",
+						Range:   Range{Start: 0, End: 9, Text: s},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Start: 6, End: 9, Text: s},
+							Message: "while parsing booking",
+							Wrapped: syntax.Error{
+								Range:   syntax.Range{Start: 9, End: 9, Text: s},
+								Message: "unexpected end of file, want whitespace",
+							},
+						},
+					}
+				},
+			},
 		},
 		desc: "p.parseTransaction()",
 		fn: func(p *Parser) (syntax.Transaction, error) {
 			return p.parseTransaction(syntax.Date{}, syntax.Addons{})
 		},
-	}.run(t)
+	}.runE(t)
 }
 
 func TestParseRestOfWhitespaceLine(t *testing.T) {

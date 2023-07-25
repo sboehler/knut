@@ -171,22 +171,23 @@ func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
 func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {
 	p.RangeStart()
 	defer p.RangeEnd()
+	annotate := p.AnnotateError("while parsing transaction")
 	trx := syntax.Transaction{}
 	var err error
 	if trx.Description, err = p.parseQuotedString(); err != nil {
-		return trx.SetRange(p.Range()), err
+		return trx.SetRange(p.Range()), annotate(err)
 	}
 	if _, err := p.readRestOfWhitespaceLine(); err != nil {
-		return trx.SetRange(p.Range()), err
+		return trx.SetRange(p.Range()), annotate(err)
 	}
 	for {
 		b, err := p.parseBooking()
-		if err != nil {
-			return trx.SetRange(p.Range()), err
-		}
 		trx.Bookings = append(trx.Bookings, b)
+		if err != nil {
+			return trx.SetRange(p.Range()), annotate(err)
+		}
 		if _, err := p.readRestOfWhitespaceLine(); err != nil {
-			return trx.SetRange(p.Range()), err
+			return trx.SetRange(p.Range()), annotate(err)
 		}
 		if isWhitespaceOrNewline(p.Current()) || p.Current() == scanner.EOF {
 			break
@@ -209,6 +210,9 @@ func (p *Parser) readRestOfWhitespaceLine() (syntax.Range, error) {
 	defer p.RangeEnd()
 	if _, err := p.ReadWhile(isWhitespace); err != nil {
 		return p.Range(), err
+	}
+	if p.Current() == scanner.EOF {
+		return p.Range(), nil
 	}
 	_, err := p.ReadCharacter('\n')
 	return p.Range(), err

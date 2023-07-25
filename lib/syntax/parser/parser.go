@@ -21,107 +21,103 @@ func New(text, path string) *Parser {
 }
 
 func (p *Parser) parseCommodity() (syntax.Commodity, error) {
-	p.RangeStart()
+	p.RangeStart("parsing commodity")
 	defer p.RangeEnd()
 	r, err := p.ReadWhile1("a letter or a digit", isAlphanumeric)
 	if err != nil {
-		return syntax.Commodity{Range: p.Range()}, p.AnnotateError("while parsing commodity")(err)
+		return syntax.Commodity{Range: p.Range()}, p.Annotate(err)
 	}
 	return syntax.Commodity{Range: r}, nil
 }
 
 func (p *Parser) parseDecimal() (syntax.Decimal, error) {
-	p.RangeStart()
+	p.RangeStart("parsing decimal")
 	defer p.RangeEnd()
-	annotate := p.AnnotateError("while parsing decimal")
 	if p.Current() == '-' {
 		if _, err := p.ReadCharacter('-'); err != nil {
-			return syntax.Decimal{Range: p.Range()}, annotate(err)
+			return syntax.Decimal{Range: p.Range()}, p.Annotate(err)
 		}
 	}
 	if _, err := p.ReadWhile1("a digit", unicode.IsDigit); err != nil {
-		return syntax.Decimal{Range: p.Range()}, annotate(err)
+		return syntax.Decimal{Range: p.Range()}, p.Annotate(err)
 	}
 	if p.Current() != '.' {
 		return syntax.Decimal{Range: p.Range()}, nil
 	}
 	if _, err := p.ReadCharacter('.'); err != nil {
-		return syntax.Decimal{Range: p.Range()}, annotate(err)
+		return syntax.Decimal{Range: p.Range()}, p.Annotate(err)
 	}
 	if _, err := p.ReadWhile1("a digit", unicode.IsDigit); err != nil {
-		return syntax.Decimal{Range: p.Range()}, annotate(err)
+		return syntax.Decimal{Range: p.Range()}, p.Annotate(err)
 	}
 	return syntax.Decimal{Range: p.Range()}, nil
 }
 
 func (p *Parser) parseAccount() (syntax.Account, error) {
-	p.RangeStart()
+	p.RangeStart("parsing account")
 	defer p.RangeEnd()
-	annotate := p.AnnotateError("while parsing account")
 	if _, err := p.ReadWhile1("a letter or a digit", isAlphanumeric); err != nil {
-		return syntax.Account{Range: p.Range()}, annotate(err)
+		return syntax.Account{Range: p.Range()}, p.Annotate(err)
 	}
 	for {
 		if p.Current() != ':' {
 			return syntax.Account{Range: p.Range()}, nil
 		}
 		if _, err := p.ReadCharacter(':'); err != nil {
-			return syntax.Account{Range: p.Range()}, annotate(err)
+			return syntax.Account{Range: p.Range()}, p.Annotate(err)
 		}
 		if _, err := p.ReadWhile1("a letter or a digit", isAlphanumeric); err != nil {
-			return syntax.Account{Range: p.Range()}, annotate(err)
+			return syntax.Account{Range: p.Range()}, p.Annotate(err)
 		}
 	}
 }
 
 func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
-	p.RangeStart()
+	p.RangeStart("parsing account macro")
 	defer p.RangeEnd()
-	annotate := p.AnnotateError("while parsing account macro")
 	if _, err := p.ReadCharacter('$'); err != nil {
-		return syntax.AccountMacro{Range: p.Range()}, annotate(err)
+		return syntax.AccountMacro{Range: p.Range()}, p.Annotate(err)
 	}
 	if _, err := p.ReadWhile1("a letter", unicode.IsLetter); err != nil {
-		return syntax.AccountMacro{Range: p.Range()}, annotate(err)
+		return syntax.AccountMacro{Range: p.Range()}, p.Annotate(err)
 	}
 	return syntax.AccountMacro{Range: p.Range()}, nil
 }
 
 func (p *Parser) parseBooking() (syntax.Booking, error) {
-	p.RangeStart()
+	p.RangeStart("parsing booking")
 	defer p.RangeEnd()
-	annotate := p.AnnotateError("while parsing booking")
 	booking := syntax.Booking{}
 	var err error
 	if p.Current() == '$' {
 		if booking.CreditMacro, err = p.parseAccountMacro(); err != nil {
-			return booking.SetRange(p.Range()), annotate(err)
+			return booking.SetRange(p.Range()), p.Annotate(err)
 		}
 	} else {
 		if booking.Credit, err = p.parseAccount(); err != nil {
-			return booking.SetRange(p.Range()), annotate(err)
+			return booking.SetRange(p.Range()), p.Annotate(err)
 		}
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
-		return booking.SetRange(p.Range()), annotate(err)
+		return booking.SetRange(p.Range()), p.Annotate(err)
 	}
 	if p.Current() == '$' {
 		if booking.DebitMacro, err = p.parseAccountMacro(); err != nil {
-			return booking.SetRange(p.Range()), annotate(err)
+			return booking.SetRange(p.Range()), p.Annotate(err)
 		}
 	} else {
 		if booking.Debit, err = p.parseAccount(); err != nil {
-			return booking.SetRange(p.Range()), annotate(err)
+			return booking.SetRange(p.Range()), p.Annotate(err)
 		}
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
-		return booking.SetRange(p.Range()), annotate(err)
+		return booking.SetRange(p.Range()), p.Annotate(err)
 	}
 	if booking.Amount, err = p.parseDecimal(); err != nil {
-		return booking.SetRange(p.Range()), annotate(err)
+		return booking.SetRange(p.Range()), p.Annotate(err)
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
-		return booking.SetRange(p.Range()), annotate(err)
+		return booking.SetRange(p.Range()), p.Annotate(err)
 	}
 	if booking.Commodity, err = p.parseCommodity(); err != nil {
 		return booking.SetRange(p.Range()), err
@@ -130,22 +126,21 @@ func (p *Parser) parseBooking() (syntax.Booking, error) {
 }
 
 func (p *Parser) parseDate() (syntax.Date, error) {
-	p.RangeStart()
+	p.RangeStart("parsing the date")
 	defer p.RangeEnd()
-	annotate := p.AnnotateError("while parsing the date")
 
 	for i := 0; i < 4; i++ {
 		if _, err := p.ReadCharacterWith("a digit", unicode.IsDigit); err != nil {
-			return syntax.Date{Range: p.Range()}, annotate(err)
+			return syntax.Date{Range: p.Range()}, p.Annotate(err)
 		}
 	}
 	for i := 0; i < 2; i++ {
 		if _, err := p.ReadCharacter('-'); err != nil {
-			return syntax.Date{Range: p.Range()}, annotate(err)
+			return syntax.Date{Range: p.Range()}, p.Annotate(err)
 		}
 		for j := 0; j < 2; j++ {
 			if _, err := p.ReadCharacterWith("a digit", unicode.IsDigit); err != nil {
-				return syntax.Date{Range: p.Range()}, annotate(err)
+				return syntax.Date{Range: p.Range()}, p.Annotate(err)
 			}
 		}
 	}
@@ -153,41 +148,39 @@ func (p *Parser) parseDate() (syntax.Date, error) {
 }
 
 func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
-	p.RangeStart()
+	p.RangeStart("parsing quoted string")
 	defer p.RangeEnd()
-	annotate := p.AnnotateError("while parsing quoted string")
 	if _, err := p.ReadCharacter('"'); err != nil {
-		return syntax.QuotedString{Range: p.Range()}, annotate(err)
+		return syntax.QuotedString{Range: p.Range()}, p.Annotate(err)
 	}
 	if _, err := p.ReadWhile(func(r rune) bool { return r != '"' }); err != nil {
-		return syntax.QuotedString{Range: p.Range()}, annotate(err)
+		return syntax.QuotedString{Range: p.Range()}, p.Annotate(err)
 	}
 	if _, err := p.ReadCharacter('"'); err != nil {
-		return syntax.QuotedString{Range: p.Range()}, annotate(err)
+		return syntax.QuotedString{Range: p.Range()}, p.Annotate(err)
 	}
 	return syntax.QuotedString{Range: p.Range()}, nil
 }
 
 func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {
-	p.RangeStart()
+	p.RangeStart("parsing transaction")
 	defer p.RangeEnd()
-	annotate := p.AnnotateError("while parsing transaction")
 	trx := syntax.Transaction{}
 	var err error
 	if trx.Description, err = p.parseQuotedString(); err != nil {
-		return trx.SetRange(p.Range()), annotate(err)
+		return trx.SetRange(p.Range()), p.Annotate(err)
 	}
 	if _, err := p.readRestOfWhitespaceLine(); err != nil {
-		return trx.SetRange(p.Range()), annotate(err)
+		return trx.SetRange(p.Range()), p.Annotate(err)
 	}
 	for {
 		b, err := p.parseBooking()
 		trx.Bookings = append(trx.Bookings, b)
 		if err != nil {
-			return trx.SetRange(p.Range()), annotate(err)
+			return trx.SetRange(p.Range()), p.Annotate(err)
 		}
 		if _, err := p.readRestOfWhitespaceLine(); err != nil {
-			return trx.SetRange(p.Range()), annotate(err)
+			return trx.SetRange(p.Range()), p.Annotate(err)
 		}
 		if isWhitespaceOrNewline(p.Current()) || p.Current() == scanner.EOF {
 			break
@@ -197,16 +190,19 @@ func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.T
 }
 
 func (p *Parser) readWhitespace1() (syntax.Range, error) {
-	p.RangeStart()
+	p.RangeStart("")
 	defer p.RangeEnd()
 	if !isWhitespaceOrNewline(p.Current()) && p.Current() != scanner.EOF {
-		return p.Range(), p.AnnotateError(fmt.Sprintf("unexpected character `%c`, want whitespace or a newline", p.Current()))(nil)
+		return p.Range(), syntax.Error{
+			Message: fmt.Sprintf("unexpected character `%c`, want whitespace or a newline", p.Current()),
+			Range:   p.Range(),
+		}
 	}
 	return p.ReadWhile(isWhitespace)
 }
 
 func (p *Parser) readRestOfWhitespaceLine() (syntax.Range, error) {
-	p.RangeStart()
+	p.RangeStart("")
 	defer p.RangeEnd()
 	if _, err := p.ReadWhile(isWhitespace); err != nil {
 		return p.Range(), err
@@ -216,16 +212,6 @@ func (p *Parser) readRestOfWhitespaceLine() (syntax.Range, error) {
 	}
 	_, err := p.ReadCharacter('\n')
 	return p.Range(), err
-}
-
-func (p *Parser) AnnotateError(desc string) func(error) error {
-	return func(err error) error {
-		return syntax.Error{
-			Message: desc,
-			Range:   p.Range(),
-			Wrapped: err,
-		}
-	}
 }
 
 func isAlphanumeric(r rune) bool {

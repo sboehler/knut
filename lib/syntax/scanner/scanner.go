@@ -34,7 +34,12 @@ type Scanner struct {
 	currentLen int
 	offset     int
 
-	ranges []Range
+	scopes []scope
+}
+
+type scope struct {
+	Range syntax.Range
+	Desc  string
 }
 
 // New creates a new Scanner.
@@ -58,8 +63,8 @@ func (s *Scanner) Offset() int {
 // Advance reads a rune.
 func (s *Scanner) Advance() error {
 	s.offset += s.currentLen
-	if l := len(s.ranges); l > 0 {
-		s.ranges[l-1].End = s.offset
+	if l := len(s.scopes); l > 0 {
+		s.scopes[l-1].Range.End = s.offset
 	}
 	if s.offset == len(s.text) && s.current != EOF {
 		s.current = EOF
@@ -94,21 +99,27 @@ func (s *Scanner) Advance() error {
 	return nil
 }
 
-func (s *Scanner) RangeStart() {
-	s.ranges = append(s.ranges, Range{
-		Start: s.Offset(),
-		End:   s.Offset(),
-		Path:  s.path,
-		Text:  s.text,
+func (s *Scanner) RangeStart(desc string) {
+	s.scopes = append(s.scopes, scope{
+		Range: Range{Start: s.Offset(), End: s.Offset(), Path: s.path, Text: s.text},
+		Desc:  desc,
 	})
 }
 
 func (s *Scanner) RangeEnd() {
-	last := len(s.ranges) - 1
+	last := len(s.scopes) - 1
 	if last > 0 {
-		s.ranges[last-1].End = s.ranges[last].End
+		s.scopes[last-1].Range.End = s.scopes[last].Range.End
 	}
-	s.ranges = s.ranges[:last]
+	s.scopes = s.scopes[:last]
+}
+
+func (s *Scanner) Annotate(err error) error {
+	return syntax.Error{
+		Message: "while " + s.scopes[len(s.scopes)-1].Desc,
+		Range:   s.Range(),
+		Wrapped: err,
+	}
 }
 
 // EOF is a rune representing the end of a file
@@ -116,7 +127,7 @@ const EOF = rune(-1)
 
 // ReadWhile reads a string while the predicate holds.
 func (s *Scanner) ReadWhile(pred func(r rune) bool) (Range, error) {
-	s.RangeStart()
+	s.RangeStart("")
 	defer s.RangeEnd()
 	for pred(s.Current()) && s.Current() != EOF {
 		if err := s.Advance(); err != nil {
@@ -133,7 +144,7 @@ func (s *Scanner) ReadWhile(pred func(r rune) bool) (Range, error) {
 // ReadWhile reads a string while the predicate holds. The predicate must be
 // satisfied at least once.
 func (s *Scanner) ReadWhile1(desc string, pred func(r rune) bool) (Range, error) {
-	s.RangeStart()
+	s.RangeStart("")
 	defer s.RangeEnd()
 	if s.Current() == EOF {
 		return s.Range(), syntax.Error{
@@ -161,7 +172,7 @@ func (s *Scanner) ReadWhile1(desc string, pred func(r rune) bool) (Range, error)
 
 // ReadUntil advances the scanner until the predicate holds.
 func (s *Scanner) ReadUntil(desc string, pred func(r rune) bool) (Range, error) {
-	s.RangeStart()
+	s.RangeStart("")
 	defer s.RangeEnd()
 	for !pred(s.Current()) {
 		if err := s.Advance(); err != nil {
@@ -183,7 +194,7 @@ func (s *Scanner) ReadUntil(desc string, pred func(r rune) bool) (Range, error) 
 
 // ReadCharacter consumes the given rune.
 func (s *Scanner) ReadCharacter(r rune) (Range, error) {
-	s.RangeStart()
+	s.RangeStart("")
 	defer s.RangeEnd()
 	if s.Current() == EOF {
 		return s.Range(), syntax.Error{
@@ -209,7 +220,7 @@ func (s *Scanner) ReadCharacter(r rune) (Range, error) {
 
 // ReadCharacter consume a rune satisfying the predicate.
 func (s *Scanner) ReadCharacterWith(desc string, pred func(rune) bool) (Range, error) {
-	s.RangeStart()
+	s.RangeStart("")
 	defer s.RangeEnd()
 	if s.Current() == EOF {
 		return s.Range(), syntax.Error{
@@ -235,7 +246,7 @@ func (s *Scanner) ReadCharacterWith(desc string, pred func(rune) bool) (Range, e
 
 // ReadString parses the given string.
 func (s *Scanner) ReadString(str string) (Range, error) {
-	s.RangeStart()
+	s.RangeStart("")
 	defer s.RangeEnd()
 	for _, ch := range str {
 		if ch != s.Current() {
@@ -257,7 +268,7 @@ func (s *Scanner) ReadString(str string) (Range, error) {
 
 // ReadN reads a string with n runes.
 func (s *Scanner) ReadN(n int) (Range, error) {
-	s.RangeStart()
+	s.RangeStart("")
 	defer s.RangeEnd()
 	for i := 0; i < n; i++ {
 		if s.current == EOF {
@@ -279,5 +290,5 @@ func (s *Scanner) ReadN(n int) (Range, error) {
 }
 
 func (s *Scanner) Range() Range {
-	return s.ranges[len(s.ranges)-1]
+	return s.scopes[len(s.scopes)-1].Range
 }

@@ -83,21 +83,39 @@ func TestParseCommodity(t *testing.T) {
 				want: func(s string) syntax.Commodity {
 					return syntax.Commodity{Range: Range{Start: 0, End: 0, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing commodity",
+						Range:   Range{Text: s},
+						Wrapped: syntax.Error{
+							Message: "unexpected end of file, want a letter or a digit",
+							Range:   Range{Text: s},
+						},
+					}
+				},
 			},
 			{
 				text: "(foobar)",
 				want: func(s string) syntax.Commodity {
 					return syntax.Commodity{Range: Range{Start: 0, End: 0, Text: s}}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing commodity",
+						Range:   Range{Text: s},
+						Wrapped: syntax.Error{
+							Message: "unexpected character `(`, want a letter or a digit",
+							Range:   Range{Text: s},
+						},
+					}
+				},
 			},
 		},
 		fn: func(p *Parser) (syntax.Commodity, error) {
 			return p.parseCommodity()
 		},
 		desc: "p.parseCommodity()",
-	}.run(t)
+	}.runE(t)
 }
 
 func TestParseAccount(t *testing.T) {

@@ -21,8 +21,13 @@ func New(text, path string) *Parser {
 }
 
 func (p *Parser) parseCommodity() (syntax.Commodity, error) {
+	p.RangeStart()
+	defer p.RangeEnd()
 	r, err := p.ReadWhile1("a letter or a digit", isAlphanumeric)
-	return syntax.Commodity{Range: r}, err
+	if err != nil {
+		return syntax.Commodity{Range: p.Range()}, p.AnnotateError("while parsing commodity")(err)
+	}
+	return syntax.Commodity{Range: r}, nil
 }
 
 func (p *Parser) parseDecimal() (syntax.Decimal, error) {

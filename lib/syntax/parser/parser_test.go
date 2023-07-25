@@ -126,9 +126,9 @@ func TestParseAccount(t *testing.T) {
 				err: func(s string) error {
 					return syntax.Error{
 						Message: "while parsing account",
-						Range:   syntax.Range{Text: "(foobar)"},
+						Range:   syntax.Range{Text: s},
 						Wrapped: syntax.Error{
-							Range:   syntax.Range{Text: "(foobar)"},
+							Range:   syntax.Range{Text: s},
 							Message: "unexpected character `(`, want a letter or a digit",
 						},
 					}
@@ -141,10 +141,10 @@ func TestParseAccount(t *testing.T) {
 				},
 				err: func(s string) error {
 					return syntax.Error{
-						Range:   syntax.Range{End: 4, Text: "ABC:"},
+						Range:   syntax.Range{End: 4, Text: s},
 						Message: "while parsing account",
 						Wrapped: syntax.Error{
-							Range:   syntax.Range{Start: 4, End: 4, Text: "ABC:"},
+							Range:   syntax.Range{Start: 4, End: 4, Text: s},
 							Message: "unexpected end of file, want a letter or a digit",
 						},
 					}
@@ -193,10 +193,10 @@ func TestParseAccountMacro(t *testing.T) {
 				err: func(s string) error {
 					return syntax.Error{
 						Message: "while parsing account macro",
-						Range:   syntax.Range{End: 1, Text: "$1foo"},
+						Range:   syntax.Range{End: 1, Text: s},
 						Wrapped: syntax.Error{
 							Message: "unexpected character `1`, want a letter",
-							Range:   syntax.Range{Start: 1, End: 1, Text: "$1foo"},
+							Range:   syntax.Range{Start: 1, End: 1, Text: s},
 						},
 					}
 				},
@@ -224,9 +224,9 @@ func TestParseAccountMacro(t *testing.T) {
 				err: func(s string) error {
 					return syntax.Error{
 						Message: "while parsing account macro",
-						Range:   syntax.Range{Text: "foobar"},
+						Range:   syntax.Range{Text: s},
 						Wrapped: syntax.Error{
-							Range:   syntax.Range{Text: "foobar"},
+							Range:   syntax.Range{Text: s},
 							Message: "unexpected character `f`, want `$`",
 						},
 					}
@@ -271,7 +271,7 @@ func TestParseDecimal(t *testing.T) {
 						Message: "while parsing decimal",
 						Range:   syntax.Range{End: 4, Text: s},
 						Wrapped: syntax.Error{
-							Range:   syntax.Range{Start: 4, End: 4, Text: "-10."},
+							Range:   syntax.Range{Start: 4, End: 4, Text: s},
 							Message: "unexpected end of file, want a digit",
 						},
 					}
@@ -287,7 +287,7 @@ func TestParseDecimal(t *testing.T) {
 						Message: "while parsing decimal",
 						Range:   syntax.Range{End: 3, Text: s},
 						Wrapped: syntax.Error{
-							Range:   syntax.Range{Start: 3, End: 3, Text: "99."},
+							Range:   syntax.Range{Start: 3, End: 3, Text: s},
 							Message: "unexpected end of file, want a digit",
 						},
 					}
@@ -303,7 +303,7 @@ func TestParseDecimal(t *testing.T) {
 						Message: "while parsing decimal",
 						Range:   syntax.Range{Text: s},
 						Wrapped: syntax.Error{
-							Range:   syntax.Range{Text: "foo"},
+							Range:   syntax.Range{Text: s},
 							Message: "unexpected character `f`, want a digit",
 						},
 					}
@@ -408,7 +408,7 @@ func TestParseBooking(t *testing.T) {
 						Message: "while parsing booking",
 						Range:   Range{Start: 0, End: 13, Text: s},
 						Wrapped: syntax.Error{
-							Range:   syntax.Range{Start: 13, End: 13, Text: "A:B C:D 100.0"},
+							Range:   syntax.Range{Start: 13, End: 13, Text: s},
 							Message: "unexpected end of file, want whitespace",
 						}}
 				},

@@ -329,6 +329,35 @@ func TestReadUntil(t *testing.T) {
 	}
 }
 
+func TestReadAlternative(t *testing.T) {
+	for _, test := range []struct {
+		input   []string
+		want    Range
+		wantErr error
+	}{
+		{
+			input: []string{"baz", "bar", "foo"},
+			want:  Range{End: 3, Text: "foobar"},
+		},
+		{
+			input: []string{"baz", "bar"},
+			want:  Range{Text: "foobar"},
+			wantErr: syntax.Error{
+				Message: "unexpected input, want one of {`baz`, `bar`}",
+				Range:   Range{Text: "foobar"},
+			},
+		},
+	} {
+		t.Run(fmt.Sprintf("%#v", test.input), func(t *testing.T) {
+			scanner := setupScanner(t, "foobar")
+
+			got, err := scanner.ReadAlternative(test.input)
+
+			assert(t, fmt.Sprintf("scanner.ReadAlternative(%#v)", test.input), test.want, got, test.wantErr, err)
+		})
+	}
+}
+
 func TestAdvanceAndCurrent(t *testing.T) {
 	scanner := setupScanner(t, "foobar")
 	for _, want := range "foobar" {

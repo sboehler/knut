@@ -17,6 +17,7 @@ package scanner
 import (
 	"fmt"
 	"io"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/sboehler/knut/lib/syntax"
@@ -104,6 +105,10 @@ func (s *Scanner) RangeStart(desc string) {
 		Range: Range{Start: s.Offset(), End: s.Offset(), Path: s.path, Text: s.text},
 		Desc:  desc,
 	})
+}
+
+func (s *Scanner) Backtrack() {
+	s.offset = s.scopes[len(s.scopes)-1].Range.End
 }
 
 func (s *Scanner) RangeEnd() {
@@ -264,6 +269,44 @@ func (s *Scanner) ReadString(str string) (Range, error) {
 		}
 	}
 	return s.Range(), nil
+}
+
+func (s *Scanner) ReadAlternative(ss []string) (Range, error) {
+	s.RangeStart("")
+	defer s.RangeEnd()
+
+	var end int
+	for _, t := range ss {
+		r, err := s.ReadString(t)
+		if err == nil {
+			return r, nil
+		}
+		if r.End > end {
+			end = r.End
+		}
+		s.Backtrack()
+	}
+
+	return s.Range(), syntax.Error{
+		Message: fmt.Sprintf("unexpected input, want one of %s", format(ss)),
+		Range:   s.Range(),
+	}
+}
+
+func format(ss []string) string {
+	var b strings.Builder
+	b.WriteString("{")
+	for i, s := range ss {
+		if i != 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString("`")
+		b.WriteString(s)
+		b.WriteString("`")
+	}
+	b.WriteString("}")
+	return b.String()
+
 }
 
 // ReadN reads a string with n runes.

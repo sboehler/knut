@@ -189,6 +189,89 @@ func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.T
 	return trx.SetRange(p.Range()), nil
 }
 
+func (p *Parser) parsePerformance() (syntax.Performance, error) {
+	p.RangeStart("parsing performance")
+	defer p.RangeEnd()
+	perf := syntax.Performance{Range: p.Range()}
+	if _, err := p.ReadCharacter('('); err != nil {
+		return perf.SetRange(p.Range()), p.Annotate(err)
+	}
+	if _, err := p.ReadWhile(isWhitespace); err != nil {
+		return perf.SetRange(p.Range()), p.Annotate(err)
+	}
+	if p.Current() != ')' {
+		if c, err := p.parseCommodity(); err != nil {
+			return perf.SetRange(p.Range()), p.Annotate(err)
+		} else {
+			perf.Targets = append(perf.Targets, c)
+		}
+		if _, err := p.ReadWhile(isWhitespace); err != nil {
+			return perf.SetRange(p.Range()), p.Annotate(err)
+		}
+	}
+	for p.Current() == ',' {
+		if _, err := p.ReadCharacter(','); err != nil {
+			return perf.SetRange(p.Range()), p.Annotate(err)
+		}
+		if _, err := p.ReadWhile(isWhitespace); err != nil {
+			return perf.SetRange(p.Range()), p.Annotate(err)
+		}
+		if c, err := p.parseCommodity(); err != nil {
+			return perf.SetRange(p.Range()), p.Annotate(err)
+		} else {
+			perf.Targets = append(perf.Targets, c)
+		}
+		if _, err := p.ReadWhile(isWhitespace); err != nil {
+			return perf.SetRange(p.Range()), p.Annotate(err)
+		}
+	}
+	if _, err := p.ReadCharacter(')'); err != nil {
+		return perf.SetRange(p.Range()), p.Annotate(err)
+	}
+	return perf.SetRange(p.Range()), nil
+}
+
+func (p *Parser) parseAccrual() (syntax.Accrual, error) {
+	p.RangeStart("parsing addons")
+	defer p.RangeEnd()
+	accrual := syntax.Accrual{Range: p.Range()}
+	if _, err := p.readWhitespace1(); err != nil {
+		return accrual.SetRange(p.Range()), p.Annotate(err)
+	}
+	var err error
+	if accrual.Interval, err = p.parseInterval(); err != nil {
+		return accrual.SetRange(p.Range()), p.Annotate(err)
+	}
+	if _, err := p.readWhitespace1(); err != nil {
+		return accrual.SetRange(p.Range()), p.Annotate(err)
+	}
+	if accrual.Start, err = p.parseDate(); err != nil {
+		return accrual.SetRange(p.Range()), p.Annotate(err)
+	}
+	if _, err := p.readWhitespace1(); err != nil {
+		return accrual.SetRange(p.Range()), p.Annotate(err)
+	}
+	if accrual.End, err = p.parseDate(); err != nil {
+		return accrual.SetRange(p.Range()), p.Annotate(err)
+	}
+	if _, err := p.readWhitespace1(); err != nil {
+		return accrual.SetRange(p.Range()), p.Annotate(err)
+	}
+	if accrual.Account, err = p.parseAccount(); err != nil {
+		return accrual.SetRange(p.Range()), p.Annotate(err)
+	}
+	return accrual.SetRange(p.Range()), nil
+}
+
+func (p *Parser) parseInterval() (syntax.Interval, error) {
+	p.RangeStart("parsing interval")
+	defer p.RangeEnd()
+	if _, err := p.ReadAlternative([]string{"daily", "weekly", "monthly", "quarterly"}); err != nil {
+		return syntax.Interval{Range: p.Range()}, p.Annotate(err)
+	}
+	return syntax.Interval{Range: p.Range()}, nil
+}
+
 func (p *Parser) readWhitespace1() (syntax.Range, error) {
 	p.RangeStart("")
 	defer p.RangeEnd()

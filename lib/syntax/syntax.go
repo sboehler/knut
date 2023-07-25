@@ -37,17 +37,34 @@ type Performance struct {
 	Targets []Commodity
 }
 
-type Interval Range
+func (b *Performance) SetRange(r Range) Performance {
+	b.Range = r
+	return *b
+}
+
+type Interval struct{ Range }
 
 type Accrual struct {
 	Range
 	Interval   Interval
 	Start, End Date
+	Account    Account
+}
+
+func (b *Accrual) SetRange(r Range) Accrual {
+	b.Range = r
+	return *b
 }
 
 type Addons struct {
-	Performance *Performance
-	Accrual     *Accrual
+	Range
+	Performance Performance
+	Accrual     Accrual
+}
+
+func (a *Addons) SetRange(r Range) Addons {
+	a.Range = r
+	return *a
 }
 
 type Transaction struct {
@@ -69,8 +86,21 @@ type Range struct {
 	Path, Text string
 }
 
+func (r Range) Extract() string {
+	return r.Text[r.Start:r.End]
+}
+
 func (r *Range) SetRange(r2 Range) {
 	*r = r2
+}
+
+func (r *Range) Extend(r2 Range) {
+	if r.Start > r2.Start {
+		r.Start = r2.Start
+	}
+	if r.End < r2.End {
+		r.End = r2.End
+	}
 }
 
 func (r Range) Empty() bool {

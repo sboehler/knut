@@ -97,6 +97,118 @@ func TestParseCommodity(t *testing.T) {
 	}.run(t)
 }
 
+func TestParsePerformance(t *testing.T) {
+	parserTest[syntax.Performance]{
+		tests: []testcase[syntax.Performance]{
+			{
+				text: "(USD   ,   CHF,GBP)",
+				want: func(s string) syntax.Performance {
+					return syntax.Performance{
+						Range: Range{Start: 0, End: 19, Text: s},
+						Targets: []syntax.Commodity{
+							{Range: syntax.Range{Start: 1, End: 4, Text: s}},
+							{Range: syntax.Range{Start: 11, End: 14, Text: s}},
+							{Range: syntax.Range{Start: 15, End: 18, Text: s}},
+						},
+					}
+				},
+			},
+			{
+				text: "(  )",
+				want: func(s string) syntax.Performance {
+					return syntax.Performance{
+						Range: Range{Start: 0, End: 4, Text: s},
+					}
+				},
+			},
+			{
+				text: "(A)",
+				want: func(s string) syntax.Performance {
+					return syntax.Performance{
+						Range: Range{Start: 0, End: 3, Text: s},
+						Targets: []syntax.Commodity{
+							{Range: syntax.Range{Start: 1, End: 2, Text: s}},
+						},
+					}
+				},
+			},
+			{
+				text: "",
+				want: func(s string) syntax.Performance {
+					return syntax.Performance{Range: Range{Start: 0, End: 0, Text: s}}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing performance",
+						Range:   Range{Text: s},
+						Wrapped: syntax.Error{
+							Message: "unexpected end of file, want `(`",
+							Range:   Range{Text: s},
+						},
+					}
+				},
+			},
+			{
+				text: "(foobar)",
+				want: func(s string) syntax.Performance {
+					return syntax.Performance{
+						Range: Range{Start: 0, End: 8, Text: s},
+						Targets: []syntax.Commodity{
+							{Range: Range{Start: 1, End: 7, Text: s}},
+						},
+					}
+				},
+			},
+		},
+		fn: func(p *Parser) (syntax.Performance, error) {
+			return p.parsePerformance()
+		},
+		desc: "p.parsePerformance()",
+	}.run(t)
+}
+
+func TestParseAccrual(t *testing.T) {
+	parserTest[syntax.Accrual]{
+		tests: []testcase[syntax.Accrual]{
+			{
+				text: " monthly 2023-01-01 2023-12-31 A:B",
+				want: func(s string) syntax.Accrual {
+					return syntax.Accrual{
+						Range:    syntax.Range{Start: 0, End: 34, Text: s},
+						Interval: syntax.Interval{Range: syntax.Range{Start: 1, End: 8, Text: s}},
+						Start:    syntax.Date{Range: syntax.Range{Start: 9, End: 19, Text: s}},
+						End:      syntax.Date{Range: syntax.Range{Start: 20, End: 30, Text: s}},
+						Account:  syntax.Account{Range: syntax.Range{Start: 31, End: 34, Text: s}},
+					}
+				},
+			},
+			{
+				text: "",
+				want: func(s string) syntax.Accrual {
+					return syntax.Accrual{
+						Range: syntax.Range{Start: 0, End: 0, Text: s}}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing addons",
+						Range:   syntax.Range{Text: s},
+						Wrapped: syntax.Error{
+							Message: "while parsing interval",
+							Wrapped: syntax.Error{
+								Message: "unexpected end of file, want one of {`daily`, `weekly`, `monthly`, `quarterly`}",
+							},
+						},
+					}
+				},
+			},
+		},
+		fn: func(p *Parser) (syntax.Accrual, error) {
+			return p.parseAccrual()
+		},
+		desc: "p.parseAccrual()",
+	}.run(t)
+}
+
 func TestParseAccount(t *testing.T) {
 	parserTest[syntax.Account]{
 		tests: []testcase[syntax.Account]{
@@ -362,6 +474,57 @@ func TestParseDate(t *testing.T) {
 		desc: "p.parseDate()",
 		fn: func(p *Parser) (syntax.Date, error) {
 			return p.parseDate()
+		},
+	}.run(t)
+}
+
+func TestParseInterval(t *testing.T) {
+	parserTest[syntax.Interval]{
+		tests: []testcase[syntax.Interval]{
+			{
+				text: "daily",
+				want: func(s string) syntax.Interval {
+					return syntax.Interval{Range: Range{Start: 0, End: 5, Text: s}}
+				},
+			},
+			{
+				text: "weekly",
+				want: func(s string) syntax.Interval {
+					return syntax.Interval{Range: Range{Start: 0, End: 6, Text: s}}
+				},
+			},
+			{
+				text: "monthly",
+				want: func(s string) syntax.Interval {
+					return syntax.Interval{Range: Range{Start: 0, End: 7, Text: s}}
+				},
+			},
+			{
+				text: "quarterly",
+				want: func(s string) syntax.Interval {
+					return syntax.Interval{Range: Range{Start: 0, End: 9, Text: s}}
+				},
+			},
+			{
+				text: "",
+				want: func(s string) syntax.Interval {
+					return syntax.Interval{Range: Range{Start: 0, End: 0, Text: s}}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Range:   syntax.Range{Text: s},
+						Message: "while parsing interval",
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Text: s},
+							Message: "unexpected end of file, want one of {`daily`, `weekly`, `monthly`, `quarterly`}",
+						},
+					}
+				},
+			},
+		},
+		desc: "p.parseInterval()",
+		fn: func(p *Parser) (syntax.Interval, error) {
+			return p.parseInterval()
 		},
 	}.run(t)
 }

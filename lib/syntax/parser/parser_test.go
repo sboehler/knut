@@ -12,10 +12,9 @@ import (
 type Range = syntax.Range
 
 type testcase[T any] struct {
-	text    string
-	want    func(string) T
-	wantErr bool
-	err     func(string) error
+	text string
+	want func(string) T
+	err  func(string) error
 }
 
 type parserTest[T any] struct {
@@ -25,27 +24,6 @@ type parserTest[T any] struct {
 }
 
 func (tests parserTest[T]) run(t *testing.T) {
-	t.Helper()
-	for _, test := range tests.tests {
-		t.Run(test.text, func(t *testing.T) {
-			parser := New(test.text, "")
-			if err := parser.Advance(); err != nil {
-				t.Fatalf("s.Advance() = %v, want nil", err)
-			}
-
-			got, err := tests.fn(parser)
-
-			if (err != nil) != test.wantErr {
-				t.Errorf("%s returned error %v, want error presence %t", tests.desc, err, test.wantErr)
-			}
-			if diff := cmp.Diff(test.want(test.text), got); diff != "" {
-				t.Errorf("%s returned unexpected diff (-want/+got)\n%s\n", tests.desc, diff)
-			}
-		})
-	}
-}
-
-func (tests parserTest[T]) runE(t *testing.T) {
 	t.Helper()
 	for _, test := range tests.tests {
 		t.Run(test.text, func(t *testing.T) {
@@ -116,7 +94,7 @@ func TestParseCommodity(t *testing.T) {
 			return p.parseCommodity()
 		},
 		desc: "p.parseCommodity()",
-	}.runE(t)
+	}.run(t)
 }
 
 func TestParseAccount(t *testing.T) {
@@ -189,7 +167,7 @@ func TestParseAccount(t *testing.T) {
 		fn: func(p *Parser) (syntax.Account, error) {
 			return p.parseAccount()
 		},
-	}.runE(t)
+	}.run(t)
 }
 
 func TestParseAccountMacro(t *testing.T) {
@@ -259,7 +237,7 @@ func TestParseAccountMacro(t *testing.T) {
 		fn: func(p *Parser) (syntax.AccountMacro, error) {
 			return p.parseAccountMacro()
 		},
-	}.runE(t)
+	}.run(t)
 }
 
 func TestParseDecimal(t *testing.T) {
@@ -336,7 +314,7 @@ func TestParseDecimal(t *testing.T) {
 		fn: func(p *Parser) (syntax.Decimal, error) {
 			return p.parseDecimal()
 		},
-	}.runE(t)
+	}.run(t)
 }
 
 func TestParseDate(t *testing.T) {
@@ -385,7 +363,7 @@ func TestParseDate(t *testing.T) {
 		fn: func(p *Parser) (syntax.Date, error) {
 			return p.parseDate()
 		},
-	}.runE(t)
+	}.run(t)
 }
 
 func TestParseBooking(t *testing.T) {
@@ -452,7 +430,7 @@ func TestParseBooking(t *testing.T) {
 		fn: func(p *Parser) (syntax.Booking, error) {
 			return p.parseBooking()
 		},
-	}.runE(t)
+	}.run(t)
 }
 
 func TestParseQuotedString(t *testing.T) {
@@ -505,7 +483,7 @@ func TestParseQuotedString(t *testing.T) {
 				},
 			},
 		},
-	}.runE(t)
+	}.run(t)
 }
 
 func TestParseTransaction(t *testing.T) {
@@ -607,7 +585,7 @@ func TestParseTransaction(t *testing.T) {
 		fn: func(p *Parser) (syntax.Transaction, error) {
 			return p.parseTransaction(syntax.Date{}, syntax.Addons{})
 		},
-	}.runE(t)
+	}.run(t)
 }
 
 func TestParseRestOfWhitespaceLine(t *testing.T) {
@@ -632,7 +610,12 @@ func TestParseRestOfWhitespaceLine(t *testing.T) {
 				want: func(s string) Range {
 					return Range{Start: 0, End: 1, Text: s}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "unexpected character `f`, want `\n`",
+						Range:   syntax.Range{Start: 1, End: 1, Text: s},
+					}
+				},
 			},
 		},
 	}.run(t)
@@ -680,5 +663,5 @@ func TestReadWhitespace1(t *testing.T) {
 				},
 			},
 		},
-	}.runE(t)
+	}.run(t)
 }

@@ -90,40 +90,43 @@ func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
 func (p *Parser) parseBooking() (syntax.Booking, error) {
 	p.RangeStart()
 	defer p.RangeEnd()
+	annotate := p.AnnotateError("while parsing booking")
 	booking := syntax.Booking{}
 	var err error
 	if p.Current() == '$' {
 		if booking.CreditMacro, err = p.parseAccountMacro(); err != nil {
-			return booking.SetRange(p.Range()), err
+			return booking.SetRange(p.Range()), annotate(err)
 		}
 	} else {
 		if booking.Credit, err = p.parseAccount(); err != nil {
-			return booking.SetRange(p.Range()), err
+			return booking.SetRange(p.Range()), annotate(err)
 		}
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
-		return booking.SetRange(p.Range()), err
+		return booking.SetRange(p.Range()), annotate(err)
 	}
 	if p.Current() == '$' {
 		if booking.DebitMacro, err = p.parseAccountMacro(); err != nil {
-			return booking.SetRange(p.Range()), err
+			return booking.SetRange(p.Range()), annotate(err)
 		}
 	} else {
 		if booking.Debit, err = p.parseAccount(); err != nil {
-			return booking.SetRange(p.Range()), err
+			return booking.SetRange(p.Range()), annotate(err)
 		}
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
-		return booking.SetRange(p.Range()), err
+		return booking.SetRange(p.Range()), annotate(err)
 	}
 	if booking.Amount, err = p.parseDecimal(); err != nil {
-		return booking.SetRange(p.Range()), err
+		return booking.SetRange(p.Range()), annotate(err)
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
+		return booking.SetRange(p.Range()), annotate(err)
+	}
+	if booking.Commodity, err = p.parseCommodity(); err != nil {
 		return booking.SetRange(p.Range()), err
 	}
-	booking.Commodity, err = p.parseCommodity()
-	return booking.SetRange(p.Range()), err
+	return booking.SetRange(p.Range()), nil
 }
 
 func (p *Parser) parseDate() (syntax.Date, error) {

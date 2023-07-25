@@ -424,7 +424,15 @@ func TestParseBooking(t *testing.T) {
 						Amount: syntax.Decimal{Range: Range{Start: 8, End: 13, Text: t}},
 					}
 				},
-				wantErr: true,
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing booking",
+						Range:   Range{Start: 0, End: 13, Text: s},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Start: 13, End: 13, Text: "A:B C:D 100.0"},
+							Message: "unexpected end of file, want whitespace",
+						}}
+				},
 			},
 			{
 				text: "C:D  $dividend  100.0  CHF",
@@ -443,7 +451,7 @@ func TestParseBooking(t *testing.T) {
 		fn: func(p *Parser) (syntax.Booking, error) {
 			return p.parseBooking()
 		},
-	}.run(t)
+	}.runE(t)
 }
 
 func TestParseQuotedString(t *testing.T) {

@@ -108,7 +108,9 @@ func (s *Scanner) RangeStart(desc string) {
 }
 
 func (s *Scanner) Backtrack() {
-	s.offset = s.scopes[len(s.scopes)-1].Range.End
+	s.offset = s.scopes[len(s.scopes)-1].Range.Start
+	s.current, s.currentLen = utf8.DecodeRuneInString(s.text[s.offset:])
+
 }
 
 func (s *Scanner) RangeEnd() {
@@ -274,7 +276,12 @@ func (s *Scanner) ReadString(str string) (Range, error) {
 func (s *Scanner) ReadAlternative(ss []string) (Range, error) {
 	s.RangeStart("")
 	defer s.RangeEnd()
-
+	if s.current == EOF {
+		return s.Range(), syntax.Error{
+			Message: fmt.Sprintf("unexpected end of file, want one of %s", format(ss)),
+			Range:   s.Range(),
+		}
+	}
 	var end int
 	for _, t := range ss {
 		r, err := s.ReadString(t)
@@ -286,7 +293,6 @@ func (s *Scanner) ReadAlternative(ss []string) (Range, error) {
 		}
 		s.Backtrack()
 	}
-
 	return s.Range(), syntax.Error{
 		Message: fmt.Sprintf("unexpected input, want one of %s", format(ss)),
 		Range:   s.Range(),

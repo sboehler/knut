@@ -331,15 +331,32 @@ func TestReadUntil(t *testing.T) {
 
 func TestReadAlternative(t *testing.T) {
 	for _, test := range []struct {
+		text    string
 		input   []string
 		want    Range
 		wantErr error
 	}{
 		{
+			text:  "foobar",
+			input: []string{"foo1", "foo2", "foo"},
+			want:  Range{End: 3, Text: "foobar"},
+		},
+		{
+			text:  "foobar",
 			input: []string{"baz", "bar", "foo"},
 			want:  Range{End: 3, Text: "foobar"},
 		},
 		{
+			text:  "",
+			input: []string{"baz", "bar", "foo"},
+			want:  Range{Text: ""},
+			wantErr: syntax.Error{
+				Message: "unexpected end of file, want one of {`baz`, `bar`, `foo`}",
+				Range:   Range{Text: ""},
+			},
+		},
+		{
+			text:  "foobar",
 			input: []string{"baz", "bar"},
 			want:  Range{Text: "foobar"},
 			wantErr: syntax.Error{
@@ -349,7 +366,7 @@ func TestReadAlternative(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("%#v", test.input), func(t *testing.T) {
-			scanner := setupScanner(t, "foobar")
+			scanner := setupScanner(t, test.text)
 
 			got, err := scanner.ReadAlternative(test.input)
 

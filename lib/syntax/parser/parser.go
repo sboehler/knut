@@ -27,29 +27,29 @@ func (p *Parser) parseDirective() (syntax.Directive, error) {
 	var err error
 	if p.Current() == '@' {
 		if addons, err = p.parseAddons(); err != nil {
-			return dir.SetRange(p.Range()), err
+			return syntax.SetRange(&dir, p.Range()), err
 		}
 	}
 	date := syntax.Date{}
 	if date, err = p.parseDate(); err != nil {
-		return dir.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.readWhitespace1(); err != nil {
-		return dir.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 	}
 	switch p.Current() {
 	case '"':
 		dir.Directive, err = p.parseTransaction(date, addons)
 	default:
-		return dir.SetRange(p.Range()), syntax.Error{
+		return syntax.SetRange(&dir, p.Range()), syntax.Error{
 			Range:   p.Range(),
 			Message: fmt.Sprintf("unexpected character `%c`, want `\"`", p.Current()),
 		}
 	}
 	if err != nil {
-		return dir.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 	}
-	return dir.SetRange(p.Range()), nil
+	return syntax.SetRange(&dir, p.Range()), nil
 }
 
 func (p *Parser) parseCommodity() (syntax.Commodity, error) {
@@ -123,38 +123,38 @@ func (p *Parser) parseBooking() (syntax.Booking, error) {
 	var err error
 	if p.Current() == '$' {
 		if booking.CreditMacro, err = p.parseAccountMacro(); err != nil {
-			return booking.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 		}
 	} else {
 		if booking.Credit, err = p.parseAccount(); err != nil {
-			return booking.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 		}
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
-		return booking.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 	}
 	if p.Current() == '$' {
 		if booking.DebitMacro, err = p.parseAccountMacro(); err != nil {
-			return booking.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 		}
 	} else {
 		if booking.Debit, err = p.parseAccount(); err != nil {
-			return booking.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 		}
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
-		return booking.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 	}
 	if booking.Amount, err = p.parseDecimal(); err != nil {
-		return booking.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
-		return booking.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 	}
 	if booking.Commodity, err = p.parseCommodity(); err != nil {
-		return booking.SetRange(p.Range()), err
+		return syntax.SetRange(&booking, p.Range()), err
 	}
-	return booking.SetRange(p.Range()), nil
+	return syntax.SetRange(&booking, p.Range()), nil
 }
 
 func (p *Parser) parseDate() (syntax.Date, error) {
@@ -200,25 +200,25 @@ func (p *Parser) parseTransaction(date syntax.Date, addons syntax.Addons) (synta
 	trx := syntax.Transaction{Date: date, Addons: addons}
 	var err error
 	if trx.Description, err = p.parseQuotedString(); err != nil {
-		return trx.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&trx, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.readRestOfWhitespaceLine(); err != nil {
-		return trx.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&trx, p.Range()), p.Annotate(err)
 	}
 	for {
 		b, err := p.parseBooking()
 		trx.Bookings = append(trx.Bookings, b)
 		if err != nil {
-			return trx.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&trx, p.Range()), p.Annotate(err)
 		}
 		if _, err := p.readRestOfWhitespaceLine(); err != nil {
-			return trx.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&trx, p.Range()), p.Annotate(err)
 		}
 		if isWhitespaceOrNewline(p.Current()) || p.Current() == scanner.EOF {
 			break
 		}
 	}
-	return trx.SetRange(p.Range()), nil
+	return syntax.SetRange(&trx, p.Range()), nil
 }
 
 func (p *Parser) parseAddons() (syntax.Addons, error) {
@@ -228,12 +228,12 @@ func (p *Parser) parseAddons() (syntax.Addons, error) {
 	for {
 		r, err := p.ReadAlternative([]string{"@performance", "@accrue"})
 		if err != nil {
-			return addons.SetRange(r), p.Annotate(err)
+			return syntax.SetRange(&addons, r), p.Annotate(err)
 		}
 		switch r.Extract() {
 		case "@performance":
 			if !addons.Performance.Empty() {
-				return addons.SetRange(p.Range()), p.Annotate(syntax.Error{
+				return syntax.SetRange(&addons, p.Range()), p.Annotate(syntax.Error{
 					Message: "duplicate performance annotation",
 					Range:   r,
 				})
@@ -241,12 +241,12 @@ func (p *Parser) parseAddons() (syntax.Addons, error) {
 			addons.Performance, err = p.parsePerformance()
 			addons.Performance.Extend(r)
 			if err != nil {
-				return addons.SetRange(p.Range()), p.Annotate(err)
+				return syntax.SetRange(&addons, p.Range()), p.Annotate(err)
 			}
 
 		case "@accrue":
 			if !addons.Accrual.Empty() {
-				return addons.SetRange(p.Range()), p.Annotate(syntax.Error{
+				return syntax.SetRange(&addons, p.Range()), p.Annotate(syntax.Error{
 					Message: "duplicate accrue annotation",
 					Range:   r,
 				})
@@ -254,14 +254,14 @@ func (p *Parser) parseAddons() (syntax.Addons, error) {
 			addons.Accrual, err = p.parseAccrual()
 			addons.Accrual.Extend(r)
 			if err != nil {
-				return addons.SetRange(p.Range()), p.Annotate(err)
+				return syntax.SetRange(&addons, p.Range()), p.Annotate(err)
 			}
 		}
 		if _, err := p.readRestOfWhitespaceLine(); err != nil {
-			return addons.SetRange(p.Range()), p.Annotate(syntax.Error{})
+			return syntax.SetRange(&addons, p.Range()), p.Annotate(syntax.Error{})
 		}
 		if p.Current() != '@' {
-			return addons.SetRange(p.Range()), nil
+			return syntax.SetRange(&addons, p.Range()), nil
 		}
 	}
 }
@@ -271,41 +271,41 @@ func (p *Parser) parsePerformance() (syntax.Performance, error) {
 	defer p.RangeEnd()
 	perf := syntax.Performance{Range: p.Range()}
 	if _, err := p.ReadCharacter('('); err != nil {
-		return perf.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&perf, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.ReadWhile(isWhitespace); err != nil {
-		return perf.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&perf, p.Range()), p.Annotate(err)
 	}
 	if p.Current() != ')' {
 		if c, err := p.parseCommodity(); err != nil {
-			return perf.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&perf, p.Range()), p.Annotate(err)
 		} else {
 			perf.Targets = append(perf.Targets, c)
 		}
 		if _, err := p.ReadWhile(isWhitespace); err != nil {
-			return perf.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&perf, p.Range()), p.Annotate(err)
 		}
 	}
 	for p.Current() == ',' {
 		if _, err := p.ReadCharacter(','); err != nil {
-			return perf.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&perf, p.Range()), p.Annotate(err)
 		}
 		if _, err := p.ReadWhile(isWhitespace); err != nil {
-			return perf.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&perf, p.Range()), p.Annotate(err)
 		}
 		if c, err := p.parseCommodity(); err != nil {
-			return perf.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&perf, p.Range()), p.Annotate(err)
 		} else {
 			perf.Targets = append(perf.Targets, c)
 		}
 		if _, err := p.ReadWhile(isWhitespace); err != nil {
-			return perf.SetRange(p.Range()), p.Annotate(err)
+			return syntax.SetRange(&perf, p.Range()), p.Annotate(err)
 		}
 	}
 	if _, err := p.ReadCharacter(')'); err != nil {
-		return perf.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&perf, p.Range()), p.Annotate(err)
 	}
-	return perf.SetRange(p.Range()), nil
+	return syntax.SetRange(&perf, p.Range()), nil
 }
 
 func (p *Parser) parseAccrual() (syntax.Accrual, error) {
@@ -313,31 +313,31 @@ func (p *Parser) parseAccrual() (syntax.Accrual, error) {
 	defer p.RangeEnd()
 	accrual := syntax.Accrual{Range: p.Range()}
 	if _, err := p.readWhitespace1(); err != nil {
-		return accrual.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&accrual, p.Range()), p.Annotate(err)
 	}
 	var err error
 	if accrual.Interval, err = p.parseInterval(); err != nil {
-		return accrual.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&accrual, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.readWhitespace1(); err != nil {
-		return accrual.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&accrual, p.Range()), p.Annotate(err)
 	}
 	if accrual.Start, err = p.parseDate(); err != nil {
-		return accrual.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&accrual, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.readWhitespace1(); err != nil {
-		return accrual.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&accrual, p.Range()), p.Annotate(err)
 	}
 	if accrual.End, err = p.parseDate(); err != nil {
-		return accrual.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&accrual, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.readWhitespace1(); err != nil {
-		return accrual.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&accrual, p.Range()), p.Annotate(err)
 	}
 	if accrual.Account, err = p.parseAccount(); err != nil {
-		return accrual.SetRange(p.Range()), p.Annotate(err)
+		return syntax.SetRange(&accrual, p.Range()), p.Annotate(err)
 	}
-	return accrual.SetRange(p.Range()), nil
+	return syntax.SetRange(&accrual, p.Range()), nil
 }
 
 func (p *Parser) parseInterval() (syntax.Interval, error) {

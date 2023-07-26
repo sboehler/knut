@@ -27,19 +27,9 @@ type Booking struct {
 	Commodity               Commodity
 }
 
-func (b *Booking) SetRange(r Range) Booking {
-	b.Range = r
-	return *b
-}
-
 type Performance struct {
 	Range
 	Targets []Commodity
-}
-
-func (b *Performance) SetRange(r Range) Performance {
-	b.Range = r
-	return *b
 }
 
 type Interval struct{ Range }
@@ -49,21 +39,11 @@ type Directive struct {
 	Directive any
 }
 
-func (b *Directive) SetRange(r Range) Directive {
-	b.Range = r
-	return *b
-}
-
 type Accrual struct {
 	Range
 	Interval   Interval
 	Start, End Date
 	Account    Account
-}
-
-func (b *Accrual) SetRange(r Range) Accrual {
-	b.Range = r
-	return *b
 }
 
 type Addons struct {
@@ -72,22 +52,12 @@ type Addons struct {
 	Accrual     Accrual
 }
 
-func (a *Addons) SetRange(r Range) Addons {
-	a.Range = r
-	return *a
-}
-
 type Transaction struct {
 	Range
 	Date        Date
 	Description QuotedString
 	Bookings    []Booking
 	Addons      Addons
-}
-
-func (t *Transaction) SetRange(r Range) Transaction {
-	t.Range = r
-	return *t
 }
 
 type Range struct {
@@ -110,6 +80,14 @@ func (r *Range) Extend(r2 Range) {
 	if r.End < r2.End {
 		r.End = r2.End
 	}
+}
+
+func SetRange[T any, P interface {
+	*T
+	SetRange(Range)
+}](t P, r Range) T {
+	t.SetRange(r)
+	return *t
 }
 
 func (r Range) Empty() bool {

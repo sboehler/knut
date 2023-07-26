@@ -60,6 +60,33 @@ type Transaction struct {
 	Addons      Addons
 }
 
+type Open struct {
+	Range
+	Date    Date
+	Account Account
+}
+
+type Close struct {
+	Range
+	Date    Date
+	Account Account
+}
+
+type Assertion struct {
+	Range
+	Date      Date
+	Account   Account
+	Amount    Decimal
+	Commodity Commodity
+}
+
+type Price struct {
+	Range
+	Date              Date
+	Commodity, Target Commodity
+	Price             Decimal
+}
+
 type Range struct {
 	Start, End int
 	Path, Text string

@@ -988,6 +988,62 @@ func TestParseDirective(t *testing.T) {
 					}
 				},
 			},
+			{
+				text: "2023-04-03 open B:A",
+				want: func(s string) syntax.Directive {
+					return syntax.Directive{
+						Range: Range{End: 19, Text: s},
+						Directive: syntax.Open{
+							Range:   Range{End: 19, Text: s},
+							Date:    syntax.Date{Range: syntax.Range{End: 10, Text: s}},
+							Account: syntax.Account{Range: syntax.Range{Start: 16, End: 19, Text: s}},
+						},
+					}
+				},
+			},
+			{
+				text: "2023-04-03 close B:A",
+				want: func(s string) syntax.Directive {
+					return syntax.Directive{
+						Range: Range{End: 20, Text: s},
+						Directive: syntax.Close{
+							Range:   Range{End: 20, Text: s},
+							Date:    syntax.Date{Range: syntax.Range{End: 10, Text: s}},
+							Account: syntax.Account{Range: syntax.Range{Start: 17, End: 20, Text: s}},
+						},
+					}
+				},
+			},
+			{
+				text: "2023-04-03 balance B:A 1 USD",
+				want: func(s string) syntax.Directive {
+					return syntax.Directive{
+						Range: Range{End: 28, Text: s},
+						Directive: syntax.Assertion{
+							Range:     Range{End: 28, Text: s},
+							Date:      syntax.Date{Range: syntax.Range{End: 10, Text: s}},
+							Account:   syntax.Account{Range: syntax.Range{Start: 19, End: 22, Text: s}},
+							Amount:    syntax.Decimal{Range: syntax.Range{Start: 23, End: 24, Text: s}},
+							Commodity: syntax.Commodity{Range: Range{Start: 25, End: 28, Text: s}},
+						},
+					}
+				},
+			},
+			{
+				text: "2023-04-03 price CHF 0.83 USD",
+				want: func(s string) syntax.Directive {
+					return syntax.Directive{
+						Range: Range{End: 29, Text: s},
+						Directive: syntax.Price{
+							Range:     Range{End: 29, Text: s},
+							Date:      syntax.Date{Range: syntax.Range{End: 10, Text: s}},
+							Commodity: syntax.Commodity{Range: syntax.Range{Start: 17, End: 20, Text: s}},
+							Price:     syntax.Decimal{Range: syntax.Range{Start: 21, End: 25, Text: s}},
+							Target:    syntax.Commodity{Range: Range{Start: 26, End: 29, Text: s}},
+						},
+					}
+				},
+			},
 		},
 		desc: "p.parseDirective()",
 		fn: func(p *Parser) (syntax.Directive, error) {

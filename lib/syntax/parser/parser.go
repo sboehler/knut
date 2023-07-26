@@ -30,21 +30,44 @@ func (p *Parser) parseDirective() (syntax.Directive, error) {
 			return syntax.SetRange(&dir, p.Range()), err
 		}
 	}
-	date := syntax.Date{}
-	if date, err = p.parseDate(); err != nil {
+	date, err := p.parseDate()
+	if err != nil {
 		return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.readWhitespace1(); err != nil {
 		return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 	}
-	switch p.Current() {
-	case '"':
-		dir.Directive, err = p.parseTransaction(date, addons)
-	default:
-		return syntax.SetRange(&dir, p.Range()), syntax.Error{
-			Range:   p.Range(),
-			Message: fmt.Sprintf("unexpected character `%c`, want `\"`", p.Current()),
+	if p.Current() == '"' {
+		if dir.Directive, err = p.parseTransaction(date, addons); err != nil {
+			return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 		}
+	} else {
+		r, err := p.ReadAlternative([]string{"open", "close", "balance", "price"})
+		if err != nil {
+			return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
+		}
+		if _, err := p.readWhitespace1(); err != nil {
+			return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
+		}
+		switch r.Extract() {
+		case "open":
+			if dir.Directive, err = p.parseOpen(date); err != nil {
+				return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
+			}
+		case "close":
+			if dir.Directive, err = p.parseClose(date); err != nil {
+				return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
+			}
+		case "balance":
+			if dir.Directive, err = p.parseAssertion(date); err != nil {
+				return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
+			}
+		case "price":
+			if dir.Directive, err = p.parsePrice(date); err != nil {
+				return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
+			}
+		}
+
 	}
 	if err != nil {
 		return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
@@ -52,14 +75,94 @@ func (p *Parser) parseDirective() (syntax.Directive, error) {
 	return syntax.SetRange(&dir, p.Range()), nil
 }
 
+func (p *Parser) parseOpen(date syntax.Date) (syntax.Open, error) {
+	p.RangeContinue("parsing `open` directive")
+	defer p.RangeEnd()
+	var (
+		open = syntax.Open{Date: date}
+		err  error
+	)
+	if open.Account, err = p.parseAccount(); err != nil {
+		err = p.Annotate(err)
+	}
+	return syntax.SetRange(&open, p.Range()), err
+}
+
+func (p *Parser) parseClose(date syntax.Date) (syntax.Close, error) {
+	p.RangeContinue("parsing `close` directive")
+	defer p.RangeEnd()
+	var (
+		close = syntax.Close{Date: date}
+		err   error
+	)
+	if close.Account, err = p.parseAccount(); err != nil {
+		err = p.Annotate(err)
+	}
+	return syntax.SetRange(&close, p.Range()), err
+}
+
+func (p *Parser) parseAssertion(date syntax.Date) (syntax.Assertion, error) {
+	p.RangeContinue("parsing `balance` directive")
+	defer p.RangeEnd()
+	var (
+		assertion = syntax.Assertion{Date: date}
+		err       error
+	)
+	if assertion.Account, err = p.parseAccount(); err != nil {
+		return syntax.SetRange(&assertion, p.Range()), p.Annotate(err)
+	}
+	if _, err := p.readWhitespace1(); err != nil {
+		return syntax.SetRange(&assertion, p.Range()), p.Annotate(err)
+	}
+	if assertion.Amount, err = p.parseDecimal(); err != nil {
+		return syntax.SetRange(&assertion, p.Range()), p.Annotate(err)
+	}
+	if _, err := p.readWhitespace1(); err != nil {
+		return syntax.SetRange(&assertion, p.Range()), p.Annotate(err)
+	}
+	if assertion.Commodity, err = p.parseCommodity(); err != nil {
+		err = p.Annotate(err)
+	}
+	return syntax.SetRange(&assertion, p.Range()), err
+}
+
+func (p *Parser) parsePrice(date syntax.Date) (syntax.Price, error) {
+	p.RangeContinue("parsing `balance` directive")
+	defer p.RangeEnd()
+	var (
+		price = syntax.Price{Date: date}
+		err   error
+	)
+	if price.Commodity, err = p.parseCommodity(); err != nil {
+		return syntax.SetRange(&price, p.Range()), p.Annotate(err)
+	}
+	if _, err := p.readWhitespace1(); err != nil {
+		return syntax.SetRange(&price, p.Range()), p.Annotate(err)
+	}
+	if price.Price, err = p.parseDecimal(); err != nil {
+		return syntax.SetRange(&price, p.Range()), p.Annotate(err)
+	}
+	if _, err := p.readWhitespace1(); err != nil {
+		return syntax.SetRange(&price, p.Range()), p.Annotate(err)
+	}
+	if price.Target, err = p.parseCommodity(); err != nil {
+		return syntax.SetRange(&price, p.Range()), err
+	}
+	return syntax.SetRange(&price, p.Range()), err
+}
+
 func (p *Parser) parseCommodity() (syntax.Commodity, error) {
+	var (
+		commodity syntax.Commodity
+		err       error
+	)
 	p.RangeStart("parsing commodity")
 	defer p.RangeEnd()
-	r, err := p.ReadWhile1("a letter or a digit", isAlphanumeric)
+	_, err = p.ReadWhile1("a letter or a digit", isAlphanumeric)
 	if err != nil {
-		return syntax.Commodity{Range: p.Range()}, p.Annotate(err)
+		err = p.Annotate(err)
 	}
-	return syntax.Commodity{Range: r}, nil
+	return syntax.SetRange(&commodity, p.Range()), err
 }
 
 func (p *Parser) parseDecimal() (syntax.Decimal, error) {

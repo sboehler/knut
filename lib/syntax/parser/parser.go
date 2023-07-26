@@ -189,6 +189,51 @@ func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.T
 	return trx.SetRange(p.Range()), nil
 }
 
+func (p *Parser) parseAddons() (syntax.Addons, error) {
+	p.RangeStart("parsing addons")
+	defer p.RangeEnd()
+	addons := syntax.Addons{}
+	for {
+		r, err := p.ReadAlternative([]string{"@performance", "@accrue"})
+		if err != nil {
+			return addons.SetRange(r), p.Annotate(err)
+		}
+		switch r.Extract() {
+		case "@performance":
+			if !addons.Performance.Empty() {
+				return addons.SetRange(p.Range()), p.Annotate(syntax.Error{
+					Message: "duplicate @performance annotation",
+					Range:   r,
+				})
+			}
+			addons.Performance, err = p.parsePerformance()
+			addons.Performance.Extend(r)
+			if err != nil {
+				return addons.SetRange(p.Range()), p.Annotate(err)
+			}
+
+		case "@accrue":
+			if !addons.Accrual.Empty() {
+				return addons.SetRange(p.Range()), p.Annotate(syntax.Error{
+					Message: "duplicate @performance annotation",
+					Range:   r,
+				})
+			}
+			addons.Accrual, err = p.parseAccrual()
+			addons.Accrual.Extend(r)
+			if err != nil {
+				return addons.SetRange(p.Range()), p.Annotate(err)
+			}
+		}
+		if _, err := p.readRestOfWhitespaceLine(); err != nil {
+			return addons.SetRange(p.Range()), p.Annotate(syntax.Error{})
+		}
+		if p.Current() != '@' {
+			return addons.SetRange(p.Range()), nil
+		}
+	}
+}
+
 func (p *Parser) parsePerformance() (syntax.Performance, error) {
 	p.RangeStart("parsing performance")
 	defer p.RangeEnd()

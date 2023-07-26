@@ -209,6 +209,107 @@ func TestParseAccrual(t *testing.T) {
 	}.run(t)
 }
 
+func TestParseAddons(t *testing.T) {
+	parserTest[syntax.Addons]{
+		tests: []testcase[syntax.Addons]{
+			{
+				text: "@accrue monthly 2023-01-01  2023-12-31 A:B",
+				want: func(s string) syntax.Addons {
+					return syntax.Addons{
+						Range: syntax.Range{Start: 0, End: 42, Text: s},
+						Accrual: syntax.Accrual{
+							Range:    syntax.Range{Start: 0, End: 42, Text: s},
+							Interval: syntax.Interval{Range: syntax.Range{Start: 8, End: 15, Text: s}},
+							Start:    syntax.Date{Range: syntax.Range{Start: 16, End: 26, Text: s}},
+							End:      syntax.Date{Range: syntax.Range{Start: 28, End: 38, Text: s}},
+							Account:  syntax.Account{Range: syntax.Range{Start: 39, End: 42, Text: s}},
+						},
+					}
+				},
+			},
+			{
+				text: "@performance(USD)",
+				want: func(s string) syntax.Addons {
+					return syntax.Addons{
+						Range: syntax.Range{Start: 0, End: 17, Text: s},
+						Performance: syntax.Performance{
+							Range: syntax.Range{Start: 0, End: 17, Text: s},
+							Targets: []syntax.Commodity{
+								{Range: Range{Start: 13, End: 16, Text: s}},
+							},
+						},
+					}
+				},
+			},
+			{
+				text: "@performance(USD)\n@accrue daily 2023-01-01 2023-01-01 B:A",
+				want: func(s string) syntax.Addons {
+					return syntax.Addons{
+						Range: syntax.Range{Start: 0, End: 57, Text: s},
+						Performance: syntax.Performance{
+							Range: syntax.Range{Start: 0, End: 17, Text: s},
+							Targets: []syntax.Commodity{
+								{Range: Range{Start: 13, End: 16, Text: s}},
+							},
+						},
+						Accrual: syntax.Accrual{
+							Range:    syntax.Range{Start: 18, End: 57, Text: s},
+							Interval: syntax.Interval{Range: syntax.Range{Start: 26, End: 31, Text: s}},
+							Start:    syntax.Date{Range: syntax.Range{Start: 32, End: 42, Text: s}},
+							End:      syntax.Date{Range: syntax.Range{Start: 43, End: 53, Text: s}},
+							Account:  syntax.Account{Range: syntax.Range{Start: 54, End: 57, Text: s}},
+						},
+					}
+				},
+			},
+			{
+				text: "@performance(USD)\n@performance(CHF)",
+				want: func(s string) syntax.Addons {
+					return syntax.Addons{
+						Range: syntax.Range{Start: 0, End: 30, Text: s},
+						Performance: syntax.Performance{
+							Range: syntax.Range{Start: 0, End: 17, Text: s},
+							Targets: []syntax.Commodity{
+								{Range: Range{Start: 13, End: 16, Text: s}},
+							},
+						},
+					}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing addons",
+						Range:   syntax.Range{End: 30, Text: s},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Start: 18, End: 30, Text: s},
+							Message: "duplicate @performance annotation",
+						},
+					}
+				},
+			},
+			{
+				text: "",
+				want: func(s string) syntax.Addons {
+					return syntax.Addons{
+						Range: syntax.Range{Start: 0, End: 0, Text: s}}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing addons",
+						Range:   syntax.Range{Text: s},
+						Wrapped: syntax.Error{
+							Message: "unexpected end of file, want one of {`@performance`, `@accrue`}",
+						},
+					}
+				},
+			},
+		},
+		fn: func(p *Parser) (syntax.Addons, error) {
+			return p.parseAddons()
+		},
+		desc: "p.parseAddons()",
+	}.run(t)
+}
+
 func TestParseAccount(t *testing.T) {
 	parserTest[syntax.Account]{
 		tests: []testcase[syntax.Account]{

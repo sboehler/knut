@@ -202,7 +202,7 @@ func (p *Parser) parseAddons() (syntax.Addons, error) {
 		case "@performance":
 			if !addons.Performance.Empty() {
 				return addons.SetRange(p.Range()), p.Annotate(syntax.Error{
-					Message: "duplicate @performance annotation",
+					Message: "duplicate performance annotation",
 					Range:   r,
 				})
 			}
@@ -215,7 +215,7 @@ func (p *Parser) parseAddons() (syntax.Addons, error) {
 		case "@accrue":
 			if !addons.Accrual.Empty() {
 				return addons.SetRange(p.Range()), p.Annotate(syntax.Error{
-					Message: "duplicate @performance annotation",
+					Message: "duplicate accrue annotation",
 					Range:   r,
 				})
 			}

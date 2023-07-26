@@ -281,7 +281,32 @@ func TestParseAddons(t *testing.T) {
 						Range:   syntax.Range{End: 30, Text: s},
 						Wrapped: syntax.Error{
 							Range:   syntax.Range{Start: 18, End: 30, Text: s},
-							Message: "duplicate @performance annotation",
+							Message: "duplicate performance annotation",
+						},
+					}
+				},
+			},
+			{
+				text: "@accrue daily 2023-01-01 2023-12-31 B\n@accrue daily 2023-01-01 2023-12-31 B",
+				want: func(s string) syntax.Addons {
+					return syntax.Addons{
+						Range: syntax.Range{Start: 0, End: 45, Text: s},
+						Accrual: syntax.Accrual{
+							Range:    syntax.Range{Start: 0, End: 37, Text: s},
+							Interval: syntax.Interval{Range: Range{Start: 8, End: 13, Text: s}},
+							Start:    syntax.Date{Range: Range{Start: 14, End: 24, Text: s}},
+							End:      syntax.Date{Range: Range{Start: 25, End: 35, Text: s}},
+							Account:  syntax.Account{Range: Range{Start: 36, End: 37, Text: s}},
+						},
+					}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Range:   syntax.Range{End: 45, Text: s},
+						Message: "while parsing addons",
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Start: 38, End: 45, Text: s},
+							Message: "duplicate accrue annotation",
 						},
 					}
 				},

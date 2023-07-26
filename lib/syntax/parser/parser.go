@@ -19,6 +19,38 @@ func New(text, path string) *Parser {
 		Scanner: *scanner.New(text, path),
 	}
 }
+func (p *Parser) parseDirective() (syntax.Directive, error) {
+	p.RangeStart("parsing directive")
+	defer p.RangeEnd()
+	dir := syntax.Directive{}
+	addons := syntax.Addons{}
+	var err error
+	if p.Current() == '@' {
+		if addons, err = p.parseAddons(); err != nil {
+			return dir.SetRange(p.Range()), err
+		}
+	}
+	date := syntax.Date{}
+	if date, err = p.parseDate(); err != nil {
+		return dir.SetRange(p.Range()), p.Annotate(err)
+	}
+	if _, err := p.readWhitespace1(); err != nil {
+		return dir.SetRange(p.Range()), p.Annotate(err)
+	}
+	switch p.Current() {
+	case '"':
+		dir.Directive, err = p.parseTransaction(date, addons)
+	default:
+		return dir.SetRange(p.Range()), syntax.Error{
+			Range:   p.Range(),
+			Message: fmt.Sprintf("unexpected character `%c`, want `\"`", p.Current()),
+		}
+	}
+	if err != nil {
+		return dir.SetRange(p.Range()), p.Annotate(err)
+	}
+	return dir.SetRange(p.Range()), nil
+}
 
 func (p *Parser) parseCommodity() (syntax.Commodity, error) {
 	p.RangeStart("parsing commodity")
@@ -162,10 +194,10 @@ func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
 	return syntax.QuotedString{Range: p.Range()}, nil
 }
 
-func (p *Parser) parseTransaction(d syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {
-	p.RangeStart("parsing transaction")
+func (p *Parser) parseTransaction(date syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {
+	p.RangeContinue("parsing transaction")
 	defer p.RangeEnd()
-	trx := syntax.Transaction{}
+	trx := syntax.Transaction{Date: date, Addons: addons}
 	var err error
 	if trx.Description, err = p.parseQuotedString(); err != nil {
 		return trx.SetRange(p.Range()), p.Annotate(err)

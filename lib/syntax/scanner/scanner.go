@@ -107,6 +107,17 @@ func (s *Scanner) RangeStart(desc string) {
 	})
 }
 
+func (s *Scanner) RangeContinue(desc string) {
+	if len(s.scopes) == 0 {
+		s.RangeStart(desc)
+		return
+	}
+	s.scopes = append(s.scopes, scope{
+		Range: s.scopes[len(s.scopes)-1].Range,
+		Desc:  desc,
+	})
+}
+
 func (s *Scanner) Backtrack() {
 	s.offset = s.scopes[len(s.scopes)-1].Range.Start
 	s.current, s.currentLen = utf8.DecodeRuneInString(s.text[s.offset:])

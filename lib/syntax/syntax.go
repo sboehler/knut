@@ -44,6 +44,16 @@ func (b *Performance) SetRange(r Range) Performance {
 
 type Interval struct{ Range }
 
+type Directive struct {
+	Range
+	Directive any
+}
+
+func (b *Directive) SetRange(r Range) Directive {
+	b.Range = r
+	return *b
+}
+
 type Accrual struct {
 	Range
 	Interval   Interval
@@ -72,8 +82,7 @@ type Transaction struct {
 	Date        Date
 	Description QuotedString
 	Bookings    []Booking
-	Accrual     *Accrual
-	Performance *Performance
+	Addons      Addons
 }
 
 func (t *Transaction) SetRange(r Range) Transaction {

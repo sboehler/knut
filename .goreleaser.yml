@@ -4,6 +4,6 @@ builds:
       - linux
       - windows
     goarch:
-      - 386
+      - i386
       - amd64
       - arm64

@@ -19,6 +19,19 @@ func New(text, path string) *Parser {
 		Scanner: *scanner.New(text, path),
 	}
 }
+
+func (p *Parser) readComment() (syntax.Range, error) {
+	p.RangeStart("reading comment")
+	defer p.RangeEnd()
+	if _, err := p.ReadAlternative([]string{"*", "//", "#"}); err != nil {
+		return p.Range(), p.Annotate(err)
+	}
+	if _, err := p.ReadWhile(func(r rune) bool { return !isNewlineOrEOF(r) }); err != nil {
+		return p.Range(), p.Annotate(err)
+	}
+	return p.Range(), nil
+}
+
 func (p *Parser) parseDirective() (syntax.Directive, error) {
 	p.RangeStart("parsing directive")
 	defer p.RangeEnd()
@@ -490,4 +503,8 @@ func isWhitespaceOrNewline(ch rune) bool {
 
 func isNewline(ch rune) bool {
 	return ch == '\n'
+}
+
+func isNewlineOrEOF(ch rune) bool {
+	return ch == '\n' || ch == scanner.EOF
 }

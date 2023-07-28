@@ -604,6 +604,51 @@ func TestParseDate(t *testing.T) {
 	}.run(t)
 }
 
+func TestReadComment(t *testing.T) {
+	parserTest[syntax.Range]{
+		tests: []testcase[syntax.Range]{
+			{
+				text: "//foobar\n",
+				want: func(s string) syntax.Range {
+					return syntax.Range{End: 8, Text: s}
+				},
+			},
+			{
+				text: "#foobar\n",
+				want: func(s string) syntax.Range {
+					return syntax.Range{End: 7, Text: s}
+				},
+			},
+			{
+				text: "* a comment",
+				want: func(s string) syntax.Range {
+					return syntax.Range{End: 11, Text: s}
+				},
+			},
+			{
+				text: "-- not a comment",
+				want: func(s string) syntax.Range {
+					return syntax.Range{Text: s}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while reading comment",
+						Range:   syntax.Range{Text: s},
+						Wrapped: syntax.Error{
+							Message: "unexpected input, want one of {`*`, `//`, `#`}",
+							Range:   syntax.Range{Text: s},
+						},
+					}
+				},
+			},
+		},
+		desc: "p.readComment()",
+		fn: func(p *Parser) (syntax.Range, error) {
+			return p.readComment()
+		},
+	}.run(t)
+}
+
 func TestParseInterval(t *testing.T) {
 	parserTest[syntax.Interval]{
 		tests: []testcase[syntax.Interval]{

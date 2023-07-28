@@ -799,13 +799,19 @@ func TestParseQuotedString(t *testing.T) {
 			{
 				text: "\"\"",
 				want: func(s string) syntax.QuotedString {
-					return syntax.QuotedString{Range: Range{End: 2, Text: s}}
+					return syntax.QuotedString{
+						Range:   Range{End: 2, Text: s},
+						Content: Range{Start: 1, End: 1, Text: s},
+					}
 				},
 			},
 			{
 				text: "\"foo",
 				want: func(s string) syntax.QuotedString {
-					return syntax.QuotedString{Range: Range{End: 4, Text: s}}
+					return syntax.QuotedString{
+						Range:   Range{End: 4, Text: s},
+						Content: Range{Start: 1, End: 4, Text: s},
+					}
 				},
 				err: func(s string) error {
 					return syntax.Error{
@@ -821,7 +827,10 @@ func TestParseQuotedString(t *testing.T) {
 			{
 				text: "\"foo\"",
 				want: func(s string) syntax.QuotedString {
-					return syntax.QuotedString{Range: Range{End: 5, Text: s}}
+					return syntax.QuotedString{
+						Range:   Range{End: 5, Text: s},
+						Content: Range{Start: 1, End: 4, Text: s},
+					}
 				},
 			},
 			{
@@ -851,8 +860,11 @@ func TestParseTransaction(t *testing.T) {
 				text: "\"foo\"\n" + "A B 1 CHF\n", // 6 + 10
 				want: func(t string) syntax.Transaction {
 					return syntax.Transaction{
-						Range:       Range{End: 16, Text: t},
-						Description: syntax.QuotedString{Range: Range{End: 5, Text: t}},
+						Range: Range{End: 16, Text: t},
+						Description: syntax.QuotedString{
+							Range:   Range{End: 5, Text: t},
+							Content: Range{Start: 1, End: 4, Text: t},
+						},
 						Bookings: []syntax.Booking{
 							{
 								Range:     Range{Start: 6, End: 15, Text: t},
@@ -869,8 +881,11 @@ func TestParseTransaction(t *testing.T) {
 				text: "\"foo\"\n" + "A B 1 CHF\n" + "B A 1 CHF\n", // 6 + 10 + 10
 				want: func(t string) syntax.Transaction {
 					return syntax.Transaction{
-						Range:       Range{End: 26, Text: t},
-						Description: syntax.QuotedString{Range: Range{End: 5, Text: t}},
+						Range: Range{End: 26, Text: t},
+						Description: syntax.QuotedString{
+							Range:   Range{End: 5, Text: t},
+							Content: Range{Start: 1, End: 4, Text: t},
+						},
 						Bookings: []syntax.Booking{
 							{
 								Range:     Range{Start: 6, End: 15, Text: t},
@@ -894,8 +909,11 @@ func TestParseTransaction(t *testing.T) {
 				text: "\"foo\"\n" + "A B 1 CHF", // 6 + 10
 				want: func(t string) syntax.Transaction {
 					return syntax.Transaction{
-						Range:       Range{End: 15, Text: t},
-						Description: syntax.QuotedString{Range: Range{End: 5, Text: t}},
+						Range: Range{End: 15, Text: t},
+						Description: syntax.QuotedString{
+							Range:   Range{End: 5, Text: t},
+							Content: Range{Start: 1, End: 4, Text: t},
+						},
 						Bookings: []syntax.Booking{
 							{
 								Range:     Range{Start: 6, End: 15, Text: t},
@@ -912,8 +930,11 @@ func TestParseTransaction(t *testing.T) {
 				text: strings.Join([]string{`"foo"`, "A B"}, "\n"), // 6 + 10
 				want: func(t string) syntax.Transaction {
 					return syntax.Transaction{
-						Range:       Range{End: 9, Text: t},
-						Description: syntax.QuotedString{Range: Range{End: 5, Text: t}},
+						Range: Range{End: 9, Text: t},
+						Description: syntax.QuotedString{
+							Range:   Range{End: 5, Text: t},
+							Content: Range{Start: 1, End: 4, Text: t},
+						},
 						Bookings: []syntax.Booking{
 							{
 								Range:  Range{Start: 6, End: 9, Text: t},
@@ -956,9 +977,12 @@ func TestParseDirective(t *testing.T) {
 						Range: Range{End: 45, Text: s},
 
 						Directive: syntax.Transaction{
-							Range:       Range{End: 45, Text: s},
-							Date:        syntax.Date{Range: syntax.Range{Start: 18, End: 28, Text: s}},
-							Description: syntax.QuotedString{Range: Range{Start: 29, End: 34, Text: s}},
+							Range: Range{End: 45, Text: s},
+							Date:  syntax.Date{Range: syntax.Range{Start: 18, End: 28, Text: s}},
+							Description: syntax.QuotedString{
+								Range:   Range{Start: 29, End: 34, Text: s},
+								Content: Range{Start: 30, End: 33, Text: s},
+							},
 							Bookings: []syntax.Booking{
 								{
 									Range:     Range{Start: 35, End: 44, Text: s},
@@ -988,9 +1012,12 @@ func TestParseDirective(t *testing.T) {
 						Range: Range{End: 27, Text: s},
 
 						Directive: syntax.Transaction{
-							Range:       Range{End: 27, Text: s},
-							Date:        syntax.Date{Range: syntax.Range{End: 10, Text: s}},
-							Description: syntax.QuotedString{Range: Range{Start: 11, End: 16, Text: s}},
+							Range: Range{End: 27, Text: s},
+							Date:  syntax.Date{Range: syntax.Range{End: 10, Text: s}},
+							Description: syntax.QuotedString{
+								Range:   Range{Start: 11, End: 16, Text: s},
+								Content: Range{Start: 12, End: 15, Text: s},
+							},
 							Bookings: []syntax.Booking{
 								{
 									Range:     Range{Start: 17, End: 26, Text: s},
@@ -1032,9 +1059,12 @@ func TestParseDirective(t *testing.T) {
 					return syntax.Directive{
 						Range: Range{End: 15, Text: s},
 						Directive: syntax.Transaction{
-							Range:       Range{End: 15, Text: s},
-							Date:        syntax.Date{Range: syntax.Range{End: 10, Text: s}},
-							Description: syntax.QuotedString{Range: syntax.Range{Start: 11, End: 15, Text: s}},
+							Range: Range{End: 15, Text: s},
+							Date:  syntax.Date{Range: syntax.Range{End: 10, Text: s}},
+							Description: syntax.QuotedString{
+								Range:   syntax.Range{Start: 11, End: 15, Text: s},
+								Content: syntax.Range{Start: 12, End: 15, Text: s},
+							},
 						},
 					}
 				},

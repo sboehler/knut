@@ -17,6 +17,7 @@ type Decimal struct{ Range }
 
 type QuotedString struct {
 	Range
+	Content Range
 }
 
 type Booking struct {

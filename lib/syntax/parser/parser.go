@@ -298,16 +298,18 @@ func (p *Parser) parseDate() (syntax.Date, error) {
 func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
 	p.RangeStart("parsing quoted string")
 	defer p.RangeEnd()
+	qs := syntax.QuotedString{}
+	var err error
 	if _, err := p.ReadCharacter('"'); err != nil {
-		return syntax.QuotedString{Range: p.Range()}, p.Annotate(err)
+		return syntax.SetRange(&qs, p.Range()), p.Annotate(err)
 	}
-	if _, err := p.ReadWhile(func(r rune) bool { return r != '"' }); err != nil {
-		return syntax.QuotedString{Range: p.Range()}, p.Annotate(err)
+	if qs.Content, err = p.ReadWhile(func(r rune) bool { return r != '"' }); err != nil {
+		return syntax.SetRange(&qs, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.ReadCharacter('"'); err != nil {
-		return syntax.QuotedString{Range: p.Range()}, p.Annotate(err)
+		return syntax.SetRange(&qs, p.Range()), p.Annotate(err)
 	}
-	return syntax.QuotedString{Range: p.Range()}, nil
+	return syntax.SetRange(&qs, p.Range()), nil
 }
 
 func (p *Parser) parseTransaction(date syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {

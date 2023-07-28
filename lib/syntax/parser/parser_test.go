@@ -791,6 +791,73 @@ func TestParseBooking(t *testing.T) {
 	}.run(t)
 }
 
+func TestParseInclude(t *testing.T) {
+	parserTest[syntax.Include]{
+		tests: []testcase[syntax.Include]{
+			{
+				text: `include "/foo/bar.knut"`,
+				want: func(t string) syntax.Include {
+					return syntax.Include{
+						Range: Range{End: 23, Text: t},
+						Path: syntax.QuotedString{
+							Range:   Range{Start: 8, End: 23, Text: t},
+							Content: Range{Start: 9, End: 22, Text: t},
+						},
+					}
+				},
+			},
+			{
+				text: `incline "foo"`,
+				want: func(s string) syntax.Include {
+					return syntax.Include{
+						Range: Range{End: 4, Text: s},
+					}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing `include` statement",
+						Range:   Range{End: 4, Text: s},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{End: 4, Text: s},
+							Message: `while reading "include"`,
+						},
+					}
+				},
+			},
+			{
+				text: `include "foo\n`,
+				want: func(s string) syntax.Include {
+					return syntax.Include{
+						Range: Range{End: 14, Text: s},
+						Path: syntax.QuotedString{
+							Range:   Range{Start: 8, End: 14, Text: s},
+							Content: Range{Start: 9, End: 14, Text: s},
+						},
+					}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing `include` statement",
+						Range:   Range{End: 14, Text: s},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Start: 8, End: 14, Text: s},
+							Message: `while parsing quoted string`,
+							Wrapped: syntax.Error{
+								Message: "unexpected end of file, want `\"`",
+								Range:   Range{Start: 14, End: 14, Text: s},
+							},
+						},
+					}
+				},
+			},
+		},
+		desc: "p.parseInclude()",
+		fn: func(p *Parser) (syntax.Include, error) {
+			return p.parseInclude()
+		},
+	}.run(t)
+}
+
 func TestParseQuotedString(t *testing.T) {
 	parserTest[syntax.QuotedString]{
 		desc: "p.parseQuotedString()",

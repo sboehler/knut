@@ -88,6 +88,25 @@ func (p *Parser) parseDirective() (syntax.Directive, error) {
 	return syntax.SetRange(&dir, p.Range()), nil
 }
 
+func (p *Parser) parseInclude() (syntax.Include, error) {
+	p.RangeStart("parsing `include` statement")
+	defer p.RangeEnd()
+	var (
+		include = syntax.Include{}
+		err     error
+	)
+	if _, err := p.ReadString("include"); err != nil {
+		return syntax.SetRange(&include, p.Range()), p.Annotate(err)
+	}
+	if _, err := p.readWhitespace1(); err != nil {
+		return syntax.SetRange(&include, p.Range()), p.Annotate(err)
+	}
+	if include.Path, err = p.parseQuotedString(); err != nil {
+		return syntax.SetRange(&include, p.Range()), p.Annotate(err)
+	}
+	return syntax.SetRange(&include, p.Range()), nil
+}
+
 func (p *Parser) parseOpen(date syntax.Date) (syntax.Open, error) {
 	p.RangeContinue("parsing `open` directive")
 	defer p.RangeEnd()

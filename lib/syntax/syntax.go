@@ -88,6 +88,11 @@ type Price struct {
 	Price             Decimal
 }
 
+type Include struct {
+	Range
+	Path QuotedString
+}
+
 type Range struct {
 	Start, End int
 	Path, Text string

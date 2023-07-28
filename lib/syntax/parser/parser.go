@@ -35,55 +35,59 @@ func (p *Parser) readComment() (syntax.Range, error) {
 func (p *Parser) parseDirective() (syntax.Directive, error) {
 	p.RangeStart("parsing directive")
 	defer p.RangeEnd()
-	dir := syntax.Directive{}
-	addons := syntax.Addons{}
+	var (
+		dir    syntax.Directive
+		addons syntax.Addons
+	)
 	var err error
 	if p.Current() == '@' {
 		if addons, err = p.parseAddons(); err != nil {
-			return syntax.SetRange(&dir, p.Range()), err
+			return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 		}
 	}
-	date, err := p.parseDate()
-	if err != nil {
-		return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
-	}
-	if _, err := p.readWhitespace1(); err != nil {
-		return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
-	}
-	if p.Current() == '"' {
-		if dir.Directive, err = p.parseTransaction(date, addons); err != nil {
+	if p.Current() == 'i' {
+		if dir.Directive, err = p.parseInclude(); err != nil {
 			return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 		}
 	} else {
-		r, err := p.ReadAlternative([]string{"open", "close", "balance", "price"})
+		date, err := p.parseDate()
 		if err != nil {
 			return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 		}
 		if _, err := p.readWhitespace1(); err != nil {
 			return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 		}
-		switch r.Extract() {
-		case "open":
-			if dir.Directive, err = p.parseOpen(date); err != nil {
+		if p.Current() == '"' {
+			if dir.Directive, err = p.parseTransaction(date, addons); err != nil {
 				return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 			}
-		case "close":
-			if dir.Directive, err = p.parseClose(date); err != nil {
+		} else {
+			r, err := p.ReadAlternative([]string{"open", "close", "balance", "price"})
+			if err != nil {
 				return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 			}
-		case "balance":
-			if dir.Directive, err = p.parseAssertion(date); err != nil {
+			if _, err := p.readWhitespace1(); err != nil {
 				return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 			}
-		case "price":
-			if dir.Directive, err = p.parsePrice(date); err != nil {
-				return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
+			switch r.Extract() {
+			case "open":
+				if dir.Directive, err = p.parseOpen(date); err != nil {
+					return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
+				}
+			case "close":
+				if dir.Directive, err = p.parseClose(date); err != nil {
+					return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
+				}
+			case "balance":
+				if dir.Directive, err = p.parseAssertion(date); err != nil {
+					return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
+				}
+			case "price":
+				if dir.Directive, err = p.parsePrice(date); err != nil {
+					return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
+				}
 			}
 		}
-
-	}
-	if err != nil {
-		return syntax.SetRange(&dir, p.Range()), p.Annotate(err)
 	}
 	return syntax.SetRange(&dir, p.Range()), nil
 }

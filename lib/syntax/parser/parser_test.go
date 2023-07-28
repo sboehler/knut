@@ -1168,6 +1168,21 @@ func TestParseDirective(t *testing.T) {
 				},
 			},
 			{
+				text: `include "foo/foo.knut"`,
+				want: func(s string) syntax.Directive {
+					return syntax.Directive{
+						Range: Range{End: 22, Text: s},
+						Directive: syntax.Include{
+							Range: Range{End: 22, Text: s},
+							Path: syntax.QuotedString{
+								Range:   Range{Start: 8, End: 22, Text: s},
+								Content: Range{Start: 9, End: 21, Text: s},
+							},
+						},
+					}
+				},
+			},
+			{
 				text: "2023-04-03 close B:A",
 				want: func(s string) syntax.Directive {
 					return syntax.Directive{

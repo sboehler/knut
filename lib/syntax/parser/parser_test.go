@@ -703,6 +703,30 @@ func TestParseBooking(t *testing.T) {
 				},
 			},
 			{
+				text: "$$ C:D 100.0",
+				want: func(t string) syntax.Booking {
+					return syntax.Booking{
+						Range: Range{End: 1, Text: t},
+						CreditMacro: syntax.AccountMacro{
+							Range: syntax.Range{End: 1, Text: t},
+						},
+					}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing booking",
+						Range:   Range{End: 1, Text: s},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{End: 1, Text: s},
+							Message: "while parsing account macro",
+							Wrapped: syntax.Error{
+								Range:   syntax.Range{Start: 1, End: 1, Text: s},
+								Message: "unexpected character `$`, want a letter",
+							},
+						}}
+				},
+			},
+			{
 				text: "C:D  $dividend  100.0  CHF",
 				want: func(t string) syntax.Booking {
 					return syntax.Booking{

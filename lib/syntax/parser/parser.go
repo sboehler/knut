@@ -255,7 +255,7 @@ func (p *Parser) parseBooking() (syntax.Booking, error) {
 		return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 	}
 	if booking.Commodity, err = p.parseCommodity(); err != nil {
-		return syntax.SetRange(&booking, p.Range()), err
+		return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 	}
 	return syntax.SetRange(&booking, p.Range()), nil
 }

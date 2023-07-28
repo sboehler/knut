@@ -258,8 +258,10 @@ func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
 func (p *Parser) parseBooking() (syntax.Booking, error) {
 	p.RangeStart("parsing booking")
 	defer p.RangeEnd()
-	booking := syntax.Booking{}
-	var err error
+	var (
+		booking syntax.Booking
+		err     error
+	)
 	if p.Current() == '$' {
 		if booking.CreditMacro, err = p.parseAccountMacro(); err != nil {
 			return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
@@ -321,8 +323,10 @@ func (p *Parser) parseDate() (syntax.Date, error) {
 func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
 	p.RangeStart("parsing quoted string")
 	defer p.RangeEnd()
-	qs := syntax.QuotedString{}
-	var err error
+	var (
+		qs  syntax.QuotedString
+		err error
+	)
 	if _, err := p.ReadCharacter('"'); err != nil {
 		return syntax.SetRange(&qs, p.Range()), p.Annotate(err)
 	}
@@ -338,8 +342,10 @@ func (p *Parser) parseQuotedString() (syntax.QuotedString, error) {
 func (p *Parser) parseTransaction(date syntax.Date, addons syntax.Addons) (syntax.Transaction, error) {
 	p.RangeContinue("parsing transaction")
 	defer p.RangeEnd()
-	trx := syntax.Transaction{Date: date, Addons: addons}
-	var err error
+	var (
+		trx = syntax.Transaction{Date: date, Addons: addons}
+		err error
+	)
 	if trx.Description, err = p.parseQuotedString(); err != nil {
 		return syntax.SetRange(&trx, p.Range()), p.Annotate(err)
 	}
@@ -365,7 +371,7 @@ func (p *Parser) parseTransaction(date syntax.Date, addons syntax.Addons) (synta
 func (p *Parser) parseAddons() (syntax.Addons, error) {
 	p.RangeStart("parsing addons")
 	defer p.RangeEnd()
-	addons := syntax.Addons{}
+	var addons syntax.Addons
 	for {
 		r, err := p.ReadAlternative([]string{"@performance", "@accrue"})
 		if err != nil {
@@ -410,7 +416,7 @@ func (p *Parser) parseAddons() (syntax.Addons, error) {
 func (p *Parser) parsePerformance() (syntax.Performance, error) {
 	p.RangeStart("parsing performance")
 	defer p.RangeEnd()
-	perf := syntax.Performance{Range: p.Range()}
+	var perf syntax.Performance
 	if _, err := p.ReadCharacter('('); err != nil {
 		return syntax.SetRange(&perf, p.Range()), p.Annotate(err)
 	}

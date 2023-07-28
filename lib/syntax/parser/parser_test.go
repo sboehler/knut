@@ -48,6 +48,55 @@ func (tests parserTest[T]) run(t *testing.T) {
 	}
 }
 
+func TestParseFile(t *testing.T) {
+	parserTest[syntax.File]{
+		tests: []testcase[syntax.File]{
+			{
+				text: strings.Join([]string{
+					"",
+					"",
+					"include \"foo.knut\"",
+					"2021-01-01 open A",
+					"# comment",
+				}, "\n"),
+				want: func(s string) syntax.File {
+					return syntax.File{
+						Range: Range{End: 48, Text: s},
+						Directives: []syntax.Directive{
+							{
+								Range: Range{Start: 2, End: 20, Text: s},
+								Directive: syntax.Include{
+									Range: syntax.Range{Start: 2, End: 20, Text: s},
+									Path: syntax.QuotedString{
+										Range:   Range{Start: 10, End: 20, Text: s},
+										Content: Range{Start: 11, End: 19, Text: s},
+									},
+								},
+							},
+							{
+								Range: Range{Start: 21, End: 38, Text: s},
+								Directive: syntax.Open{
+									Range: syntax.Range{Start: 21, End: 38, Text: s},
+									Date: syntax.Date{
+										Range: Range{Start: 21, End: 31, Text: s},
+									},
+									Account: syntax.Account{
+										Range: Range{Start: 37, End: 38, Text: s},
+									},
+								},
+							},
+						},
+					}
+				},
+			},
+		},
+		desc: "p.parseDirective()",
+		fn: func(p *Parser) (syntax.File, error) {
+			return p.parseFile()
+		},
+	}.run(t)
+}
+
 func TestParseCommodity(t *testing.T) {
 	parserTest[syntax.Commodity]{
 		tests: []testcase[syntax.Commodity]{

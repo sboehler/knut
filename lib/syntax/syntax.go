@@ -40,6 +40,11 @@ type Directive struct {
 	Directive any
 }
 
+type File struct {
+	Range
+	Directives []Directive
+}
+
 type Accrual struct {
 	Range
 	Interval   Interval

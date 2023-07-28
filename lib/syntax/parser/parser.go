@@ -32,6 +32,29 @@ func (p *Parser) readComment() (syntax.Range, error) {
 	return p.Range(), nil
 }
 
+func (p *Parser) parseFile() (syntax.File, error) {
+	p.RangeStart(fmt.Sprintf("parsing %q", p.Path))
+	defer p.RangeEnd()
+	var file syntax.File
+	for p.Current() != scanner.EOF {
+		if _, err := p.ReadWhile(isWhitespaceOrNewline); err != nil {
+			return syntax.SetRange(&file, p.Range()), p.Annotate(err)
+		}
+		if p.Current() == '*' || p.Current() == '#' {
+			if _, err := p.readComment(); err != nil {
+				return syntax.SetRange(&file, p.Range()), p.Annotate(err)
+			}
+		} else {
+			dir, err := p.parseDirective()
+			file.Directives = append(file.Directives, dir)
+			if err != nil {
+				return syntax.SetRange(&file, p.Range()), p.Annotate(err)
+			}
+		}
+	}
+	return syntax.SetRange(&file, p.Range()), nil
+}
+
 func (p *Parser) parseDirective() (syntax.Directive, error) {
 	p.RangeStart("parsing directive")
 	defer p.RangeEnd()

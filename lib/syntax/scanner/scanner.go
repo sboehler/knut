@@ -28,7 +28,7 @@ type Range = syntax.Range
 // Scanner is a scanner.
 type Scanner struct {
 	text string
-	path string
+	Path string
 
 	// current contains the current rune
 	current    rune
@@ -47,7 +47,7 @@ type scope struct {
 func New(text, path string) *Scanner {
 	return &Scanner{
 		text: text,
-		path: path,
+		Path: path,
 	}
 }
 
@@ -81,7 +81,7 @@ func (s *Scanner) Advance() error {
 				Range: Range{
 					Start: s.Offset(),
 					End:   s.Offset(),
-					Path:  s.path,
+					Path:  s.Path,
 					Text:  s.text,
 				},
 			}
@@ -91,7 +91,7 @@ func (s *Scanner) Advance() error {
 				Range: Range{
 					Start: s.Offset(),
 					End:   s.Offset(),
-					Path:  s.path,
+					Path:  s.Path,
 					Text:  s.text,
 				},
 			}
@@ -102,7 +102,7 @@ func (s *Scanner) Advance() error {
 
 func (s *Scanner) RangeStart(desc string) {
 	s.scopes = append(s.scopes, scope{
-		Range: Range{Start: s.Offset(), End: s.Offset(), Path: s.path, Text: s.text},
+		Range: Range{Start: s.Offset(), End: s.Offset(), Path: s.Path, Text: s.text},
 		Desc:  desc,
 	})
 }

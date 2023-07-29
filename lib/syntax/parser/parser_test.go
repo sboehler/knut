@@ -146,10 +146,51 @@ func TestParseFile(t *testing.T) {
 					}
 				},
 			},
+			{
+				text: strings.Join([]string{
+					`2022-03-03 "Hello, world"`,
+					`A:B:C C:B:ASDF 400 CHF`,
+				}, "\n"),
+				want: func(s string) syntax.File {
+					return syntax.File{
+						Range: Range{End: 48, Text: s},
+						Directives: []syntax.Directive{
+							{
+								Range: syntax.Range{End: 48, Text: s},
+								Directive: syntax.Transaction{
+									Range: syntax.Range{End: 48, Text: s},
+									Date:  syntax.Date{Range: Range{End: 10, Text: s}},
+									Description: syntax.QuotedString{
+										Range:   Range{Start: 11, End: 25, Text: s},
+										Content: Range{Start: 12, End: 24, Text: s},
+									},
+									Bookings: []syntax.Booking{
+										{
+											Range: syntax.Range{Start: 26, End: 48, Text: s},
+											Credit: syntax.Account{
+												Range: syntax.Range{Start: 26, End: 31, Text: s},
+											},
+											Debit: syntax.Account{
+												Range: syntax.Range{Start: 32, End: 40, Text: s},
+											},
+											Amount: syntax.Decimal{
+												Range: syntax.Range{Start: 41, End: 44, Text: s},
+											},
+											Commodity: syntax.Commodity{
+												Range: syntax.Range{Start: 45, End: 48, Text: s},
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+				},
+			},
 		},
 		desc: "p.parseDirective()",
 		fn: func(p *Parser) (syntax.File, error) {
-			return p.parseFile()
+			return p.ParseFile()
 		},
 	}.run(t)
 }

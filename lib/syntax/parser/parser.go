@@ -32,7 +32,7 @@ func (p *Parser) readComment() (syntax.Range, error) {
 	return p.Range(), nil
 }
 
-func (p *Parser) parseFile() (syntax.File, error) {
+func (p *Parser) ParseFile() (syntax.File, error) {
 	p.RangeStart(fmt.Sprintf("parsing file `%s`", p.Path))
 	defer p.RangeEnd()
 	var file syntax.File
@@ -50,6 +50,9 @@ func (p *Parser) parseFile() (syntax.File, error) {
 			if err != nil {
 				return syntax.SetRange(&file, p.Range()), p.Annotate(err)
 			}
+		}
+		if p.Current() == scanner.EOF {
+			break
 		}
 		if _, err := p.readRestOfWhitespaceLine(); err != nil {
 			return syntax.SetRange(&file, p.Range()), p.Annotate(err)

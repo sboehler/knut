@@ -76,17 +76,13 @@ func (p Printer) printTransaction(w io.Writer, t syntax.Transaction) (n int, err
 	if err != nil {
 		return n, err
 	}
-	err = p.newline(w, &n)
-	if err != nil {
-		return n, err
-	}
 	for _, po := range t.Bookings {
-		d, err := p.printPosting(w, po)
-		n += d
+		err = p.newline(w, &n)
 		if err != nil {
 			return n, err
 		}
-		err = p.newline(w, &n)
+		d, err := p.printPosting(w, po)
+		n += d
 		if err != nil {
 			return n, err
 		}
@@ -100,12 +96,9 @@ func (p Printer) printAccrual(w io.Writer, a syntax.Accrual) (n int, err error) 
 
 func (p Printer) printPosting(w io.Writer, t syntax.Booking) (int, error) {
 	var n int
-	c, err := fmt.Fprintf(w, "%s %s %s %s", p.rightPad(t.Credit.Extract()), p.rightPad(t.Debit.Extract()), leftPad(10, t.Amount.Extract()), t.Commodity.Extract())
+	c, err := fmt.Fprintf(w, "%-*s %-*s %10s %s", p.Padding, t.Credit.Extract(), p.Padding, t.Debit.Extract(), t.Amount.Extract(), t.Commodity.Extract())
 	n += c
-	if err != nil {
-		return n, err
-	}
-	return n, nil
+	return n, err
 }
 
 func (p Printer) printOpen(w io.Writer, o syntax.Open) (int, error) {
@@ -146,11 +139,11 @@ func (p *Printer) Initialize(directive []syntax.Directive) {
 	for _, d := range directive {
 		if t, ok := d.Directive.(syntax.Transaction); ok {
 			for _, b := range t.Bookings {
-				if p.Padding < b.Credit.Length() {
-					p.Padding = b.Credit.Length()
+				if l := utf8.RuneCountInString(b.Credit.Extract()); l < p.Padding {
+					p.Padding = l
 				}
-				if p.Padding < b.Debit.Length() {
-					p.Padding = b.Debit.Length()
+				if l := utf8.RuneCountInString(b.Debit.Extract()); l < p.Padding {
+					p.Padding = l
 				}
 			}
 		}
@@ -161,25 +154,4 @@ func (p Printer) newline(w io.Writer, count *int) error {
 	c, err := io.WriteString(w, "\n")
 	*count += c
 	return err
-}
-
-func (p Printer) rightPad(s string) string {
-	var b strings.Builder
-	b.WriteString(s)
-	for i := utf8.RuneCountInString(s); i < p.Padding; i++ {
-		b.WriteRune(' ')
-	}
-	return b.String()
-}
-
-func leftPad(n int, s string) string {
-	if len(s) > n {
-		return s
-	}
-	var b strings.Builder
-	for i := 0; i < n-len(s); i++ {
-		b.WriteRune(' ')
-	}
-	b.WriteString(s)
-	return b.String()
 }

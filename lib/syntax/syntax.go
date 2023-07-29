@@ -111,6 +111,10 @@ func (r *Range) SetRange(r2 Range) {
 	*r = r2
 }
 
+func (r Range) Length() int {
+	return r.End - r.Start
+}
+
 func (r *Range) Extend(r2 Range) {
 	if r.Start > r2.Start {
 		r.Start = r2.Start

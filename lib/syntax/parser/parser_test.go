@@ -38,11 +38,11 @@ func (tests parserTest[T]) run(t *testing.T) {
 
 			got, err := tests.fn(parser)
 
-			if diff := cmp.Diff(wantErr, err, cmpopts.EquateErrors()); diff != "" {
-				t.Errorf("%s returned unexpected diff in err (-want/+got)\n%s\n", tests.desc, diff)
-			}
 			if diff := cmp.Diff(test.want(test.text), got); diff != "" {
 				t.Errorf("%s returned unexpected diff (-want/+got)\n%s\n", tests.desc, diff)
+			}
+			if diff := cmp.Diff(wantErr, err, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("%s returned unexpected diff in err (-want/+got)\n%s\n", tests.desc, diff)
 			}
 		})
 	}
@@ -84,6 +84,52 @@ func TestParseFile(t *testing.T) {
 										Range: Range{Start: 37, End: 38, Text: s},
 									},
 								},
+							},
+						},
+					}
+				},
+			},
+			{
+				text: strings.Join([]string{
+					"",
+					"asdf",
+				}, "\n"),
+				want: func(s string) syntax.File {
+					return syntax.File{
+						Range: Range{End: 1, Text: s},
+					}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing file ``",
+						Range:   Range{End: 1, Text: s},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{End: 1, Text: s},
+							Message: "unexpected character `a`",
+						},
+					}
+				},
+			},
+			{
+				text: strings.Join([]string{
+					"", "", "", "",
+					"  include \"foo\"",
+				}, "\n"),
+				want: func(s string) syntax.File {
+					return syntax.File{
+						Range: Range{End: 6, Text: s},
+					}
+				},
+				err: func(s string) error {
+					return syntax.Error{
+						Message: "while parsing file ``",
+						Range:   Range{End: 6, Text: s},
+						Wrapped: syntax.Error{
+							Range:   syntax.Range{Start: 6, End: 6, Text: "\n\n\n\n  include \"foo\""},
+							Message: "while reading the rest of the line",
+							Wrapped: syntax.Error{
+								Range:   syntax.Range{Start: 6, End: 6, Text: s},
+								Message: "unexpected character `i`, want `\n`",
 							},
 						},
 					}

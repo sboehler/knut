@@ -33,23 +33,36 @@ func (p *Parser) readComment() (syntax.Range, error) {
 }
 
 func (p *Parser) parseFile() (syntax.File, error) {
-	p.RangeStart(fmt.Sprintf("parsing %q", p.Path))
+	p.RangeStart(fmt.Sprintf("parsing file `%s`", p.Path))
 	defer p.RangeEnd()
 	var file syntax.File
 	for p.Current() != scanner.EOF {
-		if _, err := p.ReadWhile(isWhitespaceOrNewline); err != nil {
-			return syntax.SetRange(&file, p.Range()), p.Annotate(err)
-		}
-		if p.Current() == '*' || p.Current() == '#' {
+		switch {
+
+		case isWhitespace(p.Current()):
+			if _, err := p.ReadWhile(isWhitespace); err != nil {
+				return syntax.SetRange(&file, p.Range()), p.Annotate(err)
+			}
+
+		case p.Current() == '*' || p.Current() == '#' || p.Current() == '/':
 			if _, err := p.readComment(); err != nil {
 				return syntax.SetRange(&file, p.Range()), p.Annotate(err)
 			}
-		} else {
+
+		case unicode.IsDigit(p.Current()) || p.Current() == '@' || p.Current() == 'i':
 			dir, err := p.parseDirective()
 			file.Directives = append(file.Directives, dir)
 			if err != nil {
 				return syntax.SetRange(&file, p.Range()), p.Annotate(err)
 			}
+		case !isNewline(p.Current()):
+			return syntax.SetRange(&file, p.Range()), p.Annotate(syntax.Error{
+				Message: fmt.Sprintf("unexpected character `%c`", p.Current()),
+				Range:   p.Range(),
+			})
+		}
+		if _, err := p.readRestOfWhitespaceLine(); err != nil {
+			return syntax.SetRange(&file, p.Range()), p.Annotate(err)
 		}
 	}
 	return syntax.SetRange(&file, p.Range()), nil
@@ -532,16 +545,18 @@ func (p *Parser) readWhitespace1() (syntax.Range, error) {
 }
 
 func (p *Parser) readRestOfWhitespaceLine() (syntax.Range, error) {
-	p.RangeStart("")
+	p.RangeStart("reading the rest of the line")
 	defer p.RangeEnd()
 	if _, err := p.ReadWhile(isWhitespace); err != nil {
-		return p.Range(), err
+		return p.Range(), p.Annotate(err)
 	}
 	if p.Current() == scanner.EOF {
 		return p.Range(), nil
 	}
-	_, err := p.ReadCharacter('\n')
-	return p.Range(), err
+	if _, err := p.ReadCharacter('\n'); err != nil {
+		return p.Range(), p.Annotate(err)
+	}
+	return p.Range(), nil
 }
 
 func isAlphanumeric(r rune) bool {

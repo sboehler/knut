@@ -97,6 +97,9 @@ func TestParseFile(t *testing.T) {
 				want: func(s string) syntax.File {
 					return syntax.File{
 						Range: Range{End: 1, Text: s},
+						Directives: []syntax.Directive{
+							{Range: syntax.Range{Start: 1, End: 1, Text: s}},
+						},
 					}
 				},
 				err: func(s string) error {
@@ -104,8 +107,16 @@ func TestParseFile(t *testing.T) {
 						Message: "while parsing file ``",
 						Range:   Range{End: 1, Text: s},
 						Wrapped: syntax.Error{
-							Range:   syntax.Range{End: 1, Text: s},
-							Message: "unexpected character `a`",
+							Message: "while parsing directive",
+							Range:   Range{Start: 1, End: 1, Text: s},
+							Wrapped: syntax.Error{
+								Message: "while parsing the date",
+								Range:   Range{Start: 1, End: 1, Text: s},
+								Wrapped: syntax.Error{
+									Range:   syntax.Range{Start: 1, End: 1, Text: s},
+									Message: "unexpected character `a`, want a digit",
+								},
+							},
 						},
 					}
 				},
@@ -125,7 +136,7 @@ func TestParseFile(t *testing.T) {
 						Message: "while parsing file ``",
 						Range:   Range{End: 6, Text: s},
 						Wrapped: syntax.Error{
-							Range:   syntax.Range{Start: 6, End: 6, Text: "\n\n\n\n  include \"foo\""},
+							Range:   syntax.Range{Start: 4, End: 6, Text: "\n\n\n\n  include \"foo\""},
 							Message: "while reading the rest of the line",
 							Wrapped: syntax.Error{
 								Range:   syntax.Range{Start: 6, End: 6, Text: s},
@@ -1352,8 +1363,12 @@ func TestParseRestOfWhitespaceLine(t *testing.T) {
 				},
 				err: func(s string) error {
 					return syntax.Error{
-						Message: "unexpected character `f`, want `\n`",
-						Range:   Range{Start: 1, End: 1, Text: s},
+						Message: "while reading the rest of the line",
+						Range:   Range{End: 1, Text: s},
+						Wrapped: syntax.Error{
+							Message: "unexpected character `f`, want `\n`",
+							Range:   Range{Start: 1, End: 1, Text: s},
+						},
 					}
 				},
 			},

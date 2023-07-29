@@ -39,27 +39,17 @@ func (p *Parser) parseFile() (syntax.File, error) {
 	for p.Current() != scanner.EOF {
 		switch {
 
-		case isWhitespace(p.Current()):
-			if _, err := p.ReadWhile(isWhitespace); err != nil {
-				return syntax.SetRange(&file, p.Range()), p.Annotate(err)
-			}
-
 		case p.Current() == '*' || p.Current() == '#' || p.Current() == '/':
 			if _, err := p.readComment(); err != nil {
 				return syntax.SetRange(&file, p.Range()), p.Annotate(err)
 			}
 
-		case unicode.IsDigit(p.Current()) || p.Current() == '@' || p.Current() == 'i':
+		case isAlphanumeric(p.Current()) || p.Current() == '@':
 			dir, err := p.parseDirective()
 			file.Directives = append(file.Directives, dir)
 			if err != nil {
 				return syntax.SetRange(&file, p.Range()), p.Annotate(err)
 			}
-		case !isNewline(p.Current()):
-			return syntax.SetRange(&file, p.Range()), p.Annotate(syntax.Error{
-				Message: fmt.Sprintf("unexpected character `%c`", p.Current()),
-				Range:   p.Range(),
-			})
 		}
 		if _, err := p.readRestOfWhitespaceLine(); err != nil {
 			return syntax.SetRange(&file, p.Range()), p.Annotate(err)

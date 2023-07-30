@@ -19,7 +19,7 @@ func Parse(ctx context.Context, file string) <-chan any {
 
 	go func() {
 		defer wg.Done()
-		err := parseRecursively(ctx, &wg, resCh, file)
+		err := parseRec(ctx, &wg, resCh, file)
 		if err != nil && ctx.Err() == nil {
 			cpr.Push[any](ctx, resCh, err)
 		}
@@ -33,7 +33,7 @@ func Parse(ctx context.Context, file string) <-chan any {
 	return resCh
 }
 
-func parseRecursively(ctx context.Context, wg *sync.WaitGroup, resCh chan<- any, file string) error {
+func parseRec(ctx context.Context, wg *sync.WaitGroup, resCh chan<- any, file string) error {
 	text, err := os.ReadFile(file)
 	if err != nil {
 		return err
@@ -48,7 +48,7 @@ func parseRecursively(ctx context.Context, wg *sync.WaitGroup, resCh chan<- any,
 			go func() {
 				defer wg.Done()
 				p := path.Join(filepath.Dir(file), inc.Path.Content.Extract())
-				err := parseRecursively(ctx, wg, resCh, p)
+				err := parseRec(ctx, wg, resCh, p)
 				if err != nil && ctx.Err() == nil {
 					cpr.Push[any](ctx, resCh, err)
 				}

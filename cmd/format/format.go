@@ -15,19 +15,18 @@
 package format
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
-	"io"
 	"os"
-	"path"
 
 	"github.com/natefinch/atomic"
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
 
 	"github.com/sboehler/knut/lib/common/cpr"
-	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/format"
+	"github.com/sboehler/knut/lib/syntax"
+	"github.com/sboehler/knut/lib/syntax/parser"
+	"github.com/sboehler/knut/lib/syntax/printer"
 )
 
 // CreateCmd creates the command.
@@ -83,46 +82,28 @@ func execute(cmd *cobra.Command, args []string) error {
 }
 
 func formatFile(target string) error {
-	var (
-		directives           []journal.Directive
-		err                  error
-		srcFile, tmpDestFile *os.File
-	)
-	if directives, err = readDirectives(target); err != nil {
-		return err
-	}
-	if srcFile, err = os.Open(target); err != nil {
-		return err
-	}
-	if tmpDestFile, err = os.CreateTemp(path.Dir(target), "format-"); err != nil {
-		return multierr.Append(err, srcFile.Close())
-	}
-	dest := bufio.NewWriter(tmpDestFile)
-	err = format.Format(directives, bufio.NewReader(srcFile), dest)
-	err = multierr.Combine(err, srcFile.Close(), dest.Flush(), tmpDestFile.Close())
+	file, err := readDirectives(target)
 	if err != nil {
-		return multierr.Append(err, os.Remove(tmpDestFile.Name()))
+		return err
 	}
-	return multierr.Append(err, atomic.ReplaceFile(tmpDestFile.Name(), target))
+	var (
+		dest bytes.Buffer
+		p    printer.Printer
+	)
+	if err := p.Format(file, &dest); err != nil {
+		return err
+	}
+	return atomic.WriteFile(target, &dest)
 }
 
-func readDirectives(target string) ([]journal.Directive, error) {
-	p, close, err := journal.ParserFromPath(journal.NewContext(), target)
+func readDirectives(target string) (syntax.File, error) {
+	text, err := os.ReadFile(target)
 	if err != nil {
-		return nil, err
+		return syntax.File{}, err
 	}
-	defer close()
-
-	var directives []journal.Directive
-
-	for {
-		d, err := p.Next()
-		if err == io.EOF {
-			return directives, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		directives = append(directives, d)
+	p := parser.New(string(text), target)
+	if err := p.Advance(); err != nil {
+		return syntax.File{}, err
 	}
+	return p.ParseFile()
 }

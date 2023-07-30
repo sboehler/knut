@@ -1,7 +1,6 @@
 package printer
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -34,7 +33,6 @@ func TestPrintAccount(t *testing.T) {
 			p := parser.New(test.text, "")
 			p.Advance()
 			f, err := p.ParseFile()
-			fmt.Println(test.text)
 			if err != nil {
 				t.Errorf("%#v", err)
 			}

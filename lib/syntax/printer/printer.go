@@ -65,7 +65,7 @@ func (p Printer) printTransaction(w io.Writer, t syntax.Transaction) (n int, err
 		for _, t := range t.Addons.Performance.Targets {
 			s = append(s, t.Extract())
 		}
-		c, err := fmt.Fprintf(w, "@performance(%s)\n", strings.Join(s, ","))
+		c, err := fmt.Fprintf(w, "@performance(%s)\n", strings.Join(s, ", "))
 		n += c
 		if err != nil {
 			return n, err
@@ -76,13 +76,17 @@ func (p Printer) printTransaction(w io.Writer, t syntax.Transaction) (n int, err
 	if err != nil {
 		return n, err
 	}
+	err = p.newline(w, &n)
+	if err != nil {
+		return n, err
+	}
 	for _, po := range t.Bookings {
-		err = p.newline(w, &n)
+		d, err := p.printPosting(w, po)
+		n += d
 		if err != nil {
 			return n, err
 		}
-		d, err := p.printPosting(w, po)
-		n += d
+		err = p.newline(w, &n)
 		if err != nil {
 			return n, err
 		}
@@ -121,13 +125,15 @@ func (p Printer) printAssertion(w io.Writer, a syntax.Assertion) (int, error) {
 	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Extract(), a.Account.Extract(), a.Amount.Extract(), a.Commodity.Extract())
 }
 
-// PrintLedger prints a Ledger.
 func (p *Printer) PrintFile(w io.Writer, f syntax.File) (int, error) {
 	var n int
 	for _, d := range f.Directives {
 		c, err := p.PrintDirective(w, d)
 		n += c
 		if err != nil {
+			return n, err
+		}
+		if err := p.newline(w, &n); err != nil {
 			return n, err
 		}
 	}
@@ -148,6 +154,27 @@ func (p *Printer) Initialize(directive []syntax.Directive) {
 			}
 		}
 	}
+}
+
+// Format formats the given file, preserving any text between directives.
+func (p *Printer) Format(f syntax.File, w io.Writer) error {
+	p.Initialize(f.Directives)
+	text := f.Text
+	var pos int
+	for _, d := range f.Directives {
+
+		if _, err := w.Write([]byte(text[pos:d.Start])); err != nil {
+			return err
+		}
+		if _, err := p.PrintDirective(w, d); err != nil {
+			return err
+		}
+		pos = d.End
+	}
+	if _, err := w.Write([]byte(text[pos:])); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p Printer) newline(w io.Writer, count *int) error {

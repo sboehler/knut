@@ -68,6 +68,28 @@ func TestPrintFile(t *testing.T) {
 			),
 		},
 		{
+			desc: "include",
+			text: lines(
+				`include     "foo"   `,
+			),
+			want: lines(
+				`include "foo"`,
+			),
+		},
+		{
+			desc: "print includes",
+			text: lines(
+				`include "foo1"     `,
+				`include    "foo2"      `,
+				`include         "foo3" `,
+			),
+			want: lines(
+				`include "foo1"`,
+				`include "foo2"`,
+				`include "foo3"`,
+			),
+		},
+		{
 			desc: "print open",
 			text: lines(
 				`2022-03-03       open XYZ:ABC`,

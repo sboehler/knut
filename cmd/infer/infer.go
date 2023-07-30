@@ -81,7 +81,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	if err != nil {
 		return err
 	}
-	directives, err := r.parseAndInfer(cmd.Context(), jctx, model, targetFile, account)
+	directives, err := r.parseAndInfer(cmd.Context(), jctx, model, targetFile)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func train(ctx context.Context, jctx journal.Context, file string, exclude *jour
 	return m, err
 }
 
-func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model *bayes.Model, targetFile string, account *journal.Account) ([]journal.Directive, error) {
+func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model *bayes.Model, targetFile string) ([]journal.Directive, error) {
 	p, cls, err := journal.ParserFromPath(jctx, targetFile)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (r *runner) parseAndInfer(ctx context.Context, jctx journal.Context, model 
 		}
 		switch t := d.(type) {
 		case *journal.Transaction:
-			model.Infer(t, account)
+			model.Infer(t)
 			directives = append(directives, t)
 		default:
 			directives = append(directives, d)

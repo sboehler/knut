@@ -27,17 +27,20 @@ import (
 type Model struct {
 	count                  int
 	countByAccount         countByAccount
-	countByTokenAndAccount map[string]countByAccount
+	countByTokenAndAccount map[token]countByAccount
 
 	exclude *journal.Account
 }
+
+type token string
 
 // NewModel creates a new model.
 func NewModel(exclude *journal.Account) *Model {
 	return &Model{
 		count:                  0,
-		countByAccount:         newCountByAccount(),
-		countByTokenAndAccount: make(map[string]countByAccount),
+		countByAccount:         make(countByAccount),
+		countByTokenAndAccount: make(map[token]countByAccount),
+		exclude:                exclude,
 	}
 }
 
@@ -63,16 +66,16 @@ func newCountByAccount() countByAccount {
 
 // Infer replaces the given account with an inferred account.
 // P(A | T1 & T2 & ... & Tn) ~ P(A) * P(T1|A) * P(T2|A) * ... * P(Tn|A)
-func (m *Model) Infer(t *journal.Transaction, tbd *journal.Account) {
+func (m *Model) Infer(t *journal.Transaction) {
 	def := math.Log(1.0 / float64(m.count))
 	for i, posting := range t.Postings {
-		if posting.Account != tbd {
+		if posting.Account != m.exclude {
 			continue
 		}
 		scores := make(map[*journal.Account]float64)
 		tokens := tokenize(t.Description, posting)
 		for a, total := range m.countByAccount {
-			if a == tbd || a == posting.Other {
+			if a == m.exclude || a == posting.Other {
 				// ignore both TBD and the other account of this posting
 				continue
 			}
@@ -103,11 +106,11 @@ func (m *Model) Infer(t *journal.Transaction, tbd *journal.Account) {
 	}
 }
 
-func tokenize(desc string, posting *journal.Posting) set.Set[string] {
+func tokenize(desc string, posting *journal.Posting) set.Set[token] {
 	tokens := append(strings.Fields(desc), posting.Commodity.Name(), posting.Amount.String(), posting.Other.Name())
-	result := set.New[string]()
-	for _, token := range tokens {
-		result.Add(strings.ToLower(token))
+	result := set.New[token]()
+	for _, t := range tokens {
+		result.Add(token(strings.ToLower(t)))
 	}
 	return result
 }

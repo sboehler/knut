@@ -136,15 +136,11 @@ func (r Range) Empty() bool {
 	return r.Start == r.End
 }
 
-func (r Range) Location() [2]Location {
+func (r Range) Location() Location {
 	loc := Location{Line: 1, Col: 1}
-	var res [2]Location
 	for pos, ch := range r.Text {
-		if pos == r.Start {
-			res[0] = loc
-		} else if pos == r.End {
-			res[1] = loc
-			return res
+		if pos == r.End {
+			return loc
 		}
 		if ch == '\n' {
 			loc.Line++
@@ -153,7 +149,7 @@ func (r Range) Location() [2]Location {
 			loc.Col++
 		}
 	}
-	return res
+	return loc
 }
 
 func (r Range) Context(previous int) []string {
@@ -197,13 +193,18 @@ type Error struct {
 }
 
 func (e Error) Error() string {
-	// var s strings.Builder
-	// if len(e.Path) > 0 {
-	// 	s.WriteString(e.Path)
-	// 	s.WriteString(": ")
-	// }
-	// s.WriteString(e.Location()[1].String())
-	// s.WriteString(" ")
-	// s.WriteString(e.Message)
-	return e.Message
+	var s strings.Builder
+	if e.Wrapped != nil {
+		s.WriteString(e.Wrapped.Error())
+		s.WriteString("\n")
+	}
+	if len(e.Path) > 0 {
+		s.WriteString(e.Path)
+		s.WriteString(": ")
+	}
+	loc := e.Location()
+	s.WriteString(loc.String())
+	s.WriteString(" ")
+	s.WriteString(e.Message)
+	return s.String()
 }

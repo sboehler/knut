@@ -11,6 +11,8 @@ import (
 // Parser parses a journal.
 type Parser struct {
 	scanner.Scanner
+
+	callback func(d syntax.Directive) error
 }
 
 // New creates a new parser.
@@ -46,6 +48,9 @@ func (p *Parser) ParseFile() (syntax.File, error) {
 
 		case isAlphanumeric(p.Current()) || p.Current() == '@':
 			dir, err := p.parseDirective()
+			if p.callback != nil {
+				p.callback(dir)
+			}
 			file.Directives = append(file.Directives, dir)
 			if err != nil {
 				return syntax.SetRange(&file, p.Range()), p.Annotate(err)

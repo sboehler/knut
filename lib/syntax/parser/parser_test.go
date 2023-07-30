@@ -188,7 +188,7 @@ func TestParseFile(t *testing.T) {
 				},
 			},
 		},
-		desc: "p.parseDirective()",
+		desc: "p.parseFile()",
 		fn: func(p *Parser) (syntax.File, error) {
 			return p.ParseFile()
 		},

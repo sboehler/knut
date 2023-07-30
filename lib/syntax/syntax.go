@@ -7,9 +7,10 @@ import (
 
 type Commodity struct{ Range }
 
-type Account struct{ Range }
-
-type AccountMacro struct{ Range }
+type Account struct {
+	Range
+	Macro bool
+}
 
 type Date struct{ Range }
 
@@ -22,10 +23,9 @@ type QuotedString struct {
 
 type Booking struct {
 	Range
-	Credit, Debit           Account
-	CreditMacro, DebitMacro AccountMacro
-	Amount                  Decimal
-	Commodity               Commodity
+	Credit, Debit Account
+	Amount        Decimal
+	Commodity     Commodity
 }
 
 type Performance struct {

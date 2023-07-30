@@ -547,37 +547,35 @@ func TestParseAccount(t *testing.T) {
 					return syntax.Account{Range: Range{End: 9, Text: s}}
 				},
 			},
-		},
-		desc: "p.parseAccount()",
-		fn: func(p *Parser) (syntax.Account, error) {
-			return p.parseAccount()
-		},
-	}.run(t)
-}
-
-func TestParseAccountMacro(t *testing.T) {
-	parserTest[syntax.AccountMacro]{
-		tests: []testcase[syntax.AccountMacro]{
 			{
 				text: "$foobar",
-				want: func(s string) syntax.AccountMacro {
-					return syntax.AccountMacro{Range: Range{End: 7, Text: s}}
+				want: func(s string) syntax.Account {
+					return syntax.Account{
+						Range: Range{End: 7, Text: s},
+						Macro: true,
+					}
 				},
 			},
 			{
 				text: "$foo1",
-				want: func(s string) syntax.AccountMacro {
-					return syntax.AccountMacro{Range: Range{End: 4, Text: s}}
+				want: func(s string) syntax.Account {
+					return syntax.Account{
+						Range: Range{End: 4, Text: s},
+						Macro: true,
+					}
 				},
 			},
 			{
 				text: "$1foo",
-				want: func(s string) syntax.AccountMacro {
-					return syntax.AccountMacro{Range: Range{End: 1, Text: s}}
+				want: func(s string) syntax.Account {
+					return syntax.Account{
+						Range: Range{End: 1, Text: s},
+						Macro: true,
+					}
 				},
 				err: func(s string) error {
 					return syntax.Error{
-						Message: "while parsing account macro",
+						Message: "while parsing account",
 						Range:   syntax.Range{End: 1, Text: s},
 						Wrapped: syntax.Error{
 							Message: "unexpected character `1`, want a letter",
@@ -586,41 +584,10 @@ func TestParseAccountMacro(t *testing.T) {
 					}
 				},
 			},
-			{
-				text: "",
-				want: func(s string) syntax.AccountMacro {
-					return syntax.AccountMacro{Range: Range{Text: s}}
-				},
-				err: func(s string) error {
-					return syntax.Error{
-						Message: "while parsing account macro",
-						Range:   syntax.Range{Text: s},
-						Wrapped: syntax.Error{
-							Message: "unexpected end of file, want `$`",
-						},
-					}
-				},
-			},
-			{
-				text: "foobar",
-				want: func(s string) syntax.AccountMacro {
-					return syntax.AccountMacro{Range: Range{Text: s}}
-				},
-				err: func(s string) error {
-					return syntax.Error{
-						Message: "while parsing account macro",
-						Range:   syntax.Range{Text: s},
-						Wrapped: syntax.Error{
-							Range:   syntax.Range{Text: s},
-							Message: "unexpected character `f`, want `$`",
-						},
-					}
-				},
-			},
 		},
-		desc: "p.parseAccountMacro()",
-		fn: func(p *Parser) (syntax.AccountMacro, error) {
-			return p.parseAccountMacro()
+		desc: "p.parseAccount()",
+		fn: func(p *Parser) (syntax.Account, error) {
+			return p.parseAccount()
 		},
 	}.run(t)
 }
@@ -866,11 +833,11 @@ func TestParseBooking(t *testing.T) {
 				text: "$dividend C:D 100.0 CHF",
 				want: func(t string) syntax.Booking {
 					return syntax.Booking{
-						Range:       Range{End: 23, Text: t},
-						CreditMacro: syntax.AccountMacro{Range: Range{End: 9, Text: t}},
-						Debit:       syntax.Account{Range: Range{Start: 10, End: 13, Text: t}},
-						Amount:      syntax.Decimal{Range: Range{Start: 14, End: 19, Text: t}},
-						Commodity:   syntax.Commodity{Range: Range{Start: 20, End: 23, Text: t}},
+						Range:     Range{End: 23, Text: t},
+						Credit:    syntax.Account{Range: Range{End: 9, Text: t}, Macro: true},
+						Debit:     syntax.Account{Range: Range{Start: 10, End: 13, Text: t}},
+						Amount:    syntax.Decimal{Range: Range{Start: 14, End: 19, Text: t}},
+						Commodity: syntax.Commodity{Range: Range{Start: 20, End: 23, Text: t}},
 					}
 				},
 			},
@@ -899,8 +866,9 @@ func TestParseBooking(t *testing.T) {
 				want: func(t string) syntax.Booking {
 					return syntax.Booking{
 						Range: Range{End: 1, Text: t},
-						CreditMacro: syntax.AccountMacro{
+						Credit: syntax.Account{
 							Range: syntax.Range{End: 1, Text: t},
+							Macro: true,
 						},
 					}
 				},
@@ -910,7 +878,7 @@ func TestParseBooking(t *testing.T) {
 						Range:   Range{End: 1, Text: s},
 						Wrapped: syntax.Error{
 							Range:   syntax.Range{End: 1, Text: s},
-							Message: "while parsing account macro",
+							Message: "while parsing account",
 							Wrapped: syntax.Error{
 								Range:   syntax.Range{Start: 1, End: 1, Text: s},
 								Message: "unexpected character `$`, want a letter",
@@ -922,11 +890,11 @@ func TestParseBooking(t *testing.T) {
 				text: "C:D  $dividend  100.0  CHF",
 				want: func(t string) syntax.Booking {
 					return syntax.Booking{
-						Range:      Range{End: 26, Text: t},
-						Credit:     syntax.Account{Range: Range{End: 3, Text: t}},
-						DebitMacro: syntax.AccountMacro{Range: Range{Start: 5, End: 14, Text: t}},
-						Amount:     syntax.Decimal{Range: Range{Start: 16, End: 21, Text: t}},
-						Commodity:  syntax.Commodity{Range: Range{Start: 23, End: 26, Text: t}},
+						Range:     Range{End: 26, Text: t},
+						Credit:    syntax.Account{Range: Range{End: 3, Text: t}},
+						Debit:     syntax.Account{Range: Range{Start: 5, End: 14, Text: t}, Macro: true},
+						Amount:    syntax.Decimal{Range: Range{Start: 16, End: 21, Text: t}},
+						Commodity: syntax.Commodity{Range: Range{Start: 23, End: 26, Text: t}},
 					}
 				},
 			},

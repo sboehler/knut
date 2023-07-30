@@ -261,6 +261,17 @@ func (p *Parser) parseDecimal() (syntax.Decimal, error) {
 func (p *Parser) parseAccount() (syntax.Account, error) {
 	p.RangeStart("parsing account")
 	defer p.RangeEnd()
+	acc := syntax.Account{}
+	if p.Current() == '$' {
+		acc.Macro = true
+		if _, err := p.ReadCharacter('$'); err != nil {
+			return syntax.SetRange(&acc, p.Range()), p.Annotate(err)
+		}
+		if _, err := p.ReadWhile1("a letter", unicode.IsLetter); err != nil {
+			return syntax.SetRange(&acc, p.Range()), p.Annotate(err)
+		}
+		return syntax.SetRange(&acc, p.Range()), nil
+	}
 	if _, err := p.ReadWhile1("a letter or a digit", isAlphanumeric); err != nil {
 		return syntax.Account{Range: p.Range()}, p.Annotate(err)
 	}
@@ -277,18 +288,6 @@ func (p *Parser) parseAccount() (syntax.Account, error) {
 	}
 }
 
-func (p *Parser) parseAccountMacro() (syntax.AccountMacro, error) {
-	p.RangeStart("parsing account macro")
-	defer p.RangeEnd()
-	if _, err := p.ReadCharacter('$'); err != nil {
-		return syntax.AccountMacro{Range: p.Range()}, p.Annotate(err)
-	}
-	if _, err := p.ReadWhile1("a letter", unicode.IsLetter); err != nil {
-		return syntax.AccountMacro{Range: p.Range()}, p.Annotate(err)
-	}
-	return syntax.AccountMacro{Range: p.Range()}, nil
-}
-
 func (p *Parser) parseBooking() (syntax.Booking, error) {
 	p.RangeStart("parsing booking")
 	defer p.RangeEnd()
@@ -296,26 +295,14 @@ func (p *Parser) parseBooking() (syntax.Booking, error) {
 		booking syntax.Booking
 		err     error
 	)
-	if p.Current() == '$' {
-		if booking.CreditMacro, err = p.parseAccountMacro(); err != nil {
-			return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
-		}
-	} else {
-		if booking.Credit, err = p.parseAccount(); err != nil {
-			return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
-		}
+	if booking.Credit, err = p.parseAccount(); err != nil {
+		return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
 		return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 	}
-	if p.Current() == '$' {
-		if booking.DebitMacro, err = p.parseAccountMacro(); err != nil {
-			return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
-		}
-	} else {
-		if booking.Debit, err = p.parseAccount(); err != nil {
-			return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
-		}
+	if booking.Debit, err = p.parseAccount(); err != nil {
+		return syntax.SetRange(&booking, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
 		return syntax.SetRange(&booking, p.Range()), p.Annotate(err)

@@ -65,7 +65,7 @@ func (p Printer) printTransaction(w io.Writer, t syntax.Transaction) (n int, err
 		for _, t := range t.Addons.Performance.Targets {
 			s = append(s, t.Extract())
 		}
-		c, err := fmt.Fprintf(w, "@performance(%s)\n", strings.Join(s, ", "))
+		c, err := fmt.Fprintf(w, "@performance(%s)\n", strings.Join(s, ","))
 		n += c
 		if err != nil {
 			return n, err
@@ -145,10 +145,10 @@ func (p *Printer) Initialize(directive []syntax.Directive) {
 	for _, d := range directive {
 		if t, ok := d.Directive.(syntax.Transaction); ok {
 			for _, b := range t.Bookings {
-				if l := utf8.RuneCountInString(b.Credit.Extract()); l < p.Padding {
+				if l := utf8.RuneCountInString(b.Credit.Extract()); l > p.Padding {
 					p.Padding = l
 				}
-				if l := utf8.RuneCountInString(b.Debit.Extract()); l < p.Padding {
+				if l := utf8.RuneCountInString(b.Debit.Extract()); l > p.Padding {
 					p.Padding = l
 				}
 			}

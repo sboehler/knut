@@ -57,7 +57,7 @@ func TestPrintFile(t *testing.T) {
 				`A:B:C       C:B:ASDF   400 CHF   `,
 			),
 			want: lines(
-				`@performance(USD, EUR)`,
+				`@performance(USD,EUR)`,
 				`2022-03-03 "Hello, world"`,
 				"A:B:C C:B:ASDF        400 CHF",
 				``,

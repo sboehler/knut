@@ -113,40 +113,6 @@ func (p Printer) printPosting(w io.Writer, t *Posting) (int, error) {
 	if err != nil {
 		return n, err
 	}
-	if t.Lot != nil {
-		c, err = io.WriteString(w, " ")
-		n += c
-		if err != nil {
-			return n, err
-		}
-		d, err := p.printLot(w, t.Lot)
-		n += d
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, nil
-}
-
-func (p Printer) printLot(w io.Writer, l *Lot) (int, error) {
-	var n int
-	c, err := fmt.Fprintf(w, "{ %g %s, %s ", l.Price, l.Commodity.Name(), l.Date.Format("2006-01-02"))
-	n += c
-	if err != nil {
-		return n, err
-	}
-	if len(l.Label) > 0 {
-		c, err = fmt.Fprintf(w, "%s ", l.Label)
-		n += c
-		if err != nil {
-			return n, err
-		}
-	}
-	c, err = io.WriteString(w, "}")
-	n += c
-	if err != nil {
-		return n, err
-	}
 	return n, nil
 }
 

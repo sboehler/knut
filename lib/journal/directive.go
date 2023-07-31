@@ -55,14 +55,12 @@ type Posting struct {
 	Amount, Value  decimal.Decimal
 	Account, Other *Account
 	Commodity      *Commodity
-	Lot            *Lot
 }
 
 type PostingBuilder struct {
 	Amount, Value decimal.Decimal
 	Credit, Debit *Account
 	Commodity     *Commodity
-	Lot           *Lot
 }
 
 func (pb PostingBuilder) Build() []*Posting {
@@ -76,7 +74,6 @@ func (pb PostingBuilder) Build() []*Posting {
 			Commodity: pb.Commodity,
 			Amount:    pb.Amount.Neg(),
 			Value:     pb.Value.Neg(),
-			Lot:       pb.Lot,
 		},
 		{
 			Account:   pb.Debit,
@@ -84,7 +81,6 @@ func (pb PostingBuilder) Build() []*Posting {
 			Commodity: pb.Commodity,
 			Amount:    pb.Amount,
 			Value:     pb.Value,
-			Lot:       pb.Lot,
 		},
 	}
 }
@@ -114,14 +110,6 @@ func ComparePostings(p, p2 *Posting) compare.Order {
 		return o
 	}
 	return compare.Ordered(p.Commodity.Name(), p2.Commodity.Name())
-}
-
-// Lot represents a lot.
-type Lot struct {
-	Date      time.Time
-	Label     string
-	Price     float64
-	Commodity *Commodity
 }
 
 // Tag represents a tag for a transaction or booking.

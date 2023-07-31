@@ -22,7 +22,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"time"
 	"unicode"
@@ -329,7 +328,6 @@ func (p *Parser) parsePostings() ([]*Posting, error) {
 			credit, debit *Account
 			amount        decimal.Decimal
 			commodity     *Commodity
-			lot           *Lot
 
 			err error
 		)
@@ -357,23 +355,11 @@ func (p *Parser) parsePostings() ([]*Posting, error) {
 		if err = p.consumeWhitespace1(); err != nil {
 			return nil, err
 		}
-		if p.current() == '{' {
-			if lot != nil {
-				return nil, fmt.Errorf("duplicate lot")
-			}
-			if lot, err = p.parseLot(); err != nil {
-				return nil, err
-			}
-			if err = p.consumeWhitespace1(); err != nil {
-				return nil, err
-			}
-		}
 		postings = append(postings, PostingBuilder{
 			Credit:    credit,
 			Debit:     debit,
 			Amount:    amount,
 			Commodity: commodity,
-			Lot:       lot,
 		})
 		if err = p.consumeRestOfWhitespaceLine(); err != nil {
 			return nil, err
@@ -562,70 +548,6 @@ func (p *Parser) consumeRestOfWhitespaceLine() error {
 	return p.consumeNewline()
 }
 
-func (p *Parser) parseLot() (*Lot, error) {
-	err := p.scanner.ConsumeRune('{')
-	if err != nil {
-		return nil, err
-	}
-	if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
-		return nil, err
-	}
-	price, err := p.parseFloat()
-	if err != nil {
-		return nil, err
-	}
-	if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
-		return nil, err
-	}
-	commodity, err := p.parseCommodity()
-	if err != nil {
-		return nil, err
-	}
-	if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
-		return nil, err
-	}
-	var (
-		label string
-		d     time.Time
-	)
-	for p.current() == ',' {
-		if err := p.scanner.ConsumeRune(','); err != nil {
-			return nil, err
-		}
-		if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
-			return nil, err
-		}
-		switch {
-		case p.current() == '"':
-			if label, err = p.parseQuotedString(); err != nil {
-				return nil, err
-			}
-			if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
-				return nil, err
-			}
-		case unicode.IsDigit(p.current()):
-			if d, err = p.parseDate(); err != nil {
-				return nil, err
-			}
-			if err := p.scanner.ConsumeWhile(isWhitespace); err != nil {
-				return nil, err
-			}
-		default:
-			return nil, fmt.Errorf("expected label or date, got %q", p.current())
-		}
-	}
-	err = p.scanner.ConsumeRune('}')
-	if err != nil {
-		return nil, err
-	}
-	return &Lot{
-		Date:      d,
-		Label:     label,
-		Price:     price,
-		Commodity: commodity,
-	}, nil
-}
-
 func (p *Parser) parseTargetCommodities() ([]*Commodity, error) {
 	// we use non-nil slices of size 0 to mark portfolio income / expenses
 	res := make([]*Commodity, 0)
@@ -745,17 +667,6 @@ func (p *Parser) parseDate() (time.Time, error) {
 		return time.Time{}, err
 	}
 	return time.Parse("2006-01-02", d)
-}
-
-// parseFloat parses a floating point number
-func (p *Parser) parseFloat() (float64, error) {
-	start := p.scanner.Pos.Offset
-	for unicode.IsDigit(p.scanner.Current()) || p.scanner.Current() == '.' || p.scanner.Current() == '-' {
-		if err := p.scanner.Advance(); err != nil {
-			return 0, err
-		}
-	}
-	return strconv.ParseFloat(p.scanner.Text[start:p.scanner.Pos.Offset], 64)
 }
 
 // parseCommodity parses a commodity

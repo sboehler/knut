@@ -15,7 +15,6 @@
 package transcode
 
 import (
-	"path"
 	"testing"
 
 	"github.com/sboehler/knut/cmd/cmdtest"
@@ -23,14 +22,8 @@ import (
 )
 
 func TestGolden(t *testing.T) {
-	args := []string{
-		"-v",
-		"CHF",
-		path.Join("testdata", "example.knut"),
-	}
-	g := goldie.New(t)
 
-	got := cmdtest.Run(t, CreateCmd(), args)
+	got := cmdtest.Run(t, CreateCmd(), "-v", "CHF", "testdata/example.knut")
 
-	g.Assert(t, "example", got)
+	goldie.New(t).Assert(t, "example", got)
 }

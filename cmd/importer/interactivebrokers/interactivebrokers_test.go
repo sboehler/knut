@@ -23,17 +23,15 @@ import (
 )
 
 func TestGolden(t *testing.T) {
-	args := []string{
+
+	got := cmdtest.Run(t, CreateCmd(),
 		"--account", "Assets:IB",
 		"--dividend", "Income:Dividends",
 		"--fee", "Expenses:Fees",
 		"--tax", "Expenses:Tax",
 		"--interest", "Expenses:Interest",
 		"--trading", "Expenses:Trading",
-		"testdata/example1.input",
-	}
-
-	got := cmdtest.Run(t, CreateCmd(), args)
+		"testdata/example1.input")
 
 	goldie.New(t).Assert(t, "example1", got)
 }

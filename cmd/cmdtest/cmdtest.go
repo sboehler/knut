@@ -24,7 +24,7 @@ import (
 
 // Run runs the given command and args and returns the output
 // to stdout.
-func Run(t *testing.T, cmd *cobra.Command, args []string) []byte {
+func Run(t *testing.T, cmd *cobra.Command, args ...string) []byte {
 	t.Helper()
 	cmd.SetArgs(args)
 	var b bytes.Buffer

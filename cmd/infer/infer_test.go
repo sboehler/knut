@@ -15,8 +15,6 @@
 package infer
 
 import (
-	"fmt"
-	"path"
 	"testing"
 
 	"github.com/sboehler/knut/cmd/cmdtest"
@@ -25,23 +23,8 @@ import (
 )
 
 func TestGolden(t *testing.T) {
-	tests := []string{
-		"target",
-	}
-	for _, test := range tests {
-		test := test
-		t.Run(test, func(t *testing.T) {
-			t.Parallel()
-			var (
-				g    = goldie.New(t)
-				args = []string{
-					"--training-file",
-					path.Join("testdata", "training.knut"),
-					path.Join("testdata", fmt.Sprintf("%s.knut", test)),
-				}
-				got = cmdtest.Run(t, CreateCmd(), args)
-			)
-			g.Assert(t, test, got)
-		})
-	}
+
+	got := cmdtest.Run(t, CreateCmd(), "--training-file", "testdata/training.knut", "testdata/target.knut")
+
+	goldie.New(t).Assert(t, "target", got)
 }

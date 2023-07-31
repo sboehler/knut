@@ -17,7 +17,7 @@ package viac
 import (
 	"bufio"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -61,7 +61,6 @@ type runner struct {
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
 		ctx     = journal.NewContext()
-		f       *bufio.Reader
 		account *journal.Commodity
 		err     error
 	)
@@ -73,10 +72,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if f, err = flags.OpenFile(args[0]); err != nil {
-		return err
-	}
-	b, err := ioutil.ReadAll(f)
+	b, err := os.ReadFile(args[0])
 	if err != nil {
 		return err
 	}

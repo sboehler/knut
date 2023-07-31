@@ -16,7 +16,7 @@ package cmdtest
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -32,7 +32,7 @@ func Run(t *testing.T, cmd *cobra.Command, args ...string) []byte {
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	out, err := ioutil.ReadAll(&b)
+	out, err := io.ReadAll(&b)
 	if err != nil {
 		t.Fatal(err)
 	}

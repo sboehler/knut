@@ -24,6 +24,7 @@ import (
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
 	"github.com/shopspring/decimal"
+	"github.com/sourcegraph/conc/pool"
 	"go.uber.org/multierr"
 
 	"github.com/cheggaaa/pb/v3"
@@ -46,7 +47,7 @@ func CreateCmd() *cobra.Command {
 }
 
 func run(cmd *cobra.Command, args []string) {
-	if err := execute(cmd, args); err != nil {
+	if err := execute2(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		os.Exit(1)
 	}
@@ -54,41 +55,23 @@ func run(cmd *cobra.Command, args []string) {
 
 const concurrency = 5
 
-func execute(cmd *cobra.Command, args []string) error {
+func execute2(cmd *cobra.Command, args []string) error {
 	ctx := journal.NewContext()
 	configs, err := readConfig(args[0])
 	if err != nil {
 		return err
 	}
-	errCh := make(chan error)
-	go func() {
-		defer close(errCh)
+	p := pool.New().WithMaxGoroutines(concurrency).WithErrors()
+	bar := pb.StartNew(len(configs))
 
-		sema := make(chan bool, concurrency)
-		defer close(sema)
-
-		bar := pb.StartNew(len(configs))
-		defer bar.Finish()
-
-		for _, cfg := range configs {
-			sema <- true
-			go func(c config) {
-				if err := fetch(ctx, args[0], c); err != nil {
-					errCh <- err
-				}
-				bar.Increment()
-				<-sema
-			}(cfg)
-		}
-		for i := 0; i < concurrency; i++ {
-			sema <- true
-		}
-	}()
-	var errors error
-	for err = range errCh {
-		errors = multierr.Append(errors, err)
+	for _, cfg := range configs {
+		cfg := cfg
+		p.Go(func() error {
+			defer bar.Increment()
+			return fetch(ctx, args[0], cfg)
+		})
 	}
-	return errors
+	return multierr.Combine(p.Wait())
 }
 
 func fetch(jctx journal.Context, f string, cfg config) error {

@@ -10,9 +10,10 @@ require (
 	github.com/natefinch/atomic v1.0.1
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/shopspring/decimal v1.3.1
+	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
-	go.uber.org/multierr v1.8.0
+	go.uber.org/multierr v1.9.0
 	golang.org/x/exp v0.0.0-20220909182711-5c715a9e8561
 	golang.org/x/sync v0.0.0-20220907140024-f12130a52804
 	golang.org/x/text v0.3.7

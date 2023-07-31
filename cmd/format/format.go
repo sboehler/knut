@@ -20,10 +20,10 @@ import (
 	"os"
 
 	"github.com/natefinch/atomic"
+	"github.com/sourcegraph/conc/iter"
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
 
-	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/syntax"
 	"github.com/sboehler/knut/lib/syntax/parser"
 	"github.com/sboehler/knut/lib/syntax/printer"
@@ -40,8 +40,6 @@ func CreateCmd() *cobra.Command {
 	}
 }
 
-const concurrency = 10
-
 func run(cmd *cobra.Command, args []string) {
 	if err := execute(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
@@ -50,39 +48,11 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func execute(cmd *cobra.Command, args []string) error {
-	var (
-		ctx   = cmd.Context()
-		errCh = make(chan error)
-	)
-	go func() {
-		defer close(errCh)
-		sema := make(chan bool, concurrency)
-		defer close(sema)
-		for _, arg := range args {
-			sema <- true
-			go func(arg string) {
-				defer func() { <-sema }()
-				if err := formatFile(arg); err != nil {
-					if cpr.Push(ctx, errCh, err) != nil {
-						return
-					}
-				}
-			}(arg)
-		}
-		for i := 0; i < concurrency; i++ {
-			sema <- true
-		}
-	}()
-
-	var errors error
-	for err := range errCh {
-		errors = multierr.Append(errors, err)
-	}
-	return errors
+	return multierr.Combine(iter.Map(args, formatFile)...)
 }
 
-func formatFile(target string) error {
-	file, err := readDirectives(target)
+func formatFile(target *string) error {
+	file, err := readDirectives(*target)
 	if err != nil {
 		return err
 	}
@@ -93,7 +63,7 @@ func formatFile(target string) error {
 	if err := p.Format(file, &dest); err != nil {
 		return err
 	}
-	return atomic.WriteFile(target, &dest)
+	return atomic.WriteFile(*target, &dest)
 }
 
 func readDirectives(target string) (syntax.File, error) {

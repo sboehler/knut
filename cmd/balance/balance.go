@@ -21,13 +21,17 @@ import (
 	"os"
 	"runtime/pprof"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/table"
-	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/report"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/report"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/account"
+	"github.com/sboehler/knut/lib/model/commodity"
+	"github.com/sboehler/knut/lib/model/registry"
 
 	"github.com/spf13/cobra"
 )
@@ -117,7 +121,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 }
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
-	jctx := journal.NewContext()
+	jctx := registry.NewContext()
 	valuation, err := r.valuation.Value(jctx)
 	if err != nil {
 		return err
@@ -137,11 +141,11 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 			Mapper: journal.KeyMapper{
 				Date: partition.Align(),
 				Account: mapper.Combine(
-					journal.RemapAccount(jctx, r.remap.Regex()),
-					journal.ShortenAccount(jctx, r.mapping.Value()),
+					account.RemapAccount(jctx.Accounts(), r.remap.Regex()),
+					account.ShortenAccount(jctx.Accounts(), r.mapping.Value()),
 				),
-				Commodity: mapper.Identity[*journal.Commodity],
-				Valuation: journal.MapCommodity(valuation != nil),
+				Commodity: mapper.Identity[*model.Commodity],
+				Valuation: commodity.Map(valuation != nil),
 			}.Build(),
 			Filter: filter.And(
 				journal.FilterAccount(r.accounts.Regex()),

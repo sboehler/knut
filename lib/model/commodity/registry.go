@@ -92,13 +92,13 @@ func isValidCommodity(s string) bool {
 	return true
 }
 
-func MapCommodity(t bool) func(*Commodity) *Commodity {
+func Map(t bool) func(*Commodity) *Commodity {
 	if t {
 		return mapper.Identity[*Commodity]
 	}
 	return mapper.Nil[*Commodity]
 }
 
-func CompareCommodities(c1, c2 *Commodity) compare.Order {
+func Compare(c1, c2 *Commodity) compare.Order {
 	return compare.Ordered(c1.Name(), c2.Name())
 }

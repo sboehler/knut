@@ -32,8 +32,8 @@ type Registry struct {
 }
 
 // NewContext creates a new, empty context.
-func NewContext() Registry {
-	return Registry{
+func NewContext() *Registry {
+	return &Registry{
 		accounts:    account.NewRegistry(),
 		commodities: commodity.NewCommodities(),
 	}

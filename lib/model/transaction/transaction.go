@@ -59,7 +59,7 @@ func (tb Builder) Build() *Transaction {
 }
 
 func Create(reg *registry.Registry, t *syntax.Transaction) ([]*Transaction, error) {
-	date, err := parseDate(t.Date)
+	date, err := t.Date.Parse()
 	if err != nil {
 		return nil, err
 	}
@@ -99,11 +99,11 @@ func expand(reg *registry.Registry, t *Transaction, accrual *syntax.Accrual) ([]
 	if err != nil {
 		return nil, err
 	}
-	start, err := parseDate(accrual.Start)
+	start, err := accrual.Start.Parse()
 	if err != nil {
 		return nil, err
 	}
-	end, err := parseDate(accrual.End)
+	end, err := accrual.End.Parse()
 	if err != nil {
 		return nil, err
 	}
@@ -155,16 +155,4 @@ func expand(reg *registry.Registry, t *Transaction, accrual *syntax.Accrual) ([]
 		}
 	}
 	return result, nil
-}
-
-func parseDate(d syntax.Date) (time.Time, error) {
-	date, err := time.Parse("2006-01-02", d.Extract())
-	if err != nil {
-		return date, syntax.Error{
-			Message: "parsing date",
-			Range:   d.Range,
-			Wrapped: err,
-		}
-	}
-	return date, nil
 }

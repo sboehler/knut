@@ -3,6 +3,9 @@ package syntax
 import (
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 type Commodity struct{ Range }
@@ -14,7 +17,31 @@ type Account struct {
 
 type Date struct{ Range }
 
+func (d Date) Parse() (time.Time, error) {
+	date, err := time.Parse("2006-01-02", d.Extract())
+	if err != nil {
+		return date, Error{
+			Message: "parsing date",
+			Range:   d.Range,
+			Wrapped: err,
+		}
+	}
+	return date, nil
+}
+
 type Decimal struct{ Range }
+
+func (d Decimal) Parse() (decimal.Decimal, error) {
+	dec, err := decimal.NewFromString(d.Extract())
+	if err != nil {
+		return dec, Error{
+			Message: "parsing date",
+			Range:   d.Range,
+			Wrapped: err,
+		}
+	}
+	return dec, nil
+}
 
 type QuotedString struct {
 	Range

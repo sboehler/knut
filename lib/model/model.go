@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/model/account"
@@ -17,6 +16,7 @@ import (
 	"github.com/sboehler/knut/lib/model/transaction"
 	"github.com/sboehler/knut/lib/syntax"
 	"github.com/sboehler/knut/lib/syntax/parser"
+	"github.com/sourcegraph/conc/pool"
 )
 
 type Commodity = commodity.Commodity
@@ -41,51 +41,76 @@ var (
 	_ Directive = (*transaction.Transaction)(nil)
 )
 
-func FromStream(ctx context.Context, reg *registry.Registry, ch <-chan parser.Result) <-chan any {
-	out := make(chan any)
-	var wg sync.WaitGroup
-	wg.Add(1)
+type Result struct {
+	Err        error
+	Directives []any
+}
+
+func FromStream(ctx context.Context, reg *registry.Registry, ch <-chan parser.Result) <-chan Result {
+	out := make(chan Result)
 	go func() {
-		defer wg.Done()
-		for res := range ch {
-			if res.Err != nil {
-				cpr.Push[any](ctx, out, res.Err)
+		p := pool.New()
+		for input := range ch {
+			if input.Err != nil {
+				cpr.Push(ctx, out, Result{Err: input.Err})
 				continue
 			}
-			wg.Add(1)
-			res := res
-			go func() {
-				defer wg.Done()
-				for _, d := range res.File.Directives {
+			input := input
+			p.Go(func() {
+				var ds []any
+				for _, d := range input.File.Directives {
 					m, err := Create(reg, d.Directive)
 					if err != nil {
-						cpr.Push[any](ctx, out, err)
-					} else if m != nil {
-						cpr.Push[any](ctx, out, m)
+						cpr.Push(ctx, out, Result{Err: err})
+						return
 					}
+					ds = append(ds, m...)
 				}
-			}()
+				cpr.Push(ctx, out, Result{Directives: ds})
+			})
 		}
-	}()
-	go func() {
-		wg.Wait()
+		p.Wait()
 		close(out)
 	}()
 	return out
 }
 
-func Create(reg *registry.Registry, w any) (Directive, error) {
+func Create(reg *registry.Registry, w any) ([]any, error) {
 	switch d := w.(type) {
 	case syntax.Transaction:
-		return transaction.Create(reg, &d)
+		ts, err := transaction.Create(reg, &d)
+		if err != nil {
+			return nil, err
+		}
+		var res []any
+		for _, t := range ts {
+			res = append(res, t)
+		}
+		return res, nil
 	case syntax.Open:
-		return open.Create(reg, &d)
+		o, err := open.Create(reg, &d)
+		if err != nil {
+			return nil, err
+		}
+		return []any{o}, nil
 	case syntax.Close:
-		return cls.Create(reg, &d)
+		o, err := cls.Create(reg, &d)
+		if err != nil {
+			return nil, err
+		}
+		return []any{o}, nil
 	case syntax.Assertion:
-		return assertion.Create(reg, &d)
+		o, err := assertion.Create(reg, &d)
+		if err != nil {
+			return nil, err
+		}
+		return []any{o}, nil
 	case syntax.Price:
-		return price.Create(reg, &d)
+		o, err := price.Create(reg, &d)
+		if err != nil {
+			return nil, err
+		}
+		return []any{o}, nil
 	case syntax.Include:
 		return nil, nil
 	}

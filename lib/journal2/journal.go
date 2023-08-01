@@ -113,40 +113,34 @@ func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, 
 	j := New(reg)
 	syntaxCh := parser.Parse(ctx, path)
 	modelCh := model.FromStream(ctx, reg, syntaxCh)
-	var errs error
-	err := cpr.Consume(ctx, modelCh, func(d any) error {
-		switch t := d.(type) {
+	err := cpr.Consume(ctx, modelCh, func(input model.Result) error {
+		if input.Err != nil {
+			return input.Err
+		}
+		for _, d := range input.Directives {
+			switch t := d.(type) {
+			case *model.Open:
+				j.AddOpen(t)
 
-		case error:
-			return t
+			case *model.Price:
+				j.AddPrice(t)
 
-		case *model.Open:
-			j.AddOpen(t)
+			case *model.Transaction:
+				j.AddTransaction(t)
 
-		case *model.Price:
-			j.AddPrice(t)
+			case *model.Assertion:
+				j.AddAssertion(t)
 
-		case []*model.Transaction:
-			for _, trx := range t {
-				j.AddTransaction(trx)
+			case *model.Close:
+				j.AddClose(t)
+			default:
+				return fmt.Errorf("unknown: %v (%T)", t, t)
 			}
-
-		case *model.Assertion:
-			j.AddAssertion(t)
-
-		case *model.Close:
-			j.AddClose(t)
-
-		default:
-			return fmt.Errorf("unknown: %v (%T)", t, t)
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
-	}
-	if errs != nil {
-		return nil, errs
 	}
 	return j, nil
 }

@@ -68,7 +68,6 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer func() { err = multierr.Append(err, w.Flush()) }()
 
-	// transcode the ledger here
 	_, errors = journal.NewPrinter().PrintJournal(w, j)
 	return errors
 }

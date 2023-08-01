@@ -18,8 +18,8 @@ import (
 	"strings"
 )
 
-// Context has context for this ledger, namely a collection of
-// referenced accounts and
+// Context has context for the model, namely a collection of
+// referenced accounts and commodities.
 type Context struct {
 	accounts    *Accounts
 	commodities *Commodities

@@ -26,8 +26,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Transcode transcodes the given ledger to beancount.
-func Transcode(w io.Writer, l []*journal.Day, c *journal.Commodity) error {
+// Transcode transcodes the given journal to beancount.
+func Transcode(w io.Writer, j []*journal.Day, c *journal.Commodity) error {
 	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c.Name()); err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func Transcode(w io.Writer, l []*journal.Day, c *journal.Commodity) error {
 	}
 	var p journal.Printer
 	openValAccounts := set.New[*journal.Account]()
-	for _, day := range l {
+	for _, day := range j {
 		for _, open := range day.Openings {
 			if _, err := p.PrintDirective(w, open); err != nil {
 				return err

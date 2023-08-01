@@ -95,12 +95,14 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 
 func train(ctx context.Context, file string, account string) (*bayes.Model, error) {
 	model := bayes.NewModel(account)
-	return model, cpr.Consume(ctx, parser.Parse(ctx, file), func(d any) error {
-		switch t := d.(type) {
-		case error:
-			return t
-		case syntax.Transaction:
-			model.Update(&t)
+	return model, cpr.Consume(ctx, parser.Parse(ctx, file), func(res parser.Result) error {
+		if res.Err != nil {
+			return res.Err
+		}
+		for _, d := range res.File.Directives {
+			if t, ok := d.Directive.(syntax.Transaction); ok {
+				model.Update(&t)
+			}
 		}
 		return nil
 	})

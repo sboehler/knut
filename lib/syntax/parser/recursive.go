@@ -11,18 +11,16 @@ import (
 	"github.com/sboehler/knut/lib/syntax"
 )
 
-func Parse(ctx context.Context, file string) <-chan any {
-	resCh := make(chan any, 1000)
+func Parse(ctx context.Context, file string) <-chan Result {
+	resCh := make(chan Result)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
-		err := parseRec(ctx, &wg, resCh, file)
-		if err != nil && ctx.Err() == nil {
-			cpr.Push[any](ctx, resCh, err)
-		}
+		res := parseRec(ctx, &wg, resCh, file)
+		cpr.Push(ctx, resCh, res)
 	}()
 
 	// Parse and eventually close input channel
@@ -33,14 +31,19 @@ func Parse(ctx context.Context, file string) <-chan any {
 	return resCh
 }
 
-func parseRec(ctx context.Context, wg *sync.WaitGroup, resCh chan<- any, file string) error {
+type Result struct {
+	File syntax.File
+	Err  error
+}
+
+func parseRec(ctx context.Context, wg *sync.WaitGroup, resCh chan<- Result, file string) Result {
 	text, err := os.ReadFile(file)
 	if err != nil {
-		return err
+		return Result{Err: err}
 	}
 	p := New(string(text), file)
 	if err := p.Advance(); err != nil {
-		return err
+		return Result{Err: err}
 	}
 	p.callback = func(d syntax.Directive) error {
 		if inc, ok := d.Directive.(syntax.Include); ok {
@@ -48,15 +51,13 @@ func parseRec(ctx context.Context, wg *sync.WaitGroup, resCh chan<- any, file st
 			go func() {
 				defer wg.Done()
 				p := path.Join(filepath.Dir(file), inc.Path.Content.Extract())
-				err := parseRec(ctx, wg, resCh, p)
-				if err != nil && ctx.Err() == nil {
-					cpr.Push[any](ctx, resCh, err)
-				}
+				res := parseRec(ctx, wg, resCh, p)
+				cpr.Push(ctx, resCh, res)
 			}()
 			return nil
 		}
-		return cpr.Push[any](ctx, resCh, d.Directive)
+		return nil
 	}
-	_, err = p.ParseFile()
-	return err
+	f, err := p.ParseFile()
+	return Result{File: f, Err: err}
 }

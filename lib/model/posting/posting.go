@@ -4,6 +4,7 @@ import (
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/model/account"
 	"github.com/sboehler/knut/lib/model/commodity"
+	"github.com/sboehler/knut/lib/model/registry"
 	"github.com/sboehler/knut/lib/syntax"
 	"github.com/shopspring/decimal"
 )
@@ -72,4 +73,34 @@ func Compare(p, p2 *Posting) compare.Order {
 		return o
 	}
 	return compare.Ordered(p.Commodity.Name(), p2.Commodity.Name())
+}
+
+func Create(reg *registry.Registry, bs []syntax.Booking) ([]*Posting, error) {
+	var builder Builders
+	for i, b := range bs {
+		credit, err := reg.Accounts().Create(b.Credit)
+		if err != nil {
+			return nil, err
+		}
+		debit, err := reg.Accounts().Create(b.Debit)
+		if err != nil {
+			return nil, err
+		}
+		amount, err := decimal.NewFromString(b.Amount.Extract())
+		if err != nil {
+			return nil, syntax.Error{Range: b.Amount.Range, Message: "parsing amount", Wrapped: err}
+		}
+		commodity, err := reg.Commodities().Create(b.Commodity)
+		if err != nil {
+			return nil, err
+		}
+		builder = append(builder, Builder{
+			Src:       &bs[i],
+			Credit:    credit,
+			Debit:     debit,
+			Amount:    amount,
+			Commodity: commodity,
+		})
+	}
+	return builder.Build(), nil
 }

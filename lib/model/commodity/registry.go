@@ -60,7 +60,7 @@ func (cs *Registry) Get(name string) (*Commodity, error) {
 	return res, nil
 }
 
-func (as *Registry) Create(a *syntax.Commodity) (*Commodity, error) {
+func (as *Registry) Create(a syntax.Commodity) (*Commodity, error) {
 	return as.Get(a.Extract())
 }
 

@@ -103,7 +103,7 @@ func (as *Registry) Get(name string) (*Account, error) {
 	return parent, nil
 }
 
-func (as *Registry) Create(a *syntax.Account) (*Account, error) {
+func (as *Registry) Create(a syntax.Account) (*Account, error) {
 	return as.Get(a.Extract())
 }
 

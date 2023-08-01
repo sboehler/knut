@@ -21,6 +21,7 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/mapper"
+	"github.com/sboehler/knut/lib/syntax"
 )
 
 // Registry is a thread-safe collection of commodities.
@@ -57,6 +58,10 @@ func (cs *Registry) Get(name string) (*Commodity, error) {
 	cs.insert(res)
 
 	return res, nil
+}
+
+func (as *Registry) Create(a *syntax.Commodity) (*Commodity, error) {
+	return as.Get(a.Extract())
 }
 
 func (cs *Registry) insert(c *Commodity) {

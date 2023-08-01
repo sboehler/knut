@@ -1,9 +1,13 @@
 package account
 
 import (
+	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/sboehler/knut/lib/common/compare"
+	"github.com/sboehler/knut/lib/common/mapper"
+	"github.com/sboehler/knut/lib/common/regex"
 )
 
 // Type is the type of an account.
@@ -97,4 +101,57 @@ func Compare(a1, a2 *Account) compare.Order {
 		return o
 	}
 	return compare.Ordered(a1.name, a2.name)
+}
+
+// Rule is a rule to shorten accounts which match the given regex.
+type Rule struct {
+	Level int
+	Regex *regexp.Regexp
+}
+
+func (r Rule) String() string {
+	return fmt.Sprintf("%d,%v", r.Level, r.Regex)
+}
+
+// AccountMapping is a set of mapping rules.
+type AccountMapping []Rule
+
+func (m AccountMapping) String() string {
+	var s []string
+	for _, r := range m {
+		s = append(s, r.String())
+	}
+	return strings.Join(s, ", ")
+}
+
+// level returns the level to which an account should be shortened.
+func (m AccountMapping) level(a *Account) int {
+	for _, c := range m {
+		if c.Regex == nil || c.Regex.MatchString(a.name) {
+			return c.Level
+		}
+	}
+	return a.level
+}
+
+func ShortenAccount(reg *Registry, m AccountMapping) mapper.Mapper[*Account] {
+	if len(m) == 0 {
+		return mapper.Identity[*Account]
+	}
+	return func(a *Account) *Account {
+		level := m.level(a)
+		if level >= a.level {
+			return a
+		}
+		return reg.NthParent(a, a.level-level)
+	}
+}
+
+func RemapAccount(reg *Registry, rs regex.Regexes) mapper.Mapper[*Account] {
+	return func(a *Account) *Account {
+		if rs.MatchString(a.name) {
+			return reg.SwapType(a)
+		}
+		return a
+	}
 }

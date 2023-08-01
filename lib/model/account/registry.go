@@ -16,15 +16,13 @@ package account
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
 	"unicode"
 
 	"github.com/sboehler/knut/lib/common/dict"
-	"github.com/sboehler/knut/lib/common/mapper"
-	"github.com/sboehler/knut/lib/common/regex"
 	"github.com/sboehler/knut/lib/common/set"
+	"github.com/sboehler/knut/lib/syntax"
 )
 
 // Registry is a thread-safe collection of accounts.
@@ -103,6 +101,10 @@ func (as *Registry) Get(name string) (*Account, error) {
 		})
 	}
 	return parent, nil
+}
+
+func (as *Registry) Create(a *syntax.Account) (*Account, error) {
+	return as.Get(a.Extract())
 }
 
 func isValidSegment(s string) bool {
@@ -197,57 +199,4 @@ func (as *Registry) SwapType(a *Account) *Account {
 	as.swaps[a] = sw
 	return sw
 
-}
-
-// Rule is a rule to shorten accounts which match the given regex.
-type Rule struct {
-	Level int
-	Regex *regexp.Regexp
-}
-
-func (r Rule) String() string {
-	return fmt.Sprintf("%d,%v", r.Level, r.Regex)
-}
-
-// AccountMapping is a set of mapping rules.
-type AccountMapping []Rule
-
-func (m AccountMapping) String() string {
-	var s []string
-	for _, r := range m {
-		s = append(s, r.String())
-	}
-	return strings.Join(s, ", ")
-}
-
-// level returns the level to which an account should be shortened.
-func (m AccountMapping) level(a *Account) int {
-	for _, c := range m {
-		if c.Regex == nil || c.Regex.MatchString(a.name) {
-			return c.Level
-		}
-	}
-	return a.level
-}
-
-func ShortenAccount(reg *Registry, m AccountMapping) mapper.Mapper[*Account] {
-	if len(m) == 0 {
-		return mapper.Identity[*Account]
-	}
-	return func(a *Account) *Account {
-		level := m.level(a)
-		if level >= a.level {
-			return a
-		}
-		return reg.NthParent(a, a.level-level)
-	}
-}
-
-func RemapAccount(reg *Registry, rs regex.Regexes) mapper.Mapper[*Account] {
-	return func(a *Account) *Account {
-		if rs.MatchString(a.name) {
-			return reg.SwapType(a)
-		}
-		return a
-	}
 }

@@ -15,6 +15,7 @@
 package date
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -55,6 +56,24 @@ func (p Interval) String() string {
 		return "yearly"
 	}
 	return ""
+}
+
+func ParseInterval(s string) (Interval, error) {
+	switch s {
+	case "once":
+		return Once, nil
+	case "daily":
+		return Daily, nil
+	case "weekly":
+		return Weekly, nil
+	case "monthly":
+		return Monthly, nil
+	case "quarterly":
+		return Quarterly, nil
+	case "yearly":
+		return Yearly, nil
+	}
+	return Once, fmt.Errorf("invalid interval: %s", s)
 }
 
 // Date creates a new

@@ -142,7 +142,7 @@ func FromPath(ctx context.Context, jctx Context, path string) (*Journal, error) 
 			j.AddClose(t)
 
 		default:
-			errs = multierr.Append(errs, fmt.Errorf("unknown: %#v", t))
+			errs = multierr.Append(errs, fmt.Errorf("unknown: %v", t))
 		}
 		return nil
 	})

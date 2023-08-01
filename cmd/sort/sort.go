@@ -129,7 +129,7 @@ func readDirectives(jctx journal.Context, target string) (*journal.Journal, erro
 			res.AddClose(t)
 
 		default:
-			return nil, fmt.Errorf("unknown: %#v", t)
+			return nil, fmt.Errorf("unknown: %v", t)
 		}
 	}
 }

@@ -28,7 +28,6 @@ import (
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/price"
 	"github.com/sboehler/knut/lib/syntax/parser"
-	"go.uber.org/multierr"
 )
 
 // Journal represents an unprocessed
@@ -119,7 +118,7 @@ func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, 
 		switch t := d.(type) {
 
 		case error:
-			errs = multierr.Append(errs, t)
+			return t
 
 		case *model.Open:
 			j.AddOpen(t)
@@ -139,7 +138,7 @@ func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, 
 			j.AddClose(t)
 
 		default:
-			errs = multierr.Append(errs, fmt.Errorf("unknown: %#v", t))
+			return fmt.Errorf("unknown: %v (%T)", t, t)
 		}
 		return nil
 	})

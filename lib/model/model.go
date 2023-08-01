@@ -44,23 +44,23 @@ func FromStream(ctx context.Context, reg *registry.Registry, ch <-chan any) <-ch
 	go func() {
 		defer close(res)
 		for a := range ch {
-			if d, ok := a.(syntax.Directive); ok {
-				m, err := Create(reg, d)
-				if err != nil {
-					cpr.Push[any](ctx, res, a)
-				} else {
-					cpr.Push[any](ctx, res, m)
-				}
+			if err, ok := a.(error); ok {
+				cpr.Push[any](ctx, res, err)
+				return
+			}
+			m, err := Create(reg, a)
+			if err != nil {
+				cpr.Push[any](ctx, res, err)
 			} else {
-				cpr.Push(ctx, res, a)
+				cpr.Push[any](ctx, res, m)
 			}
 		}
 	}()
 	return res
 }
 
-func Create(reg *registry.Registry, w syntax.Directive) (Directive, error) {
-	switch d := w.Directive.(type) {
+func Create(reg *registry.Registry, w any) (Directive, error) {
+	switch d := w.(type) {
 	case syntax.Transaction:
 		return transaction.Create(reg, &d)
 	case syntax.Open:

@@ -48,12 +48,12 @@ func (p *Parser) ParseFile() (syntax.File, error) {
 
 		case isAlphanumeric(p.Current()) || p.Current() == '@':
 			dir, err := p.parseDirective()
-			if p.callback != nil {
-				p.callback(dir)
-			}
 			file.Directives = append(file.Directives, dir)
 			if err != nil {
 				return syntax.SetRange(&file, p.Range()), p.Annotate(err)
+			}
+			if p.callback != nil {
+				p.callback(dir)
 			}
 		}
 		if p.Current() == scanner.EOF {

@@ -94,14 +94,6 @@ func (j *Journal) AddClose(c *Close) {
 	d.Closings = append(d.Closings, c)
 }
 
-func (j *Journal) Min() time.Time {
-	return j.min
-}
-
-func (j *Journal) Max() time.Time {
-	return j.max
-}
-
 func (j *Journal) Period() date.Period {
 	return date.Period{Start: j.min, End: j.max}
 }

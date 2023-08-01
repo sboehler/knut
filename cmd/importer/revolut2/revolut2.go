@@ -64,14 +64,14 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		f   *bufio.Reader
 		err error
 	)
-	a := journal.New(ctx)
+	j := journal.New(ctx)
 	for _, path := range args {
 		if f, err = flags.OpenFile(path); err != nil {
 			return err
 		}
 		p := parser{
 			reader:  csv.NewReader(f),
-			journal: a,
+			journal: j,
 		}
 		if p.account, err = r.account.Value(ctx); err != nil {
 			return err
@@ -85,7 +85,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintLedger(out, a.ToLedger())
+	_, err = journal.NewPrinter().PrintJournal(out, j)
 	return err
 }
 

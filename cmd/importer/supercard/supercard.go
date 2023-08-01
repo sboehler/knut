@@ -72,7 +72,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	p := parser{
 		reader:  csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)),
-		builder: journal.New(ctx),
+		journal: journal.New(ctx),
 	}
 
 	if p.account, err = r.account.Value(ctx); err != nil {
@@ -83,14 +83,14 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintLedger(out, p.builder.ToLedger())
+	_, err = journal.NewPrinter().PrintJournal(out, p.journal)
 	return err
 }
 
 type parser struct {
 	reader  *csv.Reader
 	account *journal.Account
-	builder *journal.Journal
+	journal *journal.Journal
 }
 
 func (p *parser) parse() error {
@@ -188,14 +188,14 @@ func (p *parser) parseBooking(r []string) error {
 	if amount, err = p.parseAmount(r); err != nil {
 		return err
 	}
-	if commodity, err = p.builder.Context.GetCommodity(currency); err != nil {
+	if commodity, err = p.journal.Context.GetCommodity(currency); err != nil {
 		return err
 	}
-	p.builder.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(journal.TransactionBuilder{
 		Date:        date,
 		Description: words,
 		Postings: journal.PostingBuilder{
-			Credit:    p.builder.Context.TBDAccount(),
+			Credit:    p.journal.Context.TBDAccount(),
 			Debit:     p.account,
 			Commodity: commodity,
 			Amount:    amount,

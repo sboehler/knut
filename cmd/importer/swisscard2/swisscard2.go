@@ -71,7 +71,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	p := parser{
 		reader:  csv.NewReader(f),
-		builder: journal.New(ctx),
+		journal: journal.New(ctx),
 		account: account,
 	}
 	if err = p.parse(); err != nil {
@@ -79,14 +79,14 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	_, err = journal.NewPrinter().PrintLedger(w, p.builder.ToLedger())
+	_, err = journal.NewPrinter().PrintJournal(w, p.journal)
 	return err
 }
 
 type parser struct {
 	reader  *csv.Reader
 	account *journal.Account
-	builder *journal.Journal
+	journal *journal.Journal
 }
 
 func (p *parser) parse() error {
@@ -134,17 +134,17 @@ func (p *parser) readBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid date in record %v: %w", r, err)
 	}
-	c := p.builder.Context.Commodity(r[währung])
+	c := p.journal.Context.Commodity(r[währung])
 	amt, err := decimal.NewFromString(r[betrag])
 	if err != nil {
 		return fmt.Errorf("invalid amount in record %v: %w", r, err)
 	}
-	p.builder.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(journal.TransactionBuilder{
 		Date:        d,
 		Description: fmt.Sprintf("%s / %s / %s / %s", r[beschreibung], r[kartennummer], r[kategorie], r[debitKredit]),
 		Postings: journal.PostingBuilder{
 			Credit:    p.account,
-			Debit:     p.builder.Context.TBDAccount(),
+			Debit:     p.journal.Context.TBDAccount(),
 			Commodity: c,
 			Amount:    amt,
 		}.Build(),

@@ -87,7 +87,7 @@ func sortFile(target string) error {
 		return err
 	}
 	var buf bytes.Buffer
-	_, err = journal.NewPrinter().PrintLedger(&buf, j.ToLedger())
+	_, err = journal.NewPrinter().PrintJournal(&buf, j)
 	if err != nil {
 		return err
 	}

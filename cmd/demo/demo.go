@@ -218,10 +218,8 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	l := j.ToLedger()
 	p := journal.NewPrinter()
-
 	var buf bytes.Buffer
-	p.PrintLedger(&buf, l)
+	p.PrintJournal(&buf, j)
 	return atomic.WriteFile(args[0], &buf)
 }

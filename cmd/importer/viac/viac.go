@@ -79,7 +79,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var resp response
 	json.Unmarshal(b, &resp)
 
-	builder := journal.New(ctx)
+	j := journal.New(ctx)
 	for _, dv := range resp.DailyValues {
 		d, err := time.Parse("2006-01-02", dv.Date)
 		if err != nil {
@@ -95,7 +95,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		if a.IsZero() {
 			continue
 		}
-		builder.AddPrice(&journal.Price{
+		j.AddPrice(&journal.Price{
 			Date:      d,
 			Commodity: account,
 			Price:     a.Round(2),
@@ -105,7 +105,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintLedger(out, builder.ToLedger())
+	_, err = journal.NewPrinter().PrintJournal(out, j)
 	return err
 }
 

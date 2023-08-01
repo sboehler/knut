@@ -155,14 +155,14 @@ func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[
 }
 
 func writeFile(ctx journal.Context, prices map[time.Time]*journal.Price, filepath string) error {
-	b := journal.New(ctx)
+	j := journal.New(ctx)
 	for _, price := range prices {
-		b.AddPrice(price)
+		j.AddPrice(price)
 	}
 	r, w := io.Pipe()
 	go func() {
 		defer w.Close()
-		_, err := journal.NewPrinter().PrintLedger(w, b.ToLedger())
+		_, err := journal.NewPrinter().PrintJournal(w, j)
 		if err != nil {
 			panic(err)
 		}

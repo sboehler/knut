@@ -74,7 +74,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	if err != nil {
 		return err
 	}
-	l, err := j.Process(
+	ds, err := j.Process(
 		journal.ComputePrices(valuation),
 		journal.Balance(jctx, valuation),
 	)
@@ -82,5 +82,5 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	defer func() { err = multierr.Append(err, w.Flush()) }()
 
 	// transcode the ledger here
-	return beancount.Transcode(w, l.Days, valuation)
+	return beancount.Transcode(w, ds, valuation)
 }

@@ -62,13 +62,13 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	if err != nil {
 		return err
 	}
-	l, err := j.Process(
+	_, err = j.Process(
 		journal.Balance(jctx, nil),
 	)
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer func() { err = multierr.Append(err, w.Flush()) }()
 
 	// transcode the ledger here
-	_, errors = journal.NewPrinter().PrintLedger(w, l)
+	_, errors = journal.NewPrinter().PrintJournal(w, j)
 	return errors
 }

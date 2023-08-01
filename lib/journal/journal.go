@@ -50,7 +50,7 @@ func (j *Journal) Day(d time.Time) *Day {
 	return dict.GetDefault(j.Days, d, func() *Day { return &Day{Date: d} })
 }
 
-func (j *Journal) ToLedger() *Ledger {
+func (j *Journal) Sorted() []*Day {
 	l, _ := j.Process(Sort())
 	return l
 }
@@ -106,16 +106,13 @@ func (j *Journal) Period() date.Period {
 	return date.Period{Start: j.min, End: j.max}
 }
 
-func (j *Journal) Process(fs ...func(*Day) error) (*Ledger, error) {
+func (j *Journal) Process(fs ...func(*Day) error) ([]*Day, error) {
 	ds := dict.SortedValues(j.Days, CompareDays)
 	ds, err := slice.Parallel(ds, fs...)
 	if err != nil {
 		return nil, err
 	}
-	return &Ledger{
-		Context: j.Context,
-		Days:    ds,
-	}, nil
+	return ds, nil
 }
 
 func FromPath(ctx context.Context, jctx Context, path string) (*Journal, error) {
@@ -164,12 +161,6 @@ func FromPath(ctx context.Context, jctx Context, path string) (*Journal, error) 
 		return nil, errs
 	}
 	return j, nil
-}
-
-// Ledger is an ordered and processed list of Days.
-type Ledger struct {
-	Context Context
-	Days    []*Day
 }
 
 // Day groups all commands for a given date.

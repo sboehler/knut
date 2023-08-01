@@ -136,15 +136,15 @@ func (p Printer) printAssertion(w io.Writer, a *Assertion) (int, error) {
 	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity.Name())
 }
 
-// PrintLedger prints a Ledger.
-func (p *Printer) PrintLedger(w io.Writer, l *Ledger) (int, error) {
-	for _, day := range l.Days {
+// PrintJournal prints a Ledger.
+func (p *Printer) PrintJournal(w io.Writer, j *Journal) (int, error) {
+	for _, day := range j.Days {
 		for _, t := range day.Transactions {
 			p.updatePadding(t)
 		}
 	}
 	var n int
-	for _, day := range l.Days {
+	for _, day := range j.Sorted() {
 		for _, pr := range day.Prices {
 			if err := p.writeLn(w, pr, &n); err != nil {
 				return n, err

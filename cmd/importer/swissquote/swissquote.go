@@ -80,7 +80,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	p := parser{
 		reader:  csv.NewReader(f),
-		builder: journal.New(ctx),
+		journal: journal.New(ctx),
 	}
 	if p.account, err = r.account.Value(ctx); err != nil {
 		return err
@@ -105,13 +105,13 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintLedger(out, p.builder.ToLedger())
+	_, err = journal.NewPrinter().PrintJournal(out, p.journal)
 	return err
 }
 
 type parser struct {
 	reader  *csv.Reader
-	builder *journal.Journal
+	journal *journal.Journal
 	last    *record
 
 	account, dividend, tax, fee, interest, trading *journal.Account
@@ -201,7 +201,7 @@ func (p *parser) lineToRecord(l []string) (*record, error) {
 		return nil, err
 	}
 	if len(l[fSymbol]) > 0 {
-		if r.symbol, err = p.builder.Context.GetCommodity(l[fSymbol]); err != nil {
+		if r.symbol, err = p.journal.Context.GetCommodity(l[fSymbol]); err != nil {
 			return nil, err
 		}
 	}
@@ -223,7 +223,7 @@ func (p *parser) lineToRecord(l []string) (*record, error) {
 	if r.balance, err = parseDecimal(l[fSaldo]); err != nil {
 		return nil, err
 	}
-	if r.currency, err = p.builder.Context.GetCommodity(l[fWährung]); err != nil {
+	if r.currency, err = p.journal.Context.GetCommodity(l[fWährung]); err != nil {
 		return nil, err
 	}
 	return &r, nil
@@ -257,7 +257,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	if proceeds.IsPositive() {
 		qty = qty.Neg()
 	}
-	p.builder.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
 		Postings: journal.PostingBuilders{
@@ -303,7 +303,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		return true, nil
 	}
 	desc := fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency.Name(), r.trxType, r.netAmount, r.currency.Name())
-	p.builder.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: desc,
 		Postings: journal.PostingBuilders{
@@ -351,7 +351,7 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 			Amount:    r.fee,
 		})
 	}
-	p.builder.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol.Name(), r.name, r.isin),
 		Postings:    postings.Build(),
@@ -364,7 +364,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 	if r.trxType != "Depotgebühren" {
 		return false, nil
 	}
-	p.builder.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: journal.PostingBuilder{
@@ -388,11 +388,11 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 	if !w.Has(r.trxType) {
 		return false, nil
 	}
-	p.builder.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: journal.PostingBuilder{
-			Credit:    p.builder.Context.TBDAccount(),
+			Credit:    p.journal.Context.TBDAccount(),
 			Debit:     p.account,
 			Commodity: r.currency,
 			Amount:    r.netAmount,
@@ -405,7 +405,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 	if r.trxType != "Zins" {
 		return false, nil
 	}
-	p.builder.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: journal.PostingBuilder{
@@ -420,11 +420,11 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 }
 
 func (p *parser) parseCatchall(r *record) (bool, error) {
-	p.builder.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(journal.TransactionBuilder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: journal.PostingBuilder{
-			Credit:    p.builder.Context.TBDAccount(),
+			Credit:    p.journal.Context.TBDAccount(),
 			Debit:     p.account,
 			Commodity: r.currency,
 			Amount:    r.netAmount,

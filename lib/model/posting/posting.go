@@ -58,7 +58,6 @@ func (pbs Builders) Build() []*Posting {
 	return res
 }
 
-// Less determines an order on postings.
 func Compare(p, p2 *Posting) compare.Order {
 	if o := account.Compare(p.Account, p2.Account); o != compare.Equal {
 		return o

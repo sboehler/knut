@@ -31,8 +31,8 @@ type Registry struct {
 	commodities *commodity.Registry
 }
 
-// NewContext creates a new, empty context.
-func NewContext() *Registry {
+// New creates a new, empty context.
+func New() *Registry {
 	return &Registry{
 		accounts:    account.NewRegistry(),
 		commodities: commodity.NewCommodities(),

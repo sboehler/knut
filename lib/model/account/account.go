@@ -134,7 +134,7 @@ func (m AccountMapping) level(a *Account) int {
 	return a.level
 }
 
-func ShortenAccount(reg *Registry, m AccountMapping) mapper.Mapper[*Account] {
+func Shorten(reg *Registry, m AccountMapping) mapper.Mapper[*Account] {
 	if len(m) == 0 {
 		return mapper.Identity[*Account]
 	}
@@ -147,7 +147,7 @@ func ShortenAccount(reg *Registry, m AccountMapping) mapper.Mapper[*Account] {
 	}
 }
 
-func RemapAccount(reg *Registry, rs regex.Regexes) mapper.Mapper[*Account] {
+func Remap(reg *Registry, rs regex.Regexes) mapper.Mapper[*Account] {
 	return func(a *Account) *Account {
 		if rs.MatchString(a.name) {
 			return reg.SwapType(a)

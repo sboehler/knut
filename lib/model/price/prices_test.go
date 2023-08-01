@@ -11,9 +11,9 @@ import (
 )
 
 func TestPrices(t *testing.T) {
-	jctx := registry.NewContext()
-	com1 := jctx.Commodity("COM1")
-	com2 := jctx.Commodity("COM2")
+	reg := registry.New()
+	com1 := reg.Commodity("COM1")
+	com2 := reg.Commodity("COM2")
 
 	tests := []struct {
 		desc  string
@@ -54,11 +54,10 @@ func TestPrices(t *testing.T) {
 }
 
 func TestNormalize(t *testing.T) {
-	jctx := registry.NewContext()
-	com1 := jctx.Commodity("COM1")
-	com2 := jctx.Commodity("COM2")
-	com3 := jctx.Commodity("COM3")
-	// com4 := jctx.Commodity("COM2")
+	reg := registry.New()
+	com1 := reg.Commodity("COM1")
+	com2 := reg.Commodity("COM2")
+	com3 := reg.Commodity("COM3")
 
 	tests := []struct {
 		desc   string

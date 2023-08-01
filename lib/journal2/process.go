@@ -54,7 +54,7 @@ func ComputePrices(v *model.Commodity) DayFn {
 }
 
 // Balance balances the journal.
-func Balance(jctx *model.Registry, v *model.Commodity) DayFn {
+func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 	amounts, values := make(Amounts), make(Amounts)
 	accounts := set.New[*model.Account]()
 
@@ -150,7 +150,7 @@ func Balance(jctx *model.Registry, v *model.Commodity) DayFn {
 			if gain.IsZero() {
 				continue
 			}
-			credit := jctx.ValuationAccountFor(pos.Account)
+			credit := reg.ValuationAccountFor(pos.Account)
 			d.Transactions = append(d.Transactions, transaction.Builder{
 				Date:        d.Date,
 				Description: fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity.Name(), pos.Account.Name()),

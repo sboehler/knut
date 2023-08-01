@@ -12,21 +12,21 @@ import (
 )
 
 type Report struct {
-	Context *model.Registry
-	AL, EIE *Node
-	cache   nodeCache
-	dates   date.Partition
+	Registry *model.Registry
+	AL, EIE  *Node
+	cache    nodeCache
+	dates    date.Partition
 }
 
 type nodeCache map[*model.Account]*Node
 
-func NewReport(jctx *model.Registry, ds date.Partition) *Report {
+func NewReport(reg *model.Registry, ds date.Partition) *Report {
 	return &Report{
-		Context: jctx,
-		AL:      newNode(nil),
-		EIE:     newNode(nil),
-		cache:   make(nodeCache),
-		dates:   ds,
+		Registry: reg,
+		AL:       newNode(nil),
+		EIE:      newNode(nil),
+		cache:    make(nodeCache),
+		dates:    ds,
 	}
 }
 
@@ -35,7 +35,7 @@ func (r *Report) Insert(k journal.Key, v decimal.Decimal) {
 		return
 	}
 	n := dict.GetDefault(r.cache, k.Account, func() *Node {
-		ancestors := r.Context.Accounts().Ancestors(k.Account)
+		ancestors := r.Registry.Accounts().Ancestors(k.Account)
 		if k.Account.IsAL() {
 			return r.AL.Leaf(ancestors)
 		}

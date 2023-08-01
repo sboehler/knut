@@ -121,28 +121,28 @@ func (r *runner) setupFlags(c *cobra.Command) {
 }
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
-	jctx := registry.NewContext()
-	valuation, err := r.valuation.Value(jctx)
+	reg := registry.New()
+	valuation, err := r.valuation.Value(reg)
 	if err != nil {
 		return err
 	}
-	j, err := journal.FromPath(cmd.Context(), jctx, args[0])
+	j, err := journal.FromPath(cmd.Context(), reg, args[0])
 	if err != nil {
 		return err
 	}
 	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), r.last)
-	rep := report.NewReport(jctx, partition)
+	rep := report.NewReport(reg, partition)
 	_, err = j.Process(
 		journal.ComputePrices(valuation),
-		journal.Balance(jctx, valuation),
+		journal.Balance(reg, valuation),
 		journal.Filter(partition),
 		journal.CloseAccounts(j, r.close, partition),
 		journal.Query{
 			Mapper: journal.KeyMapper{
 				Date: partition.Align(),
 				Account: mapper.Combine(
-					account.RemapAccount(jctx.Accounts(), r.remap.Regex()),
-					account.ShortenAccount(jctx.Accounts(), r.mapping.Value()),
+					account.Remap(reg.Accounts(), r.remap.Regex()),
+					account.Shorten(reg.Accounts(), r.mapping.Value()),
 				),
 				Commodity: mapper.Identity[*model.Commodity],
 				Valuation: commodity.Map(valuation != nil),

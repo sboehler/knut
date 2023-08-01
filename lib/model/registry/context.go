@@ -12,35 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package registry
 
 import (
 	"strings"
+
+	"github.com/sboehler/knut/lib/model/account"
+	"github.com/sboehler/knut/lib/model/commodity"
 )
+
+type Account = account.Account
+type Commodity = commodity.Commodity
 
 // Registry has context for the model, namely a collection of
 // referenced accounts and commodities.
 type Registry struct {
-	accounts    *Accounts
-	commodities *Commodities
+	accounts    *account.Registry
+	commodities *commodity.Registry
 }
 
 // NewContext creates a new, empty context.
 func NewContext() Registry {
 	return Registry{
-		accounts:    NewAccounts(),
-		commodities: NewCommodities(),
+		accounts:    account.NewRegistry(),
+		commodities: commodity.NewCommodities(),
 	}
 }
 
 // GetAccount returns an account.
-func (ctx Registry) GetAccount(name string) (*Account, error) {
-	return ctx.accounts.Get(name)
+func (reg Registry) GetAccount(name string) (*Account, error) {
+	return reg.accounts.Get(name)
 }
 
 // Account returns a commodity or panics.
-func (ctx Registry) Account(name string) *Account {
-	c, err := ctx.GetAccount(name)
+func (reg Registry) Account(name string) *Account {
+	c, err := reg.GetAccount(name)
 	if err != nil {
 		panic(err)
 	}
@@ -48,13 +54,13 @@ func (ctx Registry) Account(name string) *Account {
 }
 
 // GetCommodity returns a commodity.
-func (ctx Registry) GetCommodity(name string) (*Commodity, error) {
-	return ctx.commodities.Get(name)
+func (reg Registry) GetCommodity(name string) (*Commodity, error) {
+	return reg.commodities.Get(name)
 }
 
 // Commodity returns a commodity or panics.
-func (ctx Registry) Commodity(name string) *Commodity {
-	c, err := ctx.GetCommodity(name)
+func (reg Registry) Commodity(name string) *Commodity {
+	c, err := reg.GetCommodity(name)
 	if err != nil {
 		panic(err)
 	}
@@ -62,24 +68,24 @@ func (ctx Registry) Commodity(name string) *Commodity {
 }
 
 // TBDAccount returns the TBD account.
-func (ctx Registry) TBDAccount() *Account {
-	return ctx.Account("Expenses:TBD")
+func (reg Registry) TBDAccount() *Account {
+	return reg.Account("Expenses:TBD")
 }
 
 // ValuationAccountFor returns the valuation account which corresponds to
 // the given Asset or Liability account.
-func (ctx Registry) ValuationAccountFor(a *Account) *Account {
+func (reg Registry) ValuationAccountFor(a *Account) *Account {
 	suffix := a.Split()[1:]
-	segments := append(ctx.Account("Income").Split(), suffix...)
-	return ctx.Account(strings.Join(segments, ":"))
+	segments := append(reg.Account("Income").Split(), suffix...)
+	return reg.Account(strings.Join(segments, ":"))
 }
 
 // Accounts returns the accounts.
-func (ctx Registry) Accounts() *Accounts {
-	return ctx.accounts
+func (reg Registry) Accounts() *account.Registry {
+	return reg.accounts
 }
 
 // Commodities returns the commodities.
-func (ctx Registry) Commodities() *Commodities {
-	return ctx.commodities
+func (reg Registry) Commodities() *commodity.Registry {
+	return reg.commodities
 }

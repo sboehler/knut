@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package account
 
 import (
 	"fmt"
@@ -27,19 +27,19 @@ import (
 	"github.com/sboehler/knut/lib/common/set"
 )
 
-// Accounts is a thread-safe collection of accounts.
-type Accounts struct {
+// Registry is a thread-safe collection of accounts.
+type Registry struct {
 	mutex    sync.RWMutex
 	index    map[string]*Account
-	accounts map[AccountType]*Account
+	accounts map[Type]*Account
 	children map[*Account]set.Set[*Account]
 	parents  map[*Account]*Account
 	swaps    map[*Account]*Account
 }
 
-// NewAccounts creates a new thread-safe collection of accounts.
-func NewAccounts() *Accounts {
-	accounts := map[AccountType]*Account{
+// NewRegistry creates a new thread-safe collection of accounts.
+func NewRegistry() *Registry {
+	accounts := map[Type]*Account{
 		ASSETS:      {accountType: ASSETS, name: "Assets", segment: "Assets", level: 1},
 		LIABILITIES: {accountType: LIABILITIES, name: "Liabilities", segment: "Liabilities", level: 1},
 		EQUITY:      {accountType: EQUITY, name: "Equity", segment: "Equity", level: 1},
@@ -50,7 +50,7 @@ func NewAccounts() *Accounts {
 	for _, account := range accounts {
 		index[account.name] = account
 	}
-	return &Accounts{
+	return &Registry{
 		accounts: accounts,
 		index:    index,
 		parents:  make(map[*Account]*Account),
@@ -60,7 +60,7 @@ func NewAccounts() *Accounts {
 }
 
 // Get returns an account.
-func (as *Accounts) Get(name string) (*Account, error) {
+func (as *Registry) Get(name string) (*Account, error) {
 	as.mutex.RLock()
 	res, ok := as.index[name]
 	as.mutex.RUnlock()
@@ -78,7 +78,7 @@ func (as *Accounts) Get(name string) (*Account, error) {
 		return nil, fmt.Errorf("invalid account name: %q", name)
 	}
 	head, tail := segments[0], segments[1:]
-	at, ok := accountTypes[head]
+	at, ok := types[head]
 	if !ok {
 		return nil, fmt.Errorf("account name %q has an invalid account type %q", name, segments[0])
 	}
@@ -118,20 +118,20 @@ func isValidSegment(s string) bool {
 }
 
 // Parent returns the parent of this account.
-func (as *Accounts) Parent(a *Account) *Account {
+func (as *Registry) Parent(a *Account) *Account {
 	as.mutex.RLock()
 	defer as.mutex.RUnlock()
 	return as.parents[a]
 }
 
 // Ancestors returns the chain of ancestors of a, including a.
-func (as *Accounts) Ancestors(a *Account) []*Account {
+func (as *Registry) Ancestors(a *Account) []*Account {
 	as.mutex.RLock()
 	defer as.mutex.RUnlock()
 	return as.ancestors(a)
 }
 
-func (as *Accounts) ancestors(a *Account) []*Account {
+func (as *Registry) ancestors(a *Account) []*Account {
 	var res []*Account
 	if p := as.parents[a]; p != nil {
 		res = as.ancestors(p)
@@ -140,7 +140,7 @@ func (as *Accounts) ancestors(a *Account) []*Account {
 }
 
 // Children returns the children of this account.
-func (as *Accounts) Children(a *Account) []*Account {
+func (as *Registry) Children(a *Account) []*Account {
 	as.mutex.RLock()
 	defer as.mutex.RUnlock()
 	ch := as.children[a]
@@ -154,7 +154,7 @@ func (as *Accounts) Children(a *Account) []*Account {
 	return res
 }
 
-func (as *Accounts) NthParent(a *Account, n int) *Account {
+func (as *Registry) NthParent(a *Account, n int) *Account {
 	as.mutex.RLock()
 	defer as.mutex.RUnlock()
 	if n <= 0 {
@@ -170,7 +170,7 @@ func (as *Accounts) NthParent(a *Account, n int) *Account {
 	return a
 }
 
-func (as *Accounts) SwapType(a *Account) *Account {
+func (as *Registry) SwapType(a *Account) *Account {
 	as.mutex.RLock()
 	sw, ok := as.swaps[a]
 	as.mutex.RUnlock()
@@ -230,7 +230,7 @@ func (m AccountMapping) level(a *Account) int {
 	return a.level
 }
 
-func ShortenAccount(jctx Registry, m AccountMapping) mapper.Mapper[*Account] {
+func ShortenAccount(reg *Registry, m AccountMapping) mapper.Mapper[*Account] {
 	if len(m) == 0 {
 		return mapper.Identity[*Account]
 	}
@@ -239,14 +239,14 @@ func ShortenAccount(jctx Registry, m AccountMapping) mapper.Mapper[*Account] {
 		if level >= a.level {
 			return a
 		}
-		return jctx.Accounts().NthParent(a, a.level-level)
+		return reg.NthParent(a, a.level-level)
 	}
 }
 
-func RemapAccount(jctx Registry, rs regex.Regexes) mapper.Mapper[*Account] {
+func RemapAccount(reg *Registry, rs regex.Regexes) mapper.Mapper[*Account] {
 	return func(a *Account) *Account {
 		if rs.MatchString(a.name) {
-			return jctx.Accounts().SwapType(a)
+			return reg.SwapType(a)
 		}
 		return a
 	}

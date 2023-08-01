@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package commodity
 
 import (
 	"fmt"
@@ -23,21 +23,21 @@ import (
 	"github.com/sboehler/knut/lib/common/mapper"
 )
 
-// Commodities is a thread-safe collection of commodities.
-type Commodities struct {
+// Registry is a thread-safe collection of commodities.
+type Registry struct {
 	index map[string]*Commodity
 	mutex sync.RWMutex
 }
 
 // NewCommodities creates a new thread-safe collection of commodities.
-func NewCommodities() *Commodities {
-	return &Commodities{
+func NewCommodities() *Registry {
+	return &Registry{
 		index: make(map[string]*Commodity),
 	}
 }
 
 // Get creates a new commodity.
-func (cs *Commodities) Get(name string) (*Commodity, error) {
+func (cs *Registry) Get(name string) (*Commodity, error) {
 	cs.mutex.RLock()
 	res, ok := cs.index[name]
 	cs.mutex.RUnlock()
@@ -59,12 +59,12 @@ func (cs *Commodities) Get(name string) (*Commodity, error) {
 	return res, nil
 }
 
-func (cs *Commodities) insert(c *Commodity) {
+func (cs *Registry) insert(c *Commodity) {
 	cs.index[c.name] = c
 }
 
 // TagCurrency tags the commodity as a currency.
-func (cs *Commodities) TagCurrency(name string) error {
+func (cs *Registry) TagCurrency(name string) error {
 	commodity, err := cs.Get(name)
 	if err != nil {
 		return err

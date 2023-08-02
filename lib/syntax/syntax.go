@@ -122,7 +122,7 @@ type Price struct {
 
 type Include struct {
 	Range
-	Path QuotedString
+	IncludePath QuotedString
 }
 
 type Range struct {

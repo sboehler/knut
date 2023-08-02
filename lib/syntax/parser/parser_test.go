@@ -67,7 +67,7 @@ func TestParseFile(t *testing.T) {
 								Range: Range{Start: 2, End: 20, Text: s},
 								Directive: syntax.Include{
 									Range: syntax.Range{Start: 2, End: 20, Text: s},
-									Path: syntax.QuotedString{
+									IncludePath: syntax.QuotedString{
 										Range:   Range{Start: 10, End: 20, Text: s},
 										Content: Range{Start: 11, End: 19, Text: s},
 									},
@@ -914,7 +914,7 @@ func TestParseInclude(t *testing.T) {
 				want: func(t string) syntax.Include {
 					return syntax.Include{
 						Range: Range{End: 23, Text: t},
-						Path: syntax.QuotedString{
+						IncludePath: syntax.QuotedString{
 							Range:   Range{Start: 8, End: 23, Text: t},
 							Content: Range{Start: 9, End: 22, Text: t},
 						},
@@ -944,7 +944,7 @@ func TestParseInclude(t *testing.T) {
 				want: func(s string) syntax.Include {
 					return syntax.Include{
 						Range: Range{End: 14, Text: s},
-						Path: syntax.QuotedString{
+						IncludePath: syntax.QuotedString{
 							Range:   Range{Start: 8, End: 14, Text: s},
 							Content: Range{Start: 9, End: 14, Text: s},
 						},
@@ -1289,7 +1289,7 @@ func TestParseDirective(t *testing.T) {
 						Range: Range{End: 22, Text: s},
 						Directive: syntax.Include{
 							Range: Range{End: 22, Text: s},
-							Path: syntax.QuotedString{
+							IncludePath: syntax.QuotedString{
 								Range:   Range{Start: 8, End: 22, Text: s},
 								Content: Range{Start: 9, End: 21, Text: s},
 							},

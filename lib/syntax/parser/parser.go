@@ -139,7 +139,7 @@ func (p *Parser) parseInclude() (syntax.Include, error) {
 	if _, err := p.readWhitespace1(); err != nil {
 		return syntax.SetRange(&include, p.Range()), p.Annotate(err)
 	}
-	if include.Path, err = p.parseQuotedString(); err != nil {
+	if include.IncludePath, err = p.parseQuotedString(); err != nil {
 		return syntax.SetRange(&include, p.Range()), p.Annotate(err)
 	}
 	return syntax.SetRange(&include, p.Range()), nil

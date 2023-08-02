@@ -118,7 +118,7 @@ func (p Printer) printPrice(w io.Writer, pr syntax.Price) (int, error) {
 }
 
 func (p Printer) printInclude(w io.Writer, i syntax.Include) (int, error) {
-	return fmt.Fprintf(w, "include \"%s\"", i.Path.Content.Extract())
+	return fmt.Fprintf(w, "include \"%s\"", i.IncludePath.Content.Extract())
 }
 
 func (p Printer) printAssertion(w io.Writer, a syntax.Assertion) (int, error) {

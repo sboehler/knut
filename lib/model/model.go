@@ -50,12 +50,11 @@ func FromStream(ctx context.Context, reg *registry.Registry, ch <-chan parser.Re
 	out := make(chan Result)
 	go func() {
 		p := pool.New()
-		for input := range ch {
+		cpr.Consume(ctx, ch, func(input parser.Result) error {
 			if input.Err != nil {
 				cpr.Push(ctx, out, Result{Err: input.Err})
-				continue
+				return nil
 			}
-			input := input
 			p.Go(func() {
 				var ds []any
 				for _, d := range input.File.Directives {
@@ -68,7 +67,8 @@ func FromStream(ctx context.Context, reg *registry.Registry, ch <-chan parser.Re
 				}
 				cpr.Push(ctx, out, Result{Directives: ds})
 			})
-		}
+			return nil
+		})
 		p.Wait()
 		close(out)
 	}()

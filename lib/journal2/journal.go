@@ -111,6 +111,8 @@ func (j *Journal) Process(fs ...func(*Day) error) ([]*Day, error) {
 
 func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, error) {
 	j := New(reg)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	syntaxCh := parser.Parse(ctx, path)
 	modelCh := model.FromStream(ctx, reg, syntaxCh)
 	err := cpr.Consume(ctx, modelCh, func(input model.Result) error {
@@ -119,11 +121,11 @@ func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, 
 		}
 		for _, d := range input.Directives {
 			switch t := d.(type) {
-			case *model.Open:
-				j.AddOpen(t)
-
 			case *model.Price:
 				j.AddPrice(t)
+
+			case *model.Open:
+				j.AddOpen(t)
 
 			case *model.Transaction:
 				j.AddTransaction(t)

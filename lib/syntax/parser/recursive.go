@@ -13,8 +13,6 @@ import (
 
 func Parse(ctx context.Context, file string) <-chan Result {
 	resCh := make(chan Result)
-
-	// Parse and eventually close input channel
 	go func() {
 		defer close(resCh)
 		wg := conc.NewWaitGroup()

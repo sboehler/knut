@@ -16,7 +16,7 @@ import (
 	"github.com/sboehler/knut/lib/model/transaction"
 	"github.com/sboehler/knut/lib/syntax"
 	"github.com/sboehler/knut/lib/syntax/parser"
-	"github.com/sourcegraph/conc/pool"
+	"github.com/sourcegraph/conc"
 )
 
 type Commodity = commodity.Commodity
@@ -47,16 +47,13 @@ type Result struct {
 }
 
 func FromStream(ctx context.Context, reg *registry.Registry, inCh <-chan parser.Result) <-chan Result {
-	outCh := make(chan Result)
-	go func() {
-		defer close(outCh)
-		p := pool.New()
+	return cpr.Produce(func(wg *conc.WaitGroup, outCh chan<- Result) {
 		cpr.Consume(ctx, inCh, func(input parser.Result) error {
 			if input.Err != nil {
 				cpr.Push(ctx, outCh, Result{Err: input.Err})
 				return nil
 			}
-			p.Go(func() {
+			wg.Go(func() {
 				var ds []any
 				for _, d := range input.File.Directives {
 					m, err := Create(reg, d.Directive)
@@ -70,9 +67,7 @@ func FromStream(ctx context.Context, reg *registry.Registry, inCh <-chan parser.
 			})
 			return nil
 		})
-		p.Wait()
-	}()
-	return outCh
+	})
 }
 
 func Create(reg *registry.Registry, w any) ([]any, error) {

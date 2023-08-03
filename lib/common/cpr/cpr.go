@@ -4,6 +4,8 @@ package cpr
 import (
 	"context"
 	"sync"
+
+	"github.com/sourcegraph/conc"
 )
 
 // Pop returns a new T from the ch. It returns a boolean which indicates
@@ -89,4 +91,17 @@ func Consume[T any](ctx context.Context, ch <-chan T, f func(T) error) error {
 			return err
 		}
 	}
+}
+
+func Produce[T any](f func(*conc.WaitGroup, chan<- T)) <-chan T {
+	ch := make(chan T)
+	var wg conc.WaitGroup
+	go func() {
+		defer close(ch)
+		wg.Go(func() {
+			f(&wg, ch)
+		})
+		wg.Wait()
+	}()
+	return ch
 }

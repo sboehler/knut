@@ -12,17 +12,10 @@ import (
 )
 
 func Parse(ctx context.Context, file string) <-chan Result {
-	resCh := make(chan Result)
-	go func() {
-		defer close(resCh)
-		wg := conc.NewWaitGroup()
-		wg.Go(func() {
-			res := parseRec(ctx, wg, resCh, file)
-			cpr.Push(ctx, resCh, res)
-		})
-		wg.Wait()
-	}()
-	return resCh
+	return cpr.Produce(func(wg *conc.WaitGroup, ch chan<- Result) {
+		res := parseRec(ctx, wg, ch, file)
+		cpr.Push(ctx, ch, res)
+	})
 }
 
 type Result struct {

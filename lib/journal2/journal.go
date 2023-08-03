@@ -135,6 +135,7 @@ func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, 
 
 			case *model.Close:
 				j.AddClose(t)
+
 			default:
 				return fmt.Errorf("unknown: %v (%T)", t, t)
 			}

@@ -41,16 +41,14 @@ func parseRec(ctx context.Context, wg *conc.WaitGroup, resCh chan<- Result, file
 	if err := p.Advance(); err != nil {
 		return Result{Err: err}
 	}
-	p.callback = func(d syntax.Directive) error {
+	p.callback = func(d syntax.Directive) {
 		if inc, ok := d.Directive.(syntax.Include); ok {
+			file := path.Join(filepath.Dir(file), inc.IncludePath.Content.Extract())
 			wg.Go(func() {
-				p := path.Join(filepath.Dir(file), inc.IncludePath.Content.Extract())
-				res := parseRec(ctx, wg, resCh, p)
+				res := parseRec(ctx, wg, resCh, file)
 				cpr.Push(ctx, resCh, res)
 			})
-			return nil
 		}
-		return nil
 	}
 	f, err := p.ParseFile()
 	return Result{File: f, Err: err}

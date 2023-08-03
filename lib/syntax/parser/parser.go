@@ -12,7 +12,7 @@ import (
 type Parser struct {
 	scanner.Scanner
 
-	callback func(d syntax.Directive) error
+	callback func(d syntax.Directive)
 }
 
 // New creates a new parser.

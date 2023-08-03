@@ -46,13 +46,14 @@ type Result struct {
 	Directives []any
 }
 
-func FromStream(ctx context.Context, reg *registry.Registry, ch <-chan parser.Result) <-chan Result {
-	out := make(chan Result)
+func FromStream(ctx context.Context, reg *registry.Registry, inCh <-chan parser.Result) <-chan Result {
+	outCh := make(chan Result)
 	go func() {
+		defer close(outCh)
 		p := pool.New()
-		cpr.Consume(ctx, ch, func(input parser.Result) error {
+		cpr.Consume(ctx, inCh, func(input parser.Result) error {
 			if input.Err != nil {
-				cpr.Push(ctx, out, Result{Err: input.Err})
+				cpr.Push(ctx, outCh, Result{Err: input.Err})
 				return nil
 			}
 			p.Go(func() {
@@ -60,19 +61,18 @@ func FromStream(ctx context.Context, reg *registry.Registry, ch <-chan parser.Re
 				for _, d := range input.File.Directives {
 					m, err := Create(reg, d.Directive)
 					if err != nil {
-						cpr.Push(ctx, out, Result{Err: err})
+						cpr.Push(ctx, outCh, Result{Err: err})
 						return
 					}
 					ds = append(ds, m...)
 				}
-				cpr.Push(ctx, out, Result{Directives: ds})
+				cpr.Push(ctx, outCh, Result{Directives: ds})
 			})
 			return nil
 		})
 		p.Wait()
-		close(out)
 	}()
-	return out
+	return outCh
 }
 
 func Create(reg *registry.Registry, w any) ([]any, error) {

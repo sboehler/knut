@@ -15,8 +15,7 @@ import (
 	"github.com/sboehler/knut/lib/model/registry"
 	"github.com/sboehler/knut/lib/model/transaction"
 	"github.com/sboehler/knut/lib/syntax"
-	"github.com/sboehler/knut/lib/syntax/parser"
-	"github.com/sourcegraph/conc"
+	"golang.org/x/sync/errgroup"
 )
 
 type Commodity = commodity.Commodity
@@ -46,27 +45,24 @@ type Result struct {
 	Directives []any
 }
 
-func FromStream(ctx context.Context, reg *registry.Registry, inCh <-chan parser.Result) <-chan Result {
-	return cpr.Produce(func(wg *conc.WaitGroup, outCh chan<- Result) {
-		cpr.Consume(ctx, inCh, func(input parser.Result) error {
-			if input.Err != nil {
-				cpr.Push(ctx, outCh, Result{Err: input.Err})
-				return nil
-			}
-			wg.Go(func() {
+func FromStream(reg *registry.Registry, inCh <-chan syntax.File) (<-chan []any, func(context.Context) error) {
+	return cpr.Produce2(func(ctx context.Context, ch chan<- []any) error {
+		var wg errgroup.Group
+		cpr.Consume(ctx, inCh, func(input syntax.File) error {
+			wg.Go(func() error {
 				var ds []any
-				for _, d := range input.File.Directives {
+				for _, d := range input.Directives {
 					m, err := Create(reg, d.Directive)
 					if err != nil {
-						cpr.Push(ctx, outCh, Result{Err: err})
-						return
+						return err
 					}
 					ds = append(ds, m...)
 				}
-				cpr.Push(ctx, outCh, Result{Directives: ds})
+				return cpr.Push(ctx, ch, ds)
 			})
 			return nil
 		})
+		return wg.Wait()
 	})
 }
 

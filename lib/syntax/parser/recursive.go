@@ -8,13 +8,20 @@ import (
 
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/syntax"
-	"github.com/sourcegraph/conc"
+	"golang.org/x/sync/errgroup"
 )
 
-func Parse(ctx context.Context, file string) <-chan Result {
-	return cpr.Produce(func(wg *conc.WaitGroup, ch chan<- Result) {
-		res := parseRec(ctx, wg, ch, file)
-		cpr.Push(ctx, ch, res)
+func Parse(file string) (<-chan syntax.File, func(context.Context) error) {
+	return cpr.Produce2(func(ctx context.Context, ch chan<- syntax.File) error {
+		wg, ctx := errgroup.WithContext(ctx)
+		wg.Go(func() error {
+			res, err := parseRec(ctx, wg, ch, file)
+			if err != nil {
+				return err
+			}
+			return cpr.Push(ctx, ch, res)
+		})
+		return wg.Wait()
 	})
 }
 
@@ -23,24 +30,26 @@ type Result struct {
 	Err  error
 }
 
-func parseRec(ctx context.Context, wg *conc.WaitGroup, resCh chan<- Result, file string) Result {
+func parseRec(ctx context.Context, wg *errgroup.Group, resCh chan<- syntax.File, file string) (syntax.File, error) {
 	text, err := os.ReadFile(file)
 	if err != nil {
-		return Result{Err: err}
+		return syntax.File{}, err
 	}
 	p := New(string(text), file)
 	if err := p.Advance(); err != nil {
-		return Result{Err: err}
+		return syntax.File{}, err
 	}
 	p.callback = func(d syntax.Directive) {
 		if inc, ok := d.Directive.(syntax.Include); ok {
 			file := path.Join(filepath.Dir(file), inc.IncludePath.Content.Extract())
-			wg.Go(func() {
-				res := parseRec(ctx, wg, resCh, file)
-				cpr.Push(ctx, resCh, res)
+			wg.Go(func() error {
+				res, err := parseRec(ctx, wg, resCh, file)
+				if err != nil {
+					return err
+				}
+				return cpr.Push(ctx, resCh, res)
 			})
 		}
 	}
-	f, err := p.ParseFile()
-	return Result{File: f, Err: err}
+	return p.ParseFile()
 }

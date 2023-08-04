@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/natefinch/atomic"
+	"github.com/sourcegraph/conc/pool"
 	"github.com/spf13/cobra"
 
 	"github.com/sboehler/knut/lib/common/cpr"
@@ -95,17 +96,20 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 
 func train(ctx context.Context, file string, account string) (*bayes.Model, error) {
 	model := bayes.NewModel(account)
-	return model, cpr.Consume(ctx, parser.Parse(ctx, file), func(res parser.Result) error {
-		if res.Err != nil {
-			return res.Err
-		}
-		for _, d := range res.File.Directives {
-			if t, ok := d.Directive.(syntax.Transaction); ok {
-				model.Update(&t)
+	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)
+	ch, worker := parser.Parse(file)
+	p.Go(worker)
+	p.Go(func(ctx context.Context) error {
+		return cpr.Consume(ctx, ch, func(res syntax.File) error {
+			for _, d := range res.Directives {
+				if t, ok := d.Directive.(syntax.Transaction); ok {
+					model.Update(&t)
+				}
 			}
-		}
-		return nil
+			return nil
+		})
 	})
+	return model, p.Wait()
 }
 
 func (r *runner) parseAndInfer(ctx context.Context, model *bayes.Model, targetFile string) (syntax.File, error) {

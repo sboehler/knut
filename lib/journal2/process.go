@@ -29,7 +29,7 @@ type Error struct {
 }
 
 func (be Error) Error() string {
-	panic("todo")
+	return be.msg
 }
 
 // ComputePrices updates prices.

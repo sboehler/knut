@@ -105,3 +105,19 @@ func Produce[T any](f func(*conc.WaitGroup, chan<- T)) <-chan T {
 	}()
 	return ch
 }
+
+func Produce2[T any](f func(context.Context, chan<- T) error) (<-chan T, func(context.Context) error) {
+	ch := make(chan T)
+	return ch, func(ctx context.Context) error {
+		defer close(ch)
+		return f(ctx, ch)
+	}
+}
+
+func FanIn[T any](f func(context.Context, chan<- T) error) (<-chan T, func(context.Context) error) {
+	ch := make(chan T, 1)
+	return ch, func(ctx context.Context) error {
+		defer close(ch)
+		return f(ctx, ch)
+	}
+}

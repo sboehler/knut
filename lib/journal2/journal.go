@@ -28,6 +28,7 @@ import (
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/price"
 	"github.com/sboehler/knut/lib/syntax/parser"
+	"github.com/sourcegraph/conc/pool"
 )
 
 // Journal represents an unprocessed
@@ -110,42 +111,50 @@ func (j *Journal) Process(fs ...func(*Day) error) ([]*Day, error) {
 }
 
 func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, error) {
-	j := New(reg)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	syntaxCh := parser.Parse(ctx, path)
-	modelCh := model.FromStream(ctx, reg, syntaxCh)
-	err := cpr.Consume(ctx, modelCh, func(input model.Result) error {
-		if input.Err != nil {
-			return input.Err
-		}
-		for _, d := range input.Directives {
-			switch t := d.(type) {
-			case *model.Price:
-				j.AddPrice(t)
+	syntaxCh, worker1 := parser.Parse(path)
+	modelCh, worker2 := model.FromStream(reg, syntaxCh)
+	journalCh, worker3 := cpr.FanIn(func(ctx context.Context, ch chan<- *Journal) error {
+		j := New(reg)
+		err := cpr.Consume(ctx, modelCh, func(input []any) error {
+			for _, d := range input {
+				switch t := d.(type) {
+				case *model.Price:
+					j.AddPrice(t)
 
-			case *model.Open:
-				j.AddOpen(t)
+				case *model.Open:
+					j.AddOpen(t)
 
-			case *model.Transaction:
-				j.AddTransaction(t)
+				case *model.Transaction:
+					j.AddTransaction(t)
 
-			case *model.Assertion:
-				j.AddAssertion(t)
+				case *model.Assertion:
+					j.AddAssertion(t)
 
-			case *model.Close:
-				j.AddClose(t)
+				case *model.Close:
+					j.AddClose(t)
 
-			default:
-				return fmt.Errorf("unknown: %v (%T)", t, t)
+				default:
+					return fmt.Errorf("unknown: %v (%T)", t, t)
+				}
 			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
-		return nil
+		return cpr.Push(ctx, ch, j)
 	})
+	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)
+	p.Go(worker1)
+	p.Go(worker2)
+	p.Go(worker3)
+	err := p.Wait()
 	if err != nil {
 		return nil, err
 	}
-	return j, nil
+	return <-journalCh, nil
 }
 
 // Day groups all commands for a given date.

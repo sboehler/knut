@@ -23,9 +23,12 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/registry"
 )
 
 // CreateCmd creates the command.
@@ -60,8 +63,8 @@ type runner struct {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx     = journal.NewContext()
-		account *journal.Commodity
+		ctx     = registry.New()
+		account *model.Commodity
 		err     error
 	)
 
@@ -95,7 +98,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		if a.IsZero() {
 			continue
 		}
-		j.AddPrice(&journal.Price{
+		j.AddPrice(&model.Price{
 			Date:      d,
 			Commodity: account,
 			Price:     a.Round(2),
@@ -105,7 +108,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintJournal(out, j)
+	_, err = printer.NewPrinter().PrintJournal(out, j)
 	return err
 }
 

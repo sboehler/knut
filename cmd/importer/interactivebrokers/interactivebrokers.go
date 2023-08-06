@@ -26,9 +26,14 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/posting"
+	"github.com/sboehler/knut/lib/model/registry"
+	"github.com/sboehler/knut/lib/model/transaction"
 )
 
 // CreateCmd creates the command.
@@ -72,7 +77,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = journal.NewContext()
+		ctx = registry.New()
 		err error
 	)
 	f, err := flags.OpenFile(args[0])
@@ -83,22 +88,22 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		reader:  csv.NewReader(f),
 		journal: journal.New(ctx),
 	}
-	if p.account, err = r.accountFlag.Value(ctx); err != nil {
+	if p.account, err = r.accountFlag.Value(ctx.Accounts()); err != nil {
 		return err
 	}
-	if p.interest, err = r.interestFlag.Value(ctx); err != nil {
+	if p.interest, err = r.interestFlag.Value(ctx.Accounts()); err != nil {
 		return err
 	}
-	if p.dividend, err = r.dividendFlag.Value(ctx); err != nil {
+	if p.dividend, err = r.dividendFlag.Value(ctx.Accounts()); err != nil {
 		return err
 	}
-	if p.tax, err = r.taxFlag.Value(ctx); err != nil {
+	if p.tax, err = r.taxFlag.Value(ctx.Accounts()); err != nil {
 		return err
 	}
-	if p.fee, err = r.feeFlag.Value(ctx); err != nil {
+	if p.fee, err = r.feeFlag.Value(ctx.Accounts()); err != nil {
 		return err
 	}
-	if p.trading, err = r.tradingFlag.Value(ctx); err != nil {
+	if p.trading, err = r.tradingFlag.Value(ctx.Accounts()); err != nil {
 		return err
 	}
 	if err = p.parse(); err != nil {
@@ -106,17 +111,17 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintJournal(out, p.journal)
+	_, err = printer.NewPrinter().PrintJournal(out, p.journal)
 	return err
 }
 
 type parser struct {
 	reader           *csv.Reader
 	journal          *journal.Journal
-	baseCurrency     *journal.Commodity
+	baseCurrency     *model.Commodity
 	dateFrom, dateTo time.Time
 
-	account, dividend, tax, fee, interest, trading *journal.Account
+	account, dividend, tax, fee, interest, trading *model.Account
 }
 
 func (p *parser) parse() error {
@@ -189,7 +194,7 @@ func (p *parser) parseBaseCurrency(r []string) (bool, error) {
 		return false, nil
 	}
 	var err error
-	if p.baseCurrency, err = p.journal.Context.GetCommodity(r[aiFieldValue]); err != nil {
+	if p.baseCurrency, err = p.journal.Registry.GetCommodity(r[aiFieldValue]); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -254,16 +259,16 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency, stock           *journal.Commodity
+		currency, stock           *model.Commodity
 		date                      time.Time
 		desc                      string
 		qty, price, proceeds, fee decimal.Decimal
 		err                       error
 	)
-	if currency, err = p.journal.Context.GetCommodity(r[tfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.GetCommodity(r[tfCurrency]); err != nil {
 		return false, err
 	}
-	if stock, err = p.journal.Context.GetCommodity(r[tfSymbol]); err != nil {
+	if stock, err = p.journal.Registry.GetCommodity(r[tfSymbol]); err != nil {
 		return false, err
 	}
 	date, err = parseDateFromDateTime(r[tfDateTime])
@@ -287,10 +292,10 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        date,
 		Description: desc,
-		Postings: journal.PostingBuilders{
+		Postings: posting.Builders{
 			{
 				Credit:    p.trading,
 				Debit:     p.account,
@@ -310,7 +315,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 				Amount:    fee,
 			},
 		}.Build(),
-		Targets: []*journal.Commodity{stock, currency},
+		Targets: []*model.Commodity{stock, currency},
 	}.Build())
 	return true, nil
 }
@@ -326,16 +331,16 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		return false, fmt.Errorf("base currency is not defined")
 	}
 	var (
-		currency, stock           *journal.Commodity
+		currency, stock           *model.Commodity
 		date                      time.Time
 		desc                      string
 		qty, price, proceeds, fee decimal.Decimal
 		err                       error
 	)
-	if currency, err = p.journal.Context.GetCommodity(r[tfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.GetCommodity(r[tfCurrency]); err != nil {
 		return false, err
 	}
-	if stock, err = p.journal.Context.GetCommodity(strings.SplitN(r[tfSymbol], ".", 2)[0]); err != nil {
+	if stock, err = p.journal.Registry.GetCommodity(strings.SplitN(r[tfSymbol], ".", 2)[0]); err != nil {
 		return false, err
 	}
 	if date, err = parseDateFromDateTime(r[tfDateTime]); err != nil {
@@ -358,7 +363,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
-	postings := journal.PostingBuilders{
+	postings := posting.Builders{
 		{
 			Credit:    p.trading,
 			Debit:     p.account,
@@ -373,18 +378,18 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		},
 	}
 	if !fee.IsZero() {
-		postings = append(postings, journal.PostingBuilder{
+		postings = append(postings, posting.Builder{
 			Credit:    p.fee,
 			Debit:     p.account,
 			Commodity: p.baseCurrency,
 			Amount:    fee,
 		})
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings:    postings.Build(),
-		Targets:     []*journal.Commodity{stock, currency},
+		Targets:     []*model.Commodity{stock, currency},
 	}.Build())
 	return true, nil
 }
@@ -408,13 +413,13 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency *journal.Commodity
+		currency *model.Commodity
 		date     time.Time
 		desc     string
 		amount   decimal.Decimal
 		err      error
 	)
-	if currency, err = p.journal.Context.GetCommodity(r[dwfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.GetCommodity(r[dwfCurrency]); err != nil {
 		return false, err
 	}
 	if date, err = parseDate(r[dwfSettleDate]); err != nil {
@@ -428,11 +433,11 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Withdraw %s %s", amount, currency.Name())
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        date,
 		Description: desc,
-		Postings: journal.PostingBuilder{
-			Credit:    p.journal.Context.TBDAccount(),
+		Postings: posting.Builder{
+			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: currency,
 			Amount:    amount,
@@ -460,14 +465,14 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency, security *journal.Commodity
+		currency, security *model.Commodity
 		date               time.Time
 		desc               = r[dfDescription]
 		amount             decimal.Decimal
 		symbol             string
 		err                error
 	)
-	if currency, err = p.journal.Context.GetCommodity(r[dfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.GetCommodity(r[dfCurrency]); err != nil {
 		return false, err
 	}
 	if date, err = parseDate(r[dfDate]); err != nil {
@@ -479,19 +484,19 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if symbol, err = parseDividendSymbol(r[dfDescription]); err != nil {
 		return false, err
 	}
-	if security, err = p.journal.Context.GetCommodity(symbol); err != nil {
+	if security, err = p.journal.Registry.GetCommodity(symbol); err != nil {
 		return false, err
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        date,
 		Description: desc,
-		Postings: journal.PostingBuilder{
+		Postings: posting.Builder{
 			Credit:    p.dividend,
 			Debit:     p.account,
 			Commodity: currency,
 			Amount:    amount,
 		}.Build(),
-		Targets: []*journal.Commodity{security},
+		Targets: []*model.Commodity{security},
 	}.Build())
 	return true, nil
 }
@@ -526,13 +531,13 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	}
 	var (
 		desc               = r[wtfDescription]
-		currency, security *journal.Commodity
+		currency, security *model.Commodity
 		date               time.Time
 		amount             decimal.Decimal
 		symbol             string
 		err                error
 	)
-	if currency, err = p.journal.Context.GetCommodity(r[wtfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.GetCommodity(r[wtfCurrency]); err != nil {
 		return false, err
 	}
 	if date, err = parseDate(r[wtfDate]); err != nil {
@@ -544,19 +549,19 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if symbol, err = parseDividendSymbol(r[wtfDescription]); err != nil {
 		return false, err
 	}
-	if security, err = p.journal.Context.GetCommodity(symbol); err != nil {
+	if security, err = p.journal.Registry.GetCommodity(symbol); err != nil {
 		return false, err
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        date,
 		Description: desc,
-		Postings: journal.PostingBuilder{
+		Postings: posting.Builder{
 			Credit:    p.tax,
 			Debit:     p.account,
 			Commodity: currency,
 			Amount:    amount,
 		}.Build(),
-		Targets: []*journal.Commodity{security},
+		Targets: []*model.Commodity{security},
 	}.Build())
 	return true, nil
 }
@@ -567,13 +572,13 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 		return false, nil
 	}
 	var (
-		currency *journal.Commodity
+		currency *model.Commodity
 		date     time.Time
 		amount   decimal.Decimal
 		desc     = r[dfDescription]
 		err      error
 	)
-	if currency, err = p.journal.Context.GetCommodity(r[dfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.GetCommodity(r[dfCurrency]); err != nil {
 		return false, err
 	}
 	if date, err = parseDate(r[dfDate]); err != nil {
@@ -582,16 +587,16 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	if amount, err = parseDecimal(r[dfAmount]); err != nil {
 		return false, err
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        date,
 		Description: desc,
-		Postings: journal.PostingBuilder{
+		Postings: posting.Builder{
 			Credit:    p.interest,
 			Debit:     p.account,
 			Commodity: currency,
 			Amount:    amount,
 		}.Build(),
-		Targets: []*journal.Commodity{currency},
+		Targets: []*model.Commodity{currency},
 	}.Build())
 	return true, nil
 }
@@ -626,17 +631,17 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
 	var (
-		symbol *journal.Commodity
+		symbol *model.Commodity
 		amt    decimal.Decimal
 		err    error
 	)
-	if symbol, err = p.journal.Context.GetCommodity(r[opfSymbol]); err != nil {
+	if symbol, err = p.journal.Registry.GetCommodity(r[opfSymbol]); err != nil {
 		return false, err
 	}
 	if amt, err = decimal.NewFromString(r[opfQuantity]); err != nil {
 		return false, err
 	}
-	p.journal.AddAssertion(&journal.Assertion{
+	p.journal.AddAssertion(&model.Assertion{
 		Date:      p.dateTo,
 		Account:   p.account,
 		Commodity: symbol,
@@ -672,17 +677,17 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
 	var (
-		symbol *journal.Commodity
+		symbol *model.Commodity
 		amount decimal.Decimal
 		err    error
 	)
-	if symbol, err = p.journal.Context.GetCommodity(r[fbfDescription]); err != nil {
+	if symbol, err = p.journal.Registry.GetCommodity(r[fbfDescription]); err != nil {
 		return false, err
 	}
 	if amount, err = parseRoundedDecimal(r[fbfQuantity]); err != nil {
 		return false, err
 	}
-	p.journal.AddAssertion(&journal.Assertion{
+	p.journal.AddAssertion(&model.Assertion{
 		Date:      p.dateTo,
 		Account:   p.account,
 		Commodity: symbol,

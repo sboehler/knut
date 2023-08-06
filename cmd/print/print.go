@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model/registry"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
@@ -57,7 +59,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 }
 
 func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
-	jctx := journal.NewContext()
+	jctx := registry.New()
 	j, err := journal.FromPath(cmd.Context(), jctx, args[0])
 	if err != nil {
 		return err
@@ -68,6 +70,6 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer func() { err = multierr.Append(err, w.Flush()) }()
 
-	_, errors = journal.NewPrinter().PrintJournal(w, j)
+	_, errors = printer.NewPrinter().PrintJournal(w, j)
 	return errors
 }

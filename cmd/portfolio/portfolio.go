@@ -22,11 +22,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/performance"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/registry"
 )
 
 // CreateCmd creates the command.
@@ -84,7 +86,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 
 func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	jctx := journal.NewContext()
+	jctx := registry.New()
 	valuation, err := r.valuation.Value(jctx)
 	if err != nil {
 		return err
@@ -97,8 +99,8 @@ func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	calculator := &performance.Calculator{
 		Context:         jctx,
 		Valuation:       valuation,
-		AccountFilter:   filter.ByName[*journal.Account](r.accounts.Regex()),
-		CommodityFilter: filter.ByName[*journal.Commodity](r.commodities.Regex()),
+		AccountFilter:   filter.ByName[*model.Account](r.accounts.Regex()),
+		CommodityFilter: filter.ByName[*model.Commodity](r.commodities.Regex()),
 	}
 	_, err = j.Process(
 		journal.ComputePrices(valuation),

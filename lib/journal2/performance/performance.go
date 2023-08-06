@@ -7,15 +7,17 @@ import (
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/set"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/registry"
 )
 
 // Calculator calculates portfolio performance
 type Calculator struct {
-	Context         journal.Context
-	Valuation       *journal.Commodity
-	AccountFilter   filter.Filter[*journal.Account]
-	CommodityFilter filter.Filter[*journal.Commodity]
+	Context         *registry.Registry
+	Valuation       *model.Commodity
+	AccountFilter   filter.Filter[*model.Account]
+	CommodityFilter filter.Filter[*model.Commodity]
 }
 
 // ComputeValues computes portfolio performance.
@@ -57,7 +59,7 @@ func (calc *Calculator) ComputeValues() func(d *journal.Day) error {
 }
 
 // pcv is a per-commodity value.
-type pcv = map[*journal.Commodity]float64
+type pcv = map[*model.Commodity]float64
 
 func (calc *Calculator) ComputeFlows() journal.DayFn {
 	return func(day *journal.Day) error {
@@ -138,11 +140,11 @@ func get(m *pcv) pcv {
 	return *m
 }
 
-func pickTargets(valuation *journal.Commodity, tgts []*journal.Commodity) []*journal.Commodity {
+func pickTargets(valuation *model.Commodity, tgts []*model.Commodity) []*model.Commodity {
 	if len(tgts) == 0 {
 		return tgts
 	}
-	var res []*journal.Commodity
+	var res []*model.Commodity
 
 	// collect non-currencies
 	for _, c := range tgts {
@@ -168,7 +170,7 @@ func pickTargets(valuation *journal.Commodity, tgts []*journal.Commodity) []*jou
 	return tgts
 }
 
-func (calc Calculator) isPortfolioAccount(a *journal.Account) bool {
+func (calc Calculator) isPortfolioAccount(a *model.Account) bool {
 	return a.IsAL() && calc.AccountFilter(a)
 }
 

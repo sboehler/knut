@@ -7,13 +7,17 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/posting"
+	"github.com/sboehler/knut/lib/model/registry"
+	"github.com/sboehler/knut/lib/model/transaction"
 	"github.com/shopspring/decimal"
 )
 
 func TestComputeFlows(t *testing.T) {
 
-	ctx := journal.NewContext()
+	ctx := registry.New()
 	chf := ctx.Commodity("CHF")
 	usd := ctx.Commodity("USD")
 	gbp := ctx.Commodity("GBP")
@@ -31,13 +35,13 @@ func TestComputeFlows(t *testing.T) {
 
 	tests := []struct {
 		desc string
-		trx  *journal.Transaction
+		trx  *model.Transaction
 		want *journal.Performance
 	}{
 		{
 			desc: "outflow",
-			trx: journal.TransactionBuilder{
-				Postings: journal.PostingBuilder{
+			trx: transaction.Builder{
+				Postings: posting.Builder{
 					Credit:    portfolio,
 					Debit:     acc2,
 					Value:     decimal.NewFromInt(1),
@@ -48,8 +52,8 @@ func TestComputeFlows(t *testing.T) {
 		},
 		{
 			desc: "inflow",
-			trx: journal.TransactionBuilder{
-				Postings: journal.PostingBuilder{
+			trx: transaction.Builder{
+				Postings: posting.Builder{
 					Credit:    acc1,
 					Debit:     portfolio,
 					Value:     decimal.NewFromInt(1),
@@ -60,9 +64,9 @@ func TestComputeFlows(t *testing.T) {
 		},
 		{
 			desc: "dividend",
-			trx: journal.TransactionBuilder{
-				Targets: []*journal.Commodity{aapl, usd},
-				Postings: journal.PostingBuilder{
+			trx: transaction.Builder{
+				Targets: []*model.Commodity{aapl, usd},
+				Postings: posting.Builder{
 					Credit:    dividend,
 					Debit:     portfolio,
 					Value:     decimal.NewFromInt(1),
@@ -76,9 +80,9 @@ func TestComputeFlows(t *testing.T) {
 		},
 		{
 			desc: "expense",
-			trx: journal.TransactionBuilder{
-				Targets: []*journal.Commodity{aapl, usd},
-				Postings: journal.PostingBuilder{
+			trx: transaction.Builder{
+				Targets: []*model.Commodity{aapl, usd},
+				Postings: posting.Builder{
 					Credit:    portfolio,
 					Debit:     expense,
 					Value:     decimal.NewFromInt(1),
@@ -92,9 +96,9 @@ func TestComputeFlows(t *testing.T) {
 		},
 		{
 			desc: "expense with effect on porfolio",
-			trx: journal.TransactionBuilder{
-				Targets: make([]*journal.Commodity, 0),
-				Postings: journal.PostingBuilder{
+			trx: transaction.Builder{
+				Targets: make([]*model.Commodity, 0),
+				Postings: posting.Builder{
 					Credit:    portfolio,
 					Debit:     expense,
 					Value:     decimal.NewFromInt(1),
@@ -108,10 +112,10 @@ func TestComputeFlows(t *testing.T) {
 		},
 		{
 			desc: "stock purchase",
-			trx: journal.TransactionBuilder{
+			trx: transaction.Builder{
 
-				Targets: []*journal.Commodity{usd, aapl},
-				Postings: journal.PostingBuilders{
+				Targets: []*model.Commodity{usd, aapl},
+				Postings: posting.Builders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
@@ -133,9 +137,9 @@ func TestComputeFlows(t *testing.T) {
 		},
 		{
 			desc: "stock purchase with fee",
-			trx: journal.TransactionBuilder{
-				Targets: []*journal.Commodity{usd, aapl},
-				Postings: journal.PostingBuilders{
+			trx: transaction.Builder{
+				Targets: []*model.Commodity{usd, aapl},
+				Postings: posting.Builders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
@@ -163,9 +167,9 @@ func TestComputeFlows(t *testing.T) {
 		},
 		{
 			desc: "stock sale",
-			trx: journal.TransactionBuilder{
-				Targets: []*journal.Commodity{usd, aapl},
-				Postings: journal.PostingBuilders{
+			trx: transaction.Builder{
+				Targets: []*model.Commodity{usd, aapl},
+				Postings: posting.Builders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
@@ -188,9 +192,9 @@ func TestComputeFlows(t *testing.T) {
 
 		{
 			desc: "forex without fee",
-			trx: journal.TransactionBuilder{
-				Targets: []*journal.Commodity{usd, gbp},
-				Postings: journal.PostingBuilders{
+			trx: transaction.Builder{
+				Targets: []*model.Commodity{usd, gbp},
+				Postings: posting.Builders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
@@ -212,9 +216,9 @@ func TestComputeFlows(t *testing.T) {
 		},
 		{
 			desc: "forex with fee",
-			trx: journal.TransactionBuilder{
-				Targets: []*journal.Commodity{usd, gbp},
-				Postings: journal.PostingBuilders{
+			trx: transaction.Builder{
+				Targets: []*model.Commodity{usd, gbp},
+				Postings: posting.Builders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
@@ -242,9 +246,9 @@ func TestComputeFlows(t *testing.T) {
 		},
 		{
 			desc: "forex with native fee",
-			trx: journal.TransactionBuilder{
-				Targets: []*journal.Commodity{usd, gbp},
-				Postings: journal.PostingBuilders{
+			trx: transaction.Builder{
+				Targets: []*model.Commodity{usd, gbp},
+				Postings: posting.Builders{
 					{
 						Credit:    portfolio,
 						Debit:     equity,
@@ -276,10 +280,10 @@ func TestComputeFlows(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			day := &journal.Day{
 				Date:         date.Date(2021, 11, 15),
-				Transactions: []*journal.Transaction{test.trx},
+				Transactions: []*model.Transaction{test.trx},
 			}
 			calc := Calculator{
-				AccountFilter: filter.ByName[*journal.Account]([]*regexp.Regexp{
+				AccountFilter: filter.ByName[*model.Account]([]*regexp.Regexp{
 					regexp.MustCompile("Assets:Portfolio"),
 				}),
 				Valuation: chf,

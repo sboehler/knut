@@ -28,7 +28,6 @@ import (
 
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/regex"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/account"
 )
@@ -236,15 +235,15 @@ func (cf AccountFlag) String() string {
 }
 
 // Value returns the account.
-func (cf AccountFlag) Value(ctx journal.Context) (*journal.Account, error) {
+func (cf AccountFlag) Value(ctx *account.Registry) (*model.Account, error) {
 	if cf.val != "" {
-		return ctx.GetAccount(cf.val)
+		return ctx.Get(cf.val)
 	}
 	return nil, nil
 }
 
 // ValueWithDefault returns the account. If no account has been specified, the default is returned.
-func (cf AccountFlag) ValueWithDefault(ctx journal.Context, def *journal.Account) (*journal.Account, error) {
+func (cf AccountFlag) ValueWithDefault(ctx *account.Registry, def *model.Account) (*model.Account, error) {
 	res, err := cf.Value(ctx)
 	if err != nil {
 		return nil, err

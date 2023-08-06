@@ -6,12 +6,15 @@ import (
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/table"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/model/account"
+	"github.com/sboehler/knut/lib/model/commodity"
+	"github.com/sboehler/knut/lib/model/registry"
 	"github.com/shopspring/decimal"
 )
 
 type Report struct {
-	Context journal.Context
+	Context *registry.Registry
 
 	nodes map[time.Time]*Node
 }
@@ -21,7 +24,7 @@ type Node struct {
 	Amounts journal.Amounts
 }
 
-func NewReport(jctx journal.Context) *Report {
+func NewReport(jctx *registry.Registry) *Report {
 	return &Report{
 		nodes: make(map[time.Time]*Node),
 	}
@@ -116,12 +119,12 @@ func (rn *Renderer) renderNode(tbl *table.Table, n *Node) {
 }
 
 func compareAccount(k1, k2 journal.Key) compare.Order {
-	return journal.CompareAccounts(k1.Other, k2.Other)
+	return account.Compare(k1.Other, k2.Other)
 }
 
 func compareAccountAndCommodities(k1, k2 journal.Key) compare.Order {
-	if c := journal.CompareAccounts(k1.Other, k2.Other); c != compare.Equal {
+	if c := account.Compare(k1.Other, k2.Other); c != compare.Equal {
 		return c
 	}
-	return journal.CompareCommodities(k1.Commodity, k2.Commodity)
+	return commodity.Compare(k1.Commodity, k2.Commodity)
 }

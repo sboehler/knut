@@ -25,8 +25,8 @@ import (
 	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
-	"github.com/sboehler/knut/lib/journal/performance"
 	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/performance"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/registry"
 )

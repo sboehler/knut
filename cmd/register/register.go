@@ -21,13 +21,17 @@ import (
 	"os"
 	"runtime/pprof"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/table"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/register"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/account"
+	"github.com/sboehler/knut/lib/model/commodity"
+	"github.com/sboehler/knut/lib/model/registry"
 
 	"github.com/spf13/cobra"
 )
@@ -110,7 +114,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	jctx := journal.NewContext()
+	jctx := registry.New()
 	valuation, err := r.valuation.Value(jctx)
 	if err != nil {
 		return err
@@ -120,9 +124,9 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	var am mapper.Mapper[*journal.Account]
+	var am mapper.Mapper[*model.Account]
 	if r.showSource {
-		am = journal.RemapAccount(jctx, r.remap.Regex())
+		am = account.Remap(jctx.Accounts(), r.remap.Regex())
 	}
 	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), r.last)
 	rep := register.NewReport(jctx)
@@ -140,11 +144,11 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				Date:    partition.Align(),
 				Account: am,
 				Other: mapper.Combine(
-					journal.RemapAccount(jctx, r.remap.Regex()),
-					journal.ShortenAccount(jctx, r.mapping.Value()),
+					account.Remap(jctx.Accounts(), r.remap.Regex()),
+					account.Shorten(jctx.Accounts(), r.mapping.Value()),
 				),
-				Commodity:   journal.MapCommodity(r.showCommodities),
-				Valuation:   journal.MapCommodity(valuation != nil),
+				Commodity:   commodity.Map(r.showCommodities),
+				Valuation:   commodity.Map(valuation != nil),
 				Description: mapper.If[string](r.showDescriptions),
 			}.Build(),
 			Valuation: valuation,

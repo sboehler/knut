@@ -111,11 +111,22 @@ func (j *Journal) Process(fs ...func(*Day) error) ([]*Day, error) {
 }
 
 func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 	syntaxCh, worker1 := parser.Parse(path)
 	modelCh, worker2 := model.FromStream(reg, syntaxCh)
-	journalCh, worker3 := cpr.FanIn(func(ctx context.Context, ch chan<- *Journal) error {
+	journalCh, worker3 := Create(reg, modelCh)
+	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)
+	p.Go(worker1)
+	p.Go(worker2)
+	p.Go(worker3)
+	err := p.Wait()
+	if err != nil {
+		return nil, err
+	}
+	return <-journalCh, nil
+}
+
+func Create(reg *model.Registry, modelCh <-chan []any) (<-chan *Journal, func(context.Context) error) {
+	return cpr.FanIn(func(ctx context.Context, ch chan<- *Journal) error {
 		j := New(reg)
 		err := cpr.Consume(ctx, modelCh, func(input []any) error {
 			for _, d := range input {
@@ -146,15 +157,6 @@ func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, 
 		}
 		return cpr.Push(ctx, ch, j)
 	})
-	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)
-	p.Go(worker1)
-	p.Go(worker2)
-	p.Go(worker3)
-	err := p.Wait()
-	if err != nil {
-		return nil, err
-	}
-	return <-journalCh, nil
 }
 
 // Day groups all commands for a given date.

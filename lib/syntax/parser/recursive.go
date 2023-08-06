@@ -12,7 +12,7 @@ import (
 )
 
 func Parse(file string) (<-chan syntax.File, func(context.Context) error) {
-	return cpr.Produce2(func(ctx context.Context, ch chan<- syntax.File) error {
+	return cpr.Produce(func(ctx context.Context, ch chan<- syntax.File) error {
 		wg, ctx := errgroup.WithContext(ctx)
 		wg.Go(func() error {
 			res, err := parseRec(ctx, wg, ch, file)

@@ -15,7 +15,7 @@ import (
 	"github.com/sboehler/knut/lib/model/registry"
 	"github.com/sboehler/knut/lib/model/transaction"
 	"github.com/sboehler/knut/lib/syntax"
-	"golang.org/x/sync/errgroup"
+	"github.com/sourcegraph/conc/pool"
 )
 
 type Commodity = commodity.Commodity
@@ -46,10 +46,10 @@ type Result struct {
 }
 
 func FromStream(reg *registry.Registry, inCh <-chan syntax.File) (<-chan []any, func(context.Context) error) {
-	return cpr.Produce2(func(ctx context.Context, ch chan<- []any) error {
-		var wg errgroup.Group
+	return cpr.Produce(func(ctx context.Context, ch chan<- []any) error {
+		wg := pool.New().WithErrors().WithContext(ctx)
 		cpr.Consume(ctx, inCh, func(input syntax.File) error {
-			wg.Go(func() error {
+			wg.Go(func(ctx context.Context) error {
 				var ds []any
 				for _, d := range input.Directives {
 					m, err := Create(reg, d.Directive)

@@ -24,9 +24,14 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/posting"
+	"github.com/sboehler/knut/lib/model/registry"
+	"github.com/sboehler/knut/lib/model/transaction"
 )
 
 // CreateCmd creates the command.
@@ -60,7 +65,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = journal.NewContext()
+		ctx = registry.New()
 		f   *bufio.Reader
 		err error
 	)
@@ -73,10 +78,10 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 			reader:  csv.NewReader(f),
 			journal: j,
 		}
-		if p.account, err = r.account.Value(ctx); err != nil {
+		if p.account, err = r.account.Value(ctx.Accounts()); err != nil {
 			return err
 		}
-		if p.feeAccount, err = r.feeAccount.Value(ctx); err != nil {
+		if p.feeAccount, err = r.feeAccount.Value(ctx.Accounts()); err != nil {
 			return err
 		}
 		if err = p.parse(); err != nil {
@@ -85,13 +90,13 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintJournal(out, j)
+	_, err = printer.NewPrinter().PrintJournal(out, j)
 	return err
 }
 
 type parser struct {
 	reader              *csv.Reader
-	account, feeAccount *journal.Account
+	account, feeAccount *model.Account
 	journal             *journal.Journal
 	balance             journal.Amounts
 }
@@ -158,7 +163,7 @@ func (p *parser) parseBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid started date in row %v: %w", r, err)
 	}
-	c, err := p.journal.Context.GetCommodity(r[bfCurrency])
+	c, err := p.journal.Registry.GetCommodity(r[bfCurrency])
 	if err != nil {
 		return fmt.Errorf("invalid commodity in row %v: %v", r, err)
 	}
@@ -166,9 +171,9 @@ func (p *parser) parseBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid amount in row %v: %v", r, err)
 	}
-	postings := journal.PostingBuilders{
+	postings := posting.Builders{
 		{
-			Credit:    p.journal.Context.TBDAccount(),
+			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: c,
 			Amount:    amt,
@@ -180,14 +185,14 @@ func (p *parser) parseBooking() error {
 		return fmt.Errorf("invalid fee in row %v: %v", r, err)
 	}
 	if !fee.IsZero() {
-		postings = append(postings, journal.PostingBuilder{
+		postings = append(postings, posting.Builder{
 			Credit:    p.account,
 			Debit:     p.feeAccount,
 			Commodity: c,
 			Amount:    fee,
 		})
 	}
-	t := journal.TransactionBuilder{
+	t := transaction.Builder{
 		Date:        d,
 		Description: r[bfDescription],
 		Postings:    postings.Build(),
@@ -203,7 +208,7 @@ func (p *parser) parseBooking() error {
 
 func (p *parser) addBalances() {
 	for k, bal := range p.balance {
-		p.journal.AddAssertion(&journal.Assertion{
+		p.journal.AddAssertion(&model.Assertion{
 			Date:      k.Date,
 			Commodity: k.Commodity,
 			Amount:    bal,

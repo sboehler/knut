@@ -26,9 +26,14 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/posting"
+	"github.com/sboehler/knut/lib/model/registry"
+	"github.com/sboehler/knut/lib/model/transaction"
 )
 
 // CreateCmd creates the command.
@@ -63,7 +68,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = journal.NewContext()
+		ctx = registry.New()
 		f   *bufio.Reader
 		err error
 	)
@@ -74,7 +79,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		reader:  csv.NewReader(f),
 		journal: journal.New(ctx),
 	}
-	if p.account, err = r.account.Value(ctx); err != nil {
+	if p.account, err = r.account.Value(ctx.Accounts()); err != nil {
 		return err
 	}
 	if err = p.parse(); err != nil {
@@ -82,13 +87,13 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	_, err = journal.NewPrinter().PrintJournal(w, p.journal)
+	_, err = printer.NewPrinter().PrintJournal(w, p.journal)
 	return err
 }
 
 type parser struct {
 	reader  *csv.Reader
-	account *journal.Account
+	account *model.Account
 	journal *journal.Journal
 }
 
@@ -137,7 +142,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	var (
 		err  error
 		desc = strings.Join(words, " ")
-		chf  *journal.Commodity
+		chf  *model.Commodity
 		amt  decimal.Decimal
 		d    time.Time
 	)
@@ -147,15 +152,15 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if amt, err = decimal.NewFromString(replacer.Replace(r[3])); err != nil {
 		return false, err
 	}
-	if chf, err = p.journal.Context.GetCommodity("CHF"); err != nil {
+	if chf, err = p.journal.Registry.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        d,
 		Description: desc,
-		Postings: journal.PostingBuilder{
+		Postings: posting.Builder{
 			Credit:    p.account,
-			Debit:     p.journal.Context.TBDAccount(),
+			Debit:     p.journal.Registry.TBDAccount(),
 			Commodity: chf,
 			Amount:    amt,
 		}.Build(),

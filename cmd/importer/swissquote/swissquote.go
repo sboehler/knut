@@ -25,10 +25,15 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/common/set"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/posting"
+	"github.com/sboehler/knut/lib/model/registry"
+	"github.com/sboehler/knut/lib/model/transaction"
 )
 
 // CreateCmd creates the command.
@@ -71,7 +76,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = journal.NewContext()
+		ctx = registry.New()
 		f   *bufio.Reader
 		err error
 	)
@@ -82,22 +87,22 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		reader:  csv.NewReader(f),
 		journal: journal.New(ctx),
 	}
-	if p.account, err = r.account.Value(ctx); err != nil {
+	if p.account, err = r.account.Value(ctx.Accounts()); err != nil {
 		return err
 	}
-	if p.dividend, err = r.dividend.Value(ctx); err != nil {
+	if p.dividend, err = r.dividend.Value(ctx.Accounts()); err != nil {
 		return err
 	}
-	if p.interest, err = r.interest.Value(ctx); err != nil {
+	if p.interest, err = r.interest.Value(ctx.Accounts()); err != nil {
 		return err
 	}
-	if p.tax, err = r.tax.Value(ctx); err != nil {
+	if p.tax, err = r.tax.Value(ctx.Accounts()); err != nil {
 		return err
 	}
-	if p.fee, err = r.fee.Value(ctx); err != nil {
+	if p.fee, err = r.fee.Value(ctx.Accounts()); err != nil {
 		return err
 	}
-	if p.trading, err = r.trading.Value(ctx); err != nil {
+	if p.trading, err = r.trading.Value(ctx.Accounts()); err != nil {
 		return err
 	}
 	if err = p.parse(); err != nil {
@@ -105,7 +110,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintJournal(out, p.journal)
+	_, err = printer.NewPrinter().PrintJournal(out, p.journal)
 	return err
 }
 
@@ -114,7 +119,7 @@ type parser struct {
 	journal *journal.Journal
 	last    *record
 
-	account, dividend, tax, fee, interest, trading *journal.Account
+	account, dividend, tax, fee, interest, trading *model.Account
 }
 
 func (p *parser) parse() error {
@@ -201,7 +206,7 @@ func (p *parser) lineToRecord(l []string) (*record, error) {
 		return nil, err
 	}
 	if len(l[fSymbol]) > 0 {
-		if r.symbol, err = p.journal.Context.GetCommodity(l[fSymbol]); err != nil {
+		if r.symbol, err = p.journal.Registry.GetCommodity(l[fSymbol]); err != nil {
 			return nil, err
 		}
 	}
@@ -223,7 +228,7 @@ func (p *parser) lineToRecord(l []string) (*record, error) {
 	if r.balance, err = parseDecimal(l[fSaldo]); err != nil {
 		return nil, err
 	}
-	if r.currency, err = p.journal.Context.GetCommodity(l[fWährung]); err != nil {
+	if r.currency, err = p.journal.Registry.GetCommodity(l[fWährung]); err != nil {
 		return nil, err
 	}
 	return &r, nil
@@ -241,7 +246,7 @@ type record struct {
 	date                                               time.Time
 	orderNo, trxType, name, isin                       string
 	quantity, price, fee, interest, netAmount, balance decimal.Decimal
-	currency, symbol                                   *journal.Commodity
+	currency, symbol                                   *model.Commodity
 }
 
 func (p *parser) parseTrade(r *record) (bool, error) {
@@ -257,10 +262,10 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	if proceeds.IsPositive() {
 		qty = qty.Neg()
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        r.date,
 		Description: desc,
-		Postings: journal.PostingBuilders{
+		Postings: posting.Builders{
 			{
 				Credit:    p.trading,
 				Debit:     p.account,
@@ -280,7 +285,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 				Amount:    fee,
 			},
 		}.Build(),
-		Targets: []*journal.Commodity{r.symbol, r.currency},
+		Targets: []*model.Commodity{r.symbol, r.currency},
 	}.Build())
 	return true, nil
 }
@@ -303,10 +308,10 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		return true, nil
 	}
 	desc := fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency.Name(), r.trxType, r.netAmount, r.currency.Name())
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        r.date,
 		Description: desc,
-		Postings: journal.PostingBuilders{
+		Postings: posting.Builders{
 			{
 				Credit:    p.trading,
 				Debit:     p.account,
@@ -320,7 +325,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 				Amount:    r.netAmount,
 			},
 		}.Build(),
-		Targets: []*journal.Commodity{p.last.currency, r.currency},
+		Targets: []*model.Commodity{p.last.currency, r.currency},
 	}.Build())
 	p.last = nil
 	return true, nil
@@ -335,7 +340,7 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 	if !w.Has(r.trxType) {
 		return false, nil
 	}
-	postings := journal.PostingBuilders{
+	postings := posting.Builders{
 		{
 			Credit:    p.dividend,
 			Debit:     p.account,
@@ -344,18 +349,18 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 		},
 	}
 	if !r.fee.IsZero() {
-		postings = append(postings, journal.PostingBuilder{
+		postings = append(postings, posting.Builder{
 			Credit:    p.account,
 			Debit:     p.tax,
 			Commodity: r.currency,
 			Amount:    r.fee,
 		})
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        r.date,
 		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol.Name(), r.name, r.isin),
 		Postings:    postings.Build(),
-		Targets:     []*journal.Commodity{r.symbol},
+		Targets:     []*model.Commodity{r.symbol},
 	}.Build())
 	return true, nil
 }
@@ -364,16 +369,16 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 	if r.trxType != "Depotgebühren" {
 		return false, nil
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: journal.PostingBuilder{
+		Postings: posting.Builder{
 			Credit:    p.fee,
 			Debit:     p.account,
 			Commodity: r.currency,
 			Amount:    r.netAmount,
 		}.Build(),
-		Targets: make([]*journal.Commodity, 0),
+		Targets: make([]*model.Commodity, 0),
 	}.Build())
 	return true, nil
 }
@@ -388,11 +393,11 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 	if !w.Has(r.trxType) {
 		return false, nil
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: journal.PostingBuilder{
-			Credit:    p.journal.Context.TBDAccount(),
+		Postings: posting.Builder{
+			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: r.currency,
 			Amount:    r.netAmount,
@@ -405,26 +410,26 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 	if r.trxType != "Zins" {
 		return false, nil
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: journal.PostingBuilder{
+		Postings: posting.Builder{
 			Credit:    p.interest,
 			Debit:     p.account,
 			Commodity: r.currency,
 			Amount:    r.netAmount,
 		}.Build(),
-		Targets: []*journal.Commodity{r.currency},
+		Targets: []*model.Commodity{r.currency},
 	}.Build())
 	return true, nil
 }
 
 func (p *parser) parseCatchall(r *record) (bool, error) {
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
-		Postings: journal.PostingBuilder{
-			Credit:    p.journal.Context.TBDAccount(),
+		Postings: posting.Builder{
+			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: r.currency,
 			Amount:    r.netAmount,

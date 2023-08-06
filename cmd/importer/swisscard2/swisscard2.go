@@ -24,9 +24,14 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/posting"
+	"github.com/sboehler/knut/lib/model/registry"
+	"github.com/sboehler/knut/lib/model/transaction"
 )
 
 // CreateCmd creates the command.
@@ -60,12 +65,12 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
-	ctx := journal.NewContext()
+	ctx := registry.New()
 	f, err := flags.OpenFile(args[0])
 	if err != nil {
 		return err
 	}
-	account, err := r.account.Value(ctx)
+	account, err := r.account.Value(ctx.Accounts())
 	if err != nil {
 		return err
 	}
@@ -79,13 +84,13 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	_, err = journal.NewPrinter().PrintJournal(w, p.journal)
+	_, err = printer.NewPrinter().PrintJournal(w, p.journal)
 	return err
 }
 
 type parser struct {
 	reader  *csv.Reader
-	account *journal.Account
+	account *model.Account
 	journal *journal.Journal
 }
 
@@ -134,17 +139,17 @@ func (p *parser) readBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid date in record %v: %w", r, err)
 	}
-	c := p.journal.Context.Commodity(r[währung])
+	c := p.journal.Registry.Commodity(r[währung])
 	amt, err := decimal.NewFromString(r[betrag])
 	if err != nil {
 		return fmt.Errorf("invalid amount in record %v: %w", r, err)
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        d,
 		Description: fmt.Sprintf("%s / %s / %s / %s", r[beschreibung], r[kartennummer], r[kategorie], r[debitKredit]),
-		Postings: journal.PostingBuilder{
+		Postings: posting.Builder{
 			Credit:    p.account,
-			Debit:     p.journal.Context.TBDAccount(),
+			Debit:     p.journal.Registry.TBDAccount(),
 			Commodity: c,
 			Amount:    amt,
 		}.Build(),

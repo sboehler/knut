@@ -26,9 +26,14 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/posting"
+	"github.com/sboehler/knut/lib/model/registry"
+	"github.com/sboehler/knut/lib/model/transaction"
 )
 
 // CreateCmd creates the command.
@@ -62,7 +67,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = journal.NewContext()
+		ctx = registry.New()
 		f   *bufio.Reader
 		err error
 	)
@@ -73,7 +78,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		reader:  csv.NewReader(f),
 		journal: journal.New(ctx),
 	}
-	if p.account, err = r.account.Value(ctx); err != nil {
+	if p.account, err = r.account.Value(ctx.Accounts()); err != nil {
 		return err
 	}
 	if err = p.parse(); err != nil {
@@ -81,15 +86,15 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintJournal(out, p.journal)
+	_, err = printer.NewPrinter().PrintJournal(out, p.journal)
 	return err
 }
 
 type parser struct {
 	reader   *csv.Reader
-	account  *journal.Account
+	account  *model.Account
 	journal  *journal.Journal
-	currency *journal.Commodity
+	currency *model.Commodity
 	date     time.Time
 }
 
@@ -146,7 +151,7 @@ func (p *parser) parseHeader(r []string) error {
 		return fmt.Errorf("could not extract currency from header field: %q", r[bfPaidOut])
 	}
 	var err error
-	p.currency, err = p.journal.Context.GetCommodity(groups[1])
+	p.currency, err = p.journal.Registry.GetCommodity(groups[1])
 	return err
 }
 
@@ -169,7 +174,7 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		p.journal.AddAssertion(&journal.Assertion{
+		p.journal.AddAssertion(&model.Assertion{
 			Date:      date,
 			Account:   p.account,
 			Amount:    balance,
@@ -202,7 +207,7 @@ func (p *parser) parseBooking(r []string) error {
 		return err
 	}
 	amount = amount.Mul(sign)
-	t := journal.TransactionBuilder{
+	t := transaction.Builder{
 		Date:        date,
 		Description: desc,
 	}
@@ -212,15 +217,15 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		t.Postings = journal.PostingBuilders{
+		t.Postings = posting.Builders{
 			{
-				Credit:    p.journal.Context.ValuationAccountFor(p.account),
+				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Amount:    amount,
 			},
 			{
-				Credit:    p.journal.Context.ValuationAccountFor(p.account),
+				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Amount:    otherAmount,
@@ -231,24 +236,24 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		t.Postings = journal.PostingBuilders{
+		t.Postings = posting.Builders{
 			{
-				Credit:    p.journal.Context.ValuationAccountFor(p.account),
+				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Amount:    amount,
 			},
 			{
-				Credit:    p.journal.Context.ValuationAccountFor(p.account),
+				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Amount:    otherAmount.Neg(),
 			},
 		}.Build()
 	default:
-		t.Postings = journal.PostingBuilder{
+		t.Postings = posting.Builder{
 
-			Credit:    p.journal.Context.TBDAccount(),
+			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: p.currency,
 			Amount:    amount,
@@ -258,17 +263,17 @@ func (p *parser) parseBooking(r []string) error {
 	return nil
 }
 
-func (p *parser) parseCombiField(f string) (*journal.Commodity, decimal.Decimal, error) {
+func (p *parser) parseCombiField(f string) (*model.Commodity, decimal.Decimal, error) {
 	fs := strings.Fields(f)
 	if len(fs) != 2 {
 		return nil, decimal.Decimal{}, fmt.Errorf("expected currency and amount, got %s", f)
 	}
 	var (
-		otherCommodity *journal.Commodity
+		otherCommodity *model.Commodity
 		otherAmount    decimal.Decimal
 		err            error
 	)
-	if otherCommodity, err = p.journal.Context.GetCommodity(fs[0]); err != nil {
+	if otherCommodity, err = p.journal.Registry.GetCommodity(fs[0]); err != nil {
 		return nil, decimal.Decimal{}, err
 	}
 	if otherAmount, err = parseDecimal(fs[1]); err != nil {

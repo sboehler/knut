@@ -28,9 +28,14 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/posting"
+	"github.com/sboehler/knut/lib/model/registry"
+	"github.com/sboehler/knut/lib/model/transaction"
 )
 
 // CreateCmd creates the cobra command.
@@ -69,7 +74,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 func (r *runner) runE(cmd *cobra.Command, args []string) error {
 	var (
 		reader *bufio.Reader
-		ctx    = journal.NewContext()
+		ctx    = registry.New()
 		err    error
 	)
 	if reader, err = flags.OpenFile(args[0]); err != nil {
@@ -79,7 +84,7 @@ func (r *runner) runE(cmd *cobra.Command, args []string) error {
 		reader:  csv.NewReader(utfbom.SkipOnly(reader)),
 		journal: journal.New(ctx),
 	}
-	if p.account, err = r.accountFlag.Value(ctx); err != nil {
+	if p.account, err = r.accountFlag.Value(ctx.Accounts()); err != nil {
 		return err
 	}
 	if err = p.parse(); err != nil {
@@ -87,7 +92,7 @@ func (r *runner) runE(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintJournal(out, p.journal)
+	_, err = printer.NewPrinter().PrintJournal(out, p.journal)
 	return err
 }
 
@@ -98,10 +103,10 @@ func init() {
 // Parser is a parser for account statements
 type Parser struct {
 	reader  *csv.Reader
-	account *journal.Account
+	account *model.Account
 	journal *journal.Journal
 
-	currency *journal.Commodity
+	currency *model.Commodity
 }
 
 func (p *Parser) parse() error {
@@ -120,7 +125,7 @@ func (p *Parser) parse() error {
 		return err
 	} else {
 		sym := strings.Trim(s, "=\"")
-		if p.currency, err = p.journal.Context.GetCommodity(sym); err != nil {
+		if p.currency, err = p.journal.Registry.GetCommodity(sym); err != nil {
 			return err
 		}
 	}
@@ -190,11 +195,11 @@ func (p *Parser) readBookingLine() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	p.journal.AddTransaction(journal.TransactionBuilder{
+	p.journal.AddTransaction(transaction.Builder{
 		Date:        date,
 		Description: strings.TrimSpace(rec[bfAvisierungstext]),
-		Postings: journal.PostingBuilder{
-			Credit:    p.journal.Context.TBDAccount(),
+		Postings: posting.Builder{
+			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: p.currency,
 			Amount:    amount,

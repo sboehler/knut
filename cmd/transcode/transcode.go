@@ -19,9 +19,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/journal"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/lib/journal/beancount"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/registry"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
@@ -63,8 +65,8 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 
 func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
-		jctx      = journal.NewContext()
-		valuation *journal.Commodity
+		jctx      = registry.New()
+		valuation *model.Commodity
 		err       error
 	)
 	if valuation, err = r.valuation.Value(jctx); err != nil {

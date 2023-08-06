@@ -21,8 +21,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/price"
+	"github.com/sboehler/knut/lib/model/registry"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
+	"github.com/sboehler/knut/lib/syntax"
+	"github.com/sboehler/knut/lib/syntax/parser"
 	"github.com/shopspring/decimal"
 	"github.com/sourcegraph/conc/pool"
 	"go.uber.org/multierr"
@@ -56,7 +62,7 @@ func run(cmd *cobra.Command, args []string) {
 const concurrency = 5
 
 func execute2(cmd *cobra.Command, args []string) error {
-	ctx := journal.NewContext()
+	ctx := registry.New()
 	configs, err := readConfig(args[0])
 	if err != nil {
 		return err
@@ -74,7 +80,7 @@ func execute2(cmd *cobra.Command, args []string) error {
 	return multierr.Combine(p.Wait())
 }
 
-func fetch(jctx journal.Context, f string, cfg config) error {
+func fetch(jctx *registry.Registry, f string, cfg config) error {
 	absPath := filepath.Join(filepath.Dir(f), cfg.File)
 	l, err := readFile(jctx, absPath)
 	if err != nil {
@@ -104,34 +110,39 @@ func readConfig(path string) ([]config, error) {
 	return t, nil
 }
 
-func readFile(ctx journal.Context, filepath string) (res map[time.Time]*journal.Price, err error) {
-	p, cls, err := journal.ParserFromPath(ctx, filepath)
+func readFile(ctx *registry.Registry, filepath string) (res map[time.Time]*model.Price, err error) {
+	text, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { err = multierr.Append(err, cls()) }()
-	prices := make(map[time.Time]*journal.Price)
-	for {
-		d, err := p.Next()
-		if err == io.EOF {
-			return prices, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		if p, ok := d.(*journal.Price); ok {
-			prices[p.Date] = p
+	p := parser.New(string(text), filepath)
+	if err := p.Advance(); err != nil {
+		return nil, err
+	}
+	f, err := p.ParseFile()
+	if err != nil {
+		return nil, err
+	}
+	prices := make(map[time.Time]*model.Price)
+	for _, d := range f.Directives {
+		if p, ok := d.Directive.(syntax.Price); ok {
+			m, err := price.Create(ctx, &p)
+			if err != nil {
+				return nil, err
+			}
+			prices[m.Date] = m
 		} else {
 			return nil, fmt.Errorf("unexpected directive in prices file: %v", d)
 		}
 	}
+	return prices, nil
 }
 
-func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[time.Time]*journal.Price) error {
+func fetchPrices(ctx *registry.Registry, cfg config, t0, t1 time.Time, results map[time.Time]*model.Price) error {
 	var (
 		c                 = yahoo.New()
 		quotes            []yahoo.Quote
-		commodity, target *journal.Commodity
+		commodity, target *model.Commodity
 		err               error
 	)
 	if quotes, err = c.Fetch(cfg.Symbol, t0, t1); err != nil {
@@ -144,7 +155,7 @@ func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[
 		return err
 	}
 	for _, i := range quotes {
-		results[i.Date] = &journal.Price{
+		results[i.Date] = &model.Price{
 			Date:      i.Date,
 			Commodity: commodity,
 			Target:    target,
@@ -154,7 +165,7 @@ func fetchPrices(ctx journal.Context, cfg config, t0, t1 time.Time, results map[
 	return nil
 }
 
-func writeFile(ctx journal.Context, prices map[time.Time]*journal.Price, filepath string) error {
+func writeFile(ctx *registry.Registry, prices map[time.Time]*model.Price, filepath string) error {
 	j := journal.New(ctx)
 	for _, price := range prices {
 		j.AddPrice(price)
@@ -162,7 +173,7 @@ func writeFile(ctx journal.Context, prices map[time.Time]*journal.Price, filepat
 	r, w := io.Pipe()
 	go func() {
 		defer w.Close()
-		_, err := journal.NewPrinter().PrintJournal(w, j)
+		_, err := printer.NewPrinter().PrintJournal(w, j)
 		if err != nil {
 			panic(err)
 		}

@@ -26,9 +26,14 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
-	"github.com/sboehler/knut/cmd/flags"
+	flags "github.com/sboehler/knut/cmd/flags2"
 	"github.com/sboehler/knut/cmd/importer"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/posting"
+	"github.com/sboehler/knut/lib/model/registry"
+	"github.com/sboehler/knut/lib/model/transaction"
 )
 
 // CreateCmd creates the command.
@@ -63,12 +68,12 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx     = journal.NewContext()
-		account *journal.Account
+		ctx     = registry.New()
+		account *model.Account
 		reader  *bufio.Reader
 		err     error
 	)
-	if account, err = r.account.Value(ctx); err != nil {
+	if account, err = r.account.Value(ctx.Accounts()); err != nil {
 		return err
 	}
 	if reader, err = flags.OpenFile(args[0]); err != nil {
@@ -78,7 +83,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		context: ctx,
 		account: account,
 	}
-	var trx []*journal.Transaction
+	var trx []*model.Transaction
 	if trx, err = p.parse(reader); err != nil {
 		return err
 	}
@@ -88,20 +93,20 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = journal.NewPrinter().PrintJournal(out, j)
+	_, err = printer.NewPrinter().PrintJournal(out, j)
 	return err
 }
 
 type parser struct {
-	context journal.Context
-	account *journal.Account
+	context *registry.Registry
+	account *model.Account
 
 	// internal variables
 	reader       *csv.Reader
-	transactions []journal.TransactionBuilder
+	transactions []transaction.Builder
 }
 
-func (p *parser) parse(r io.Reader) ([]*journal.Transaction, error) {
+func (p *parser) parse(r io.Reader) ([]*model.Transaction, error) {
 	p.reader = csv.NewReader(r)
 	p.reader.FieldsPerRecord = -1
 	p.reader.LazyQuotes = true
@@ -114,7 +119,7 @@ func (p *parser) parse(r io.Reader) ([]*journal.Transaction, error) {
 			return nil, err
 		}
 	}
-	var res []*journal.Transaction
+	var res []*model.Transaction
 	for _, b := range p.transactions {
 		res = append(res, b.Build())
 	}
@@ -162,7 +167,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		err    error
 		desc   = r[bfBeschreibung]
 		amount decimal.Decimal
-		chf    *journal.Commodity
+		chf    *model.Commodity
 		date   time.Time
 	)
 	if date, err = time.Parse("02.01.2006", r[bfEinkaufsDatum]); err != nil {
@@ -174,10 +179,10 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.transactions = append(p.transactions, journal.TransactionBuilder{
+	p.transactions = append(p.transactions, transaction.Builder{
 		Date:        date,
 		Description: desc,
-		Postings: journal.PostingBuilder{
+		Postings: posting.Builder{
 			Credit:    p.context.TBDAccount(),
 			Debit:     p.account,
 			Commodity: chf,
@@ -251,7 +256,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 		err    error
 		amount decimal.Decimal
 		date   time.Time
-		chf    *journal.Commodity
+		chf    *model.Commodity
 	)
 	if date, err = time.Parse("02.01.2006", r[rfEinkaufsDatum]); err != nil {
 		return false, err
@@ -262,10 +267,10 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	if chf, err = p.context.GetCommodity("CHF"); err != nil {
 		return false, err
 	}
-	p.transactions = append(p.transactions, journal.TransactionBuilder{
+	p.transactions = append(p.transactions, transaction.Builder{
 		Date:        date,
 		Description: r[rfBeschreibung],
-		Postings: journal.PostingBuilder{
+		Postings: posting.Builder{
 			Credit:    p.context.TBDAccount(),
 			Debit:     p.account,
 			Commodity: chf,

@@ -22,20 +22,23 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/set"
-	"github.com/sboehler/knut/lib/journal"
+	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/transaction"
 	"github.com/shopspring/decimal"
 )
 
 // Transcode transcodes the given journal to beancount.
-func Transcode(w io.Writer, j []*journal.Day, c *journal.Commodity) error {
+func Transcode(w io.Writer, j []*journal.Day, c *model.Commodity) error {
 	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c.Name()); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n\n"); err != nil {
 		return err
 	}
-	var p journal.Printer
-	openValAccounts := set.New[*journal.Account]()
+	var p printer.Printer
+	openValAccounts := set.New[*model.Account]()
 	for _, day := range j {
 		for _, open := range day.Openings {
 			if _, err := p.PrintDirective(w, open); err != nil {
@@ -45,13 +48,13 @@ func Transcode(w io.Writer, j []*journal.Day, c *journal.Commodity) error {
 				return err
 			}
 		}
-		compare.Sort(day.Transactions, journal.CompareTransactions)
+		compare.Sort(day.Transactions, transaction.Compare)
 
 		for _, trx := range day.Transactions {
 			for _, pst := range trx.Postings {
 				if strings.HasPrefix(pst.Account.Name(), "Equity:Valuation:") && !openValAccounts.Has(pst.Account) {
 					openValAccounts.Add(pst.Account)
-					if _, err := p.PrintDirective(w, &journal.Open{Date: trx.Date, Account: pst.Account}); err != nil {
+					if _, err := p.PrintDirective(w, &model.Open{Date: trx.Date, Account: pst.Account}); err != nil {
 						return err
 					}
 					if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -77,14 +80,9 @@ func Transcode(w io.Writer, j []*journal.Day, c *journal.Commodity) error {
 	return nil
 }
 
-func writeTrx(w io.Writer, t *journal.Transaction, c *journal.Commodity) error {
+func writeTrx(w io.Writer, t *model.Transaction, c *model.Commodity) error {
 	if _, err := fmt.Fprintf(w, `%s * "%s"`, t.Date.Format("2006-01-02"), t.Description); err != nil {
 		return err
-	}
-	for _, tag := range t.Tags {
-		if _, err := fmt.Fprintf(w, " %s", tag); err != nil {
-			return err
-		}
 	}
 	if _, err := io.WriteString(w, "\n"); err != nil {
 		return err
@@ -99,7 +97,7 @@ func writeTrx(w io.Writer, t *journal.Transaction, c *journal.Commodity) error {
 }
 
 // WriteTo pretty-prints a posting.
-func writePosting(w io.Writer, p *journal.Posting, c *journal.Commodity) error {
+func writePosting(w io.Writer, p *model.Posting, c *model.Commodity) error {
 	var amt decimal.Decimal
 	if c == nil {
 		amt = p.Amount
@@ -117,6 +115,6 @@ func writePosting(w io.Writer, p *journal.Posting, c *journal.Commodity) error {
 
 var regex = regexp.MustCompile("[^a-zA-Z]")
 
-func stripNonAlphanum(c *journal.Commodity) string {
+func stripNonAlphanum(c *model.Commodity) string {
 	return regex.ReplaceAllString(c.Name(), "X")
 }

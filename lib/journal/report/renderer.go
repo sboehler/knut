@@ -21,7 +21,7 @@ import (
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/regex"
 	"github.com/sboehler/knut/lib/common/table"
-	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/commodity"
 	"github.com/shopspring/decimal"

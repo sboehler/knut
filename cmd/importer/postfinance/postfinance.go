@@ -28,10 +28,10 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 
-	flags "github.com/sboehler/knut/cmd/flags2"
+	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
-	journal "github.com/sboehler/knut/lib/journal2"
-	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/posting"
 	"github.com/sboehler/knut/lib/model/registry"

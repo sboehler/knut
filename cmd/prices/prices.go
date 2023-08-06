@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"time"
 
-	journal "github.com/sboehler/knut/lib/journal2"
-	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/price"
 	"github.com/sboehler/knut/lib/model/registry"

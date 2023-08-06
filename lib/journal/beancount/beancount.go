@@ -22,8 +22,8 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/set"
-	journal "github.com/sboehler/knut/lib/journal2"
-	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/transaction"
 	"github.com/shopspring/decimal"

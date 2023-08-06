@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"os"
 
-	flags "github.com/sboehler/knut/cmd/flags2"
+	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/beancount"
-	journal "github.com/sboehler/knut/lib/journal2"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/registry"
 

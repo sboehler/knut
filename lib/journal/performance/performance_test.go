@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
-	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/posting"
 	"github.com/sboehler/knut/lib/model/registry"

@@ -6,7 +6,7 @@ import (
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/table"
-	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model/account"
 	"github.com/sboehler/knut/lib/model/commodity"
 	"github.com/sboehler/knut/lib/model/registry"

@@ -22,11 +22,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	flags "github.com/sboehler/knut/cmd/flags2"
+	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
-	journal "github.com/sboehler/knut/lib/journal2"
-	"github.com/sboehler/knut/lib/journal2/performance"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/performance"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/registry"
 )

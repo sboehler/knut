@@ -6,7 +6,7 @@ import (
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/mapper"
-	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/shopspring/decimal"
 )

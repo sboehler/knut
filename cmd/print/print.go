@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"os"
 
-	journal "github.com/sboehler/knut/lib/journal2"
-	"github.com/sboehler/knut/lib/journal2/printer"
+	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model/registry"
 
 	"github.com/spf13/cobra"

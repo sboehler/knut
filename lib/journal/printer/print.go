@@ -20,7 +20,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	journal "github.com/sboehler/knut/lib/journal2"
+	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
 )
 

@@ -45,14 +45,14 @@ type Result struct {
 	Directives []any
 }
 
-func FromStream(reg *registry.Registry, inCh <-chan syntax.File) (<-chan []any, func(context.Context) error) {
-	return cpr.Produce(func(ctx context.Context, ch chan<- []any) error {
+func FromStream(reg *registry.Registry, inCh <-chan syntax.File) (<-chan []Directive, func(context.Context) error) {
+	return cpr.Produce(func(ctx context.Context, ch chan<- []Directive) error {
 		wg := pool.New().WithErrors().WithContext(ctx)
 		cpr.Consume(ctx, inCh, func(input syntax.File) error {
 			wg.Go(func(ctx context.Context) error {
-				var ds []any
+				var ds []Directive
 				for _, d := range input.Directives {
-					m, err := Create(reg, d.Directive)
+					m, err := Create(reg, d)
 					if err != nil {
 						return err
 					}
@@ -66,14 +66,14 @@ func FromStream(reg *registry.Registry, inCh <-chan syntax.File) (<-chan []any, 
 	})
 }
 
-func Create(reg *registry.Registry, w any) ([]any, error) {
-	switch d := w.(type) {
+func Create(reg *registry.Registry, w syntax.Directive) ([]Directive, error) {
+	switch d := w.Directive.(type) {
 	case syntax.Transaction:
 		ts, err := transaction.Create(reg, &d)
 		if err != nil {
 			return nil, err
 		}
-		var res []any
+		var res []Directive
 		for _, t := range ts {
 			res = append(res, t)
 		}
@@ -83,25 +83,25 @@ func Create(reg *registry.Registry, w any) ([]any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return []any{o}, nil
+		return []Directive{o}, nil
 	case syntax.Close:
 		o, err := cls.Create(reg, &d)
 		if err != nil {
 			return nil, err
 		}
-		return []any{o}, nil
+		return []Directive{o}, nil
 	case syntax.Assertion:
 		o, err := assertion.Create(reg, &d)
 		if err != nil {
 			return nil, err
 		}
-		return []any{o}, nil
+		return []Directive{o}, nil
 	case syntax.Price:
 		o, err := price.Create(reg, &d)
 		if err != nil {
 			return nil, err
 		}
-		return []any{o}, nil
+		return []Directive{o}, nil
 	case syntax.Include:
 		return nil, nil
 	}

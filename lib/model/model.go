@@ -52,7 +52,7 @@ func FromStream(reg *registry.Registry, inCh <-chan syntax.File) (<-chan []Direc
 			wg.Go(func(ctx context.Context) error {
 				var ds []Directive
 				for _, d := range input.Directives {
-					m, err := Create(reg, d)
+					m, err := ParseDirective(reg, d)
 					if err != nil {
 						return err
 					}
@@ -66,7 +66,7 @@ func FromStream(reg *registry.Registry, inCh <-chan syntax.File) (<-chan []Direc
 	})
 }
 
-func Create(reg *registry.Registry, w syntax.Directive) ([]Directive, error) {
+func ParseDirective(reg *registry.Registry, w syntax.Directive) ([]Directive, error) {
 	switch d := w.Directive.(type) {
 	case syntax.Transaction:
 		ts, err := transaction.Create(reg, &d)

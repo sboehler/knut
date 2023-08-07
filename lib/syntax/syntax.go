@@ -53,14 +53,6 @@ type Include = directives.Include
 
 type Range = directives.Range
 
-func SetRange[T any, P interface {
-	*T
-	SetRange(Range)
-}](t P, r Range) T {
-	t.SetRange(r)
-	return *t
-}
-
 type Location = directives.Location
 
 var _ error = Error{}
@@ -70,8 +62,6 @@ type Error = directives.Error
 type Parser = parser.Parser
 
 type Scanner = scanner.Scanner
-
-type Printer = printer.Printer
 
 func ParseFile(file string) (directives.File, error) {
 	text, err := os.ReadFile(file)

@@ -1,155 +1,50 @@
 package syntax
 
 import (
-	"fmt"
-	"strings"
-	"time"
+	"text/scanner"
 
-	"github.com/shopspring/decimal"
+	"github.com/sboehler/knut/lib/syntax/directives"
+	"github.com/sboehler/knut/lib/syntax/parser"
+	"github.com/sboehler/knut/lib/syntax/printer"
 )
 
-type Commodity struct{ Range }
+type Commodity = directives.Commodity
 
-type Account struct {
-	Range
-	Macro bool
-}
+type Account = directives.Account
 
-type Date struct{ Range }
+type Date = directives.Date
 
-func (d Date) Parse() (time.Time, error) {
-	date, err := time.Parse("2006-01-02", d.Extract())
-	if err != nil {
-		return date, Error{
-			Message: "parsing date",
-			Range:   d.Range,
-			Wrapped: err,
-		}
-	}
-	return date, nil
-}
+type Decimal = directives.Decimal
 
-type Decimal struct{ Range }
+type QuotedString = directives.QuotedString
 
-func (d Decimal) Parse() (decimal.Decimal, error) {
-	dec, err := decimal.NewFromString(d.Extract())
-	if err != nil {
-		return dec, Error{
-			Message: "parsing date",
-			Range:   d.Range,
-			Wrapped: err,
-		}
-	}
-	return dec, nil
-}
+type Booking = directives.Booking
 
-type QuotedString struct {
-	Range
-	Content Range
-}
+type Performance = directives.Performance
 
-type Booking struct {
-	Range
-	Credit, Debit Account
-	Amount        Decimal
-	Commodity     Commodity
-}
+type Interval = directives.Interval
 
-type Performance struct {
-	Range
-	Targets []Commodity
-}
+type Directive = directives.Directive
 
-type Interval struct{ Range }
+type File = directives.File
 
-type Directive struct {
-	Range
-	Directive any
-}
+type Accrual = directives.Accrual
 
-type File struct {
-	Range
-	Directives []Directive
-}
+type Addons = directives.Addons
 
-type Accrual struct {
-	Range
-	Interval   Interval
-	Start, End Date
-	Account    Account
-}
+type Transaction = directives.Transaction
 
-type Addons struct {
-	Range
-	Performance Performance
-	Accrual     Accrual
-}
+type Open = directives.Open
 
-type Transaction struct {
-	Range
-	Date        Date
-	Description QuotedString
-	Bookings    []Booking
-	Addons      Addons
-}
+type Close = directives.Close
 
-type Open struct {
-	Range
-	Date    Date
-	Account Account
-}
+type Assertion = directives.Assertion
 
-type Close struct {
-	Range
-	Date    Date
-	Account Account
-}
+type Price = directives.Price
 
-type Assertion struct {
-	Range
-	Date      Date
-	Account   Account
-	Amount    Decimal
-	Commodity Commodity
-}
+type Include = directives.Include
 
-type Price struct {
-	Range
-	Date              Date
-	Commodity, Target Commodity
-	Price             Decimal
-}
-
-type Include struct {
-	Range
-	IncludePath QuotedString
-}
-
-type Range struct {
-	Start, End int
-	Path, Text string
-}
-
-func (r Range) Extract() string {
-	return r.Text[r.Start:r.End]
-}
-
-func (r *Range) SetRange(r2 Range) {
-	*r = r2
-}
-
-func (r Range) Length() int {
-	return r.End - r.Start
-}
-
-func (r *Range) Extend(r2 Range) {
-	if r.Start > r2.Start {
-		r.Start = r2.Start
-	}
-	if r.End < r2.End {
-		r.End = r2.End
-	}
-}
+type Range = directives.Range
 
 func SetRange[T any, P interface {
 	*T
@@ -159,79 +54,18 @@ func SetRange[T any, P interface {
 	return *t
 }
 
-func (r Range) Empty() bool {
-	return r.Start == r.End
-}
-
-func (r Range) Location() Location {
-	loc := Location{Line: 1, Col: 1}
-	for pos, ch := range r.Text {
-		if pos == r.End {
-			return loc
-		}
-		if ch == '\n' {
-			loc.Line++
-			loc.Col = 1
-		} else {
-			loc.Col++
-		}
-	}
-	return loc
-}
-
-func (r Range) Context(previous int) []string {
-	start := r.Start
-	end := r.End
-	for i := 0; i <= previous; i++ {
-		start = r.firstOfLine(start)
-	}
-	end = r.lastOfLine(end)
-	return strings.Split(r.Text[start:end], "\n")
-}
-
-func (r Range) firstOfLine(pos int) int {
-	for pos > 0 && r.Text[pos-1] != '\n' {
-		pos--
-	}
-	return pos
-}
-
-func (r Range) lastOfLine(pos int) int {
-	for pos < len(r.Text) && r.Text[pos] != '\n' {
-		pos++
-	}
-	return pos
-}
-
-type Location struct {
-	Line, Col int
-}
-
-func (l Location) String() string {
-	return fmt.Sprintf("%d:%d", l.Line, l.Col)
-}
+type Location = directives.Location
 
 var _ error = Error{}
 
-type Error struct {
-	Range
-	Message string
-	Wrapped error
-}
+type Error = directives.Error
 
-func (e Error) Error() string {
-	var s strings.Builder
-	if e.Wrapped != nil {
-		s.WriteString(e.Wrapped.Error())
-		s.WriteString("\n")
-	}
-	if len(e.Path) > 0 {
-		s.WriteString(e.Path)
-		s.WriteString(": ")
-	}
-	loc := e.Location()
-	s.WriteString(loc.String())
-	s.WriteString(" ")
-	s.WriteString(e.Message)
-	return s.String()
-}
+type Parser = parser.Parser
+
+type Scanner = scanner.Scanner
+
+type Printer = printer.Printer
+
+var Parse = parser.Parse
+
+var NewParser = parser.New

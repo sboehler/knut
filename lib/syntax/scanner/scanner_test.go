@@ -22,7 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/sboehler/knut/lib/syntax"
+	"github.com/sboehler/knut/lib/syntax/directives"
 )
 
 func TestNewScanner(t *testing.T) {
@@ -52,8 +52,8 @@ func TestReadN(t *testing.T) {
 		{
 			n:    7,
 			want: Range{Start: 0, End: 6, Text: "foobar"},
-			err: syntax.Error{
-				Range:   syntax.Range{End: 6, Text: "foobar"},
+			err: directives.Error{
+				Range:   directives.Range{End: 6, Text: "foobar"},
 				Message: "while reading 6 of 7 characters",
 				Wrapped: io.EOF,
 			},
@@ -101,9 +101,9 @@ func TestReadString(t *testing.T) {
 		{
 			str:  "foobarbaz",
 			want: Range{Start: 0, End: 6, Text: "foobar"},
-			wantErr: syntax.Error{
+			wantErr: directives.Error{
 				Message: "while reading \"foobarbaz\"",
-				Range:   syntax.Range{End: 6, Text: "foobar"},
+				Range:   directives.Range{End: 6, Text: "foobar"},
 			},
 		},
 	} {
@@ -133,7 +133,7 @@ func TestReadCharacter(t *testing.T) {
 			text: "foo",
 			char: 'o',
 			want: Range{Start: 0, End: 0, Text: "foo"},
-			wantErr: syntax.Error{
+			wantErr: directives.Error{
 				Message: "unexpected character `f`, want `o`",
 				Range:   Range{Start: 0, End: 0, Text: "foo"},
 			},
@@ -142,7 +142,7 @@ func TestReadCharacter(t *testing.T) {
 			text: "",
 			char: 'o',
 			want: Range{Start: 0, End: 0, Text: ""},
-			wantErr: syntax.Error{
+			wantErr: directives.Error{
 				Message: "unexpected end of file, want `o`",
 				Range:   Range{Start: 0, End: 0, Text: ""},
 			},
@@ -174,7 +174,7 @@ func TestReadCharacterWith(t *testing.T) {
 			text: "foo",
 			char: 'o',
 			want: Range{Start: 0, End: 0, Text: "foo"},
-			wantErr: syntax.Error{
+			wantErr: directives.Error{
 				Message: "unexpected character `f`, want character `o`",
 				Range:   Range{Text: "foo"},
 			},
@@ -183,7 +183,7 @@ func TestReadCharacterWith(t *testing.T) {
 			text: "",
 			char: 'o',
 			want: Range{Start: 0, End: 0, Text: ""},
-			wantErr: syntax.Error{
+			wantErr: directives.Error{
 				Message: "unexpected end of file, want character `o`",
 				Range:   Range{Start: 0, End: 0, Text: ""},
 			},
@@ -257,7 +257,7 @@ func TestReadWhile1(t *testing.T) {
 			pred: func(r rune) bool { return r == 'o' },
 			want: Range{Start: 0, End: 0, Text: ""},
 			desc: "character `o`",
-			wantErr: syntax.Error{
+			wantErr: directives.Error{
 				Message: "unexpected end of file, want character `o`",
 				Range:   Range{},
 			},
@@ -279,7 +279,7 @@ func TestReadWhile1(t *testing.T) {
 			pred: unicode.IsUpper,
 			desc: "an upper-case character",
 			want: Range{Start: 0, End: 0, Text: "asdf"},
-			wantErr: syntax.Error{
+			wantErr: directives.Error{
 				Message: "unexpected character `a`, want an upper-case character",
 				Range:   Range{Start: 0, End: 0, Text: "asdf"},
 			},
@@ -312,7 +312,7 @@ func TestReadUntil(t *testing.T) {
 		{
 			char: 'z',
 			want: Range{Start: 0, End: 6, Text: "foobar"},
-			wantErr: syntax.Error{
+			wantErr: directives.Error{
 				Message: "unexpected end of file, want character `z`",
 				Range:   Range{Start: 0, End: 6, Text: "foobar"},
 			},
@@ -350,7 +350,7 @@ func TestReadAlternative(t *testing.T) {
 			text:  "",
 			input: []string{"baz", "bar", "foo"},
 			want:  Range{Text: ""},
-			wantErr: syntax.Error{
+			wantErr: directives.Error{
 				Message: "unexpected end of file, want one of {`baz`, `bar`, `foo`}",
 				Range:   Range{Text: ""},
 			},
@@ -359,7 +359,7 @@ func TestReadAlternative(t *testing.T) {
 			text:  "foobar",
 			input: []string{"baz", "bar"},
 			want:  Range{Text: "foobar"},
-			wantErr: syntax.Error{
+			wantErr: directives.Error{
 				Message: "unexpected input, want one of {`baz`, `bar`}",
 				Range:   Range{Text: "foobar"},
 			},

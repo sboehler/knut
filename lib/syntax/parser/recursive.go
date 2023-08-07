@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 
 	"github.com/sboehler/knut/lib/common/cpr"
-	"github.com/sboehler/knut/lib/syntax"
+	"github.com/sboehler/knut/lib/syntax/directives"
 	"golang.org/x/sync/errgroup"
 )
 
-func Parse(file string) (<-chan syntax.File, func(context.Context) error) {
-	return cpr.Produce(func(ctx context.Context, ch chan<- syntax.File) error {
+func Parse(file string) (<-chan directives.File, func(context.Context) error) {
+	return cpr.Produce(func(ctx context.Context, ch chan<- directives.File) error {
 		wg, ctx := errgroup.WithContext(ctx)
 		wg.Go(func() error {
 			res, err := parseRec(ctx, wg, ch, file)
@@ -26,21 +26,21 @@ func Parse(file string) (<-chan syntax.File, func(context.Context) error) {
 }
 
 type Result struct {
-	File syntax.File
+	File directives.File
 	Err  error
 }
 
-func parseRec(ctx context.Context, wg *errgroup.Group, resCh chan<- syntax.File, file string) (syntax.File, error) {
+func parseRec(ctx context.Context, wg *errgroup.Group, resCh chan<- directives.File, file string) (directives.File, error) {
 	text, err := os.ReadFile(file)
 	if err != nil {
-		return syntax.File{}, err
+		return directives.File{}, err
 	}
 	p := New(string(text), file)
 	if err := p.Advance(); err != nil {
-		return syntax.File{}, err
+		return directives.File{}, err
 	}
-	p.callback = func(d syntax.Directive) {
-		if inc, ok := d.Directive.(syntax.Include); ok {
+	p.callback = func(d directives.Directive) {
+		if inc, ok := d.Directive.(directives.Include); ok {
 			file := path.Join(filepath.Dir(file), inc.IncludePath.Content.Extract())
 			wg.Go(func() error {
 				res, err := parseRec(ctx, wg, resCh, file)

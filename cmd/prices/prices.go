@@ -28,7 +28,6 @@ import (
 	"github.com/sboehler/knut/lib/model/registry"
 	"github.com/sboehler/knut/lib/quotes/yahoo"
 	"github.com/sboehler/knut/lib/syntax"
-	"github.com/sboehler/knut/lib/syntax/parser"
 	"github.com/shopspring/decimal"
 	"github.com/sourcegraph/conc/pool"
 	"go.uber.org/multierr"
@@ -115,7 +114,7 @@ func readFile(ctx *registry.Registry, filepath string) (res map[time.Time]*model
 	if err != nil {
 		return nil, err
 	}
-	p := parser.New(string(text), filepath)
+	p := syntax.NewParser(string(text), filepath)
 	if err := p.Advance(); err != nil {
 		return nil, err
 	}

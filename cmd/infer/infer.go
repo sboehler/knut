@@ -28,8 +28,6 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/syntax"
 	"github.com/sboehler/knut/lib/syntax/bayes"
-	"github.com/sboehler/knut/lib/syntax/parser"
-	"github.com/sboehler/knut/lib/syntax/printer"
 )
 
 // CreateCmd creates the command.
@@ -80,7 +78,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	if err != nil {
 		return err
 	}
-	var p printer.Printer
+	var p syntax.Printer
 	if r.inplace {
 		var buf bytes.Buffer
 		if err := p.Format(file, &buf); err != nil {
@@ -97,7 +95,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 func train(ctx context.Context, file string, account string) (*bayes.Model, error) {
 	model := bayes.NewModel(account)
 	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)
-	ch, worker := parser.Parse(file)
+	ch, worker := syntax.Parse(file)
 	p.Go(worker)
 	p.Go(func(ctx context.Context) error {
 		return cpr.Consume(ctx, ch, func(res syntax.File) error {
@@ -117,7 +115,7 @@ func (r *runner) parseAndInfer(ctx context.Context, model *bayes.Model, targetFi
 	if err != nil {
 		return syntax.File{}, err
 	}
-	p := parser.New(string(text), targetFile)
+	p := syntax.NewParser(string(text), targetFile)
 	if err := p.Advance(); err != nil {
 		return syntax.File{}, err
 	}

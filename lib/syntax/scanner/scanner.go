@@ -20,10 +20,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/sboehler/knut/lib/syntax"
+	"github.com/sboehler/knut/lib/syntax/directives"
 )
 
-type Range = syntax.Range
+type Range = directives.Range
 
 // Scanner is a scanner.
 type Scanner struct {
@@ -39,7 +39,7 @@ type Scanner struct {
 }
 
 type scope struct {
-	Range syntax.Range
+	Range directives.Range
 	Desc  string
 }
 
@@ -76,7 +76,7 @@ func (s *Scanner) Advance() error {
 	if s.current == utf8.RuneError {
 		switch s.currentLen {
 		case 0:
-			return syntax.Error{
+			return directives.Error{
 				Message: "unexpected end of file",
 				Range: Range{
 					Start: s.Offset(),
@@ -86,7 +86,7 @@ func (s *Scanner) Advance() error {
 				},
 			}
 		case 1:
-			return syntax.Error{
+			return directives.Error{
 				Message: "invalid unicode character",
 				Range: Range{
 					Start: s.Offset(),
@@ -133,7 +133,7 @@ func (s *Scanner) RangeEnd() {
 }
 
 func (s *Scanner) Annotate(err error) error {
-	return syntax.Error{
+	return directives.Error{
 		Message: "while " + s.scopes[len(s.scopes)-1].Desc,
 		Range:   s.Range(),
 		Wrapped: err,
@@ -149,7 +149,7 @@ func (s *Scanner) ReadWhile(pred func(r rune) bool) (Range, error) {
 	defer s.RangeEnd()
 	for pred(s.Current()) && s.Current() != EOF {
 		if err := s.Advance(); err != nil {
-			return s.Range(), syntax.Error{
+			return s.Range(), directives.Error{
 				Message: "reading next character",
 				Range:   s.Range(),
 				Wrapped: err,
@@ -165,20 +165,20 @@ func (s *Scanner) ReadWhile1(desc string, pred func(r rune) bool) (Range, error)
 	s.RangeStart("")
 	defer s.RangeEnd()
 	if s.Current() == EOF {
-		return s.Range(), syntax.Error{
+		return s.Range(), directives.Error{
 			Message: fmt.Sprintf("unexpected end of file, want %s", desc),
 			Range:   s.Range(),
 		}
 	}
 	if !pred(s.Current()) {
-		return s.Range(), syntax.Error{
+		return s.Range(), directives.Error{
 			Message: fmt.Sprintf("unexpected character `%c`, want %s", s.Current(), desc),
 			Range:   s.Range(),
 		}
 	}
 	for pred(s.Current()) && s.Current() != EOF {
 		if err := s.Advance(); err != nil {
-			return s.Range(), syntax.Error{
+			return s.Range(), directives.Error{
 				Message: "reading next character",
 				Range:   s.Range(),
 				Wrapped: err,
@@ -194,14 +194,14 @@ func (s *Scanner) ReadUntil(desc string, pred func(r rune) bool) (Range, error) 
 	defer s.RangeEnd()
 	for !pred(s.Current()) {
 		if err := s.Advance(); err != nil {
-			return s.Range(), syntax.Error{
+			return s.Range(), directives.Error{
 				Message: "reading next character",
 				Range:   s.Range(),
 				Wrapped: err,
 			}
 		}
 		if s.Current() == EOF {
-			return s.Range(), syntax.Error{
+			return s.Range(), directives.Error{
 				Message: fmt.Sprintf("unexpected end of file, want %s", desc),
 				Range:   s.Range(),
 			}
@@ -215,19 +215,19 @@ func (s *Scanner) ReadCharacter(r rune) (Range, error) {
 	s.RangeStart("")
 	defer s.RangeEnd()
 	if s.Current() == EOF {
-		return s.Range(), syntax.Error{
+		return s.Range(), directives.Error{
 			Message: fmt.Sprintf("unexpected end of file, want `%c`", r),
 			Range:   s.Range(),
 		}
 	}
 	if s.Current() != r {
-		return s.Range(), syntax.Error{
+		return s.Range(), directives.Error{
 			Message: fmt.Sprintf("unexpected character `%c`, want `%c`", s.current, r),
 			Range:   s.Range(),
 		}
 	}
 	if err := s.Advance(); err != nil {
-		return s.Range(), syntax.Error{
+		return s.Range(), directives.Error{
 			Message: "reading next character",
 			Range:   s.Range(),
 			Wrapped: err,
@@ -241,19 +241,19 @@ func (s *Scanner) ReadCharacterWith(desc string, pred func(rune) bool) (Range, e
 	s.RangeStart("")
 	defer s.RangeEnd()
 	if s.Current() == EOF {
-		return s.Range(), syntax.Error{
+		return s.Range(), directives.Error{
 			Message: fmt.Sprintf("unexpected end of file, want %s", desc),
 			Range:   s.Range(),
 		}
 	}
 	if !pred(s.Current()) {
-		return s.Range(), syntax.Error{
+		return s.Range(), directives.Error{
 			Message: fmt.Sprintf("unexpected character `%c`, want %s", s.Current(), desc),
 			Range:   s.Range(),
 		}
 	}
 	if err := s.Advance(); err != nil {
-		return s.Range(), syntax.Error{
+		return s.Range(), directives.Error{
 			Message: "reading next character",
 			Range:   s.Range(),
 			Wrapped: err,
@@ -268,13 +268,13 @@ func (s *Scanner) ReadString(str string) (Range, error) {
 	defer s.RangeEnd()
 	for _, ch := range str {
 		if ch != s.Current() {
-			return s.Range(), syntax.Error{
+			return s.Range(), directives.Error{
 				Message: fmt.Sprintf("while reading %q", str),
 				Range:   s.Range(),
 			}
 		}
 		if err := s.Advance(); err != nil {
-			return s.Range(), syntax.Error{
+			return s.Range(), directives.Error{
 				Message: fmt.Sprintf("while reading %q", str),
 				Range:   s.Range(),
 				Wrapped: err,
@@ -288,7 +288,7 @@ func (s *Scanner) ReadAlternative(ss []string) (Range, error) {
 	s.RangeStart("")
 	defer s.RangeEnd()
 	if s.current == EOF {
-		return s.Range(), syntax.Error{
+		return s.Range(), directives.Error{
 			Message: fmt.Sprintf("unexpected end of file, want one of %s", format(ss)),
 			Range:   s.Range(),
 		}
@@ -304,7 +304,7 @@ func (s *Scanner) ReadAlternative(ss []string) (Range, error) {
 		}
 		s.Backtrack()
 	}
-	return s.Range(), syntax.Error{
+	return s.Range(), directives.Error{
 		Message: fmt.Sprintf("unexpected input, want one of %s", format(ss)),
 		Range:   s.Range(),
 	}
@@ -332,14 +332,14 @@ func (s *Scanner) ReadN(n int) (Range, error) {
 	defer s.RangeEnd()
 	for i := 0; i < n; i++ {
 		if s.current == EOF {
-			return s.Range(), syntax.Error{
+			return s.Range(), directives.Error{
 				Range:   s.Range(),
 				Message: fmt.Sprintf("while reading %d of %d characters", i, n),
 				Wrapped: io.EOF,
 			}
 		}
 		if err := s.Advance(); err != nil {
-			return s.Range(), syntax.Error{
+			return s.Range(), directives.Error{
 				Range:   s.Range(),
 				Message: fmt.Sprintf("while reading %d of %d characters", i, n),
 				Wrapped: err,

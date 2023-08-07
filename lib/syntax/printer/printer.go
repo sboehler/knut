@@ -20,7 +20,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/sboehler/knut/lib/syntax"
+	"github.com/sboehler/knut/lib/syntax/directives"
 )
 
 // Printer prints directives.
@@ -34,25 +34,25 @@ func NewPrinter() *Printer {
 }
 
 // PrintDirective prints a directive to the given Writer.
-func (p Printer) PrintDirective(w io.Writer, directive syntax.Directive) (n int, err error) {
+func (p Printer) PrintDirective(w io.Writer, directive directives.Directive) (n int, err error) {
 	switch d := directive.Directive.(type) {
-	case syntax.Transaction:
+	case directives.Transaction:
 		return p.printTransaction(w, d)
-	case syntax.Open:
+	case directives.Open:
 		return p.printOpen(w, d)
-	case syntax.Close:
+	case directives.Close:
 		return p.printClose(w, d)
-	case syntax.Assertion:
+	case directives.Assertion:
 		return p.printAssertion(w, d)
-	case syntax.Include:
+	case directives.Include:
 		return p.printInclude(w, d)
-	case syntax.Price:
+	case directives.Price:
 		return p.printPrice(w, d)
 	}
 	return 0, fmt.Errorf("unknown directive: %v", directive)
 }
 
-func (p Printer) printTransaction(w io.Writer, t syntax.Transaction) (n int, err error) {
+func (p Printer) printTransaction(w io.Writer, t directives.Transaction) (n int, err error) {
 	if !t.Addons.Accrual.Empty() {
 		c, err := p.printAccrual(w, t.Addons.Accrual)
 		n += c
@@ -94,38 +94,38 @@ func (p Printer) printTransaction(w io.Writer, t syntax.Transaction) (n int, err
 	return n, nil
 }
 
-func (p Printer) printAccrual(w io.Writer, a syntax.Accrual) (n int, err error) {
+func (p Printer) printAccrual(w io.Writer, a directives.Accrual) (n int, err error) {
 	return fmt.Fprintf(w, "@accrue %s %s %s %s\n", a.Interval.Extract(), a.Start.Extract(), a.End.Extract(), a.Account.Extract())
 }
 
-func (p Printer) printPosting(w io.Writer, t syntax.Booking) (int, error) {
+func (p Printer) printPosting(w io.Writer, t directives.Booking) (int, error) {
 	var n int
 	c, err := fmt.Fprintf(w, "%-*s %-*s %10s %s", p.Padding, t.Credit.Extract(), p.Padding, t.Debit.Extract(), t.Amount.Extract(), t.Commodity.Extract())
 	n += c
 	return n, err
 }
 
-func (p Printer) printOpen(w io.Writer, o syntax.Open) (int, error) {
+func (p Printer) printOpen(w io.Writer, o directives.Open) (int, error) {
 	return fmt.Fprintf(w, "%s open %s", o.Date.Extract(), o.Account.Extract())
 }
 
-func (p Printer) printClose(w io.Writer, c syntax.Close) (int, error) {
+func (p Printer) printClose(w io.Writer, c directives.Close) (int, error) {
 	return fmt.Fprintf(w, "%s close %s", c.Date.Extract(), c.Account.Extract())
 }
 
-func (p Printer) printPrice(w io.Writer, pr syntax.Price) (int, error) {
+func (p Printer) printPrice(w io.Writer, pr directives.Price) (int, error) {
 	return fmt.Fprintf(w, "%s price %s %s %s", pr.Date.Extract(), pr.Commodity.Extract(), pr.Price.Extract(), pr.Target.Extract())
 }
 
-func (p Printer) printInclude(w io.Writer, i syntax.Include) (int, error) {
+func (p Printer) printInclude(w io.Writer, i directives.Include) (int, error) {
 	return fmt.Fprintf(w, "include \"%s\"", i.IncludePath.Content.Extract())
 }
 
-func (p Printer) printAssertion(w io.Writer, a syntax.Assertion) (int, error) {
+func (p Printer) printAssertion(w io.Writer, a directives.Assertion) (int, error) {
 	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Extract(), a.Account.Extract(), a.Amount.Extract(), a.Commodity.Extract())
 }
 
-func (p *Printer) PrintFile(w io.Writer, f syntax.File) (int, error) {
+func (p *Printer) PrintFile(w io.Writer, f directives.File) (int, error) {
 	var n int
 	for _, d := range f.Directives {
 		c, err := p.PrintDirective(w, d)
@@ -141,9 +141,9 @@ func (p *Printer) PrintFile(w io.Writer, f syntax.File) (int, error) {
 }
 
 // Initialize initializes the padding of this printer.
-func (p *Printer) Initialize(directive []syntax.Directive) {
+func (p *Printer) Initialize(directive []directives.Directive) {
 	for _, d := range directive {
-		if t, ok := d.Directive.(syntax.Transaction); ok {
+		if t, ok := d.Directive.(directives.Transaction); ok {
 			for _, b := range t.Bookings {
 				if l := utf8.RuneCountInString(b.Credit.Extract()); l > p.Padding {
 					p.Padding = l
@@ -157,7 +157,7 @@ func (p *Printer) Initialize(directive []syntax.Directive) {
 }
 
 // Format formats the given file, preserving any text between directives.
-func (p *Printer) Format(f syntax.File, w io.Writer) error {
+func (p *Printer) Format(f directives.File, w io.Writer) error {
 	p.Initialize(f.Directives)
 	text := f.Text
 	var pos int

@@ -25,8 +25,6 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/sboehler/knut/lib/syntax"
-	"github.com/sboehler/knut/lib/syntax/parser"
-	"github.com/sboehler/knut/lib/syntax/printer"
 )
 
 // CreateCmd creates the command.
@@ -58,7 +56,7 @@ func formatFile(target *string) error {
 	}
 	var (
 		dest bytes.Buffer
-		p    printer.Printer
+		p    syntax.Printer
 	)
 	if err := p.Format(file, &dest); err != nil {
 		return err
@@ -71,7 +69,7 @@ func readDirectives(target string) (syntax.File, error) {
 	if err != nil {
 		return syntax.File{}, err
 	}
-	p := parser.New(string(text), target)
+	p := syntax.NewParser(string(text), target)
 	if err := p.Advance(); err != nil {
 		return syntax.File{}, err
 	}

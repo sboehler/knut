@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/sboehler/knut/lib/syntax"
+	"github.com/sboehler/knut/lib/syntax/parser"
 )
 
 func TestPrintFile(t *testing.T) {
@@ -93,7 +94,7 @@ func lines(ss ...string) string {
 
 func parse(t *testing.T, s string) syntax.File {
 	t.Helper()
-	p := syntax.NewParser(s, "")
+	p := parser.New(s, "")
 	if err := p.Advance(); err != nil {
 		t.Fatal(err)
 	}

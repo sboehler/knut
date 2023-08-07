@@ -50,7 +50,7 @@ func execute(cmd *cobra.Command, args []string) error {
 }
 
 func formatFile(target *string) error {
-	file, err := readDirectives(*target)
+	file, err := syntax.ParseFile(*target)
 	if err != nil {
 		return err
 	}
@@ -62,16 +62,4 @@ func formatFile(target *string) error {
 		return err
 	}
 	return atomic.WriteFile(*target, &dest)
-}
-
-func readDirectives(target string) (syntax.File, error) {
-	text, err := os.ReadFile(target)
-	if err != nil {
-		return syntax.File{}, err
-	}
-	p := syntax.NewParser(string(text), target)
-	if err := p.Advance(); err != nil {
-		return syntax.File{}, err
-	}
-	return p.ParseFile()
 }

@@ -110,15 +110,7 @@ func readConfig(path string) ([]config, error) {
 }
 
 func readFile(ctx *registry.Registry, filepath string) (res map[time.Time]*model.Price, err error) {
-	text, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-	p := syntax.NewParser(string(text), filepath)
-	if err := p.Advance(); err != nil {
-		return nil, err
-	}
-	f, err := p.ParseFile()
+	f, err := syntax.ParseFile(filepath)
 	if err != nil {
 		return nil, err
 	}

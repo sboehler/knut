@@ -111,7 +111,7 @@ func (j *Journal) Process(fs ...func(*Day) error) ([]*Day, error) {
 }
 
 func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, error) {
-	syntaxCh, worker1 := syntax.Parse(path)
+	syntaxCh, worker1 := syntax.ParseFileRecursively(path)
 	modelCh, worker2 := model.FromStream(reg, syntaxCh)
 	journalCh, worker3 := Create(reg, modelCh)
 	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)

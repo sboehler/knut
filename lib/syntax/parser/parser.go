@@ -12,7 +12,7 @@ import (
 type Parser struct {
 	scanner.Scanner
 
-	callback func(d directives.Directive)
+	Callback func(d directives.Directive)
 }
 
 // New creates a new parser.
@@ -52,8 +52,8 @@ func (p *Parser) ParseFile() (directives.File, error) {
 			if err != nil {
 				return directives.SetRange(&file, p.Range()), p.Annotate(err)
 			}
-			if p.callback != nil {
-				p.callback(dir)
+			if p.Callback != nil {
+				p.Callback(dir)
 			}
 		}
 		if p.Current() == scanner.EOF {

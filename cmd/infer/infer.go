@@ -95,7 +95,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 func train(ctx context.Context, file string, account string) (*bayes.Model, error) {
 	model := bayes.NewModel(account)
 	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)
-	ch, worker := syntax.Parse(file)
+	ch, worker := syntax.ParseFileRecursively(file)
 	p.Go(worker)
 	p.Go(func(ctx context.Context) error {
 		return cpr.Consume(ctx, ch, func(res syntax.File) error {
@@ -111,15 +111,7 @@ func train(ctx context.Context, file string, account string) (*bayes.Model, erro
 }
 
 func (r *runner) parseAndInfer(ctx context.Context, model *bayes.Model, targetFile string) (syntax.File, error) {
-	text, err := os.ReadFile(targetFile)
-	if err != nil {
-		return syntax.File{}, err
-	}
-	p := syntax.NewParser(string(text), targetFile)
-	if err := p.Advance(); err != nil {
-		return syntax.File{}, err
-	}
-	f, err := p.ParseFile()
+	f, err := syntax.ParseFile(targetFile)
 	if err != nil {
 		return syntax.File{}, err
 	}

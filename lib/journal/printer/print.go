@@ -26,7 +26,7 @@ import (
 
 // Printer prints directives.
 type Printer struct {
-	Padding int
+	padding int
 }
 
 // New creates a new Printer.
@@ -188,11 +188,11 @@ func (p *Printer) Initialize(directive []model.Directive) {
 func (p *Printer) updatePadding(t *model.Transaction) {
 	for _, pt := range t.Postings {
 		cr, dr := utf8.RuneCountInString(pt.Account.String()), utf8.RuneCountInString(pt.Other.String())
-		if p.Padding < cr {
-			p.Padding = cr
+		if p.padding < cr {
+			p.padding = cr
 		}
-		if p.Padding < dr {
-			p.Padding = dr
+		if p.padding < dr {
+			p.padding = dr
 		}
 	}
 }
@@ -215,7 +215,7 @@ func (p Printer) newline(w io.Writer, count *int) error {
 func (p Printer) rightPad(a *model.Account) string {
 	var b strings.Builder
 	b.WriteString(a.String())
-	for i := utf8.RuneCountInString(a.String()); i < p.Padding; i++ {
+	for i := utf8.RuneCountInString(a.String()); i < p.padding; i++ {
 		b.WriteRune(' ')
 	}
 	return b.String()

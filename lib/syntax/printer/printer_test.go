@@ -183,10 +183,10 @@ func TestPrintFile(t *testing.T) {
 			if err != nil {
 				t.Fatalf("p.ParseFile() returned unexpected error: %#v", err)
 			}
-			pr := NewPrinter()
 			var got strings.Builder
+			pr := Printer{Writer: &got}
 
-			_, err = pr.PrintFile(&got, f)
+			_, err = pr.PrintFile(f)
 
 			if diff := cmp.Diff(err, nil, cmpopts.EquateErrors()); diff != "" {
 				t.Fatalf("PrintFile() error returned unexpected diff (-want/+got):\n%s\n", diff)
@@ -233,16 +233,16 @@ func TestFormat(t *testing.T) {
 			if err != nil {
 				t.Fatalf("p.ParseFile() returned unexpected error: %#v", err)
 			}
-			pr := NewPrinter()
 			var got strings.Builder
+			pr := Printer{Writer: &got}
 
-			err = pr.Format(f, &got)
+			err = pr.Format(f)
 
 			if diff := cmp.Diff(err, nil, cmpopts.EquateErrors()); diff != "" {
-				t.Fatalf("PrintFile() error returned unexpected diff (-want/+got):\n%s\n", diff)
+				t.Fatalf("Format() error returned unexpected diff (-want/+got):\n%s\n", diff)
 			}
 			if diff := cmp.Diff(test.want, got.String()); diff != "" {
-				t.Fatalf("PrintFile() returned unexpected diff (-want/+got):\n%s\n", diff)
+				t.Fatalf("Format() returned unexpected diff (-want/+got):\n%s\n", diff)
 			}
 		})
 	}

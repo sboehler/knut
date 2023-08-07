@@ -63,6 +63,8 @@ type Parser = parser.Parser
 
 type Scanner = scanner.Scanner
 
+type Printer = printer.Printer
+
 func ParseFile(file string) (directives.File, error) {
 	text, err := os.ReadFile(file)
 	if err != nil {
@@ -119,6 +121,12 @@ func parseRec(ctx context.Context, wg *errgroup.Group, resCh chan<- directives.F
 }
 
 func FormatFile(w io.Writer, f directives.File) error {
-	var p printer.Printer
-	return p.Format(f, w)
+	p := printer.Printer{Writer: w}
+	return p.Format(f)
+}
+
+func PrintFile(w io.Writer, f directives.File) error {
+	p := printer.Printer{Writer: w}
+	_, err := p.PrintFile(f)
+	return err
 }

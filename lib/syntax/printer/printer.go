@@ -23,9 +23,17 @@ import (
 	"github.com/sboehler/knut/lib/syntax/directives"
 )
 
+func (pp *Printer) Write(p []byte) (int, error) {
+	n, err := pp.Writer.Write(p)
+	pp.count += n
+	return n, err
+}
+
 // Printer prints directives.
 type Printer struct {
+	Writer  io.Writer
 	Padding int
+	count   int
 }
 
 // New creates a new Printer.
@@ -34,30 +42,29 @@ func NewPrinter() *Printer {
 }
 
 // PrintDirective prints a directive to the given Writer.
-func (p Printer) PrintDirective(w io.Writer, directive directives.Directive) (n int, err error) {
+func (p Printer) PrintDirective(directive directives.Directive) (n int, err error) {
 	switch d := directive.Directive.(type) {
 	case directives.Transaction:
-		return p.printTransaction(w, d)
+		return p.printTransaction(d)
 	case directives.Open:
-		return p.printOpen(w, d)
+		return p.printOpen(d)
 	case directives.Close:
-		return p.printClose(w, d)
+		return p.printClose(d)
 	case directives.Assertion:
-		return p.printAssertion(w, d)
+		return p.printAssertion(d)
 	case directives.Include:
-		return p.printInclude(w, d)
+		return p.printInclude(d)
 	case directives.Price:
-		return p.printPrice(w, d)
+		return p.printPrice(d)
 	}
 	return 0, fmt.Errorf("unknown directive: %v", directive)
 }
 
-func (p Printer) printTransaction(w io.Writer, t directives.Transaction) (n int, err error) {
+func (p *Printer) printTransaction(t directives.Transaction) (n int, err error) {
+	start := p.count
 	if !t.Addons.Accrual.Empty() {
-		c, err := p.printAccrual(w, t.Addons.Accrual)
-		n += c
-		if err != nil {
-			return n, err
+		if _, err := p.printAccrual(t.Addons.Accrual); err != nil {
+			return p.count - start, err
 		}
 	}
 	if !t.Addons.Performance.Empty() {
@@ -65,79 +72,66 @@ func (p Printer) printTransaction(w io.Writer, t directives.Transaction) (n int,
 		for _, t := range t.Addons.Performance.Targets {
 			s = append(s, t.Extract())
 		}
-		c, err := fmt.Fprintf(w, "@performance(%s)\n", strings.Join(s, ","))
-		n += c
-		if err != nil {
-			return n, err
+		if _, err := fmt.Fprintf(p, "@performance(%s)\n", strings.Join(s, ",")); err != nil {
+			return p.count - start, err
 		}
 	}
-	c, err := fmt.Fprintf(w, `%s "%s"`, t.Date.Extract(), t.Description.Content.Extract())
-	n += c
-	if err != nil {
-		return n, err
+	if _, err := fmt.Fprintf(p, `%s "%s"`, t.Date.Extract(), t.Description.Content.Extract()); err != nil {
+		return p.count - start, err
 	}
-	err = p.newline(w, &n)
-	if err != nil {
-		return n, err
+	if _, err = io.WriteString(p, "\n"); err != nil {
+		return p.count - start, err
 	}
 	for _, po := range t.Bookings {
-		d, err := p.printPosting(w, po)
-		n += d
-		if err != nil {
-			return n, err
+		if _, err := p.printPosting(po); err != nil {
+			return p.count - start, err
 		}
-		err = p.newline(w, &n)
-		if err != nil {
-			return n, err
+		if _, err = io.WriteString(p, "\n"); err != nil {
+			return p.count - start, err
 		}
 	}
 	return n, nil
 }
 
-func (p Printer) printAccrual(w io.Writer, a directives.Accrual) (n int, err error) {
-	return fmt.Fprintf(w, "@accrue %s %s %s %s\n", a.Interval.Extract(), a.Start.Extract(), a.End.Extract(), a.Account.Extract())
+func (p *Printer) printAccrual(a directives.Accrual) (n int, err error) {
+	return fmt.Fprintf(p, "@accrue %s %s %s %s\n", a.Interval.Extract(), a.Start.Extract(), a.End.Extract(), a.Account.Extract())
 }
 
-func (p Printer) printPosting(w io.Writer, t directives.Booking) (int, error) {
-	var n int
-	c, err := fmt.Fprintf(w, "%-*s %-*s %10s %s", p.Padding, t.Credit.Extract(), p.Padding, t.Debit.Extract(), t.Amount.Extract(), t.Commodity.Extract())
-	n += c
-	return n, err
+func (p *Printer) printPosting(t directives.Booking) (int, error) {
+	return fmt.Fprintf(p, "%-*s %-*s %10s %s", p.Padding, t.Credit.Extract(), p.Padding, t.Debit.Extract(), t.Amount.Extract(), t.Commodity.Extract())
 }
 
-func (p Printer) printOpen(w io.Writer, o directives.Open) (int, error) {
-	return fmt.Fprintf(w, "%s open %s", o.Date.Extract(), o.Account.Extract())
+func (p *Printer) printOpen(o directives.Open) (int, error) {
+	return fmt.Fprintf(p, "%s open %s", o.Date.Extract(), o.Account.Extract())
 }
 
-func (p Printer) printClose(w io.Writer, c directives.Close) (int, error) {
-	return fmt.Fprintf(w, "%s close %s", c.Date.Extract(), c.Account.Extract())
+func (p *Printer) printClose(c directives.Close) (int, error) {
+	return fmt.Fprintf(p, "%s close %s", c.Date.Extract(), c.Account.Extract())
 }
 
-func (p Printer) printPrice(w io.Writer, pr directives.Price) (int, error) {
-	return fmt.Fprintf(w, "%s price %s %s %s", pr.Date.Extract(), pr.Commodity.Extract(), pr.Price.Extract(), pr.Target.Extract())
+func (p *Printer) printPrice(pr directives.Price) (int, error) {
+	return fmt.Fprintf(p, "%s price %s %s %s", pr.Date.Extract(), pr.Commodity.Extract(), pr.Price.Extract(), pr.Target.Extract())
 }
 
-func (p Printer) printInclude(w io.Writer, i directives.Include) (int, error) {
-	return fmt.Fprintf(w, "include \"%s\"", i.IncludePath.Content.Extract())
+func (p *Printer) printInclude(i directives.Include) (int, error) {
+	return fmt.Fprintf(p, "include \"%s\"", i.IncludePath.Content.Extract())
 }
 
-func (p Printer) printAssertion(w io.Writer, a directives.Assertion) (int, error) {
-	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Extract(), a.Account.Extract(), a.Amount.Extract(), a.Commodity.Extract())
+func (p *Printer) printAssertion(a directives.Assertion) (int, error) {
+	return fmt.Fprintf(p, "%s balance %s %s %s", a.Date.Extract(), a.Account.Extract(), a.Amount.Extract(), a.Commodity.Extract())
 }
 
-func (p *Printer) PrintFile(w io.Writer, f directives.File) (int, error) {
-	var n int
+func (p *Printer) PrintFile(f directives.File) (int, error) {
+	start := p.count
 	for _, d := range f.Directives {
-		c, err := p.PrintDirective(w, d)
-		n += c
-		if err != nil {
-			return n, err
+		if _, err := p.PrintDirective(d); err != nil {
+			return p.count - start, err
 		}
-		if err := p.newline(w, &n); err != nil {
-			return n, err
+		if _, err := io.WriteString(p, "\n"); err != nil {
+			return p.count - start, err
 		}
 	}
-	return n, nil
+	return p.count - start, nil
 }
 
 // Initialize initializes the padding of this printer.
@@ -157,28 +151,19 @@ func (p *Printer) Initialize(directive []directives.Directive) {
 }
 
 // Format formats the given file, preserving any text between directives.
-func (p *Printer) Format(f directives.File, w io.Writer) error {
+func (p *Printer) Format(f directives.File) error {
 	p.Initialize(f.Directives)
 	text := f.Text
 	var pos int
 	for _, d := range f.Directives {
-
-		if _, err := w.Write([]byte(text[pos:d.Start])); err != nil {
+		if _, err := p.Write([]byte(text[pos:d.Start])); err != nil {
 			return err
 		}
-		if _, err := p.PrintDirective(w, d); err != nil {
+		if _, err := p.PrintDirective(d); err != nil {
 			return err
 		}
 		pos = d.End
 	}
-	if _, err := w.Write([]byte(text[pos:])); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p Printer) newline(w io.Writer, count *int) error {
-	c, err := io.WriteString(w, "\n")
-	*count += c
+	_, err := p.Write([]byte(text[pos:]))
 	return err
 }

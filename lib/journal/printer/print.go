@@ -116,7 +116,8 @@ func (p Printer) printAssertion(w io.Writer, a *model.Assertion) (int, error) {
 }
 
 // PrintJournal prints a journal.
-func (p *Printer) PrintJournal(w io.Writer, j *journal.Journal) (int, error) {
+func PrintJournal(w io.Writer, j *journal.Journal) error {
+	p := new(Printer)
 	days := j.Sorted()
 	for _, day := range days {
 		for _, t := range day.Transactions {
@@ -127,51 +128,51 @@ func (p *Printer) PrintJournal(w io.Writer, j *journal.Journal) (int, error) {
 	for _, day := range days {
 		for _, pr := range day.Prices {
 			if err := p.writeLn(w, pr, &n); err != nil {
-				return n, err
+				return err
 			}
 		}
 		if len(day.Prices) > 0 {
 			if err := p.newline(w, &n); err != nil {
-				return n, err
+				return err
 			}
 		}
 		for _, o := range day.Openings {
 			if err := p.writeLn(w, o, &n); err != nil {
-				return n, err
+				return err
 			}
 		}
 		if len(day.Openings) > 0 {
 			if err := p.newline(w, &n); err != nil {
-				return n, err
+				return err
 			}
 		}
 		for _, t := range day.Transactions {
 			if err := p.writeLn(w, t, &n); err != nil {
-				return n, err
+				return err
 			}
 		}
 		for _, a := range day.Assertions {
 			if err := p.writeLn(w, a, &n); err != nil {
-				return n, err
+				return err
 			}
 		}
 		if len(day.Assertions) > 0 {
 			if err := p.newline(w, &n); err != nil {
-				return n, err
+				return err
 			}
 		}
 		for _, c := range day.Closings {
 			if err := p.writeLn(w, c, &n); err != nil {
-				return n, err
+				return err
 			}
 		}
 		if len(day.Closings) > 0 {
 			if err := p.newline(w, &n); err != nil {
-				return n, err
+				return err
 			}
 		}
 	}
-	return n, nil
+	return nil
 }
 
 // Initialize initializes the padding of this printer.

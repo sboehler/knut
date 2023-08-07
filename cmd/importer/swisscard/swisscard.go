@@ -87,8 +87,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	_, err = printer.NewPrinter().PrintJournal(w, p.journal)
-	return err
+	return printer.PrintJournal(w, p.journal)
 }
 
 type parser struct {

@@ -24,7 +24,6 @@ import (
 	"github.com/sboehler/knut/lib/model/registry"
 
 	"github.com/spf13/cobra"
-	"go.uber.org/multierr"
 )
 
 // CreateCmd creates the command.
@@ -64,12 +63,10 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	if err != nil {
 		return err
 	}
-	_, err = j.Process(
-		journal.Balance(jctx, nil),
-	)
+	if _, err := j.Process(journal.Balance(jctx, nil)); err != nil {
+		return err
+	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
-	defer func() { err = multierr.Append(err, w.Flush()) }()
-
-	_, errors = printer.NewPrinter().PrintJournal(w, j)
-	return errors
+	defer w.Flush()
+	return printer.PrintJournal(w, j)
 }

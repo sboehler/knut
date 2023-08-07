@@ -92,8 +92,7 @@ func (r *runner) runE(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	_, err = printer.NewPrinter().PrintJournal(out, p.journal)
-	return err
+	return printer.PrintJournal(out, p.journal)
 }
 
 func init() {

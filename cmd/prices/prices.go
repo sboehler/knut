@@ -162,7 +162,7 @@ func writeFile(ctx *registry.Registry, prices map[time.Time]*model.Price, filepa
 		j.AddPrice(price)
 	}
 	var buf bytes.Buffer
-	_, err := printer.NewPrinter().PrintJournal(&buf, j)
+	err := printer.PrintJournal(&buf, j)
 	if err != nil {
 		return err
 	}

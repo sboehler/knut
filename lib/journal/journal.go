@@ -113,7 +113,7 @@ func (j *Journal) Process(fs ...func(*Day) error) ([]*Day, error) {
 func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, error) {
 	syntaxCh, worker1 := syntax.ParseFileRecursively(path)
 	modelCh, worker2 := model.FromStream(reg, syntaxCh)
-	journalCh, worker3 := Create(reg, modelCh)
+	journalCh, worker3 := FromModelStream(reg, modelCh)
 	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)
 	p.Go(worker1)
 	p.Go(worker2)
@@ -125,7 +125,7 @@ func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, 
 	return <-journalCh, nil
 }
 
-func Create(reg *model.Registry, modelCh <-chan []model.Directive) (<-chan *Journal, func(context.Context) error) {
+func FromModelStream(reg *model.Registry, modelCh <-chan []model.Directive) (<-chan *Journal, func(context.Context) error) {
 	return cpr.FanIn(func(ctx context.Context, ch chan<- *Journal) error {
 		j := New(reg)
 		err := cpr.Consume(ctx, modelCh, func(directives []model.Directive) error {

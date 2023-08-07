@@ -37,11 +37,11 @@ func Transcode(w io.Writer, j []*journal.Day, c *model.Commodity) error {
 	if _, err := io.WriteString(w, "\n\n"); err != nil {
 		return err
 	}
-	var p printer.Printer
+	p := printer.New(w)
 	openValAccounts := set.New[*model.Account]()
 	for _, day := range j {
 		for _, open := range day.Openings {
-			if _, err := p.PrintDirective(w, open); err != nil {
+			if _, err := p.PrintDirective(open); err != nil {
 				return err
 			}
 			if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -54,7 +54,7 @@ func Transcode(w io.Writer, j []*journal.Day, c *model.Commodity) error {
 			for _, pst := range trx.Postings {
 				if strings.HasPrefix(pst.Account.Name(), "Equity:Valuation:") && !openValAccounts.Has(pst.Account) {
 					openValAccounts.Add(pst.Account)
-					if _, err := p.PrintDirective(w, &model.Open{Date: trx.Date, Account: pst.Account}); err != nil {
+					if _, err := p.PrintDirective(&model.Open{Date: trx.Date, Account: pst.Account}); err != nil {
 						return err
 					}
 					if _, err := io.WriteString(w, "\n\n"); err != nil {
@@ -69,7 +69,7 @@ func Transcode(w io.Writer, j []*journal.Day, c *model.Commodity) error {
 			}
 		}
 		for _, close := range day.Closings {
-			if _, err := p.PrintDirective(w, close); err != nil {
+			if _, err := p.PrintDirective(close); err != nil {
 				return err
 			}
 			if _, err := io.WriteString(w, "\n\n"); err != nil {

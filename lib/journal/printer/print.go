@@ -26,98 +26,93 @@ import (
 
 // Printer prints directives.
 type Printer struct {
+	writer  io.Writer
 	padding int
+	count   int
 }
 
 // New creates a new Printer.
-func NewPrinter() *Printer {
-	return new(Printer)
+func New(w io.Writer) *Printer {
+	return &Printer{writer: w}
+}
+
+func (p *Printer) Write(bs []byte) (int, error) {
+	n, err := p.writer.Write(bs)
+	p.count += n
+	return n, err
 }
 
 // PrintDirective prints a directive to the given Writer.
-func (p Printer) PrintDirective(w io.Writer, directive model.Directive) (n int, err error) {
+func (p *Printer) PrintDirective(directive model.Directive) (n int, err error) {
 	switch d := directive.(type) {
 	case *model.Transaction:
-		return p.printTransaction(w, d)
+		return p.printTransaction(d)
 	case *model.Open:
-		return p.printOpen(w, d)
+		return p.printOpen(d)
 	case *model.Close:
-		return p.printClose(w, d)
+		return p.printClose(d)
 	case *model.Assertion:
-		return p.printAssertion(w, d)
+		return p.printAssertion(d)
 	case *model.Price:
-		return p.printPrice(w, d)
+		return p.printPrice(d)
 	}
 	return 0, fmt.Errorf("unknown directive: %v", directive)
 }
 
-func (p Printer) printTransaction(w io.Writer, t *model.Transaction) (n int, err error) {
+func (p *Printer) printTransaction(t *model.Transaction) (n int, err error) {
+	start := p.count
 	if t.Targets != nil {
 		var s []string
 		for _, t := range t.Targets {
 			s = append(s, t.Name())
 		}
-		c, err := fmt.Fprintf(w, "@performance(%s)\n", strings.Join(s, ","))
-		n += c
-		if err != nil {
-			return n, err
+		if _, err := fmt.Fprintf(p, "@performance(%s)\n", strings.Join(s, ",")); err != nil {
+			return p.count - start, err
 		}
 	}
-	c, err := fmt.Fprintf(w, "%s \"%s\"", t.Date.Format("2006-01-02"), t.Description)
-	n += c
-	if err != nil {
-		return n, err
+	if _, err := fmt.Fprintf(p, "%s \"%s\"", t.Date.Format("2006-01-02"), t.Description); err != nil {
+		return p.count - start, err
 	}
-	err = p.newline(w, &n)
-	if err != nil {
-		return n, err
+	if _, err := io.WriteString(p, "\n"); err != nil {
+		return p.count - start, err
 	}
 	for i, po := range t.Postings {
 		if i%2 == 0 {
 			continue
 		}
-		d, err := p.printPosting(w, po)
-		n += d
-		if err != nil {
-			return n, err
+		if _, err := p.printPosting(po); err != nil {
+			return p.count - start, err
 		}
-		err = p.newline(w, &n)
-		if err != nil {
-			return n, err
+		if _, err := io.WriteString(p, "\n"); err != nil {
+			return p.count - start, err
 		}
 	}
-	return n, nil
+	return p.count - start, nil
 }
 
-func (p Printer) printPosting(w io.Writer, t *model.Posting) (int, error) {
-	var n int
-	c, err := fmt.Fprintf(w, "%s %s %s %s", p.rightPad(t.Other), p.rightPad(t.Account), leftPad(10, t.Amount.String()), t.Commodity.Name())
-	n += c
-	if err != nil {
-		return n, err
-	}
-	return n, nil
+func (p *Printer) printPosting(t *model.Posting) (int, error) {
+	return fmt.Fprintf(p, "%s %s %s %s", p.rightPad(t.Other), p.rightPad(t.Account), leftPad(10, t.Amount.String()), t.Commodity.Name())
 }
 
-func (p Printer) printOpen(w io.Writer, o *model.Open) (int, error) {
-	return fmt.Fprintf(w, "%s open %s", o.Date.Format("2006-01-02"), o.Account)
+func (p *Printer) printOpen(o *model.Open) (int, error) {
+	return fmt.Fprintf(p, "%s open %s", o.Date.Format("2006-01-02"), o.Account)
 }
 
-func (p Printer) printClose(w io.Writer, c *model.Close) (int, error) {
-	return fmt.Fprintf(w, "%s close %s", c.Date.Format("2006-01-02"), c.Account)
+func (p *Printer) printClose(c *model.Close) (int, error) {
+	return fmt.Fprintf(p, "%s close %s", c.Date.Format("2006-01-02"), c.Account)
 }
 
-func (p Printer) printPrice(w io.Writer, pr *model.Price) (int, error) {
-	return fmt.Fprintf(w, "%s price %s %s %s", pr.Date.Format("2006-01-02"), pr.Commodity.Name(), pr.Price, pr.Target.Name())
+func (p *Printer) printPrice(pr *model.Price) (int, error) {
+	return fmt.Fprintf(p, "%s price %s %s %s", pr.Date.Format("2006-01-02"), pr.Commodity.Name(), pr.Price, pr.Target.Name())
 }
 
-func (p Printer) printAssertion(w io.Writer, a *model.Assertion) (int, error) {
-	return fmt.Fprintf(w, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity.Name())
+func (p *Printer) printAssertion(a *model.Assertion) (int, error) {
+	return fmt.Fprintf(p, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity.Name())
 }
 
 // PrintJournal prints a journal.
 func PrintJournal(w io.Writer, j *journal.Journal) error {
-	p := new(Printer)
+	p := New(w)
 	days := j.Sorted()
 	for _, day := range days {
 		for _, t := range day.Transactions {
@@ -197,8 +192,8 @@ func (p *Printer) updatePadding(t *model.Transaction) {
 	}
 }
 
-func (p Printer) writeLn(w io.Writer, d model.Directive, count *int) error {
-	c, err := p.PrintDirective(w, d)
+func (p *Printer) writeLn(w io.Writer, d model.Directive, count *int) error {
+	c, err := p.PrintDirective(d)
 	*count += c
 	if err != nil {
 		return err
@@ -206,13 +201,13 @@ func (p Printer) writeLn(w io.Writer, d model.Directive, count *int) error {
 	return p.newline(w, count)
 }
 
-func (p Printer) newline(w io.Writer, count *int) error {
+func (p *Printer) newline(w io.Writer, count *int) error {
 	c, err := io.WriteString(w, "\n")
 	*count += c
 	return err
 }
 
-func (p Printer) rightPad(a *model.Account) string {
+func (p *Printer) rightPad(a *model.Account) string {
 	var b strings.Builder
 	b.WriteString(a.String())
 	for i := utf8.RuneCountInString(a.String()); i < p.padding; i++ {

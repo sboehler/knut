@@ -148,7 +148,7 @@ func (pf *PeriodFlag) Value() date.Period {
 
 // MappingFlag manages a flag of type -c1,<regex>.
 type MappingFlag struct {
-	m account.AccountMapping
+	m account.Mapping
 }
 
 var _ pflag.Value = (*MappingFlag)(nil)
@@ -180,7 +180,7 @@ func (cf *MappingFlag) Set(v string) error {
 }
 
 // Value returns the value of this flag.
-func (cf *MappingFlag) Value() account.AccountMapping {
+func (cf *MappingFlag) Value() account.Mapping {
 	return cf.m
 }
 

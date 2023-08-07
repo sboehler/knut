@@ -113,10 +113,10 @@ func (r Rule) String() string {
 	return fmt.Sprintf("%d,%v", r.Level, r.Regex)
 }
 
-// AccountMapping is a set of mapping rules.
-type AccountMapping []Rule
+// Mapping is a set of mapping rules.
+type Mapping []Rule
 
-func (m AccountMapping) String() string {
+func (m Mapping) String() string {
 	var s []string
 	for _, r := range m {
 		s = append(s, r.String())
@@ -125,7 +125,7 @@ func (m AccountMapping) String() string {
 }
 
 // level returns the level to which an account should be shortened.
-func (m AccountMapping) level(a *Account) int {
+func (m Mapping) level(a *Account) int {
 	for _, c := range m {
 		if c.Regex == nil || c.Regex.MatchString(a.name) {
 			return c.Level
@@ -134,7 +134,7 @@ func (m AccountMapping) level(a *Account) int {
 	return a.level
 }
 
-func Shorten(reg *Registry, m AccountMapping) mapper.Mapper[*Account] {
+func Shorten(reg *Registry, m Mapping) mapper.Mapper[*Account] {
 	if len(m) == 0 {
 		return mapper.Identity[*Account]
 	}

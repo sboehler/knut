@@ -23,12 +23,6 @@ import (
 	"github.com/sboehler/knut/lib/syntax/directives"
 )
 
-func (pp *Printer) Write(p []byte) (int, error) {
-	n, err := pp.writer.Write(p)
-	pp.count += n
-	return n, err
-}
-
 // Printer prints directives.
 type Printer struct {
 	writer  io.Writer
@@ -39,6 +33,12 @@ type Printer struct {
 // New creates a new Printer.
 func New(w io.Writer) *Printer {
 	return &Printer{writer: w}
+}
+
+func (p *Printer) Write(bs []byte) (int, error) {
+	n, err := p.writer.Write(bs)
+	p.count += n
+	return n, err
 }
 
 // PrintDirective prints a directive to the given Writer.

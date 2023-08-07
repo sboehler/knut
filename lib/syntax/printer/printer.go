@@ -24,21 +24,21 @@ import (
 )
 
 func (pp *Printer) Write(p []byte) (int, error) {
-	n, err := pp.Writer.Write(p)
+	n, err := pp.writer.Write(p)
 	pp.count += n
 	return n, err
 }
 
 // Printer prints directives.
 type Printer struct {
-	Writer  io.Writer
-	Padding int
+	writer  io.Writer
+	padding int
 	count   int
 }
 
 // New creates a new Printer.
-func NewPrinter() *Printer {
-	return new(Printer)
+func New(w io.Writer) *Printer {
+	return &Printer{writer: w}
 }
 
 // PrintDirective prints a directive to the given Writer.
@@ -98,7 +98,7 @@ func (p *Printer) printAccrual(a directives.Accrual) (n int, err error) {
 }
 
 func (p *Printer) printPosting(t directives.Booking) (int, error) {
-	return fmt.Fprintf(p, "%-*s %-*s %10s %s", p.Padding, t.Credit.Extract(), p.Padding, t.Debit.Extract(), t.Amount.Extract(), t.Commodity.Extract())
+	return fmt.Fprintf(p, "%-*s %-*s %10s %s", p.padding, t.Credit.Extract(), p.padding, t.Debit.Extract(), t.Amount.Extract(), t.Commodity.Extract())
 }
 
 func (p *Printer) printOpen(o directives.Open) (int, error) {
@@ -139,11 +139,11 @@ func (p *Printer) Initialize(directive []directives.Directive) {
 	for _, d := range directive {
 		if t, ok := d.Directive.(directives.Transaction); ok {
 			for _, b := range t.Bookings {
-				if l := utf8.RuneCountInString(b.Credit.Extract()); l > p.Padding {
-					p.Padding = l
+				if l := utf8.RuneCountInString(b.Credit.Extract()); l > p.padding {
+					p.padding = l
 				}
-				if l := utf8.RuneCountInString(b.Debit.Extract()); l > p.Padding {
-					p.Padding = l
+				if l := utf8.RuneCountInString(b.Debit.Extract()); l > p.padding {
+					p.padding = l
 				}
 			}
 		}

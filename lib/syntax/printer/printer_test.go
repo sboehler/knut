@@ -184,7 +184,7 @@ func TestPrintFile(t *testing.T) {
 				t.Fatalf("p.ParseFile() returned unexpected error: %#v", err)
 			}
 			var got strings.Builder
-			pr := Printer{Writer: &got}
+			pr := New(&got)
 
 			_, err = pr.PrintFile(f)
 
@@ -234,7 +234,7 @@ func TestFormat(t *testing.T) {
 				t.Fatalf("p.ParseFile() returned unexpected error: %#v", err)
 			}
 			var got strings.Builder
-			pr := Printer{Writer: &got}
+			pr := New(&got)
 
 			err = pr.Format(f)
 

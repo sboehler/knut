@@ -2,6 +2,7 @@ package syntax
 
 import (
 	"context"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -125,4 +126,9 @@ func parseRec(ctx context.Context, wg *errgroup.Group, resCh chan<- directives.F
 		}
 	}
 	return p.ParseFile()
+}
+
+func FormatFile(w io.Writer, f directives.File) error {
+	var p printer.Printer
+	return p.Format(f, w)
 }

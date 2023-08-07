@@ -54,11 +54,8 @@ func formatFile(target *string) error {
 	if err != nil {
 		return err
 	}
-	var (
-		dest bytes.Buffer
-		p    syntax.Printer
-	)
-	if err := p.Format(file, &dest); err != nil {
+	var dest bytes.Buffer
+	if err := syntax.FormatFile(&dest, file); err != nil {
 		return err
 	}
 	return atomic.WriteFile(*target, &dest)

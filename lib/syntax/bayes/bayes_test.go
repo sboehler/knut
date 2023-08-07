@@ -57,9 +57,7 @@ func TestPrintFile(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			training := parse(t, test.training)
 			target := parse(t, test.target)
-
 			model := NewModel("TBD")
-
 			for _, d := range training.Directives {
 				if t, ok := d.Directive.(syntax.Transaction); ok {
 					model.Update(&t)
@@ -71,12 +69,9 @@ func TestPrintFile(t *testing.T) {
 					model.Infer(&t)
 				}
 			}
+			var got bytes.Buffer
 
-			var (
-				pr  syntax.Printer
-				got bytes.Buffer
-			)
-			err := pr.Format(target, &got)
+			err := syntax.FormatFile(&got, target)
 
 			if err != nil {
 				t.Fatalf("pr.Format() returned unexpected error: %v", err)

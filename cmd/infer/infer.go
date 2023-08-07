@@ -78,17 +78,16 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	if err != nil {
 		return err
 	}
-	var p syntax.Printer
 	if r.inplace {
 		var buf bytes.Buffer
-		if err := p.Format(file, &buf); err != nil {
+		if err := syntax.FormatFile(&buf, file); err != nil {
 			return err
 		}
 		return atomic.WriteFile(targetFile, &buf)
 	} else {
 		out := bufio.NewWriter(cmd.OutOrStdout())
 		defer out.Flush()
-		return p.Format(file, out)
+		return syntax.FormatFile(out, file)
 	}
 }
 

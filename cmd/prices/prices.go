@@ -15,8 +15,8 @@
 package prices
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -52,7 +52,7 @@ func CreateCmd() *cobra.Command {
 }
 
 func run(cmd *cobra.Command, args []string) {
-	if err := execute2(cmd, args); err != nil {
+	if err := execute(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		os.Exit(1)
 	}
@@ -60,7 +60,7 @@ func run(cmd *cobra.Command, args []string) {
 
 const concurrency = 5
 
-func execute2(cmd *cobra.Command, args []string) error {
+func execute(cmd *cobra.Command, args []string) error {
 	ctx := registry.New()
 	configs, err := readConfig(args[0])
 	if err != nil {
@@ -81,14 +81,14 @@ func execute2(cmd *cobra.Command, args []string) error {
 
 func fetch(jctx *registry.Registry, f string, cfg config) error {
 	absPath := filepath.Join(filepath.Dir(f), cfg.File)
-	l, err := readFile(jctx, absPath)
+	pricesByDate, err := readFile(jctx, absPath)
 	if err != nil {
 		return err
 	}
-	if err := fetchPrices(jctx, cfg, time.Now().AddDate(-1, 0, 0), time.Now(), l); err != nil {
+	if err := fetchPrices(jctx, cfg, time.Now().AddDate(-1, 0, 0), time.Now(), pricesByDate); err != nil {
 		return err
 	}
-	if err := writeFile(jctx, l, absPath); err != nil {
+	if err := writeFile(jctx, pricesByDate, absPath); err != nil {
 		return err
 	}
 	return nil
@@ -145,12 +145,12 @@ func fetchPrices(ctx *registry.Registry, cfg config, t0, t1 time.Time, results m
 	if target, err = ctx.GetCommodity(cfg.TargetCommodity); err != nil {
 		return err
 	}
-	for _, i := range quotes {
-		results[i.Date] = &model.Price{
-			Date:      i.Date,
+	for _, quote := range quotes {
+		results[quote.Date] = &model.Price{
+			Date:      quote.Date,
 			Commodity: commodity,
 			Target:    target,
-			Price:     decimal.NewFromFloat(i.Close),
+			Price:     decimal.NewFromFloat(quote.Close),
 		}
 	}
 	return nil
@@ -161,15 +161,12 @@ func writeFile(ctx *registry.Registry, prices map[time.Time]*model.Price, filepa
 	for _, price := range prices {
 		j.AddPrice(price)
 	}
-	r, w := io.Pipe()
-	go func() {
-		defer w.Close()
-		_, err := printer.NewPrinter().PrintJournal(w, j)
-		if err != nil {
-			panic(err)
-		}
-	}()
-	return atomic.WriteFile(filepath, r)
+	var buf bytes.Buffer
+	_, err := printer.NewPrinter().PrintJournal(&buf, j)
+	if err != nil {
+		return err
+	}
+	return atomic.WriteFile(filepath, &buf)
 }
 
 type config struct {

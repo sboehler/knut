@@ -58,6 +58,16 @@ func (p *Printer) PrintDirective(directive model.Directive) (n int, err error) {
 	return 0, fmt.Errorf("unknown directive: %v", directive)
 }
 
+// PrintDirectiveLn prints a directive to the given Writer, followed by a newline.
+func (p *Printer) PrintDirectiveLn(d model.Directive) (n int, err error) {
+	start := p.count
+	if _, err := p.PrintDirective(d); err != nil {
+		return p.count - start, err
+	}
+	_, err = io.WriteString(p, "\n")
+	return p.count - start, err
+}
+
 func (p *Printer) printTransaction(t *model.Transaction) (n int, err error) {
 	start := p.count
 	if t.Targets != nil {

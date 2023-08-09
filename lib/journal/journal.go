@@ -221,10 +221,7 @@ func Print(w io.Writer, j *Journal) error {
 	}
 	for _, day := range days {
 		for _, pr := range day.Prices {
-			if _, err := p.PrintDirective(pr); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(p, "\n"); err != nil {
+			if _, err := p.PrintDirectiveLn(pr); err != nil {
 				return err
 			}
 		}
@@ -234,10 +231,7 @@ func Print(w io.Writer, j *Journal) error {
 			}
 		}
 		for _, o := range day.Openings {
-			if _, err := p.PrintDirective(o); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(p, "\n"); err != nil {
+			if _, err := p.PrintDirectiveLn(o); err != nil {
 				return err
 			}
 		}
@@ -247,18 +241,12 @@ func Print(w io.Writer, j *Journal) error {
 			}
 		}
 		for _, t := range day.Transactions {
-			if _, err := p.PrintDirective(t); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(p, "\n"); err != nil {
+			if _, err := p.PrintDirectiveLn(t); err != nil {
 				return err
 			}
 		}
 		for _, a := range day.Assertions {
-			if _, err := p.PrintDirective(a); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(p, "\n"); err != nil {
+			if _, err := p.PrintDirectiveLn(a); err != nil {
 				return err
 			}
 		}
@@ -268,10 +256,7 @@ func Print(w io.Writer, j *Journal) error {
 			}
 		}
 		for _, c := range day.Closings {
-			if _, err := p.PrintDirective(c); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(p, "\n"); err != nil {
+			if _, err := p.PrintDirectiveLn(c); err != nil {
 				return err
 			}
 		}

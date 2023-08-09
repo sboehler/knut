@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/price"
 	"github.com/sboehler/knut/lib/model/registry"
@@ -162,7 +161,7 @@ func writeFile(ctx *registry.Registry, prices map[time.Time]*model.Price, filepa
 		j.AddPrice(price)
 	}
 	var buf bytes.Buffer
-	err := printer.PrintJournal(&buf, j)
+	err := journal.Print(&buf, j)
 	if err != nil {
 		return err
 	}

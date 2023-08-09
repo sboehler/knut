@@ -29,7 +29,6 @@ import (
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/posting"
 	"github.com/sboehler/knut/lib/model/registry"
@@ -110,7 +109,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return printer.PrintJournal(out, p.journal)
+	return journal.Print(out, p.journal)
 }
 
 type parser struct {

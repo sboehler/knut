@@ -20,7 +20,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
 )
 
@@ -108,80 +107,6 @@ func (p *Printer) printPrice(pr *model.Price) (int, error) {
 
 func (p *Printer) printAssertion(a *model.Assertion) (int, error) {
 	return fmt.Fprintf(p, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity.Name())
-}
-
-// PrintJournal prints a journal.
-func PrintJournal(w io.Writer, j *journal.Journal) error {
-	p := New(w)
-	days := j.Sorted()
-	for _, day := range days {
-		for _, t := range day.Transactions {
-			p.UpdatePadding(t)
-		}
-	}
-	for _, day := range days {
-		for _, pr := range day.Prices {
-			if _, err := p.printPrice(pr); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(p, "\n"); err != nil {
-				return err
-			}
-		}
-		if len(day.Prices) > 0 {
-			if _, err := io.WriteString(p, "\n"); err != nil {
-				return err
-			}
-		}
-		for _, o := range day.Openings {
-			if _, err := p.printOpen(o); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(p, "\n"); err != nil {
-				return err
-			}
-		}
-		if len(day.Openings) > 0 {
-			if _, err := io.WriteString(p, "\n"); err != nil {
-				return err
-			}
-		}
-		for _, t := range day.Transactions {
-			if _, err := p.printTransaction(t); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(p, "\n"); err != nil {
-				return err
-			}
-		}
-		for _, a := range day.Assertions {
-			if _, err := p.printAssertion(a); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(p, "\n"); err != nil {
-				return err
-			}
-		}
-		if len(day.Assertions) > 0 {
-			if _, err := io.WriteString(p, "\n"); err != nil {
-				return err
-			}
-		}
-		for _, c := range day.Closings {
-			if _, err := p.printClose(c); err != nil {
-				return err
-			}
-			if _, err := io.WriteString(p, "\n"); err != nil {
-				return err
-			}
-		}
-		if len(day.Closings) > 0 {
-			if _, err := io.WriteString(p, "\n"); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // Initialize initializes the padding of this printer.

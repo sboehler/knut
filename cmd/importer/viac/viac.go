@@ -26,7 +26,6 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/registry"
 )
@@ -108,7 +107,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return printer.PrintJournal(out, j)
+	return journal.Print(out, j)
 }
 
 type response struct {

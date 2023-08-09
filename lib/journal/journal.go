@@ -17,6 +17,7 @@ package journal
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/slice"
+	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/price"
 	"github.com/sboehler/knut/lib/syntax"
@@ -206,4 +208,78 @@ func (p Performance) String() string {
 		fmt.Fprintf(&buf, "V1: %20s %f\n", c, v)
 	}
 	return buf.String()
+}
+
+// PrintJournal prints a journal.
+func Print(w io.Writer, j *Journal) error {
+	p := printer.New(w)
+	days := j.Sorted()
+	for _, day := range days {
+		for _, t := range day.Transactions {
+			p.UpdatePadding(t)
+		}
+	}
+	for _, day := range days {
+		for _, pr := range day.Prices {
+			if _, err := p.PrintDirective(pr); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(p, "\n"); err != nil {
+				return err
+			}
+		}
+		if len(day.Prices) > 0 {
+			if _, err := io.WriteString(p, "\n"); err != nil {
+				return err
+			}
+		}
+		for _, o := range day.Openings {
+			if _, err := p.PrintDirective(o); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(p, "\n"); err != nil {
+				return err
+			}
+		}
+		if len(day.Openings) > 0 {
+			if _, err := io.WriteString(p, "\n"); err != nil {
+				return err
+			}
+		}
+		for _, t := range day.Transactions {
+			if _, err := p.PrintDirective(t); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(p, "\n"); err != nil {
+				return err
+			}
+		}
+		for _, a := range day.Assertions {
+			if _, err := p.PrintDirective(a); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(p, "\n"); err != nil {
+				return err
+			}
+		}
+		if len(day.Assertions) > 0 {
+			if _, err := io.WriteString(p, "\n"); err != nil {
+				return err
+			}
+		}
+		for _, c := range day.Closings {
+			if _, err := p.PrintDirective(c); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(p, "\n"); err != nil {
+				return err
+			}
+		}
+		if len(day.Closings) > 0 {
+			if _, err := io.WriteString(p, "\n"); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

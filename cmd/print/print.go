@@ -20,7 +20,6 @@ import (
 	"os"
 
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model/registry"
 
 	"github.com/spf13/cobra"
@@ -68,5 +67,5 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	return printer.PrintJournal(w, j)
+	return journal.Print(w, j)
 }

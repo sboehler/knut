@@ -91,7 +91,7 @@ func (p *Printer) printTransaction(t *model.Transaction) (n int, err error) {
 }
 
 func (p *Printer) printPosting(t *model.Posting) (int, error) {
-	return fmt.Fprintf(p, "%s %s %s %s", p.rightPad(t.Other), p.rightPad(t.Account), leftPad(10, t.Amount.String()), t.Commodity.Name())
+	return fmt.Fprintf(p, "%-*s %-*s %10s %s", p.padding, t.Other.String(), p.padding, t.Account.String(), t.Amount.String(), t.Commodity.Name())
 }
 
 func (p *Printer) printOpen(o *model.Open) (int, error) {
@@ -116,53 +116,67 @@ func PrintJournal(w io.Writer, j *journal.Journal) error {
 	days := j.Sorted()
 	for _, day := range days {
 		for _, t := range day.Transactions {
-			p.updatePadding(t)
+			p.UpdatePadding(t)
 		}
 	}
-	var n int
 	for _, day := range days {
 		for _, pr := range day.Prices {
-			if err := p.writeLn(w, pr, &n); err != nil {
+			if _, err := p.printPrice(pr); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(p, "\n"); err != nil {
 				return err
 			}
 		}
 		if len(day.Prices) > 0 {
-			if err := p.newline(w, &n); err != nil {
+			if _, err := io.WriteString(p, "\n"); err != nil {
 				return err
 			}
 		}
 		for _, o := range day.Openings {
-			if err := p.writeLn(w, o, &n); err != nil {
+			if _, err := p.printOpen(o); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(p, "\n"); err != nil {
 				return err
 			}
 		}
 		if len(day.Openings) > 0 {
-			if err := p.newline(w, &n); err != nil {
+			if _, err := io.WriteString(p, "\n"); err != nil {
 				return err
 			}
 		}
 		for _, t := range day.Transactions {
-			if err := p.writeLn(w, t, &n); err != nil {
+			if _, err := p.printTransaction(t); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(p, "\n"); err != nil {
 				return err
 			}
 		}
 		for _, a := range day.Assertions {
-			if err := p.writeLn(w, a, &n); err != nil {
+			if _, err := p.printAssertion(a); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(p, "\n"); err != nil {
 				return err
 			}
 		}
 		if len(day.Assertions) > 0 {
-			if err := p.newline(w, &n); err != nil {
+			if _, err := io.WriteString(p, "\n"); err != nil {
 				return err
 			}
 		}
 		for _, c := range day.Closings {
-			if err := p.writeLn(w, c, &n); err != nil {
+			if _, err := p.printClose(c); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(p, "\n"); err != nil {
 				return err
 			}
 		}
 		if len(day.Closings) > 0 {
-			if err := p.newline(w, &n); err != nil {
+			if _, err := io.WriteString(p, "\n"); err != nil {
 				return err
 			}
 		}
@@ -175,12 +189,12 @@ func (p *Printer) Initialize(directive []model.Directive) {
 	for _, d := range directive {
 		switch t := d.(type) {
 		case *model.Transaction:
-			p.updatePadding(t)
+			p.UpdatePadding(t)
 		}
 	}
 }
 
-func (p *Printer) updatePadding(t *model.Transaction) {
+func (p *Printer) UpdatePadding(t *model.Transaction) {
 	for _, pt := range t.Postings {
 		cr, dr := utf8.RuneCountInString(pt.Account.String()), utf8.RuneCountInString(pt.Other.String())
 		if p.padding < cr {
@@ -190,40 +204,4 @@ func (p *Printer) updatePadding(t *model.Transaction) {
 			p.padding = dr
 		}
 	}
-}
-
-func (p *Printer) writeLn(w io.Writer, d model.Directive, count *int) error {
-	c, err := p.PrintDirective(d)
-	*count += c
-	if err != nil {
-		return err
-	}
-	return p.newline(w, count)
-}
-
-func (p *Printer) newline(w io.Writer, count *int) error {
-	c, err := io.WriteString(w, "\n")
-	*count += c
-	return err
-}
-
-func (p *Printer) rightPad(a *model.Account) string {
-	var b strings.Builder
-	b.WriteString(a.String())
-	for i := utf8.RuneCountInString(a.String()); i < p.padding; i++ {
-		b.WriteRune(' ')
-	}
-	return b.String()
-}
-
-func leftPad(n int, s string) string {
-	if len(s) > n {
-		return s
-	}
-	var b strings.Builder
-	for i := 0; i < n-len(s); i++ {
-		b.WriteRune(' ')
-	}
-	b.WriteString(s)
-	return b.String()
 }

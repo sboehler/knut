@@ -42,7 +42,7 @@ func (p *Printer) Write(bs []byte) (int, error) {
 }
 
 // PrintDirective prints a directive to the given Writer.
-func (p Printer) PrintDirective(directive directives.Directive) (n int, err error) {
+func (p *Printer) PrintDirective(directive directives.Directive) (n int, err error) {
 	switch d := directive.Directive.(type) {
 	case directives.Transaction:
 		return p.printTransaction(d)

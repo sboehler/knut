@@ -81,7 +81,7 @@ func ForAll[T any](ts []T, f func(T)) func() {
 	return wg.Wait
 }
 
-func Consume[T any](ctx context.Context, ch <-chan T, f func(T) error) error {
+func ForEach[T any](ctx context.Context, ch <-chan T, f func(T) error) error {
 	for {
 		t, ok, err := Pop(ctx, ch)
 		if err != nil || !ok {
@@ -115,7 +115,7 @@ func Seq[T any](ctx context.Context, ts []T, fs ...func(T) error) ([]T, error) {
 	for _, f := range fs {
 		f, inCh := f, prevCh
 		ch, w := Produce(func(ctx context.Context, ch chan<- T) error {
-			return Consume(ctx, inCh, func(t T) error {
+			return ForEach(ctx, inCh, func(t T) error {
 				if err := f(t); err != nil {
 					return err
 				}
@@ -128,7 +128,7 @@ func Seq[T any](ctx context.Context, ts []T, fs ...func(T) error) ([]T, error) {
 
 	ch, w := FanIn(func(ctx context.Context, ch chan<- []T) error {
 		var res []T
-		err := Consume(ctx, prevCh, func(t T) error {
+		err := ForEach(ctx, prevCh, func(t T) error {
 			res = append(res, t)
 			return nil
 		})

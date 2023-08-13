@@ -123,7 +123,7 @@ func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, 
 func FromModelStream(reg *model.Registry, modelCh <-chan []model.Directive) (<-chan *Journal, func(context.Context) error) {
 	return cpr.FanIn(func(ctx context.Context, ch chan<- *Journal) error {
 		j := New(reg)
-		err := cpr.Consume(ctx, modelCh, func(directives []model.Directive) error {
+		err := cpr.ForEach(ctx, modelCh, func(directives []model.Directive) error {
 			for _, d := range directives {
 				switch t := d.(type) {
 				case *model.Price:

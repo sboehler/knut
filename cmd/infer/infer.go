@@ -97,7 +97,7 @@ func train(ctx context.Context, file string, account string) (*bayes.Model, erro
 	ch, worker := syntax.ParseFileRecursively(file)
 	p.Go(worker)
 	p.Go(func(ctx context.Context) error {
-		return cpr.Consume(ctx, ch, func(res syntax.File) error {
+		return cpr.ForEach(ctx, ch, func(res syntax.File) error {
 			for _, d := range res.Directives {
 				if t, ok := d.Directive.(syntax.Transaction); ok {
 					model.Update(&t)

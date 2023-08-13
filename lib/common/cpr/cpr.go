@@ -4,6 +4,8 @@ package cpr
 import (
 	"context"
 	"sync"
+
+	"github.com/sourcegraph/conc/pool"
 )
 
 // Pop returns a new T from the ch. It returns a boolean which indicates
@@ -97,6 +99,54 @@ func Produce[T any](f func(context.Context, chan<- T) error) (<-chan T, func(con
 		defer close(ch)
 		return f(ctx, ch)
 	}
+}
+
+func Seq[T any](ctx context.Context, ts []T, fs ...func(T) error) ([]T, error) {
+	var workers []func(context.Context) error
+	prevCh, w := Produce(func(ctx context.Context, ch chan<- T) error {
+		for _, t := range ts {
+			if err := Push(ctx, ch, t); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	workers = append(workers, w)
+	for _, f := range fs {
+		f, inCh := f, prevCh
+		ch, w := Produce(func(ctx context.Context, ch chan<- T) error {
+			return Consume(ctx, inCh, func(t T) error {
+				if err := f(t); err != nil {
+					return err
+				}
+				return Push(ctx, ch, t)
+			})
+		})
+		workers = append(workers, w)
+		prevCh = ch
+	}
+
+	ch, w := FanIn(func(ctx context.Context, ch chan<- []T) error {
+		var res []T
+		err := Consume(ctx, prevCh, func(t T) error {
+			res = append(res, t)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		return Push(ctx, ch, res)
+	})
+
+	workers = append(workers, w)
+	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)
+	for _, w := range workers {
+		p.Go(w)
+	}
+	if err := p.Wait(); err != nil {
+		return nil, err
+	}
+	return <-ch, nil
 }
 
 func FanIn[T any](f func(context.Context, chan<- T) error) (<-chan T, func(context.Context) error) {

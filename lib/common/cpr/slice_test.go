@@ -1,6 +1,7 @@
-package slice
+package cpr
 
 import (
+	"context"
 	"testing"
 )
 
@@ -8,7 +9,7 @@ type input struct {
 	a, b, c int
 }
 
-func TestParallel(t *testing.T) {
+func TestSeq(t *testing.T) {
 	const size = 100000
 	var list []*input
 	for i := 0; i < size; i++ {
@@ -26,7 +27,9 @@ func TestParallel(t *testing.T) {
 		in.c = in.c + in.b
 		return nil
 	}
-	got, err := Parallel(list, fnA, fnB, fnC)
+
+	got, err := Seq(context.Background(), list, fnA, fnB, fnC)
+
 	if err != nil {
 		t.Fatalf("Parallel() returned unexpected error: %v", err)
 	}

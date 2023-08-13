@@ -25,7 +25,6 @@ import (
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/dict"
-	"github.com/sboehler/knut/lib/common/slice"
 	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/price"
@@ -103,7 +102,7 @@ func (j *Journal) Period() date.Period {
 }
 
 func (j *Journal) Process(fs ...func(*Day) error) ([]*Day, error) {
-	return slice.Parallel(j.Sorted(), fs...)
+	return cpr.Seq(context.Background(), j.Sorted(), fs...)
 }
 
 func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, error) {

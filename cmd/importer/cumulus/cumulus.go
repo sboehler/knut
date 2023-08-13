@@ -54,7 +54,7 @@ using the default options and saving it to CSV. This importer will parse the una
 }
 
 func init() {
-	importer.Register(CreateCmd)
+	importer.RegisterImporter(CreateCmd)
 }
 
 type runner struct {

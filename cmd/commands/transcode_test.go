@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package transcode
+package commands
 
 import (
 	"testing"
@@ -23,7 +23,7 @@ import (
 
 func TestGolden(t *testing.T) {
 
-	got := cmdtest.Run(t, CreateCmd(), "-v", "CHF", "testdata/example.knut")
+	got := cmdtest.Run(t, CreateTranscodeCommand(), "-v", "CHF", "testdata/transcode/example.knut")
 
-	goldie.New(t).Assert(t, "example", got)
+	goldie.New(t, goldie.WithFixtureDir("testdata/transcode")).Assert(t, "example", got)
 }

@@ -47,7 +47,7 @@ func CreateCmd() *cobra.Command {
 }
 
 func init() {
-	importer.Register(CreateCmd)
+	importer.RegisterImporter(CreateCmd)
 }
 
 func (r *runner) setupFlags(cmd *cobra.Command) {

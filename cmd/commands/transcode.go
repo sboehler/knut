@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package transcode
+package commands
 
 import (
 	"bufio"
@@ -29,9 +29,9 @@ import (
 	"go.uber.org/multierr"
 )
 
-// CreateCmd creates the command.
-func CreateCmd() *cobra.Command {
-	var r runner
+// CreateTranscodeCommand creates the command.
+func CreateTranscodeCommand() *cobra.Command {
+	var r transcodeRunner
 
 	// Cmd is the balance command.
 	cmd := &cobra.Command{
@@ -48,22 +48,22 @@ func CreateCmd() *cobra.Command {
 	return cmd
 }
 
-type runner struct {
+type transcodeRunner struct {
 	valuation flags.CommodityFlag
 }
 
-func (r *runner) setupFlags(c *cobra.Command) {
+func (r *transcodeRunner) setupFlags(c *cobra.Command) {
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 }
 
-func (r *runner) run(cmd *cobra.Command, args []string) {
+func (r *transcodeRunner) run(cmd *cobra.Command, args []string) {
 	if err := r.execute(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		os.Exit(1)
 	}
 }
 
-func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
+func (r *transcodeRunner) execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
 		reg       = registry.New()
 		valuation *model.Commodity

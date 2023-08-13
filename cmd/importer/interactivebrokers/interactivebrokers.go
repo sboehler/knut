@@ -52,7 +52,7 @@ func CreateCmd() *cobra.Command {
 }
 
 func init() {
-	importer.Register(CreateCmd)
+	importer.RegisterImporter(CreateCmd)
 }
 
 type runner struct {

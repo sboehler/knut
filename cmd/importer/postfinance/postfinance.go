@@ -95,7 +95,7 @@ func (r *runner) runE(cmd *cobra.Command, args []string) error {
 }
 
 func init() {
-	importer.Register(CreateCmd)
+	importer.RegisterImporter(CreateCmd)
 }
 
 // Parser is a parser for account statements

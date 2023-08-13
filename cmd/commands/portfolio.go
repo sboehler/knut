@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package portfolio
+package commands
 
 import (
 	"fmt"
@@ -31,10 +31,10 @@ import (
 	"github.com/sboehler/knut/lib/model/registry"
 )
 
-// CreateCmd creates the command.
-func CreateCmd() *cobra.Command {
+// CreatePortfolioCommand creates the command.
+func CreatePortfolioCommand() *cobra.Command {
 
-	var r runner
+	var r portfolioRunner
 	// Cmd is the balance command.
 	c := &cobra.Command{
 		Use:   "portfolio",
@@ -51,7 +51,7 @@ func CreateCmd() *cobra.Command {
 	return c
 }
 
-type runner struct {
+type portfolioRunner struct {
 	cpuprofile            string
 	valuation             flags.CommodityFlag
 	accounts, commodities flags.RegexFlag
@@ -59,7 +59,7 @@ type runner struct {
 	interval              flags.IntervalFlags
 }
 
-func (r *runner) setupFlags(cmd *cobra.Command) {
+func (r *portfolioRunner) setupFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
 	cmd.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	cmd.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
@@ -69,7 +69,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 }
 
-func (r *runner) run(cmd *cobra.Command, args []string) {
+func (r *portfolioRunner) run(cmd *cobra.Command, args []string) {
 	if r.cpuprofile != "" {
 		f, err := os.Create(r.cpuprofile)
 		if err != nil {
@@ -84,7 +84,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 	}
 }
 
-func (r *runner) execute(cmd *cobra.Command, args []string) error {
+func (r *portfolioRunner) execute(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	reg := registry.New()
 	valuation, err := r.valuation.Value(reg)

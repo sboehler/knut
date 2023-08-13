@@ -12,27 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package importer
+package commands
 
 import (
+	"github.com/sboehler/knut/cmd/importer"
 	"github.com/spf13/cobra"
 )
 
-// CreateCmd is the import command.
-func CreateCmd() *cobra.Command {
+// CreateImportCommand is the import command.
+func CreateImportCommand() *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "import",
 		Short: "Import financial account statements",
 	}
-	for _, constructor := range importers {
+	for _, constructor := range importer.GetImporters() {
 		cmd.AddCommand(constructor())
 	}
 	return &cmd
-}
-
-var importers []func() *cobra.Command
-
-// Register registers an importer constructor.
-func Register(f func() *cobra.Command) {
-	importers = append(importers, f)
 }

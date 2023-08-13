@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package completion
+package commands
 
 import (
 	"fmt"
@@ -22,8 +22,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// CreateCmd creates a command.
-func CreateCmd(rootCmd *cobra.Command) *cobra.Command {
+// CreateCompletionCommand creates a command.
+func CreateCompletionCommand(rootCmd *cobra.Command) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "completion [bash|zsh]",
 		Short: "output shell completion code [bash|zsh]",

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package format
+package commands
 
 import (
 	"bytes"
@@ -27,29 +27,32 @@ import (
 	"github.com/sboehler/knut/lib/syntax"
 )
 
-// CreateCmd creates the command.
-func CreateCmd() *cobra.Command {
+// CreateFormatCommand creates the command.
+func CreateFormatCommand() *cobra.Command {
+	var runner formatRunner
 	return &cobra.Command{
 		Use:   "format",
 		Short: "Format the given journal",
 		Long:  `Format the given journal in-place. Any white space and comments between directives is preserved.`,
 
-		Run: run,
+		Run: runner.run,
 	}
 }
 
-func run(cmd *cobra.Command, args []string) {
-	if err := execute(cmd, args); err != nil {
+type formatRunner struct{}
+
+func (r formatRunner) run(cmd *cobra.Command, args []string) {
+	if err := r.execute(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		os.Exit(1)
 	}
 }
 
-func execute(cmd *cobra.Command, args []string) error {
-	return multierr.Combine(iter.Map(args, formatFile)...)
+func (r formatRunner) execute(cmd *cobra.Command, args []string) error {
+	return multierr.Combine(iter.Map(args, r.formatFile)...)
 }
 
-func formatFile(target *string) error {
+func (formatRunner) formatFile(target *string) error {
 	file, err := syntax.ParseFile(*target)
 	if err != nil {
 		return err

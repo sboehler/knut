@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package infer
+package commands
 
 import (
 	"testing"
@@ -22,9 +22,9 @@ import (
 	"github.com/sebdah/goldie/v2"
 )
 
-func TestGolden(t *testing.T) {
+func TestInfer(t *testing.T) {
 
-	got := cmdtest.Run(t, CreateCmd(), "--training-file", "testdata/training.knut", "testdata/target.knut")
+	got := cmdtest.Run(t, CreateInferCmd(), "--training-file", "testdata/infer/training.knut", "testdata/infer/target.knut")
 
-	goldie.New(t).Assert(t, "target", got)
+	goldie.New(t, goldie.WithFixtureDir("testdata/infer")).Assert(t, "target", got)
 }

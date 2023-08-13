@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package balance
+package commands
 
 import (
 	"bufio"
@@ -36,10 +36,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// CreateCmd creates the command.
-func CreateCmd() *cobra.Command {
+// CreateBalanceCommand creates the command.
+func CreateBalanceCommand() *cobra.Command {
 
-	var r runner
+	var r balanceRunner
 
 	// Cmd is the balance command.
 	c := &cobra.Command{
@@ -53,7 +53,7 @@ func CreateCmd() *cobra.Command {
 	return c
 }
 
-type runner struct {
+type balanceRunner struct {
 	// internal
 	cpuprofile string
 
@@ -85,7 +85,7 @@ type runner struct {
 	digits    int32
 }
 
-func (r *runner) run(cmd *cobra.Command, args []string) {
+func (r *balanceRunner) run(cmd *cobra.Command, args []string) {
 	if r.cpuprofile != "" {
 		f, err := os.Create(r.cpuprofile)
 		if err != nil {
@@ -101,7 +101,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 	}
 }
 
-func (r *runner) setupFlags(c *cobra.Command) {
+func (r *balanceRunner) setupFlags(c *cobra.Command) {
 	c.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
 	r.period.Setup(c, date.Period{End: date.Today()})
 	c.Flags().IntVar(&r.last, "last", 0, "last n periods")
@@ -120,7 +120,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().BoolVar(&r.color, "color", true, "print output in color")
 }
 
-func (r runner) execute(cmd *cobra.Command, args []string) error {
+func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 	reg := registry.New()
 	valuation, err := r.valuation.Value(reg)
 	if err != nil {

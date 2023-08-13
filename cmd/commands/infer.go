@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package infer
+package commands
 
 import (
 	"bufio"
@@ -30,9 +30,9 @@ import (
 	"github.com/sboehler/knut/lib/syntax/bayes"
 )
 
-// CreateCmd creates the command.
-func CreateCmd() *cobra.Command {
-	var r runner
+// CreateInferCmd creates the command.
+func CreateInferCmd() *cobra.Command {
+	var r inferRunner
 	cmd := &cobra.Command{
 		Use:   "infer",
 		Short: "Auto-assign accounts in a journal",
@@ -45,32 +45,32 @@ func CreateCmd() *cobra.Command {
 	return cmd
 }
 
-type runner struct {
+type inferRunner struct {
 	account      string
 	trainingFile string
 	inplace      bool
 }
 
-func (r *runner) setupFlags(cmd *cobra.Command) {
+func (r *inferRunner) setupFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&r.account, "account", "a", "Expenses:TBD", "account name")
 	cmd.Flags().BoolVarP(&r.inplace, "inplace", "i", false, "infer the accounts inplace")
 	cmd.Flags().StringVarP(&r.trainingFile, "training-file", "t", "", "the journal file with existing data")
 	cmd.MarkFlagRequired("training-file")
 }
 
-func (r *runner) run(cmd *cobra.Command, args []string) {
+func (r *inferRunner) run(cmd *cobra.Command, args []string) {
 	if err := r.execute(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		os.Exit(1)
 	}
 }
 
-func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
+func (r *inferRunner) execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
 		targetFile = args[0]
 		err        error
 	)
-	model, err := train(cmd.Context(), r.trainingFile, r.account)
+	model, err := r.train(cmd.Context(), r.trainingFile, r.account)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	}
 }
 
-func train(ctx context.Context, file string, account string) (*bayes.Model, error) {
+func (inferRunner) train(ctx context.Context, file string, account string) (*bayes.Model, error) {
 	model := bayes.NewModel(account)
 	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)
 	ch, worker := syntax.ParseFileRecursively(file)
@@ -109,7 +109,7 @@ func train(ctx context.Context, file string, account string) (*bayes.Model, erro
 	return model, p.Wait()
 }
 
-func (r *runner) parseAndInfer(ctx context.Context, model *bayes.Model, targetFile string) (syntax.File, error) {
+func (r *inferRunner) parseAndInfer(ctx context.Context, model *bayes.Model, targetFile string) (syntax.File, error) {
 	f, err := syntax.ParseFile(targetFile)
 	if err != nil {
 		return syntax.File{}, err

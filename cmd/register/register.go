@@ -27,11 +27,11 @@ import (
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
-	"github.com/sboehler/knut/lib/journal/register"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/account"
 	"github.com/sboehler/knut/lib/model/commodity"
 	"github.com/sboehler/knut/lib/model/registry"
+	"github.com/sboehler/knut/lib/reports/register"
 
 	"github.com/spf13/cobra"
 )

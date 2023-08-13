@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package print
+package commands
 
 import (
 	"bufio"
@@ -25,9 +25,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// CreateCmd creates the command.
-func CreateCmd() *cobra.Command {
-	var r runner
+// CreatePrintCommand creates the command.
+func CreatePrintCommand() *cobra.Command {
+	var r printRunner
 
 	// Cmd is the balance command.
 	cmd := &cobra.Command{
@@ -43,20 +43,20 @@ func CreateCmd() *cobra.Command {
 	return cmd
 }
 
-type runner struct {
+type printRunner struct {
 }
 
-func (r *runner) setupFlags(c *cobra.Command) {
+func (r *printRunner) setupFlags(c *cobra.Command) {
 }
 
-func (r *runner) run(cmd *cobra.Command, args []string) {
+func (r *printRunner) run(cmd *cobra.Command, args []string) {
 	if err := r.execute(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		os.Exit(1)
 	}
 }
 
-func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
+func (r *printRunner) execute(cmd *cobra.Command, args []string) (errors error) {
 	reg := registry.New()
 	j, err := journal.FromPath(cmd.Context(), reg, args[0])
 	if err != nil {

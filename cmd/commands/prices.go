@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package prices
+package commands
 
 import (
 	"bytes"
@@ -37,8 +37,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// CreateCmd creates the command.
-func CreateCmd() *cobra.Command {
+// CreateFetchCommand creates the command.
+func CreateFetchCommand() *cobra.Command {
+	var runner fetchRunner
 	return &cobra.Command{
 		Use:   "fetch",
 		Short: "Fetch quotes from Yahoo! Finance",
@@ -46,54 +47,56 @@ func CreateCmd() *cobra.Command {
 
 		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 
-		Run: run,
+		Run: runner.run,
 	}
 }
 
-func run(cmd *cobra.Command, args []string) {
-	if err := execute(cmd, args); err != nil {
+type fetchRunner struct{}
+
+func (r *fetchRunner) run(cmd *cobra.Command, args []string) {
+	if err := r.execute(cmd, args); err != nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		os.Exit(1)
 	}
 }
 
-const concurrency = 5
+const fetchConcurrency = 5
 
-func execute(cmd *cobra.Command, args []string) error {
+func (r *fetchRunner) execute(cmd *cobra.Command, args []string) error {
 	reg := registry.New()
-	configs, err := readConfig(args[0])
+	configs, err := r.readConfig(args[0])
 	if err != nil {
 		return err
 	}
-	p := pool.New().WithMaxGoroutines(concurrency).WithErrors()
+	p := pool.New().WithMaxGoroutines(fetchConcurrency).WithErrors()
 	bar := pb.StartNew(len(configs))
 
 	for _, cfg := range configs {
 		cfg := cfg
 		p.Go(func() error {
 			defer bar.Increment()
-			return fetch(reg, args[0], cfg)
+			return r.fetch(reg, args[0], cfg)
 		})
 	}
 	return multierr.Combine(p.Wait())
 }
 
-func fetch(reg *registry.Registry, f string, cfg config) error {
+func (r *fetchRunner) fetch(reg *registry.Registry, f string, cfg fetchConfig) error {
 	absPath := filepath.Join(filepath.Dir(f), cfg.File)
-	pricesByDate, err := readFile(reg, absPath)
+	pricesByDate, err := r.readFile(reg, absPath)
 	if err != nil {
 		return err
 	}
-	if err := fetchPrices(reg, cfg, time.Now().AddDate(-1, 0, 0), time.Now(), pricesByDate); err != nil {
+	if err := r.fetchPrices(reg, cfg, time.Now().AddDate(-1, 0, 0), time.Now(), pricesByDate); err != nil {
 		return err
 	}
-	if err := writeFile(reg, pricesByDate, absPath); err != nil {
+	if err := r.writeFile(reg, pricesByDate, absPath); err != nil {
 		return err
 	}
 	return nil
 }
 
-func readConfig(path string) ([]config, error) {
+func (r *fetchRunner) readConfig(path string) ([]fetchConfig, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -101,14 +104,14 @@ func readConfig(path string) ([]config, error) {
 	defer f.Close()
 	dec := yaml.NewDecoder(f)
 	dec.SetStrict(true)
-	var t []config
+	var t []fetchConfig
 	if err := dec.Decode(&t); err != nil {
 		return nil, err
 	}
 	return t, nil
 }
 
-func readFile(ctx *registry.Registry, filepath string) (res map[time.Time]*model.Price, err error) {
+func (r *fetchRunner) readFile(ctx *registry.Registry, filepath string) (res map[time.Time]*model.Price, err error) {
 	f, err := syntax.ParseFile(filepath)
 	if err != nil {
 		return nil, err
@@ -128,7 +131,7 @@ func readFile(ctx *registry.Registry, filepath string) (res map[time.Time]*model
 	return prices, nil
 }
 
-func fetchPrices(ctx *registry.Registry, cfg config, t0, t1 time.Time, results map[time.Time]*model.Price) error {
+func (r *fetchRunner) fetchPrices(ctx *registry.Registry, cfg fetchConfig, t0, t1 time.Time, results map[time.Time]*model.Price) error {
 	var (
 		c                 = yahoo.New()
 		quotes            []yahoo.Quote
@@ -155,7 +158,7 @@ func fetchPrices(ctx *registry.Registry, cfg config, t0, t1 time.Time, results m
 	return nil
 }
 
-func writeFile(ctx *registry.Registry, prices map[time.Time]*model.Price, filepath string) error {
+func (r *fetchRunner) writeFile(ctx *registry.Registry, prices map[time.Time]*model.Price, filepath string) error {
 	j := journal.New(ctx)
 	for _, price := range prices {
 		j.AddPrice(price)
@@ -168,7 +171,7 @@ func writeFile(ctx *registry.Registry, prices map[time.Time]*model.Price, filepa
 	return atomic.WriteFile(filepath, &buf)
 }
 
-type config struct {
+type fetchConfig struct {
 	Symbol          string `yaml:"symbol"`
 	File            string `yaml:"file"`
 	Commodity       string `yaml:"commodity"`

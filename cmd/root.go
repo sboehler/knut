@@ -19,8 +19,6 @@ import (
 	"github.com/sboehler/knut/cmd/commands"
 	"github.com/sboehler/knut/cmd/importer"
 	"github.com/sboehler/knut/cmd/portfolio"
-	"github.com/sboehler/knut/cmd/prices"
-	"github.com/sboehler/knut/cmd/print"
 	"github.com/sboehler/knut/cmd/register"
 	"github.com/sboehler/knut/cmd/transcode"
 
@@ -41,10 +39,10 @@ func CreateCmd(version string) *cobra.Command {
 	c.AddCommand(importer.CreateCmd())
 	c.AddCommand(commands.CreateInferCmd())
 	c.AddCommand(portfolio.CreateCmd())
-	c.AddCommand(prices.CreateCmd())
+	c.AddCommand(commands.CreateFetchCommand())
 	c.AddCommand(register.CreateCmd())
 	c.AddCommand(transcode.CreateCmd())
-	c.AddCommand(print.CreateCmd())
+	c.AddCommand(commands.CreatePrintCommand())
 
 	return c
 }

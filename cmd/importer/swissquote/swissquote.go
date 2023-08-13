@@ -43,7 +43,7 @@ func CreateCmd() *cobra.Command {
 		Short: "Import Swissquote account reports",
 		Long:  `Parses CSV files from Swissquote's transactions overview.`,
 
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		RunE: r.run,
 	}
 	r.setupFlags(cmd)

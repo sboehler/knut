@@ -44,7 +44,7 @@ func CreateCmd() *cobra.Command {
 		Short: "Fetch quotes from Yahoo! Finance",
 		Long:  `Fetch quotes from Yahoo! Finance based on the supplied configuration in yaml format. See doc/prices.yaml for an example.`,
 
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 
 		Run: run,
 	}
@@ -60,7 +60,7 @@ func run(cmd *cobra.Command, args []string) {
 const concurrency = 5
 
 func execute(cmd *cobra.Command, args []string) error {
-	ctx := registry.New()
+	reg := registry.New()
 	configs, err := readConfig(args[0])
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func execute(cmd *cobra.Command, args []string) error {
 		cfg := cfg
 		p.Go(func() error {
 			defer bar.Increment()
-			return fetch(ctx, args[0], cfg)
+			return fetch(reg, args[0], cfg)
 		})
 	}
 	return multierr.Combine(p.Wait())

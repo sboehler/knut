@@ -46,7 +46,7 @@ func CreateCmd() *cobra.Command {
 		Use:   "balance",
 		Short: "create a balance sheet",
 		Long:  `Compute a balance for a date or set of dates.`,
-		Args:  cobra.ExactValidArgs(1),
+		Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		Run:   r.run,
 	}
 	r.setupFlags(c)

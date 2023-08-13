@@ -46,7 +46,7 @@ func CreateCmd() *cobra.Command {
 		Use:   "ch.postfinance",
 		Short: "Import Postfinance CSV account statements",
 
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 
 		Run: r.run,
 	}

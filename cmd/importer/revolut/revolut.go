@@ -43,7 +43,7 @@ func CreateCmd() *cobra.Command {
 		Short: "Import Revolut CSV account statements",
 		Long:  `Download one CSV file per account through their app. Make sure the app language is set to English, as they use localized formats.`,
 
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 
 		RunE: r.run,
 	}

@@ -38,7 +38,7 @@ func CreateCmd() *cobra.Command {
 		Short: "Import VIAC values from JSON files",
 		Long:  `Open app.viac.ch, choose a portfolio, and select "From start" in the overview dash. In the Chrome dev tools, save the response from the "performance" XHR call, and pass the resulting file to this importer.`,
 
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 
 		RunE: r.run,
 	}

@@ -38,7 +38,7 @@ func CreateCmd() *cobra.Command {
 		Short: "Auto-assign accounts in a journal",
 		Long: `Build a Bayes model using the supplied training file and apply it to replace
 		the indicated account in the target file. Training file and target file may be the same.`,
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		Run:  r.run,
 	}
 	r.setupFlags(cmd)

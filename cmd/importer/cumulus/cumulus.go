@@ -44,7 +44,7 @@ func CreateCmd() *cobra.Command {
 		Long: `Download a PDF account statement and run it through tabula (https://tabula.technology/),
 using the default options and saving it to CSV. This importer will parse the unaltered CSV.`,
 
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 
 		RunE: r.run,
 	}

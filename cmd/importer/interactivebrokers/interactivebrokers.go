@@ -44,7 +44,7 @@ func CreateCmd() *cobra.Command {
 		Long: `In the account manager web UI, go to "Reports" and download an "Activity" statement for the
 		desired period (under "Default Statements"). Select CSV as the file format.`,
 
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		RunE: r.run,
 	}
 	r.setupFlags(cmd)

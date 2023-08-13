@@ -40,7 +40,7 @@ func CreateCmd() *cobra.Command {
 		Long: `Transcode the given journal to beancount, to leverage their amazing tooling. This command requires a valuation commodity, so` +
 			` that all currency conversions can be done by knut.`,
 
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 
 		Run: r.run,
 	}

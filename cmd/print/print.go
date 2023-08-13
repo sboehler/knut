@@ -35,7 +35,7 @@ func CreateCmd() *cobra.Command {
 		Short: "print the journal",
 		Long:  `Print the given journal.`,
 
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 
 		Run: r.run,
 	}

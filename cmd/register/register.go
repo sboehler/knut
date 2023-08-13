@@ -46,7 +46,7 @@ func CreateCmd() *cobra.Command {
 		Use:    "register",
 		Short:  "create a register sheet",
 		Long:   `Compute a register report.`,
-		Args:   cobra.ExactValidArgs(1),
+		Args:   cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		Run:    r.run,
 		Hidden: true,
 	}

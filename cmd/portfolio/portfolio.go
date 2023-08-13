@@ -41,7 +41,7 @@ func CreateCmd() *cobra.Command {
 		Short: "compute portfolio returns",
 		Long:  `Compute portfolio returns.`,
 
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 
 		Hidden: true,
 

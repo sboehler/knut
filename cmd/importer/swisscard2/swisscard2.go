@@ -41,7 +41,7 @@ func CreateCmd() *cobra.Command {
 		Short: "Import Swisscard credit card statements (from mid 2023)",
 		Long:  `Download the CSV file from their account management tool.`,
 
-		Args: cobra.ExactValidArgs(1),
+		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 
 		RunE: r.run,
 	}

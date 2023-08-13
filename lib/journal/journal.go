@@ -113,8 +113,7 @@ func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, 
 	p.Go(worker1)
 	p.Go(worker2)
 	p.Go(worker3)
-	err := p.Wait()
-	if err != nil {
+	if err := p.Wait(); err != nil {
 		return nil, err
 	}
 	return <-journalCh, nil

@@ -114,25 +114,26 @@ func (r *runner) setupFlags(c *cobra.Command) {
 
 func (r runner) execute(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	jctx := registry.New()
-	valuation, err := r.valuation.Value(jctx)
+	reg := registry.New()
+	valuation, err := r.valuation.Value(reg)
 	if err != nil {
 		return err
 	}
 	r.showCommodities = r.showCommodities || valuation == nil
-	j, err := journal.FromPath(ctx, jctx, args[0])
+	j, err := journal.FromPath(ctx, reg, args[0])
 	if err != nil {
 		return err
 	}
 	var am mapper.Mapper[*model.Account]
 	if r.showSource {
-		am = account.Remap(jctx.Accounts(), r.remap.Regex())
+		am = account.Remap(reg.Accounts(), r.remap.Regex())
 	}
 	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), r.last)
-	rep := register.NewReport(jctx)
+	rep := register.NewReport(reg)
 	_, err = j.Process(
+		journal.Sort(),
 		journal.ComputePrices(valuation),
-		journal.Balance(jctx, valuation),
+		journal.Balance(reg, valuation),
 		journal.Filter(partition),
 		journal.Query{
 			Filter: filter.And(
@@ -144,8 +145,8 @@ func (r runner) execute(cmd *cobra.Command, args []string) error {
 				Date:    partition.Align(),
 				Account: am,
 				Other: mapper.Combine(
-					account.Remap(jctx.Accounts(), r.remap.Regex()),
-					account.Shorten(jctx.Accounts(), r.mapping.Value()),
+					account.Remap(reg.Accounts(), r.remap.Regex()),
+					account.Shorten(reg.Accounts(), r.mapping.Value()),
 				),
 				Commodity:   commodity.Map(r.showCommodities),
 				Valuation:   commodity.Map(valuation != nil),

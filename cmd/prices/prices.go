@@ -78,16 +78,16 @@ func execute(cmd *cobra.Command, args []string) error {
 	return multierr.Combine(p.Wait())
 }
 
-func fetch(jctx *registry.Registry, f string, cfg config) error {
+func fetch(reg *registry.Registry, f string, cfg config) error {
 	absPath := filepath.Join(filepath.Dir(f), cfg.File)
-	pricesByDate, err := readFile(jctx, absPath)
+	pricesByDate, err := readFile(reg, absPath)
 	if err != nil {
 		return err
 	}
-	if err := fetchPrices(jctx, cfg, time.Now().AddDate(-1, 0, 0), time.Now(), pricesByDate); err != nil {
+	if err := fetchPrices(reg, cfg, time.Now().AddDate(-1, 0, 0), time.Now(), pricesByDate); err != nil {
 		return err
 	}
-	if err := writeFile(jctx, pricesByDate, absPath); err != nil {
+	if err := writeFile(reg, pricesByDate, absPath); err != nil {
 		return err
 	}
 	return nil

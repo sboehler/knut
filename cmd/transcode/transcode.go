@@ -65,20 +65,21 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 
 func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
 	var (
-		jctx      = registry.New()
+		reg       = registry.New()
 		valuation *model.Commodity
 		err       error
 	)
-	if valuation, err = r.valuation.Value(jctx); err != nil {
+	if valuation, err = r.valuation.Value(reg); err != nil {
 		return err
 	}
-	j, err := journal.FromPath(cmd.Context(), jctx, args[0])
+	j, err := journal.FromPath(cmd.Context(), reg, args[0])
 	if err != nil {
 		return err
 	}
 	ds, err := j.Process(
+		journal.Sort(),
 		journal.ComputePrices(valuation),
-		journal.Balance(jctx, valuation),
+		journal.Balance(reg, valuation),
 	)
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer func() { err = multierr.Append(err, w.Flush()) }()

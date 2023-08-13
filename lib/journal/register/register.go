@@ -24,7 +24,7 @@ type Node struct {
 	Amounts journal.Amounts
 }
 
-func NewReport(jctx *registry.Registry) *Report {
+func NewReport(reg *registry.Registry) *Report {
 	return &Report{
 		nodes: make(map[time.Time]*Node),
 	}

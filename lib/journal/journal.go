@@ -56,8 +56,7 @@ func (j *Journal) Day(d time.Time) *Day {
 }
 
 func (j *Journal) Sorted() []*Day {
-	l, _ := j.Process(Sort())
-	return l
+	return dict.SortedValues(j.Days, CompareDays)
 }
 
 // AddOpen adds an Open directive.
@@ -104,12 +103,7 @@ func (j *Journal) Period() date.Period {
 }
 
 func (j *Journal) Process(fs ...func(*Day) error) ([]*Day, error) {
-	ds := dict.SortedValues(j.Days, CompareDays)
-	ds, err := slice.Parallel(ds, fs...)
-	if err != nil {
-		return nil, err
-	}
-	return ds, nil
+	return slice.Parallel(j.Sorted(), fs...)
 }
 
 func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, error) {
@@ -213,7 +207,10 @@ func (p Performance) String() string {
 // PrintJournal prints a journal.
 func Print(w io.Writer, j *Journal) error {
 	p := printer.New(w)
-	days := j.Sorted()
+	days, err := j.Process(Sort())
+	if err != nil {
+		return err
+	}
 	for _, day := range days {
 		for _, t := range day.Transactions {
 			p.UpdatePadding(t)

@@ -57,12 +57,12 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 }
 
 func (r *runner) execute(cmd *cobra.Command, args []string) (errors error) {
-	jctx := registry.New()
-	j, err := journal.FromPath(cmd.Context(), jctx, args[0])
+	reg := registry.New()
+	j, err := journal.FromPath(cmd.Context(), reg, args[0])
 	if err != nil {
 		return err
 	}
-	if _, err := j.Process(journal.Balance(jctx, nil)); err != nil {
+	if _, err := j.Process(journal.Balance(reg, nil)); err != nil {
 		return err
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())

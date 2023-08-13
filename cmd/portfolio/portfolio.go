@@ -86,25 +86,25 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 
 func (r *runner) execute(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	jctx := registry.New()
-	valuation, err := r.valuation.Value(jctx)
+	reg := registry.New()
+	valuation, err := r.valuation.Value(reg)
 	if err != nil {
 		return err
 	}
-	j, err := journal.FromPath(ctx, jctx, args[0])
+	j, err := journal.FromPath(ctx, reg, args[0])
 	if err != nil {
 		return err
 	}
 	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), 0)
 	calculator := &performance.Calculator{
-		Context:         jctx,
+		Context:         reg,
 		Valuation:       valuation,
 		AccountFilter:   filter.ByName[*model.Account](r.accounts.Regex()),
 		CommodityFilter: filter.ByName[*model.Commodity](r.commodities.Regex()),
 	}
 	_, err = j.Process(
 		journal.ComputePrices(valuation),
-		journal.Balance(jctx, valuation),
+		journal.Balance(reg, valuation),
 		calculator.ComputeValues(),
 		calculator.ComputeFlows(),
 		performance.Perf(j, partition),

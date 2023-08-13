@@ -96,7 +96,7 @@ func Map(t bool) func(*Commodity) *Commodity {
 	if t {
 		return mapper.Identity[*Commodity]
 	}
-	return mapper.Nil[*Commodity]
+	return mapper.Nil[*Commodity, Commodity]
 }
 
 func Compare(c1, c2 *Commodity) compare.Order {

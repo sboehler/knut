@@ -101,9 +101,10 @@ func decodeResponse(r io.ReadCloser) ([]Quote, error) {
 		if err != nil {
 			return nil, err
 		}
-		if ok {
-			res = append(res, quote)
+		if !ok {
+			continue
 		}
+		res = append(res, quote)
 	}
 }
 

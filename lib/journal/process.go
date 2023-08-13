@@ -243,10 +243,14 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 		}
 		for _, t := range d.Transactions {
 			for _, p := range t.Postings {
-				if !p.Account.IsAL() && p.Account != equityAccount {
-					amounts.Add(AccountCommodityKey(p.Account, p.Commodity), p.Amount)
-					values.Add(AccountCommodityKey(p.Account, p.Commodity), p.Value)
+				if p.Account.IsAL() {
+					continue
 				}
+				if p.Account == equityAccount {
+					continue
+				}
+				amounts.Add(AccountCommodityKey(p.Account, p.Commodity), p.Amount)
+				values.Add(AccountCommodityKey(p.Account, p.Commodity), p.Value)
 			}
 		}
 		return nil

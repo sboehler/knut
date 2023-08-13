@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/set"
@@ -23,7 +24,7 @@ type Calculator struct {
 // ComputeValues computes portfolio performance.
 func (calc *Calculator) ComputeValues() func(d *journal.Day) error {
 	var prev pcv
-	values := make(journal.Amounts)
+	values := make(amounts.Amounts)
 	return func(d *journal.Day) error {
 		if d.Performance == nil {
 			d.Performance = new(journal.Performance)
@@ -38,7 +39,7 @@ func (calc *Calculator) ComputeValues() func(d *journal.Day) error {
 				if !calc.isPortfolioAccount(p.Account) {
 					continue
 				}
-				k := journal.CommodityKey(p.Commodity)
+				k := amounts.CommodityKey(p.Commodity)
 				values.Add(k, p.Value)
 				if values[k].IsZero() {
 					delete(values, k)

@@ -1,12 +1,12 @@
 package balance
 
 import (
+	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/cpr"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/dict"
 	"github.com/sboehler/knut/lib/common/mapper"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/shopspring/decimal"
 )
@@ -30,7 +30,7 @@ func NewReport(reg *model.Registry, ds date.Partition) *Report {
 	}
 }
 
-func (r *Report) Insert(k journal.Key, v decimal.Decimal) {
+func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
 	if k.Account == nil {
 		return
 	}
@@ -51,8 +51,8 @@ func (r *Report) ComputeWeights() {
 	)()
 }
 
-func (r *Report) Totals(m mapper.Mapper[journal.Key]) (journal.Amounts, journal.Amounts) {
-	al, eie := make(journal.Amounts), make(journal.Amounts)
+func (r *Report) Totals(m mapper.Mapper[amounts.Key]) (amounts.Amounts, amounts.Amounts) {
+	al, eie := make(amounts.Amounts), make(amounts.Amounts)
 	cpr.Parallel(
 		func() { r.AL.computeTotals(al, m) },
 		func() { r.EIE.computeTotals(eie, m) },
@@ -63,7 +63,7 @@ func (r *Report) Totals(m mapper.Mapper[journal.Key]) (journal.Amounts, journal.
 type Node struct {
 	Account  *model.Account
 	children map[*model.Account]*Node
-	Amounts  journal.Amounts
+	Amounts  amounts.Amounts
 
 	weight float64
 }
@@ -72,11 +72,11 @@ func newNode(a *model.Account) *Node {
 	return &Node{
 		Account:  a,
 		children: make(map[*model.Account]*Node),
-		Amounts:  make(journal.Amounts),
+		Amounts:  make(amounts.Amounts),
 	}
 }
 
-func (n *Node) Insert(k journal.Key, v decimal.Decimal) {
+func (n *Node) Insert(k amounts.Key, v decimal.Decimal) {
 	n.Amounts.Add(k, v)
 }
 
@@ -113,7 +113,7 @@ func (n *Node) computeWeights() {
 		sn.computeWeights()
 	})
 	n.weight = 0
-	keysWithVal := func(k journal.Key) bool { return k.Valuation != nil }
+	keysWithVal := func(k amounts.Key) bool { return k.Valuation != nil }
 	w := n.Amounts.SumOver(keysWithVal)
 	f, _ := w.Abs().Float64()
 	n.weight -= f
@@ -123,7 +123,7 @@ func (n *Node) computeWeights() {
 	}
 }
 
-func (n *Node) computeTotals(res journal.Amounts, m mapper.Mapper[journal.Key]) {
+func (n *Node) computeTotals(res amounts.Amounts, m mapper.Mapper[amounts.Key]) {
 	for _, ch := range n.children {
 		ch.computeTotals(res, m)
 	}

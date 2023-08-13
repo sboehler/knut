@@ -1,4 +1,4 @@
-package journal
+package amounts
 
 import (
 	"regexp"

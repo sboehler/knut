@@ -26,6 +26,7 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
+	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/posting"
@@ -96,14 +97,14 @@ type parser struct {
 	reader              *csv.Reader
 	account, feeAccount *model.Account
 	journal             *journal.Journal
-	balance             journal.Amounts
+	balance             amounts.Amounts
 }
 
 func (p *parser) parse() error {
 	p.reader.TrimLeadingSpace = true
 	p.reader.Comma = ','
 	p.reader.FieldsPerRecord = 10
-	p.balance = make(journal.Amounts)
+	p.balance = make(amounts.Amounts)
 
 	if err := p.parseHeader(); err != nil {
 		return err
@@ -200,7 +201,7 @@ func (p *parser) parseBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid balance in row %v: %v", r, err)
 	}
-	p.balance[journal.DateCommodityKey(d, c)] = bal
+	p.balance[amounts.DateCommodityKey(d, c)] = bal
 	return nil
 }
 

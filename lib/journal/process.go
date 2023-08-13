@@ -3,6 +3,7 @@ package journal
 import (
 	"fmt"
 
+	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
@@ -55,7 +56,7 @@ func ComputePrices(v *model.Commodity) DayFn {
 
 // Balance balances the journal.
 func Balance(reg *model.Registry, v *model.Commodity) DayFn {
-	amounts, values := make(Amounts), make(Amounts)
+	amts, values := make(amounts.Amounts), make(amounts.Amounts)
 	accounts := set.New[*model.Account]()
 
 	processOpenings := func(d *Day) error {
@@ -75,7 +76,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 					return Error{t, fmt.Sprintf("account %s is not open", p.Account)}
 				}
 				if p.Account.IsAL() {
-					amounts.Add(AccountCommodityKey(p.Account, p.Commodity), p.Amount)
+					amts.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Amount)
 				}
 			}
 		}
@@ -87,8 +88,8 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 			if !accounts.Has(a.Account) {
 				return Error{a, "account is not open"}
 			}
-			position := AccountCommodityKey(a.Account, a.Commodity)
-			if va, ok := amounts[position]; !ok || !va.Equal(a.Amount) {
+			position := amounts.AccountCommodityKey(a.Account, a.Commodity)
+			if va, ok := amts[position]; !ok || !va.Equal(a.Amount) {
 				return Error{a, fmt.Sprintf("account has position: %s %s", va, position.Commodity.Name())}
 			}
 		}
@@ -97,14 +98,14 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 
 	processClosings := func(d *Day) error {
 		for _, c := range d.Closings {
-			for pos, amount := range amounts {
+			for pos, amount := range amts {
 				if pos.Account != c.Account {
 					continue
 				}
 				if !amount.IsZero() {
 					return Error{c, fmt.Sprintf("account has nonzero position: %s %s", amount, pos.Commodity.Name())}
 				}
-				delete(amounts, pos)
+				delete(amts, pos)
 			}
 			if !accounts.Has(c.Account) {
 				return Error{c, "account is not open"}
@@ -127,7 +128,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 					posting.Value = posting.Amount
 				}
 				if posting.Account.IsAL() {
-					values.Add(AccountCommodityKey(posting.Account, posting.Commodity), posting.Value)
+					values.Add(amounts.AccountCommodityKey(posting.Account, posting.Commodity), posting.Value)
 				}
 			}
 		}
@@ -135,7 +136,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 	}
 
 	valuateGains := func(d *Day) error {
-		for pos, amt := range amounts {
+		for pos, amt := range amts {
 			if pos.Commodity == v {
 				continue
 			}
@@ -163,7 +164,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 				Targets: []*model.Commodity{pos.Commodity},
 			}.Build())
 			values.Add(pos, gain)
-			values.Add(AccountCommodityKey(credit, pos.Commodity), gain.Neg())
+			values.Add(amounts.AccountCommodityKey(credit, pos.Commodity), gain.Neg())
 		}
 		return nil
 
@@ -209,7 +210,7 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 		return func(d *Day) error { return nil }
 	}
 
-	amounts, values := make(Amounts), make(Amounts)
+	amts, values := make(amounts.Amounts), make(amounts.Amounts)
 	closingDays := set.New[*Day]()
 	for _, d := range partition.StartDates() {
 		// j.Day creates the entry for the given date as a side effect.
@@ -218,7 +219,7 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 	equityAccount := j.Registry.Account("Equity:Equity")
 	return func(d *Day) error {
 		if closingDays.Has(d) {
-			for k, amt := range amounts {
+			for k, amt := range amts {
 				if k.Account.IsAL() {
 					continue
 				}
@@ -249,8 +250,8 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 				if p.Account == equityAccount {
 					continue
 				}
-				amounts.Add(AccountCommodityKey(p.Account, p.Commodity), p.Amount)
-				values.Add(AccountCommodityKey(p.Account, p.Commodity), p.Value)
+				amts.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Amount)
+				values.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Value)
 			}
 		}
 		return nil
@@ -266,21 +267,21 @@ func Sort() DayFn {
 }
 
 type Collection interface {
-	Insert(k Key, v decimal.Decimal)
+	Insert(k amounts.Key, v decimal.Decimal)
 }
 
 type Query struct {
-	Mapper    mapper.Mapper[Key]
-	Filter    filter.Filter[Key]
+	Mapper    mapper.Mapper[amounts.Key]
+	Filter    filter.Filter[amounts.Key]
 	Valuation *model.Commodity
 }
 
 func (query Query) Execute(c Collection) DayFn {
 	if query.Filter == nil {
-		query.Filter = filter.AllowAll[Key]
+		query.Filter = filter.AllowAll[amounts.Key]
 	}
 	if query.Mapper == nil {
-		query.Mapper = mapper.Identity[Key]
+		query.Mapper = mapper.Identity[amounts.Key]
 	}
 	return func(d *Day) error {
 		for _, t := range d.Transactions {
@@ -289,7 +290,7 @@ func (query Query) Execute(c Collection) DayFn {
 				if query.Valuation != nil {
 					amt = b.Value
 				}
-				kc := Key{
+				kc := amounts.Key{
 					Date:        t.Date,
 					Account:     b.Account,
 					Other:       b.Other,

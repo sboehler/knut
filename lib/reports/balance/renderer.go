@@ -17,11 +17,11 @@ package balance
 import (
 	"time"
 
+	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/regex"
 	"github.com/sboehler/knut/lib/common/table"
-	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/commodity"
 	"github.com/shopspring/decimal"
@@ -61,7 +61,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	}
 	tbl.AddSeparatorRow()
 
-	totalAL, totalEIE := r.Totals(journal.KeyMapper{
+	totalAL, totalEIE := r.Totals(amounts.KeyMapper{
 		Date:      mapper.Identity[time.Time],
 		Commodity: commodity.Map(rn.Valuation == nil),
 	}.Build())
@@ -88,7 +88,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 func (rn *Renderer) renderNode(t *table.Table, indent int, n *Node) {
 	if n.Account != nil {
 		showCommodities := rn.Valuation == nil || rn.CommodityDetails.MatchString(n.Account.Name())
-		vals := n.Amounts.SumBy(nil, journal.KeyMapper{
+		vals := n.Amounts.SumBy(nil, amounts.KeyMapper{
 			Date:      mapper.Identity[time.Time],
 			Commodity: commodity.Map(showCommodities),
 		}.Build())
@@ -99,7 +99,7 @@ func (rn *Renderer) renderNode(t *table.Table, indent int, n *Node) {
 	}
 }
 
-func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, vals journal.Amounts) {
+func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, vals amounts.Amounts) {
 	if len(vals) == 0 {
 		t.AddRow().AddIndented(name, indent).FillEmpty()
 		return
@@ -123,7 +123,7 @@ func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, va
 		}
 		var total decimal.Decimal
 		for _, d := range rn.partition.EndDates() {
-			v := vals[journal.DateCommodityKey(d, c)]
+			v := vals[amounts.DateCommodityKey(d, c)]
 			if !rn.Diff {
 				total = total.Add(v)
 				v = total

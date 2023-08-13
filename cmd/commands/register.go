@@ -22,6 +22,7 @@ import (
 	"runtime/pprof"
 
 	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
@@ -137,11 +138,11 @@ func (r registerRunner) execute(cmd *cobra.Command, args []string) error {
 		journal.Filter(partition),
 		journal.Query{
 			Filter: filter.And(
-				journal.FilterAccount(r.accounts.Regex()),
-				journal.FilterOther(r.others.Regex()),
-				journal.FilterCommodity(r.commodities.Regex()),
+				amounts.FilterAccount(r.accounts.Regex()),
+				amounts.FilterOther(r.others.Regex()),
+				amounts.FilterCommodity(r.commodities.Regex()),
 			),
-			Mapper: journal.KeyMapper{
+			Mapper: amounts.KeyMapper{
 				Date:    partition.Align(),
 				Account: am,
 				Other: mapper.Combine(

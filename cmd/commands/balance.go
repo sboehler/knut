@@ -22,6 +22,7 @@ import (
 	"runtime/pprof"
 
 	"github.com/sboehler/knut/cmd/flags"
+	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
@@ -138,7 +139,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 		journal.Filter(partition),
 		journal.CloseAccounts(j, r.close, partition),
 		journal.Query{
-			Mapper: journal.KeyMapper{
+			Mapper: amounts.KeyMapper{
 				Date: partition.Align(),
 				Account: mapper.Combine(
 					account.Remap(reg.Accounts(), r.remap.Regex()),
@@ -148,8 +149,8 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 				Valuation: commodity.Map(valuation != nil),
 			}.Build(),
 			Filter: filter.And(
-				journal.FilterAccount(r.accounts.Regex()),
-				journal.FilterCommodity(r.commodities.Regex()),
+				amounts.FilterAccount(r.accounts.Regex()),
+				amounts.FilterCommodity(r.commodities.Regex()),
 			),
 			Valuation: valuation,
 		}.Execute(rep),

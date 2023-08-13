@@ -1,6 +1,7 @@
 package compare
 
 import (
+	"cmp"
 	"sort"
 	"time"
 
@@ -8,7 +9,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type Order int
+type Order = int
 
 const (
 	Smaller Order = -1
@@ -19,13 +20,7 @@ const (
 type Compare[T any] func(t1, t2 T) Order
 
 func Ordered[T constraints.Ordered](t1, t2 T) Order {
-	if t1 < t2 {
-		return Smaller
-	}
-	if t1 == t2 {
-		return Equal
-	}
-	return Greater
+	return cmp.Compare(t1, t2)
 }
 
 func Time(t1, t2 time.Time) Order {

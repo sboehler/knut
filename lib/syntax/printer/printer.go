@@ -98,7 +98,7 @@ func (p *Printer) printAccrual(a directives.Accrual) (n int, err error) {
 }
 
 func (p *Printer) printPosting(t directives.Booking) (int, error) {
-	return fmt.Fprintf(p, "%-*s %-*s %10s %s", p.padding, t.Credit.Extract(), p.padding, t.Debit.Extract(), t.Amount.Extract(), t.Commodity.Extract())
+	return fmt.Fprintf(p, "%-*s %-*s %10s %s", p.padding, t.Credit.Extract(), p.padding, t.Debit.Extract(), t.Quantity.Extract(), t.Commodity.Extract())
 }
 
 func (p *Printer) printOpen(o directives.Open) (int, error) {
@@ -118,7 +118,7 @@ func (p *Printer) printInclude(i directives.Include) (int, error) {
 }
 
 func (p *Printer) printAssertion(a directives.Assertion) (int, error) {
-	return fmt.Fprintf(p, "%s balance %s %s %s", a.Date.Extract(), a.Account.Extract(), a.Amount.Extract(), a.Commodity.Extract())
+	return fmt.Fprintf(p, "%s balance %s %s %s", a.Date.Extract(), a.Account.Extract(), a.Quantity.Extract(), a.Commodity.Extract())
 }
 
 func (p *Printer) PrintFile(f directives.File) (int, error) {

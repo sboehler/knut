@@ -184,7 +184,7 @@ func (p *Parser) parseAssertion(date directives.Date) (directives.Assertion, err
 	if _, err := p.readWhitespace1(); err != nil {
 		return directives.SetRange(&assertion, p.Range()), p.Annotate(err)
 	}
-	if assertion.Amount, err = p.parseDecimal(); err != nil {
+	if assertion.Quantity, err = p.parseDecimal(); err != nil {
 		return directives.SetRange(&assertion, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.readWhitespace1(); err != nil {
@@ -307,7 +307,7 @@ func (p *Parser) parseBooking() (directives.Booking, error) {
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {
 		return directives.SetRange(&booking, p.Range()), p.Annotate(err)
 	}
-	if booking.Amount, err = p.parseDecimal(); err != nil {
+	if booking.Quantity, err = p.parseDecimal(); err != nil {
 		return directives.SetRange(&booking, p.Range()), p.Annotate(err)
 	}
 	if _, err := p.ReadWhile1("whitespace", isWhitespace); err != nil {

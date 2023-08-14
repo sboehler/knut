@@ -15,7 +15,7 @@ type Assertion struct {
 	Src       *syntax.Assertion
 	Date      time.Time
 	Account   *account.Account
-	Amount    decimal.Decimal
+	Quantity  decimal.Decimal
 	Commodity *commodity.Commodity
 }
 
@@ -28,7 +28,7 @@ func Create(reg *registry.Registry, o *syntax.Assertion) (*Assertion, error) {
 	if err != nil {
 		return nil, err
 	}
-	amount, err := o.Amount.Parse()
+	amount, err := o.Quantity.Parse()
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func Create(reg *registry.Registry, o *syntax.Assertion) (*Assertion, error) {
 		Src:       o,
 		Date:      date,
 		Account:   account,
-		Amount:    amount,
+		Quantity:  amount,
 		Commodity: commodity,
 	}, nil
 }

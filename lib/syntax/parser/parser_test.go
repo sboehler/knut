@@ -173,7 +173,7 @@ func TestParseFile(t *testing.T) {
 											Debit: directives.Account{
 												Range: directives.Range{Start: 32, End: 40, Text: s},
 											},
-											Amount: directives.Decimal{
+											Quantity: directives.Decimal{
 												Range: directives.Range{Start: 41, End: 44, Text: s},
 											},
 											Commodity: directives.Commodity{
@@ -824,7 +824,7 @@ func TestParseBooking(t *testing.T) {
 						Range:     Range{End: 17, Text: t},
 						Credit:    directives.Account{Range: Range{End: 3, Text: t}},
 						Debit:     directives.Account{Range: Range{Start: 4, End: 7, Text: t}},
-						Amount:    directives.Decimal{Range: Range{Start: 8, End: 13, Text: t}},
+						Quantity:  directives.Decimal{Range: Range{Start: 8, End: 13, Text: t}},
 						Commodity: directives.Commodity{Range: Range{Start: 14, End: 17, Text: t}},
 					}
 				},
@@ -836,7 +836,7 @@ func TestParseBooking(t *testing.T) {
 						Range:     Range{End: 23, Text: t},
 						Credit:    directives.Account{Range: Range{End: 9, Text: t}, Macro: true},
 						Debit:     directives.Account{Range: Range{Start: 10, End: 13, Text: t}},
-						Amount:    directives.Decimal{Range: Range{Start: 14, End: 19, Text: t}},
+						Quantity:  directives.Decimal{Range: Range{Start: 14, End: 19, Text: t}},
 						Commodity: directives.Commodity{Range: Range{Start: 20, End: 23, Text: t}},
 					}
 				},
@@ -845,10 +845,10 @@ func TestParseBooking(t *testing.T) {
 				text: "A:B C:D 100.0",
 				want: func(t string) directives.Booking {
 					return directives.Booking{
-						Range:  Range{End: 13, Text: t},
-						Credit: directives.Account{Range: Range{End: 3, Text: t}},
-						Debit:  directives.Account{Range: Range{Start: 4, End: 7, Text: t}},
-						Amount: directives.Decimal{Range: Range{Start: 8, End: 13, Text: t}},
+						Range:    Range{End: 13, Text: t},
+						Credit:   directives.Account{Range: Range{End: 3, Text: t}},
+						Debit:    directives.Account{Range: Range{Start: 4, End: 7, Text: t}},
+						Quantity: directives.Decimal{Range: Range{Start: 8, End: 13, Text: t}},
 					}
 				},
 				err: func(s string) error {
@@ -893,7 +893,7 @@ func TestParseBooking(t *testing.T) {
 						Range:     Range{End: 26, Text: t},
 						Credit:    directives.Account{Range: Range{End: 3, Text: t}},
 						Debit:     directives.Account{Range: Range{Start: 5, End: 14, Text: t}, Macro: true},
-						Amount:    directives.Decimal{Range: Range{Start: 16, End: 21, Text: t}},
+						Quantity:  directives.Decimal{Range: Range{Start: 16, End: 21, Text: t}},
 						Commodity: directives.Commodity{Range: Range{Start: 23, End: 26, Text: t}},
 					}
 				},
@@ -1052,7 +1052,7 @@ func TestParseTransaction(t *testing.T) {
 								Range:     Range{Start: 6, End: 15, Text: t},
 								Credit:    directives.Account{Range: Range{Start: 6, End: 7, Text: t}},
 								Debit:     directives.Account{Range: Range{Start: 8, End: 9, Text: t}},
-								Amount:    directives.Decimal{Range: Range{Start: 10, End: 11, Text: t}},
+								Quantity:  directives.Decimal{Range: Range{Start: 10, End: 11, Text: t}},
 								Commodity: directives.Commodity{Range: Range{Start: 12, End: 15, Text: t}},
 							},
 						},
@@ -1073,14 +1073,14 @@ func TestParseTransaction(t *testing.T) {
 								Range:     Range{Start: 6, End: 15, Text: t},
 								Credit:    directives.Account{Range: Range{Start: 6, End: 7, Text: t}},
 								Debit:     directives.Account{Range: Range{Start: 8, End: 9, Text: t}},
-								Amount:    directives.Decimal{Range: Range{Start: 10, End: 11, Text: t}},
+								Quantity:  directives.Decimal{Range: Range{Start: 10, End: 11, Text: t}},
 								Commodity: directives.Commodity{Range: Range{Start: 12, End: 15, Text: t}},
 							},
 							{
 								Range:     Range{Start: 16, End: 25, Text: t},
 								Credit:    directives.Account{Range: Range{Start: 16, End: 17, Text: t}},
 								Debit:     directives.Account{Range: Range{Start: 18, End: 19, Text: t}},
-								Amount:    directives.Decimal{Range: Range{Start: 20, End: 21, Text: t}},
+								Quantity:  directives.Decimal{Range: Range{Start: 20, End: 21, Text: t}},
 								Commodity: directives.Commodity{Range: Range{Start: 22, End: 25, Text: t}},
 							},
 						},
@@ -1101,7 +1101,7 @@ func TestParseTransaction(t *testing.T) {
 								Range:     Range{Start: 6, End: 15, Text: t},
 								Credit:    directives.Account{Range: Range{Start: 6, End: 7, Text: t}},
 								Debit:     directives.Account{Range: Range{Start: 8, End: 9, Text: t}},
-								Amount:    directives.Decimal{Range: Range{Start: 10, End: 11, Text: t}},
+								Quantity:  directives.Decimal{Range: Range{Start: 10, End: 11, Text: t}},
 								Commodity: directives.Commodity{Range: Range{Start: 12, End: 15, Text: t}},
 							},
 						},
@@ -1170,7 +1170,7 @@ func TestParseDirective(t *testing.T) {
 									Range:     Range{Start: 35, End: 44, Text: s},
 									Credit:    directives.Account{Range: Range{Start: 35, End: 36, Text: s}},
 									Debit:     directives.Account{Range: Range{Start: 37, End: 38, Text: s}},
-									Amount:    directives.Decimal{Range: Range{Start: 39, End: 40, Text: s}},
+									Quantity:  directives.Decimal{Range: Range{Start: 39, End: 40, Text: s}},
 									Commodity: directives.Commodity{Range: Range{Start: 41, End: 44, Text: s}},
 								},
 							},
@@ -1205,7 +1205,7 @@ func TestParseDirective(t *testing.T) {
 									Range:     Range{Start: 17, End: 26, Text: s},
 									Credit:    directives.Account{Range: Range{Start: 17, End: 18, Text: s}},
 									Debit:     directives.Account{Range: Range{Start: 19, End: 20, Text: s}},
-									Amount:    directives.Decimal{Range: Range{Start: 21, End: 22, Text: s}},
+									Quantity:  directives.Decimal{Range: Range{Start: 21, End: 22, Text: s}},
 									Commodity: directives.Commodity{Range: Range{Start: 23, End: 26, Text: s}},
 								},
 							},
@@ -1319,7 +1319,7 @@ func TestParseDirective(t *testing.T) {
 							Range:     Range{End: 28, Text: s},
 							Date:      directives.Date{Range: directives.Range{End: 10, Text: s}},
 							Account:   directives.Account{Range: directives.Range{Start: 19, End: 22, Text: s}},
-							Amount:    directives.Decimal{Range: directives.Range{Start: 23, End: 24, Text: s}},
+							Quantity:  directives.Decimal{Range: directives.Range{Start: 23, End: 24, Text: s}},
 							Commodity: directives.Commodity{Range: Range{Start: 25, End: 28, Text: s}},
 						},
 					}

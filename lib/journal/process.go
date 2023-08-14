@@ -89,7 +89,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 				return Error{a, "account is not open"}
 			}
 			position := amounts.AccountCommodityKey(a.Account, a.Commodity)
-			if va, ok := quantities[position]; !ok || !va.Equal(a.Amount) {
+			if va, ok := quantities[position]; !ok || !va.Equal(a.Quantity) {
 				return Error{a, fmt.Sprintf("account has position: %s %s", va, position.Commodity.Name())}
 			}
 		}

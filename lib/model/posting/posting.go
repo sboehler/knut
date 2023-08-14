@@ -85,9 +85,9 @@ func Create(reg *registry.Registry, bs []syntax.Booking) ([]*Posting, error) {
 		if err != nil {
 			return nil, err
 		}
-		amount, err := decimal.NewFromString(b.Amount.Extract())
+		amount, err := decimal.NewFromString(b.Quantity.Extract())
 		if err != nil {
-			return nil, syntax.Error{Range: b.Amount.Range, Message: "parsing amount", Wrapped: err}
+			return nil, syntax.Error{Range: b.Quantity.Range, Message: "parsing amount", Wrapped: err}
 		}
 		commodity, err := reg.Commodities().Create(b.Commodity)
 		if err != nil {

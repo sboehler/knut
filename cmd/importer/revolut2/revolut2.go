@@ -210,7 +210,7 @@ func (p *parser) addBalances() {
 		p.journal.AddAssertion(&model.Assertion{
 			Date:      k.Date,
 			Commodity: k.Commodity,
-			Amount:    bal,
+			Quantity:  bal,
 			Account:   p.account,
 		})
 	}

@@ -116,7 +116,7 @@ func (p *Printer) printPrice(pr *model.Price) (int, error) {
 }
 
 func (p *Printer) printAssertion(a *model.Assertion) (int, error) {
-	return fmt.Fprintf(p, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Amount, a.Commodity.Name())
+	return fmt.Fprintf(p, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Quantity, a.Commodity.Name())
 }
 
 // Initialize initializes the padding of this printer.

@@ -51,7 +51,7 @@ type QuotedString struct {
 type Booking struct {
 	Range
 	Credit, Debit Account
-	Amount        Decimal
+	Quantity      Decimal
 	Commodity     Commodity
 }
 
@@ -109,7 +109,7 @@ type Assertion struct {
 	Range
 	Date      Date
 	Account   Account
-	Amount    Decimal
+	Quantity  Decimal
 	Commodity Commodity
 }
 

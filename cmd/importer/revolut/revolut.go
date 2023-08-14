@@ -175,7 +175,7 @@ func (p *parser) parseBooking(r []string) error {
 		p.journal.AddAssertion(&model.Assertion{
 			Date:      date,
 			Account:   p.account,
-			Amount:    balance,
+			Quantity:  balance,
 			Commodity: p.currency,
 		})
 		p.date = date

@@ -643,7 +643,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 		Date:      p.dateTo,
 		Account:   p.account,
 		Commodity: symbol,
-		Amount:    quantity,
+		Quantity:  quantity,
 	})
 	return true, nil
 }
@@ -689,7 +689,7 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 		Date:      p.dateTo,
 		Account:   p.account,
 		Commodity: symbol,
-		Amount:    amount,
+		Quantity:  amount,
 	})
 	return true, nil
 }

@@ -31,31 +31,31 @@ type Prices map[*commodity.Commodity]NormalizedPrices
 var one = decimal.NewFromInt(1)
 
 // Insert inserts a new price.
-func (p Prices) Insert(commodity *commodity.Commodity, price decimal.Decimal, target *commodity.Commodity) {
-	p.addPrice(target, commodity, price)
-	p.addPrice(commodity, target, one.Div(price).Truncate(8))
+func (ps Prices) Insert(commodity *commodity.Commodity, price decimal.Decimal, target *commodity.Commodity) {
+	ps.addPrice(target, commodity, price)
+	ps.addPrice(commodity, target, one.Div(price).Truncate(8))
 }
 
-func (pr Prices) addPrice(target, commodity *commodity.Commodity, p decimal.Decimal) {
-	dict.GetDefault(pr, target, NewNormalizedPrices)[commodity] = p
+func (ps Prices) addPrice(target, commodity *commodity.Commodity, price decimal.Decimal) {
+	dict.GetDefault(ps, target, NewNormalizedPrices)[commodity] = price
 }
 
 // Normalize creates a normalized price map for the given commodity.
-func (pr Prices) Normalize(t *commodity.Commodity) NormalizedPrices {
+func (ps Prices) Normalize(t *commodity.Commodity) NormalizedPrices {
 	res := NormalizedPrices{t: one}
-	pr.normalize(t, res)
+	ps.normalize(t, res)
 	return res
 }
 
 // normalize recursively computes prices by traversing the price graph.
 // res must already contain a price for c.
-func (pr Prices) normalize(c *commodity.Commodity, res NormalizedPrices) {
-	for neighbor, price := range pr[c] {
+func (ps Prices) normalize(c *commodity.Commodity, res NormalizedPrices) {
+	for neighbor, price := range ps[c] {
 		if _, done := res[neighbor]; done {
 			continue
 		}
 		res[neighbor] = multiply(price, res[c])
-		pr.normalize(neighbor, res)
+		ps.normalize(neighbor, res)
 	}
 }
 
@@ -68,10 +68,10 @@ func NewNormalizedPrices() NormalizedPrices {
 }
 
 // Valuate valuates the given amount.
-func (n NormalizedPrices) Valuate(c *commodity.Commodity, a decimal.Decimal) (decimal.Decimal, error) {
-	price, ok := n[c]
+func (np NormalizedPrices) Valuate(c *commodity.Commodity, a decimal.Decimal) (decimal.Decimal, error) {
+	price, ok := np[c]
 	if !ok {
-		return decimal.Zero, fmt.Errorf("no price found for %v in %v", c, n)
+		return decimal.Zero, fmt.Errorf("no price found for %v in %v", c, np)
 	}
 	return multiply(a, price), nil
 }

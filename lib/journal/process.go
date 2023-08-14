@@ -56,7 +56,7 @@ func ComputePrices(v *model.Commodity) DayFn {
 
 // Balance balances the journal.
 func Balance(reg *model.Registry, v *model.Commodity) DayFn {
-	amts, values := make(amounts.Amounts), make(amounts.Amounts)
+	quantities, values := make(amounts.Amounts), make(amounts.Amounts)
 	accounts := set.New[*model.Account]()
 
 	processOpenings := func(d *Day) error {
@@ -76,7 +76,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 					return Error{t, fmt.Sprintf("account %s is not open", p.Account)}
 				}
 				if p.Account.IsAL() {
-					amts.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Amount)
+					quantities.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Quantity)
 				}
 			}
 		}
@@ -89,7 +89,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 				return Error{a, "account is not open"}
 			}
 			position := amounts.AccountCommodityKey(a.Account, a.Commodity)
-			if va, ok := amts[position]; !ok || !va.Equal(a.Amount) {
+			if va, ok := quantities[position]; !ok || !va.Equal(a.Amount) {
 				return Error{a, fmt.Sprintf("account has position: %s %s", va, position.Commodity.Name())}
 			}
 		}
@@ -98,14 +98,14 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 
 	processClosings := func(d *Day) error {
 		for _, c := range d.Closings {
-			for pos, amount := range amts {
+			for pos, amount := range quantities {
 				if pos.Account != c.Account {
 					continue
 				}
 				if !amount.IsZero() {
 					return Error{c, fmt.Sprintf("account has nonzero position: %s %s", amount, pos.Commodity.Name())}
 				}
-				delete(amts, pos)
+				delete(quantities, pos)
 			}
 			if !accounts.Has(c.Account) {
 				return Error{c, "account is not open"}
@@ -119,13 +119,13 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 		for _, t := range d.Transactions {
 			for _, posting := range t.Postings {
 				if v != posting.Commodity {
-					v, err := d.Normalized.Valuate(posting.Commodity, posting.Amount)
+					v, err := d.Normalized.Valuate(posting.Commodity, posting.Quantity)
 					if err != nil {
 						return err
 					}
 					posting.Value = v
 				} else {
-					posting.Value = posting.Amount
+					posting.Value = posting.Quantity
 				}
 				if posting.Account.IsAL() {
 					values.Add(amounts.AccountCommodityKey(posting.Account, posting.Commodity), posting.Value)
@@ -136,14 +136,14 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 	}
 
 	valuateGains := func(d *Day) error {
-		for pos, amt := range amts {
+		for pos, qty := range quantities {
 			if pos.Commodity == v {
 				continue
 			}
 			if !pos.Account.IsAL() {
 				continue
 			}
-			value, err := d.Normalized.Valuate(pos.Commodity, amt)
+			value, err := d.Normalized.Valuate(pos.Commodity, qty)
 			if err != nil {
 				return fmt.Errorf("no valuation found for commodity %s", pos.Commodity.Name())
 			}
@@ -210,7 +210,7 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 		return func(d *Day) error { return nil }
 	}
 
-	amts, values := make(amounts.Amounts), make(amounts.Amounts)
+	quantities, values := make(amounts.Amounts), make(amounts.Amounts)
 	closingDays := set.New[*Day]()
 	for _, d := range partition.StartDates() {
 		// j.Day creates the entry for the given date as a side effect.
@@ -219,14 +219,14 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 	equityAccount := j.Registry.Account("Equity:Equity")
 	return func(d *Day) error {
 		if closingDays.Has(d) {
-			for k, amt := range amts {
+			for k, quantity := range quantities {
 				if k.Account.IsAL() {
 					continue
 				}
 				if k.Account == equityAccount {
 					continue
 				}
-				if amt.IsZero() && values[k].IsZero() {
+				if quantity.IsZero() && values[k].IsZero() {
 					continue
 				}
 				d.Transactions = append(d.Transactions, transaction.Builder{
@@ -236,7 +236,7 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 						Credit:    k.Account,
 						Debit:     equityAccount,
 						Commodity: k.Commodity,
-						Amount:    amt,
+						Quantity:  quantity,
 						Value:     values[k],
 					}.Build(),
 				}.Build())
@@ -250,7 +250,7 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 				if p.Account == equityAccount {
 					continue
 				}
-				amts.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Amount)
+				quantities.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Quantity)
 				values.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Value)
 			}
 		}
@@ -286,9 +286,9 @@ func (query Query) Execute(c Collection) DayFn {
 	return func(d *Day) error {
 		for _, t := range d.Transactions {
 			for _, b := range t.Postings {
-				amt := b.Amount
+				quantity := b.Quantity
 				if query.Valuation != nil {
-					amt = b.Value
+					quantity = b.Value
 				}
 				kc := amounts.Key{
 					Date:        t.Date,
@@ -299,7 +299,7 @@ func (query Query) Execute(c Collection) DayFn {
 					Description: t.Description,
 				}
 				if query.Filter(kc) {
-					c.Insert(query.Mapper(kc), amt)
+					c.Insert(query.Mapper(kc), quantity)
 				}
 			}
 		}

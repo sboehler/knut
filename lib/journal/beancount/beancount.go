@@ -98,13 +98,13 @@ func writeTrx(w io.Writer, t *model.Transaction, c *model.Commodity) error {
 
 // WriteTo pretty-prints a posting.
 func writePosting(w io.Writer, p *model.Posting, c *model.Commodity) error {
-	var amt decimal.Decimal
+	var quantity decimal.Decimal
 	if c == nil {
-		amt = p.Amount
+		quantity = p.Quantity
 	} else {
-		amt = p.Value
+		quantity = p.Value
 	}
-	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Account.Name(), amt, stripNonAlphanum(c)); err != nil {
+	if _, err := fmt.Fprintf(w, "  %s %s %s", p.Account.Name(), quantity, stripNonAlphanum(c)); err != nil {
 		return err
 	}
 	if _, err := io.WriteString(w, "\n"); err != nil {

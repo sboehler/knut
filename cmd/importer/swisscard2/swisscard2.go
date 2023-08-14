@@ -138,7 +138,7 @@ func (p *parser) readBooking() error {
 		return fmt.Errorf("invalid date in record %v: %w", r, err)
 	}
 	c := p.journal.Registry.Commodity(r[währung])
-	amt, err := decimal.NewFromString(r[betrag])
+	quantity, err := decimal.NewFromString(r[betrag])
 	if err != nil {
 		return fmt.Errorf("invalid amount in record %v: %w", r, err)
 	}
@@ -149,7 +149,7 @@ func (p *parser) readBooking() error {
 			Credit:    p.account,
 			Debit:     p.journal.Registry.TBDAccount(),
 			Commodity: c,
-			Amount:    amt,
+			Quantity:  quantity,
 		}.Build(),
 	}.Build())
 	return nil

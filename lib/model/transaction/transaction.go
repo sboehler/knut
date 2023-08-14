@@ -126,14 +126,14 @@ func expand(reg *registry.Registry, t *Transaction, accrual *syntax.Accrual) ([]
 					Credit:    account,
 					Debit:     p.Account,
 					Commodity: p.Commodity,
-					Amount:    p.Amount,
+					Quantity:  p.Quantity,
 				}.Build(),
 				Targets: t.Targets,
 			}.Build())
 		}
 		if p.Account.IsIE() {
 			partition := date.NewPartition(date.Period{Start: start, End: end}, interval, 0)
-			amount, rem := p.Amount.QuoRem(decimal.NewFromInt(int64(partition.Size())), 1)
+			amount, rem := p.Quantity.QuoRem(decimal.NewFromInt(int64(partition.Size())), 1)
 			for i, dt := range partition.EndDates() {
 				a := amount
 				if i == 0 {
@@ -147,7 +147,7 @@ func expand(reg *registry.Registry, t *Transaction, accrual *syntax.Accrual) ([]
 						Credit:    account,
 						Debit:     p.Account,
 						Commodity: p.Commodity,
-						Amount:    a,
+						Quantity:  a,
 					}.Build(),
 					Targets: t.Targets,
 				}.Build())

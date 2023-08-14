@@ -166,7 +166,7 @@ func (p *parser) parseBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid commodity in row %v: %v", r, err)
 	}
-	amt, err := decimal.NewFromString(r[bfAmount])
+	quantity, err := decimal.NewFromString(r[bfAmount])
 	if err != nil {
 		return fmt.Errorf("invalid amount in row %v: %v", r, err)
 	}
@@ -175,7 +175,7 @@ func (p *parser) parseBooking() error {
 			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: c,
-			Amount:    amt,
+			Quantity:  quantity,
 		},
 	}
 
@@ -188,7 +188,7 @@ func (p *parser) parseBooking() error {
 			Credit:    p.account,
 			Debit:     p.feeAccount,
 			Commodity: c,
-			Amount:    fee,
+			Quantity:  fee,
 		})
 	}
 	t := transaction.Builder{

@@ -162,16 +162,16 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		return false, fmt.Errorf("expected five items, got %v", r)
 	}
 	var (
-		err    error
-		desc   = r[bfBeschreibung]
-		amount decimal.Decimal
-		chf    *model.Commodity
-		date   time.Time
+		err      error
+		desc     = r[bfBeschreibung]
+		quantity decimal.Decimal
+		chf      *model.Commodity
+		date     time.Time
 	)
 	if date, err = time.Parse("02.01.2006", r[bfEinkaufsDatum]); err != nil {
 		return false, err
 	}
-	if amount, err = parseAmount(r[bfBelastungCHF], r[bfGutschriftCHF]); err != nil {
+	if quantity, err = parseAmount(r[bfBelastungCHF], r[bfGutschriftCHF]); err != nil {
 		return false, err
 	}
 	if chf, err = p.context.GetCommodity("CHF"); err != nil {
@@ -184,7 +184,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 			Credit:    p.context.TBDAccount(),
 			Debit:     p.account,
 			Commodity: chf,
-			Amount:    amount,
+			Quantity:  quantity,
 		}.Build(),
 	})
 	return true, nil
@@ -272,7 +272,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 			Credit:    p.context.TBDAccount(),
 			Debit:     p.account,
 			Commodity: chf,
-			Amount:    amount,
+			Quantity:  amount,
 		}.Build(),
 	})
 	return true, nil

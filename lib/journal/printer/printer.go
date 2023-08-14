@@ -100,7 +100,7 @@ func (p *Printer) printTransaction(t *model.Transaction) (n int, err error) {
 }
 
 func (p *Printer) printPosting(t *model.Posting) (int, error) {
-	return fmt.Fprintf(p, "%-*s %-*s %10s %s", p.padding, t.Other.String(), p.padding, t.Account.String(), t.Amount.String(), t.Commodity.Name())
+	return fmt.Fprintf(p, "%-*s %-*s %10s %s", p.padding, t.Other.String(), p.padding, t.Account.String(), t.Quantity.String(), t.Commodity.Name())
 }
 
 func (p *Printer) printOpen(o *model.Open) (int, error) {

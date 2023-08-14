@@ -186,10 +186,10 @@ func (p *parser) parseBooking(r []string) error {
 		words = append(words, r[field])
 	}
 	var (
-		desc   = strings.TrimSpace(space.ReplaceAllString(strings.Join(words, " "), " "))
-		amount decimal.Decimal
-		field  bookingField
-		sign   = decimal.NewFromInt(1)
+		desc     = strings.TrimSpace(space.ReplaceAllString(strings.Join(words, " "), " "))
+		quantity decimal.Decimal
+		field    bookingField
+		sign     = decimal.NewFromInt(1)
 	)
 	switch {
 
@@ -201,17 +201,17 @@ func (p *parser) parseBooking(r []string) error {
 	default:
 		return fmt.Errorf("invalid record with two amounts: %v", r)
 	}
-	if amount, err = parseDecimal(r[field]); err != nil {
+	if quantity, err = parseDecimal(r[field]); err != nil {
 		return err
 	}
-	amount = amount.Mul(sign)
+	quantity = quantity.Mul(sign)
 	t := transaction.Builder{
 		Date:        date,
 		Description: desc,
 	}
 	switch {
 	case fxSellRegex.MatchString(r[bfReference]):
-		otherCommodity, otherAmount, err := p.parseCombiField(r[bfExchangeOut])
+		otherCommodity, otherQuantity, err := p.parseCombiField(r[bfExchangeOut])
 		if err != nil {
 			return err
 		}
@@ -220,13 +220,13 @@ func (p *parser) parseBooking(r []string) error {
 				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: p.currency,
-				Amount:    amount,
+				Quantity:  quantity,
 			},
 			{
 				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: otherCommodity,
-				Amount:    otherAmount,
+				Quantity:  otherQuantity,
 			},
 		}.Build()
 	case fxBuyRegex.MatchString(r[bfReference]):
@@ -239,13 +239,13 @@ func (p *parser) parseBooking(r []string) error {
 				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: p.currency,
-				Amount:    amount,
+				Quantity:  quantity,
 			},
 			{
 				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: otherCommodity,
-				Amount:    otherAmount.Neg(),
+				Quantity:  otherAmount.Neg(),
 			},
 		}.Build()
 	default:
@@ -254,7 +254,7 @@ func (p *parser) parseBooking(r []string) error {
 			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: p.currency,
-			Amount:    amount,
+			Quantity:  quantity,
 		}.Build()
 	}
 	p.journal.AddTransaction(t.Build())

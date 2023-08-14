@@ -189,7 +189,7 @@ func (p *Parser) readBookingLine() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	amount, err := parseAmount(rec[bfGutschriftInCHF], rec[bfLastschriftInCHF])
+	quantity, err := parseAmount(rec[bfGutschriftInCHF], rec[bfLastschriftInCHF])
 	if err != nil {
 		return false, err
 	}
@@ -200,7 +200,7 @@ func (p *Parser) readBookingLine() (bool, error) {
 			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: p.currency,
-			Amount:    amount,
+			Quantity:  quantity,
 		}.Build(),
 	}.Build())
 	return true, nil

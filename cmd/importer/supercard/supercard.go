@@ -182,13 +182,13 @@ func (p *parser) parseBooking(r []string) error {
 		currency  = p.parseCurrency(r)
 		commodity *model.Commodity
 		date      time.Time
-		amount    decimal.Decimal
+		quantity  decimal.Decimal
 		err       error
 	)
 	if date, err = p.parseDate(r); err != nil {
 		return fmt.Errorf("%v %w", r, err)
 	}
-	if amount, err = p.parseAmount(r); err != nil {
+	if quantity, err = p.parseAmount(r); err != nil {
 		return err
 	}
 	if commodity, err = p.journal.Registry.GetCommodity(currency); err != nil {
@@ -201,7 +201,7 @@ func (p *parser) parseBooking(r []string) error {
 			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: commodity,
-			Amount:    amount,
+			Quantity:  quantity,
 		}.Build(),
 	}.Build())
 	return nil
@@ -235,11 +235,11 @@ func (p *parser) parseAmount(r []string) (decimal.Decimal, error) {
 		field = fieldBelastung
 		sign = sign.Neg()
 	default:
-		return res, fmt.Errorf("empty amount fields: %s %s", r[fieldGutschrift], r[fieldBelastung])
+		return res, fmt.Errorf("empty quantity fields: %s %s", r[fieldGutschrift], r[fieldBelastung])
 	}
-	amt, err := decimal.NewFromString(r[field])
+	quantity, err := decimal.NewFromString(r[field])
 	if err != nil {
 		return res, err
 	}
-	return amt.Mul(sign), nil
+	return quantity.Mul(sign), nil
 }

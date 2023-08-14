@@ -138,16 +138,16 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		}
 	}
 	var (
-		err  error
-		desc = strings.Join(words, " ")
-		chf  *model.Commodity
-		amt  decimal.Decimal
-		d    time.Time
+		err      error
+		desc     = strings.Join(words, " ")
+		chf      *model.Commodity
+		quantity decimal.Decimal
+		d        time.Time
 	)
 	if d, err = time.Parse("02.01.2006", r[0]); err != nil {
 		return false, err
 	}
-	if amt, err = decimal.NewFromString(replacer.Replace(r[3])); err != nil {
+	if quantity, err = decimal.NewFromString(replacer.Replace(r[3])); err != nil {
 		return false, err
 	}
 	if chf, err = p.journal.Registry.GetCommodity("CHF"); err != nil {
@@ -160,7 +160,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 			Credit:    p.account,
 			Debit:     p.journal.Registry.TBDAccount(),
 			Commodity: chf,
-			Amount:    amt,
+			Quantity:  quantity,
 		}.Build(),
 	}.Build())
 	return true, nil

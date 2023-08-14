@@ -298,19 +298,19 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: stock,
-				Amount:    qty,
+				Quantity:  qty,
 			},
 			{
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: currency,
-				Amount:    proceeds,
+				Quantity:  proceeds,
 			},
 			{
 				Credit:    p.fee,
 				Debit:     p.account,
 				Commodity: currency,
-				Amount:    fee,
+				Quantity:  fee,
 			},
 		}.Build(),
 		Targets: []*model.Commodity{stock, currency},
@@ -366,13 +366,13 @@ func (p *parser) parseForex(r []string) (bool, error) {
 			Credit:    p.trading,
 			Debit:     p.account,
 			Commodity: stock,
-			Amount:    qty,
+			Quantity:  qty,
 		},
 		{
 			Credit:    p.trading,
 			Debit:     p.account,
 			Commodity: currency,
-			Amount:    proceeds,
+			Quantity:  proceeds,
 		},
 	}
 	if !fee.IsZero() {
@@ -380,7 +380,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 			Credit:    p.fee,
 			Debit:     p.account,
 			Commodity: p.baseCurrency,
-			Amount:    fee,
+			Quantity:  fee,
 		})
 	}
 	p.journal.AddTransaction(transaction.Builder{
@@ -414,7 +414,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 		currency *model.Commodity
 		date     time.Time
 		desc     string
-		amount   decimal.Decimal
+		quantity decimal.Decimal
 		err      error
 	)
 	if currency, err = p.journal.Registry.GetCommodity(r[dwfCurrency]); err != nil {
@@ -423,13 +423,13 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	if date, err = parseDate(r[dwfSettleDate]); err != nil {
 		return false, err
 	}
-	if amount, err = parseRoundedDecimal(r[dwfAmount]); err != nil {
+	if quantity, err = parseRoundedDecimal(r[dwfAmount]); err != nil {
 		return false, err
 	}
-	if amount.IsPositive() {
-		desc = fmt.Sprintf("Deposit %s %s", amount, currency.Name())
+	if quantity.IsPositive() {
+		desc = fmt.Sprintf("Deposit %s %s", quantity, currency.Name())
 	} else {
-		desc = fmt.Sprintf("Withdraw %s %s", amount, currency.Name())
+		desc = fmt.Sprintf("Withdraw %s %s", quantity, currency.Name())
 	}
 	p.journal.AddTransaction(transaction.Builder{
 		Date:        date,
@@ -438,7 +438,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: currency,
-			Amount:    amount,
+			Quantity:  quantity,
 		}.Build(),
 	}.Build())
 	return true, nil
@@ -466,7 +466,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 		currency, security *model.Commodity
 		date               time.Time
 		desc               = r[dfDescription]
-		amount             decimal.Decimal
+		quantity           decimal.Decimal
 		symbol             string
 		err                error
 	)
@@ -476,7 +476,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if date, err = parseDate(r[dfDate]); err != nil {
 		return false, err
 	}
-	if amount, err = parseDecimal(r[dfAmount]); err != nil {
+	if quantity, err = parseDecimal(r[dfAmount]); err != nil {
 		return false, err
 	}
 	if symbol, err = parseDividendSymbol(r[dfDescription]); err != nil {
@@ -492,7 +492,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 			Credit:    p.dividend,
 			Debit:     p.account,
 			Commodity: currency,
-			Amount:    amount,
+			Quantity:  quantity,
 		}.Build(),
 		Targets: []*model.Commodity{security},
 	}.Build())
@@ -531,7 +531,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 		desc               = r[wtfDescription]
 		currency, security *model.Commodity
 		date               time.Time
-		amount             decimal.Decimal
+		quantity           decimal.Decimal
 		symbol             string
 		err                error
 	)
@@ -541,7 +541,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if date, err = parseDate(r[wtfDate]); err != nil {
 		return false, err
 	}
-	if amount, err = parseDecimal(r[wtfAmount]); err != nil {
+	if quantity, err = parseDecimal(r[wtfAmount]); err != nil {
 		return false, err
 	}
 	if symbol, err = parseDividendSymbol(r[wtfDescription]); err != nil {
@@ -557,7 +557,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 			Credit:    p.tax,
 			Debit:     p.account,
 			Commodity: currency,
-			Amount:    amount,
+			Quantity:  quantity,
 		}.Build(),
 		Targets: []*model.Commodity{security},
 	}.Build())
@@ -572,7 +572,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	var (
 		currency *model.Commodity
 		date     time.Time
-		amount   decimal.Decimal
+		quantity decimal.Decimal
 		desc     = r[dfDescription]
 		err      error
 	)
@@ -582,7 +582,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	if date, err = parseDate(r[dfDate]); err != nil {
 		return false, err
 	}
-	if amount, err = parseDecimal(r[dfAmount]); err != nil {
+	if quantity, err = parseDecimal(r[dfAmount]); err != nil {
 		return false, err
 	}
 	p.journal.AddTransaction(transaction.Builder{
@@ -592,7 +592,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 			Credit:    p.interest,
 			Debit:     p.account,
 			Commodity: currency,
-			Amount:    amount,
+			Quantity:  quantity,
 		}.Build(),
 		Targets: []*model.Commodity{currency},
 	}.Build())
@@ -629,21 +629,21 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 		return false, fmt.Errorf("report end date has not been parsed yet")
 	}
 	var (
-		symbol *model.Commodity
-		amt    decimal.Decimal
-		err    error
+		symbol   *model.Commodity
+		quantity decimal.Decimal
+		err      error
 	)
 	if symbol, err = p.journal.Registry.GetCommodity(r[opfSymbol]); err != nil {
 		return false, err
 	}
-	if amt, err = decimal.NewFromString(r[opfQuantity]); err != nil {
+	if quantity, err = decimal.NewFromString(r[opfQuantity]); err != nil {
 		return false, err
 	}
 	p.journal.AddAssertion(&model.Assertion{
 		Date:      p.dateTo,
 		Account:   p.account,
 		Commodity: symbol,
-		Amount:    amt,
+		Amount:    quantity,
 	})
 	return true, nil
 }

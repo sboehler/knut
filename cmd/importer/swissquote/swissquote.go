@@ -220,7 +220,7 @@ func (p *parser) lineToRecord(l []string) (*record, error) {
 	if r.interest, err = parseDecimal(l[fAufgelaufeneZinsen]); err != nil {
 		return nil, err
 	}
-	if r.netAmount, err = parseDecimal(l[fNettobetrag]); err != nil {
+	if r.netQuantity, err = parseDecimal(l[fNettobetrag]); err != nil {
 		return nil, err
 	}
 	if r.balance, err = parseDecimal(l[fSaldo]); err != nil {
@@ -241,10 +241,10 @@ func parseDateFromDateTime(s string) (time.Time, error) {
 }
 
 type record struct {
-	date                                               time.Time
-	orderNo, trxType, name, isin                       string
-	quantity, price, fee, interest, netAmount, balance decimal.Decimal
-	currency, symbol                                   *model.Commodity
+	date                                                 time.Time
+	orderNo, trxType, name, isin                         string
+	quantity, price, fee, interest, netQuantity, balance decimal.Decimal
+	currency, symbol                                     *model.Commodity
 }
 
 func (p *parser) parseTrade(r *record) (bool, error) {
@@ -252,7 +252,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 		return false, nil
 	}
 	var (
-		proceeds = r.netAmount.Add(r.fee)
+		proceeds = r.netQuantity.Add(r.fee)
 		fee      = r.fee.Neg()
 		qty      = r.quantity
 		desc     = fmt.Sprintf("%s %s %s x %s %s %s @ %s %s", r.orderNo, r.trxType, r.quantity, r.symbol.Name(), r.name, r.isin, r.price, r.currency.Name())
@@ -268,19 +268,19 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: r.symbol,
-				Amount:    qty,
+				Quantity:  qty,
 			},
 			{
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: r.currency,
-				Amount:    proceeds,
+				Quantity:  proceeds,
 			},
 			{
 				Credit:    p.fee,
 				Debit:     p.account,
 				Commodity: r.currency,
-				Amount:    fee,
+				Quantity:  fee,
 			},
 		}.Build(),
 		Targets: []*model.Commodity{r.symbol, r.currency},
@@ -305,7 +305,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		p.last = r
 		return true, nil
 	}
-	desc := fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netAmount, p.last.currency.Name(), r.trxType, r.netAmount, r.currency.Name())
+	desc := fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netQuantity, p.last.currency.Name(), r.trxType, r.netQuantity, r.currency.Name())
 	p.journal.AddTransaction(transaction.Builder{
 		Date:        r.date,
 		Description: desc,
@@ -314,13 +314,13 @@ func (p *parser) parseForex(r *record) (bool, error) {
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: p.last.currency,
-				Amount:    p.last.netAmount,
+				Quantity:  p.last.netQuantity,
 			},
 			{
 				Credit:    p.trading,
 				Debit:     p.account,
 				Commodity: r.currency,
-				Amount:    r.netAmount,
+				Quantity:  r.netQuantity,
 			},
 		}.Build(),
 		Targets: []*model.Commodity{p.last.currency, r.currency},
@@ -343,7 +343,7 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 			Credit:    p.dividend,
 			Debit:     p.account,
 			Commodity: r.currency,
-			Amount:    r.price,
+			Quantity:  r.price,
 		},
 	}
 	if !r.fee.IsZero() {
@@ -351,7 +351,7 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 			Credit:    p.account,
 			Debit:     p.tax,
 			Commodity: r.currency,
-			Amount:    r.fee,
+			Quantity:  r.fee,
 		})
 	}
 	p.journal.AddTransaction(transaction.Builder{
@@ -374,7 +374,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 			Credit:    p.fee,
 			Debit:     p.account,
 			Commodity: r.currency,
-			Amount:    r.netAmount,
+			Quantity:  r.netQuantity,
 		}.Build(),
 		Targets: make([]*model.Commodity, 0),
 	}.Build())
@@ -398,7 +398,7 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: r.currency,
-			Amount:    r.netAmount,
+			Quantity:  r.netQuantity,
 		}.Build(),
 	}.Build())
 	return true, nil
@@ -415,7 +415,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 			Credit:    p.interest,
 			Debit:     p.account,
 			Commodity: r.currency,
-			Amount:    r.netAmount,
+			Quantity:  r.netQuantity,
 		}.Build(),
 		Targets: []*model.Commodity{r.currency},
 	}.Build())
@@ -430,7 +430,7 @@ func (p *parser) parseCatchall(r *record) (bool, error) {
 			Credit:    p.journal.Registry.TBDAccount(),
 			Debit:     p.account,
 			Commodity: r.currency,
-			Amount:    r.netAmount,
+			Quantity:  r.netQuantity,
 		}.Build(),
 	}.Build())
 	return true, nil

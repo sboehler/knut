@@ -11,22 +11,22 @@ import (
 
 // Posting represents a posting.
 type Posting struct {
-	Src            *syntax.Booking
-	Amount, Value  decimal.Decimal
-	Account, Other *account.Account
-	Commodity      *commodity.Commodity
+	Src             *syntax.Booking
+	Quantity, Value decimal.Decimal
+	Account, Other  *account.Account
+	Commodity       *commodity.Commodity
 }
 
 type Builder struct {
-	Src           *syntax.Booking
-	Amount, Value decimal.Decimal
-	Credit, Debit *account.Account
-	Commodity     *commodity.Commodity
+	Src             *syntax.Booking
+	Quantity, Value decimal.Decimal
+	Credit, Debit   *account.Account
+	Commodity       *commodity.Commodity
 }
 
 func (pb Builder) Build() []*Posting {
-	if pb.Amount.IsNegative() || pb.Amount.IsZero() && pb.Value.IsNegative() {
-		pb.Credit, pb.Debit, pb.Amount, pb.Value = pb.Debit, pb.Credit, pb.Amount.Neg(), pb.Value.Neg()
+	if pb.Quantity.IsNegative() || pb.Quantity.IsZero() && pb.Value.IsNegative() {
+		pb.Credit, pb.Debit, pb.Quantity, pb.Value = pb.Debit, pb.Credit, pb.Quantity.Neg(), pb.Value.Neg()
 	}
 	return []*Posting{
 		{
@@ -34,7 +34,7 @@ func (pb Builder) Build() []*Posting {
 			Account:   pb.Credit,
 			Other:     pb.Debit,
 			Commodity: pb.Commodity,
-			Amount:    pb.Amount.Neg(),
+			Quantity:  pb.Quantity.Neg(),
 			Value:     pb.Value.Neg(),
 		},
 		{
@@ -42,7 +42,7 @@ func (pb Builder) Build() []*Posting {
 			Account:   pb.Debit,
 			Other:     pb.Credit,
 			Commodity: pb.Commodity,
-			Amount:    pb.Amount,
+			Quantity:  pb.Quantity,
 			Value:     pb.Value,
 		},
 	}
@@ -65,7 +65,7 @@ func Compare(p, p2 *Posting) compare.Order {
 	if o := account.Compare(p.Other, p2.Other); o != compare.Equal {
 		return o
 	}
-	if o := compare.Decimal(p.Amount, p2.Amount); o != compare.Equal {
+	if o := compare.Decimal(p.Quantity, p2.Quantity); o != compare.Equal {
 		return o
 	}
 	if o := compare.Decimal(p.Value, p2.Value); o != compare.Equal {
@@ -97,7 +97,7 @@ func Create(reg *registry.Registry, bs []syntax.Booking) ([]*Posting, error) {
 			Src:       &bs[i],
 			Credit:    credit,
 			Debit:     debit,
-			Amount:    amount,
+			Quantity:  amount,
 			Commodity: commodity,
 		})
 	}

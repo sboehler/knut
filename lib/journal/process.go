@@ -286,9 +286,9 @@ func (query Query) Execute(c Collection) DayFn {
 	return func(d *Day) error {
 		for _, t := range d.Transactions {
 			for _, b := range t.Postings {
-				quantity := b.Quantity
+				amount := b.Quantity
 				if query.Valuation != nil {
-					quantity = b.Value
+					amount = b.Value
 				}
 				kc := amounts.Key{
 					Date:        t.Date,
@@ -299,7 +299,7 @@ func (query Query) Execute(c Collection) DayFn {
 					Description: t.Description,
 				}
 				if query.Filter(kc) {
-					c.Insert(query.Mapper(kc), quantity)
+					c.Insert(query.Mapper(kc), amount)
 				}
 			}
 		}

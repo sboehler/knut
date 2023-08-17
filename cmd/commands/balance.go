@@ -32,7 +32,7 @@ import (
 	"github.com/sboehler/knut/lib/model/account"
 	"github.com/sboehler/knut/lib/model/commodity"
 	"github.com/sboehler/knut/lib/model/registry"
-	balancereport "github.com/sboehler/knut/lib/reports/balance"
+	"github.com/sboehler/knut/lib/reports/balance"
 
 	"github.com/spf13/cobra"
 )
@@ -132,7 +132,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), r.last)
-	rep := balancereport.NewReport(reg, partition)
+	rep := balance.NewReport(reg, partition)
 	_, err = j.Process(
 		journal.ComputePrices(valuation),
 		journal.Balance(reg, valuation),
@@ -158,7 +158,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	reportRenderer := balancereport.Renderer{
+	reportRenderer := balance.Renderer{
 		Valuation:          valuation,
 		CommodityDetails:   r.showCommodities.Regex(),
 		SortAlphabetically: r.sortAlphabetically,

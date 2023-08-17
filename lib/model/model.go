@@ -47,7 +47,7 @@ type Result struct {
 
 func FromStream(reg *registry.Registry, inCh <-chan syntax.File) (<-chan []Directive, func(context.Context) error) {
 	return cpr.Produce(func(ctx context.Context, ch chan<- []Directive) error {
-		wg := pool.New().WithErrors().WithContext(ctx)
+		wg := pool.New().WithContext(ctx).WithCancelOnError().WithFirstError()
 		cpr.ForEach(ctx, inCh, func(input syntax.File) error {
 			wg.Go(func(ctx context.Context) error {
 				var ds []Directive

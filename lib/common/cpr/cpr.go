@@ -139,7 +139,7 @@ func Seq[T any](ctx context.Context, ts []T, fs ...func(T) error) ([]T, error) {
 	})
 
 	workers = append(workers, w)
-	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)
+	p := pool.New().WithContext(ctx).WithCancelOnError().WithFirstError()
 	for _, w := range workers {
 		p.Go(w)
 	}

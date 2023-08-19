@@ -73,6 +73,7 @@ func (rn *Renderer) Render(rep *Report) *table.Table {
 			}
 		}
 	}
+	tbl.AddSeparatorRow()
 
 	return tbl
 }

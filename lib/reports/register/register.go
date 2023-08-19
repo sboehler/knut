@@ -103,7 +103,7 @@ func (rn *Renderer) renderNode(tbl *table.Table, n *Node) {
 			row.AddText(k.Account.Name(), table.Left)
 		}
 		row.AddText(k.Other.Name(), table.Left)
-		row.AddNumber(n.Amounts[k].Neg())
+		row.AddDecimal(n.Amounts[k].Neg())
 		if rn.ShowCommodities {
 			row.AddText(k.Commodity.Name(), table.Left)
 		}

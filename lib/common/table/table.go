@@ -94,8 +94,8 @@ func (r *Row) AddText(content string, align Alignment) *Row {
 	return r
 }
 
-// AddNumber adds a number cell.
-func (r *Row) AddNumber(n decimal.Decimal) *Row {
+// AddDecimal adds a number cell.
+func (r *Row) AddDecimal(n decimal.Decimal) *Row {
 	r.addCell(numberCell{n})
 	return r
 }

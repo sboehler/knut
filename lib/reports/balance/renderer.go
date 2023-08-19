@@ -134,7 +134,7 @@ func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, va
 			if v.IsZero() {
 				row.AddEmpty()
 			} else {
-				row.AddNumber(v)
+				row.AddDecimal(v)
 			}
 		}
 	}

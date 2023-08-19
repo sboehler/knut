@@ -16,6 +16,7 @@ package portfolio
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -62,6 +63,8 @@ type weightsRunner struct {
 	thousands bool
 	color     bool
 	digits    int32
+
+	csv bool
 }
 
 func (r *weightsRunner) setupFlags(cmd *cobra.Command) {
@@ -71,6 +74,7 @@ func (r *weightsRunner) setupFlags(cmd *cobra.Command) {
 	r.period.Setup(cmd, date.Period{End: date.Today()})
 	r.interval.Setup(cmd, date.Once)
 	cmd.Flags().IntVar(&r.last, "last", 0, "last n periods")
+	cmd.Flags().BoolVar(&r.csv, "csv", false, "render csv")
 	cmd.Flags().Int32Var(&r.digits, "digits", 0, "round to number of digits")
 	cmd.Flags().BoolVarP(&r.thousands, "thousands", "k", false, "show numbers in units of 1000")
 	cmd.Flags().BoolVar(&r.color, "color", true, "print output in color")
@@ -114,12 +118,21 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	reportRenderer := weights.Renderer{}
-	tableRenderer := table.TextRenderer{
-		Color:     r.color,
-		Thousands: r.thousands,
-		Round:     r.digits,
+	var tableRenderer Renderer
+	if r.csv {
+		tableRenderer = &table.CSVRenderer{}
+	} else {
+		tableRenderer = &table.TextRenderer{
+			Color:     r.color,
+			Thousands: r.thousands,
+			Round:     r.digits,
+		}
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 	return tableRenderer.Render(reportRenderer.Render(rep), out)
+}
+
+type Renderer interface {
+	Render(*table.Table, io.Writer) error
 }

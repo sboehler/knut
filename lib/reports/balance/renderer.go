@@ -18,8 +18,10 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/amounts"
+	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/mapper"
+	"github.com/sboehler/knut/lib/common/multimap"
 	"github.com/sboehler/knut/lib/common/regex"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/model"
@@ -66,14 +68,14 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 		Commodity: commodity.Map(rn.Valuation == nil),
 	}.Build())
 
-	for _, n := range r.AL.Children() {
-		rn.renderNode(tbl, 0, n)
+	for _, n := range r.AL.SortedChildrenFunc(compareNodes) {
+		rn.renderNode(tbl, 0, false, n)
 		tbl.AddEmptyRow()
 	}
 	rn.render(tbl, 0, "Total (A+L)", false, totalAL)
 	tbl.AddSeparatorRow()
-	for _, n := range r.EIE.Children() {
-		rn.renderNode(tbl, 0, n)
+	for _, n := range r.EIE.SortedChildrenFunc(compareNodes) {
+		rn.renderNode(tbl, 0, true, n)
 		tbl.AddEmptyRow()
 	}
 	rn.render(tbl, 0, "Total (E+I+E)", true, totalEIE)
@@ -85,18 +87,30 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	return tbl
 }
 
-func (rn *Renderer) renderNode(t *table.Table, indent int, n *Node) {
-	if n.Account != nil {
-		showCommodities := rn.Valuation == nil || rn.CommodityDetails.MatchString(n.Account.Name())
-		vals := n.Amounts.SumBy(nil, amounts.KeyMapper{
+func (rn *Renderer) renderNode(t *table.Table, indent int, neg bool, n *Node) {
+	var vals amounts.Amounts
+	if n.Value.Account != nil {
+		showCommodities := rn.Valuation == nil || rn.CommodityDetails.MatchString(n.Value.Account.Name())
+		vals = n.Value.Amounts.SumBy(nil, amounts.KeyMapper{
 			Date:      mapper.Identity[time.Time],
 			Commodity: commodity.Map(showCommodities),
 		}.Build())
-		rn.render(t, indent, n.Account.Segment(), !n.Account.IsAL(), vals)
 	}
-	for _, ch := range n.Children() {
-		rn.renderNode(t, indent+2, ch)
+	if n.Segment != "" {
+		rn.render(t, indent, n.Segment, neg, vals)
 	}
+	for _, ch := range n.SortedChildrenFunc(compareNodes) {
+		rn.renderNode(t, indent+2, neg, ch)
+	}
+}
+
+func compareNodes(n1, n2 *Node) compare.Order {
+	if n1.Value.Account != nil && n2.Value.Account != nil {
+		if n1.Value.Account.Type() != n2.Value.Account.Type() {
+			return compare.Ordered(n1.Value.Account.Type(), n2.Value.Account.Type())
+		}
+	}
+	return multimap.Compare[Value](n1, n2)
 }
 
 func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, vals amounts.Amounts) {

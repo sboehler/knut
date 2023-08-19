@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/date"
@@ -64,10 +65,13 @@ type weightsRunner struct {
 	color     bool
 	digits    int32
 
+	universe string
+
 	csv bool
 }
 
 func (r *weightsRunner) setupFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&r.universe, "universe", "", "", "universe file")
 	cmd.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	cmd.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
 	cmd.Flags().Var(&r.commodities, "commodity", "filter commodities with a regex")
@@ -91,6 +95,15 @@ func (r *weightsRunner) run(cmd *cobra.Command, args []string) {
 func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	reg := registry.New()
+	var cfg universeModel
+	if len(r.universe) > 0 {
+		var err error
+		cfg, err = r.readConfig(r.universe)
+		if err != nil {
+			return err
+		}
+	}
+	fmt.Println(cfg)
 	valuation, err := r.valuation.Value(reg)
 	if err != nil {
 		return err
@@ -133,6 +146,23 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 	return tableRenderer.Render(reportRenderer.Render(rep), out)
 }
 
+func (r *weightsRunner) readConfig(path string) (universeModel, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	dec := yaml.NewDecoder(f)
+	dec.SetStrict(true)
+	var t universeModel
+	if err := dec.Decode(&t); err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
 type Renderer interface {
 	Render(*table.Table, io.Writer) error
 }
+
+type universeModel map[string][]string

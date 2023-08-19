@@ -135,6 +135,18 @@ func (r *TextRenderer) renderCell(c cell, l int, w io.Writer) error {
 			_, err = green.Fprintf(w, "%*s", l, s)
 		}
 		return err
+
+	case percentCell:
+		var err error
+		switch {
+		case t.n < 0:
+			_, err = red.Fprintf(w, "%*.2f%%", l-1, t.n*100)
+		case t.n > 0:
+			_, err = green.Fprintf(w, "%*.2f%%", l-1, t.n*100)
+		case t.n == 0:
+			_, err = fmt.Fprintf(w, "%*.2f%%", l-1, t.n*100)
+		}
+		return err
 	}
 	return fmt.Errorf("%v is not a valid cell type", c)
 }
@@ -168,6 +180,8 @@ func (r *TextRenderer) minLengthCell(c cell) int {
 		return utf8.RuneCountInString(t.Content)
 	case numberCell:
 		return utf8.RuneCountInString(r.numToString(t.n))
+	case percentCell:
+		return utf8.RuneCountInString(fmt.Sprintf("%.2f%%", t.n))
 	}
 	return 0
 }

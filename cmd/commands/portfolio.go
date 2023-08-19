@@ -28,5 +28,6 @@ func CreatePortfolioCommand() *cobra.Command {
 		Long:  `Portfolio management commands`,
 	}
 	c.AddCommand(returns.CreateReturnsCommand())
+	c.AddCommand(returns.CreateWeightsCommand())
 	return c
 }

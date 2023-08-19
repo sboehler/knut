@@ -105,6 +105,12 @@ func (j *Journal) Process(fs ...func(*Day) error) ([]*Day, error) {
 	return cpr.Seq(context.Background(), j.Sorted(), fs...)
 }
 
+func (j *Journal) Fill(dates ...time.Time) {
+	for _, d := range dates {
+		j.Day(d)
+	}
+}
+
 func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, error) {
 	syntaxCh, worker1 := syntax.ParseFileRecursively(path)
 	modelCh, worker2 := model.FromStream(reg, syntaxCh)

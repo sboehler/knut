@@ -100,6 +100,11 @@ func (r *Row) AddDecimal(n decimal.Decimal) *Row {
 	return r
 }
 
+func (r *Row) AddPercent(n float64) *Row {
+	r.addCell(percentCell{n})
+	return r
+}
+
 // AddIndented adds an indented cell.
 func (r *Row) AddIndented(content string, indent int) *Row {
 	r.addCell(textCell{
@@ -150,6 +155,15 @@ type numberCell struct {
 }
 
 func (t numberCell) isSep() bool {
+	return false
+}
+
+// percentCell is a cell containing a percentage
+type percentCell struct {
+	n float64
+}
+
+func (t percentCell) isSep() bool {
 	return false
 }
 

@@ -124,26 +124,17 @@ func (r *TextRenderer) renderCell(c cell, l int, w io.Writer) error {
 		return writeSpace(w, l-before-utf8.RuneCountInString(t.Content))
 
 	case numberCell:
-		var (
-			s      = r.numToString(t.n)
-			before = l - utf8.RuneCountInString(s)
-		)
-		if err := writeSpace(w, before); err != nil {
-			return err
-		}
+		s := r.numToString(t.n)
 		var err error
 		switch {
 		case t.n.LessThan(decimal.Zero):
-			_, err = red.Fprint(w, s)
+			_, err = red.Fprintf(w, "%*s", l, s)
 		case t.n.Equal(decimal.Zero):
-			_, err = fmt.Fprint(w, s)
+			_, err = fmt.Fprintf(w, "%*s", l, s)
 		case t.n.GreaterThan(decimal.Zero):
-			_, err = green.Fprint(w, s)
+			_, err = green.Fprintf(w, "%*s", l, s)
 		}
-		if err != nil {
-			return err
-		}
-		return writeSpace(w, l-before-utf8.RuneCountInString(s))
+		return err
 	}
 	return fmt.Errorf("%v is not a valid cell type", c)
 }

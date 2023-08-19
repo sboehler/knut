@@ -110,6 +110,9 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 		calculator.ComputeValues(),
 		rep.Add,
 	)
+	if err != nil {
+		return err
+	}
 	reportRenderer := weights.Renderer{}
 	tableRenderer := table.TextRenderer{
 		Color:     r.color,

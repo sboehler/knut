@@ -2,6 +2,7 @@ package journal
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
@@ -9,6 +10,7 @@ import (
 	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/set"
+	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/posting"
 	"github.com/sboehler/knut/lib/model/price"
@@ -30,7 +32,13 @@ type Error struct {
 }
 
 func (be Error) Error() string {
-	return be.msg
+	var s strings.Builder
+	s.WriteString(be.msg)
+	s.WriteRune('\n')
+	s.WriteRune('\n')
+	p := printer.New(&s)
+	p.PrintDirectiveLn(be.directive)
+	return s.String()
 }
 
 // ComputePrices updates prices.
@@ -90,7 +98,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 			}
 			position := amounts.AccountCommodityKey(a.Account, a.Commodity)
 			if va, ok := quantities[position]; !ok || !va.Equal(a.Quantity) {
-				return Error{a, fmt.Sprintf("account has position: %s %s", va, position.Commodity.Name())}
+				return Error{a, fmt.Sprintf("failed assertion: account has position: %s %s", va, position.Commodity.Name())}
 			}
 		}
 		return nil

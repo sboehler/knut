@@ -10,9 +10,9 @@ import (
 )
 
 type Report struct {
-	Registry *model.Registry
-	AL, EIE  *multimap.Node[Value]
-	dates    date.Partition
+	Registry  *model.Registry
+	AL, EIE   *multimap.Node[Value]
+	partition date.Partition
 }
 
 type Value struct {
@@ -22,12 +22,12 @@ type Value struct {
 
 type Node = multimap.Node[Value]
 
-func NewReport(reg *model.Registry, ds date.Partition) *Report {
+func NewReport(reg *model.Registry, part date.Partition) *Report {
 	return &Report{
-		Registry: reg,
-		AL:       multimap.New[Value](""),
-		EIE:      multimap.New[Value](""),
-		dates:    ds,
+		Registry:  reg,
+		AL:        multimap.New[Value](""),
+		EIE:       multimap.New[Value](""),
+		partition: part,
 	}
 }
 

@@ -36,26 +36,26 @@ type Renderer struct {
 	SortAlphabetically bool
 	Diff               bool
 
-	commoditiesColumn bool
-	partition         date.Partition
+	drawCommsColumn bool
+	partition       date.Partition
 }
 
 // Render renders a report.
 func (rn *Renderer) Render(r *Report) *table.Table {
-	rn.commoditiesColumn = rn.Valuation == nil || len(rn.CommodityDetails) > 0
-	rn.partition = r.dates
+	rn.drawCommsColumn = rn.Valuation == nil || len(rn.CommodityDetails) > 0
+	rn.partition = r.partition
 	if !rn.SortAlphabetically {
 		r.ComputeWeights()
 	}
 	var tbl *table.Table
-	if rn.commoditiesColumn {
+	if rn.drawCommsColumn {
 		tbl = table.New(1, 1, rn.partition.Size())
 	} else {
 		tbl = table.New(1, rn.partition.Size())
 	}
 	tbl.AddSeparatorRow()
 	header := tbl.AddRow().AddText("Account", table.Center)
-	if rn.commoditiesColumn {
+	if rn.drawCommsColumn {
 		header.AddText("Comm", table.Center)
 	}
 	for _, d := range rn.partition.EndDates() {
@@ -118,17 +118,16 @@ func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, va
 		t.AddRow().AddIndented(name, indent).FillEmpty()
 		return
 	}
-	for i, c := range vals.CommoditiesSorted() {
+	for i, commodity := range vals.CommoditiesSorted() {
 		row := t.AddRow()
 		if i == 0 {
 			row.AddIndented(name, indent)
 		} else {
 			row.AddEmpty()
 		}
-		if rn.commoditiesColumn {
-
-			if c != nil {
-				row.AddText(c.Name(), table.Left)
+		if rn.drawCommsColumn {
+			if commodity != nil {
+				row.AddText(commodity.Name(), table.Left)
 			} else if rn.Valuation != nil {
 				row.AddText(rn.Valuation.Name(), table.Left)
 			} else {
@@ -136,8 +135,8 @@ func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, va
 			}
 		}
 		var total decimal.Decimal
-		for _, d := range rn.partition.EndDates() {
-			v := vals[amounts.DateCommodityKey(d, c)]
+		for _, date := range rn.partition.EndDates() {
+			v := vals[amounts.DateCommodityKey(date, commodity)]
 			if !rn.Diff {
 				total = total.Add(v)
 				v = total

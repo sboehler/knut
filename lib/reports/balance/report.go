@@ -63,8 +63,17 @@ func (r *Report) SortAlpha() {
 }
 
 func (r *Report) SortWeighted() {
-	computeWeights(r.AL)
-	computeWeights(r.EIE)
+	computeWeights := func(n *Node) {
+		w := n.Value.Amounts.SumOver(func(k amounts.Key) bool {
+			return k.Valuation != nil
+		}).Abs().Neg()
+		for _, ch := range n.Children {
+			w = w.Add(ch.Value.Weight)
+		}
+		n.Value.Weight = w
+	}
+	r.AL.PostOrder(computeWeights)
+	r.EIE.PostOrder(computeWeights)
 	f := func(n1, n2 *Node) compare.Order {
 		if n1.Value.Account.Level() == 1 && n2.Value.Account.Level() == 1 {
 			return compare.Ordered(n1.Value.Account.Type(), n2.Value.Account.Type())
@@ -73,18 +82,6 @@ func (r *Report) SortWeighted() {
 	}
 	r.AL.Sort(f)
 	r.EIE.Sort(f)
-}
-
-func computeWeights(n *Node) decimal.Decimal {
-	w := n.Value.Amounts.SumOver(func(k amounts.Key) bool {
-		return k.Valuation != nil
-	}).Abs().Neg()
-	for _, ch := range n.Children {
-		w = w.Add(computeWeights(ch))
-		n.Value.Account = ch.Value.Account
-	}
-	n.Value.Weight = w
-	return w
 }
 
 func (r *Report) SetAccounts() {

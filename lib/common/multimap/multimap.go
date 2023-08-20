@@ -26,9 +26,7 @@ func (n *Node[V]) GetOrCreate(ss []string) *Node[V] {
 	}
 	head, tail := ss[0], ss[1:]
 	return dict.
-		GetDefault(n.Children, head, func() *Node[V] {
-			return New[V](head)
-		}).
+		GetDefault(n.Children, head, func() *Node[V] { return New[V](head) }).
 		GetOrCreate(tail)
 }
 
@@ -44,7 +42,7 @@ func SortAlpha[V any](n1, n2 *Node[V]) compare.Order {
 }
 
 func (n *Node[V]) PostOrder(f func(*Node[V])) {
-	for _, ch := range n.Sorted {
+	for _, ch := range n.Children {
 		ch.PostOrder(f)
 	}
 	f(n)

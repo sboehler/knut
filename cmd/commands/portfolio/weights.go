@@ -64,6 +64,8 @@ type weightsRunner struct {
 	color     bool
 	digits    int32
 
+	omitCommodities bool
+
 	universe string
 
 	csv bool
@@ -78,6 +80,7 @@ func (r *weightsRunner) setupFlags(cmd *cobra.Command) {
 	r.interval.Setup(cmd, date.Once)
 	cmd.Flags().IntVar(&r.last, "last", 0, "last n periods")
 	cmd.Flags().BoolVar(&r.csv, "csv", false, "render csv")
+	cmd.Flags().BoolVar(&r.omitCommodities, "omit-commodities", false, "don't render commodities")
 	cmd.Flags().Int32Var(&r.digits, "digits", 0, "round to number of digits")
 	cmd.Flags().BoolVarP(&r.thousands, "thousands", "k", false, "show numbers in units of 1000")
 	cmd.Flags().BoolVar(&r.color, "color", true, "print output in color")
@@ -128,7 +131,9 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	reportRenderer := weights.Renderer{}
+	reportRenderer := weights.Renderer{
+		OmitCommodities: r.omitCommodities,
+	}
 	var tableRenderer Renderer
 	if r.csv {
 		tableRenderer = &table.CSVRenderer{}

@@ -57,19 +57,35 @@ func (r *Report) Add(d *journal.Day) error {
 		n := r.weights.GetOrCreate(ss)
 		if n.Value.Weights == nil {
 			n.Value.Weights = make(map[time.Time]float64)
+			n.Value.Commodity = com
 		}
 		n.Value.Weights[d.Date] = v / total
 	}
 	return nil
 }
 
+func (r *Report) PropagateWeights() {
+	r.weights.PostOrder(func(n *Node) {
+		if n.Value.Weights == nil {
+			n.Value.Weights = make(map[time.Time]float64)
+		}
+		for _, ch := range n.Children {
+			for _, date := range r.partition.EndDates() {
+				n.Value.Weights[date] += ch.Value.Weights[date]
+			}
+		}
+	})
+}
+
 type Renderer struct {
-	table  *table.Table
-	report *Report
+	OmitCommodities bool
+	table           *table.Table
+	report          *Report
 }
 
 func (rn *Renderer) Render(rep *Report) *table.Table {
 	rep.weights.Sort(multimap.SortAlpha)
+	rep.PropagateWeights()
 
 	rn.table = table.New(1, rep.partition.Size())
 	rn.report = rep
@@ -99,15 +115,16 @@ func (rn *Renderer) renderNode(n *Node, indent int) {
 	row.AddIndented(n.Segment, indent)
 	for _, date := range rn.report.partition.EndDates() {
 		w, ok := n.Value.Weights[date]
-		if !ok {
+		if !ok || w == 0 {
 			row.AddEmpty()
 			continue
 		}
-		if w != 0 {
-			row.AddPercent(w)
-		}
+		row.AddPercent(w)
 	}
 	for _, ch := range n.Sorted {
+		if ch.Value.Commodity != nil && rn.OmitCommodities {
+			continue
+		}
 		rn.renderNode(ch, indent+2)
 	}
 }

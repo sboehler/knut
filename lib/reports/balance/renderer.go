@@ -18,10 +18,8 @@ import (
 	"time"
 
 	"github.com/sboehler/knut/lib/amounts"
-	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/mapper"
-	"github.com/sboehler/knut/lib/common/multimap"
 	"github.com/sboehler/knut/lib/common/regex"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/model"
@@ -44,8 +42,11 @@ type Renderer struct {
 func (rn *Renderer) Render(r *Report) *table.Table {
 	rn.drawCommsColumn = rn.Valuation == nil || len(rn.CommodityDetails) > 0
 	rn.partition = r.partition
-	if !rn.SortAlphabetically {
-		r.ComputeWeights()
+	r.SetAccounts()
+	if rn.SortAlphabetically {
+		r.SortAlpha()
+	} else {
+		r.SortWeighted()
 	}
 	var tbl *table.Table
 	if rn.drawCommsColumn {
@@ -68,13 +69,13 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 		Commodity: commodity.Map(rn.Valuation == nil),
 	}.Build())
 
-	for _, n := range r.AL.SortedChildrenFunc(compareNodes) {
+	for _, n := range r.AL.Sorted {
 		rn.renderNode(tbl, 0, false, n)
 		tbl.AddEmptyRow()
 	}
 	rn.render(tbl, 0, "Total (A+L)", false, totalAL)
 	tbl.AddSeparatorRow()
-	for _, n := range r.EIE.SortedChildrenFunc(compareNodes) {
+	for _, n := range r.EIE.Sorted {
 		rn.renderNode(tbl, 0, true, n)
 		tbl.AddEmptyRow()
 	}
@@ -99,18 +100,9 @@ func (rn *Renderer) renderNode(t *table.Table, indent int, neg bool, n *Node) {
 	if n.Segment != "" {
 		rn.render(t, indent, n.Segment, neg, vals)
 	}
-	for _, ch := range n.SortedChildrenFunc(compareNodes) {
+	for _, ch := range n.Sorted {
 		rn.renderNode(t, indent+2, neg, ch)
 	}
-}
-
-func compareNodes(n1, n2 *Node) compare.Order {
-	if n1.Value.Account != nil && n2.Value.Account != nil {
-		if n1.Value.Account.Type() != n2.Value.Account.Type() {
-			return compare.Ordered(n1.Value.Account.Type(), n2.Value.Account.Type())
-		}
-	}
-	return multimap.Compare[Value](n1, n2)
 }
 
 func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, vals amounts.Amounts) {

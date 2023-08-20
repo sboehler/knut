@@ -2,10 +2,12 @@ package balance
 
 import (
 	"github.com/sboehler/knut/lib/amounts"
+	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/multimap"
 	"github.com/sboehler/knut/lib/model"
+	"github.com/sboehler/knut/lib/model/account"
 	"github.com/shopspring/decimal"
 )
 
@@ -18,6 +20,7 @@ type Report struct {
 type Value struct {
 	Account *model.Account
 	Amounts amounts.Amounts
+	Weight  decimal.Decimal
 }
 
 type Node = multimap.Node[Value]
@@ -48,19 +51,58 @@ func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
 	n.Value.Amounts.Add(k, v)
 }
 
-func (r *Report) ComputeWeights() {
-	f := func(n *Node) {
-		n.Weight = 0
-		keysWithVal := func(k amounts.Key) bool { return k.Valuation != nil }
-		w := n.Value.Amounts.SumOver(keysWithVal)
-		f, _ := w.Abs().Float64()
-		n.Weight -= f
-		for _, sn := range n.Children() {
-			n.Weight += sn.Weight
+func (r *Report) SortAlpha() {
+	f := func(n1, n2 *Node) compare.Order {
+		if n1.Value.Account.Level() == 1 && n2.Value.Account.Level() == 1 {
+			return compare.Ordered(n1.Value.Account.Type(), n2.Value.Account.Type())
+		}
+		return multimap.SortAlpha(n1, n2)
+	}
+	r.AL.Sort(f)
+	r.EIE.Sort(f)
+}
+
+func (r *Report) SortWeighted() {
+	computeWeights(r.AL)
+	computeWeights(r.EIE)
+	f := func(n1, n2 *Node) compare.Order {
+		if n1.Value.Account.Level() == 1 && n2.Value.Account.Level() == 1 {
+			return compare.Ordered(n1.Value.Account.Type(), n2.Value.Account.Type())
+		}
+		return compare.Decimal(n1.Value.Weight, n2.Value.Weight)
+	}
+	r.AL.Sort(f)
+	r.EIE.Sort(f)
+}
+
+func computeWeights(n *Node) decimal.Decimal {
+	w := n.Value.Amounts.SumOver(func(k amounts.Key) bool {
+		return k.Valuation != nil
+	}).Abs().Neg()
+	for _, ch := range n.Children {
+		w = w.Add(computeWeights(ch))
+		n.Value.Account = ch.Value.Account
+	}
+	n.Value.Weight = w
+	return w
+}
+
+func (r *Report) SetAccounts() {
+	setAccounts(r.Registry.Accounts(), r.AL)
+	setAccounts(r.Registry.Accounts(), r.EIE)
+}
+
+func setAccounts(reg *account.Registry, n *Node) {
+	var acc *account.Account
+	for _, ch := range n.Children {
+		setAccounts(reg, ch)
+		if acc == nil {
+			acc = reg.Parent(ch.Value.Account)
 		}
 	}
-	r.AL.PostOrder(f)
-	r.EIE.PostOrder(f)
+	if n.Value.Account == nil {
+		n.Value.Account = acc
+	}
 }
 
 func (r *Report) Totals(m mapper.Mapper[amounts.Key]) (amounts.Amounts, amounts.Amounts) {

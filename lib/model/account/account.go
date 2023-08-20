@@ -95,6 +95,10 @@ func (a Account) String() string {
 	return a.name
 }
 
+func (a Account) Level() int {
+	return a.level
+}
+
 func Compare(a1, a2 *Account) compare.Order {
 	o := compare.Ordered(a1.accountType, a2.accountType)
 	if o != compare.Equal {

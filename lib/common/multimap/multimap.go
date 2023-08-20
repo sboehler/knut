@@ -6,17 +6,16 @@ import (
 )
 
 type Node[V any] struct {
-	Segment string
-	Value   V
-	Weight  float64
-
-	children map[string]*Node[V]
+	Segment  string
+	Value    V
+	Children map[string]*Node[V]
+	Sorted   []*Node[V]
 }
 
 func New[V any](segment string) *Node[V] {
 	return &Node[V]{
 		Segment:  segment,
-		children: make(map[string]*Node[V]),
+		Children: make(map[string]*Node[V]),
 	}
 }
 
@@ -27,33 +26,25 @@ func (n *Node[V]) GetOrCreate(ss []string) *Node[V] {
 	}
 	head, tail := ss[0], ss[1:]
 	return dict.
-		GetDefault(n.children, head, func() *Node[V] {
+		GetDefault(n.Children, head, func() *Node[V] {
 			return New[V](head)
 		}).
 		GetOrCreate(tail)
 }
 
-func (n *Node[V]) Children() []*Node[V] {
-	return dict.Values[string, *Node[V]](n.children)
-}
-
-func (n *Node[V]) SortedChildren() []*Node[V] {
-	return dict.SortedValues(n.children, Compare)
-}
-
-func Compare[V any](n1, n2 *Node[V]) compare.Order {
-	if n1.Weight != n2.Weight {
-		return compare.Ordered(n1.Weight, n2.Weight)
+func (n *Node[V]) Sort(f compare.Compare[*Node[V]]) {
+	for _, ch := range n.Children {
+		ch.Sort(f)
 	}
+	n.Sorted = dict.SortedValues(n.Children, f)
+}
+
+func SortAlpha[V any](n1, n2 *Node[V]) compare.Order {
 	return compare.Ordered(n1.Segment, n2.Segment)
 }
 
-func (n *Node[V]) SortedChildrenFunc(f compare.Compare[*Node[V]]) []*Node[V] {
-	return dict.SortedValues(n.children, f)
-}
-
 func (n *Node[V]) PostOrder(f func(*Node[V])) {
-	for _, ch := range n.children {
+	for _, ch := range n.Sorted {
 		ch.PostOrder(f)
 	}
 	f(n)

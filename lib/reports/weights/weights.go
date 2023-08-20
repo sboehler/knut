@@ -7,26 +7,29 @@ import (
 	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/performance"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/commodity"
 )
 
 type Report struct {
 	Registry    *model.Registry
-	part        date.Partition
+	universe    performance.Universe
+	partition   date.Partition
 	dates       set.Set[time.Time]
 	commodities set.Set[*model.Commodity]
 	weights     map[time.Time]map[*model.Commodity]float64
 }
 
-func NewReport(reg *model.Registry, ds date.Partition) *Report {
+func NewReport(reg *model.Registry, ds date.Partition, universe performance.Universe) *Report {
 	endDates := set.New[time.Time]()
 	for _, d := range ds.EndDates() {
 		endDates.Add(d)
 	}
 	return &Report{
 		Registry:    reg,
-		part:        ds,
+		universe:    universe,
+		partition:   ds,
 		dates:       endDates,
 		commodities: set.New[*model.Commodity](),
 		weights:     make(map[time.Time]map[*commodity.Commodity]float64),
@@ -53,10 +56,10 @@ func (r *Report) Add(d *journal.Day) error {
 type Renderer struct{}
 
 func (rn *Renderer) Render(rep *Report) *table.Table {
-	tbl := table.New(1, rep.part.Size())
+	tbl := table.New(1, rep.partition.Size())
 	tbl.AddSeparatorRow()
 	header := tbl.AddRow().AddText("Commodity", table.Center)
-	for _, d := range rep.part.EndDates() {
+	for _, d := range rep.partition.EndDates() {
 		header.AddText(d.Format("2006-01-02"), table.Center)
 	}
 	tbl.AddSeparatorRow()
@@ -64,7 +67,7 @@ func (rn *Renderer) Render(rep *Report) *table.Table {
 	for _, com := range rep.commodities.Sorted(commodity.Compare) {
 		row := tbl.AddRow()
 		row.AddText(com.Name(), table.Left)
-		for _, d := range rep.part.EndDates() {
+		for _, d := range rep.partition.EndDates() {
 			n := rep.weights[d][com]
 			if n != 0 {
 				row.AddPercent(n)

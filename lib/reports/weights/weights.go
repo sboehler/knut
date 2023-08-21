@@ -13,12 +13,11 @@ import (
 )
 
 type Report struct {
-	Registry    *model.Registry
-	universe    performance.Universe
-	partition   date.Partition
-	dates       set.Set[time.Time]
-	commodities set.Set[*model.Commodity]
-	weights     *Node
+	Registry  *model.Registry
+	universe  performance.Universe
+	partition date.Partition
+	dates     set.Set[time.Time]
+	weights   *Node
 }
 type Node = multimap.Node[Value]
 
@@ -28,19 +27,18 @@ func NewReport(reg *model.Registry, ds date.Partition, universe performance.Univ
 		endDates.Add(d)
 	}
 	return &Report{
-		Registry:    reg,
-		universe:    universe,
-		partition:   ds,
-		dates:       endDates,
-		commodities: set.New[*model.Commodity](),
+		Registry:  reg,
+		universe:  universe,
+		partition: ds,
+		dates:     endDates,
 
 		weights: multimap.New[Value](""),
 	}
 }
 
 type Value struct {
-	Commodity *model.Commodity
-	Weights   map[time.Time]float64
+	Leaf    bool
+	Weights map[time.Time]float64
 }
 
 func (r *Report) Add(d *journal.Day) error {
@@ -52,12 +50,11 @@ func (r *Report) Add(d *journal.Day) error {
 		total += v
 	}
 	for com, v := range d.Performance.V1 {
-		r.commodities.Add(com)
 		ss := r.universe.Locate(com)
 		n := r.weights.GetOrCreate(ss)
 		if n.Value.Weights == nil {
 			n.Value.Weights = make(map[time.Time]float64)
-			n.Value.Commodity = com
+			n.Value.Leaf = true
 		}
 		n.Value.Weights[d.Date] = v / total
 	}
@@ -121,7 +118,7 @@ func (rn *Renderer) renderNode(n *Node, indent int) {
 		}
 	}
 	for _, ch := range n.Sorted {
-		if ch.Value.Commodity == nil || !rn.OmitCommodities {
+		if !ch.Value.Leaf || !rn.OmitCommodities {
 			rn.renderNode(ch, indent+2)
 		}
 	}

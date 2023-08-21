@@ -113,8 +113,18 @@ type Rule struct {
 	Regex *regexp.Regexp
 }
 
-func (r Rule) String() string {
-	return fmt.Sprintf("%d,%v", r.Level, r.Regex)
+func (rule Rule) String() string {
+	return fmt.Sprintf("%d,%v", rule.Level, rule.Regex)
+}
+
+func (rule Rule) Match(s string) (int, bool) {
+	if rule.Regex == nil {
+		return rule.Level, true
+	}
+	if rule.Regex.MatchString(s) {
+		return rule.Level, true
+	}
+	return 0, false
 }
 
 // Mapping is a set of mapping rules.
@@ -128,14 +138,14 @@ func (m Mapping) String() string {
 	return strings.Join(s, ", ")
 }
 
-// level returns the level to which an account should be shortened.
-func (m Mapping) level(a *Account) int {
-	for _, c := range m {
-		if c.Regex == nil || c.Regex.MatchString(a.name) {
-			return c.Level
+// Level returns the Level to which an account should be shortened.
+func (m Mapping) Level(s string) (int, bool) {
+	for _, rule := range m {
+		if l, ok := rule.Match(s); ok {
+			return l, ok
 		}
 	}
-	return a.level
+	return 0, false
 }
 
 func Shorten(reg *Registry, m Mapping) mapper.Mapper[*Account] {
@@ -143,7 +153,10 @@ func Shorten(reg *Registry, m Mapping) mapper.Mapper[*Account] {
 		return mapper.Identity[*Account]
 	}
 	return func(a *Account) *Account {
-		level := m.level(a)
+		level, ok := m.Level(a.name)
+		if !ok {
+			return a
+		}
 		if level >= a.level {
 			return a
 		}

@@ -140,11 +140,11 @@ func (r *TextRenderer) renderCell(c cell, l int, w io.Writer) error {
 		var err error
 		switch {
 		case t.n < 0:
-			_, err = red.Fprintf(w, "%*.2f%%", l-1, t.n*100)
+			_, err = red.Fprintf(w, "%*.*f%%", l-1, r.Round, t.n*100)
 		case t.n > 0:
-			_, err = green.Fprintf(w, "%*.2f%%", l-1, t.n*100)
+			_, err = green.Fprintf(w, "%*.*f%%", l-1, r.Round, t.n*100)
 		case t.n == 0:
-			_, err = fmt.Fprintf(w, "%*.2f%%", l-1, t.n*100)
+			_, err = fmt.Fprintf(w, "%*.*f%%", l-1, r.Round, t.n*100)
 		}
 		return err
 	}

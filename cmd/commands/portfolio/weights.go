@@ -139,9 +139,8 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 		tableRenderer = &table.CSVRenderer{}
 	} else {
 		tableRenderer = &table.TextRenderer{
-			Color:     r.color,
-			Thousands: r.thousands,
-			Round:     r.digits,
+			Color: r.color,
+			Round: r.digits,
 		}
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())

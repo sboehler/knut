@@ -114,12 +114,11 @@ func (rn *Renderer) renderNode(n *Node, indent int) {
 	row := rn.table.AddRow()
 	row.AddIndented(n.Segment, indent)
 	for _, date := range rn.report.partition.EndDates() {
-		w, ok := n.Value.Weights[date]
-		if !ok || w == 0 {
+		if w, ok := n.Value.Weights[date]; ok && w != 0 {
+			row.AddPercent(w)
+		} else {
 			row.AddEmpty()
-			continue
 		}
-		row.AddPercent(w)
 	}
 	for _, ch := range n.Sorted {
 		if ch.Value.Commodity != nil && rn.OmitCommodities {

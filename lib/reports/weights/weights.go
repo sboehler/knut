@@ -121,9 +121,8 @@ func (rn *Renderer) renderNode(n *Node, indent int) {
 		}
 	}
 	for _, ch := range n.Sorted {
-		if ch.Value.Commodity != nil && rn.OmitCommodities {
-			continue
+		if ch.Value.Commodity == nil || !rn.OmitCommodities {
+			rn.renderNode(ch, indent+2)
 		}
-		rn.renderNode(ch, indent+2)
 	}
 }

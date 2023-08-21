@@ -121,19 +121,21 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 		CommodityFilter: filter.ByName[*model.Commodity](r.commodities.Regex()),
 	}
 	j.Fill(partition.EndDates()...)
-	rep := weights.NewReport(reg, partition, universe)
+	rep := weights.NewReport()
 	_, err = j.Process(
 		journal.ComputePrices(valuation),
 		journal.Balance(reg, valuation),
 		calculator.ComputeValues(),
-		rep.Add,
+		weights.Query{
+			OmitCommodities: r.omitCommodities,
+			Universe:        universe,
+			Partition:       partition,
+		}.Execute(j, rep),
 	)
 	if err != nil {
 		return err
 	}
-	reportRenderer := weights.Renderer{
-		OmitCommodities: r.omitCommodities,
-	}
+	var reportRenderer weights.Renderer
 	var tableRenderer Renderer
 	if r.csv {
 		tableRenderer = &table.CSVRenderer{}

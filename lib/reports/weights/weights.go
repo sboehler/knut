@@ -3,61 +3,72 @@ package weights
 import (
 	"time"
 
+	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/multimap"
 	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/performance"
-	"github.com/sboehler/knut/lib/model"
 )
 
-type Report struct {
-	Registry  *model.Registry
-	universe  performance.Universe
-	partition date.Partition
-	dates     set.Set[time.Time]
-	weights   *Node
+type Query struct {
+	OmitCommodities bool
+	Partition       date.Partition
+	Universe        performance.Universe
 }
+
+func (q Query) Execute(j *journal.Journal, r *Report) journal.DayFn {
+	days := set.New[*journal.Day]()
+	for _, d := range q.Partition.EndDates() {
+		days.Add(j.Day(d))
+	}
+	return func(d *journal.Day) error {
+		if !days.Has(d) {
+			return nil
+		}
+		var total float64
+		for _, v := range d.Performance.V1 {
+			total += v
+		}
+		for com, v := range d.Performance.V1 {
+			ss := q.Universe.Locate(com)
+			if q.OmitCommodities {
+				ss = ss[:len(ss)-1]
+			}
+			r.Add(ss, d.Date, v/total)
+		}
+		return nil
+	}
+}
+
 type Node = multimap.Node[Value]
-
-func NewReport(reg *model.Registry, ds date.Partition, universe performance.Universe) *Report {
-	endDates := set.New[time.Time]()
-	for _, d := range ds.EndDates() {
-		endDates.Add(d)
-	}
-	return &Report{
-		Registry:  reg,
-		universe:  universe,
-		partition: ds,
-		dates:     endDates,
-
-		weights: multimap.New[Value](""),
-	}
-}
 
 type Value struct {
 	Leaf    bool
 	Weights map[time.Time]float64
 }
 
-func (r *Report) Add(d *journal.Day) error {
-	if !r.dates.Has(d.Date) {
-		return nil
+type Report struct {
+	dates   set.Set[time.Time]
+	weights *Node
+}
+
+func NewReport() *Report {
+	return &Report{
+		dates:   set.New[time.Time](),
+		weights: multimap.New[Value](""),
 	}
-	var total float64
-	for _, v := range d.Performance.V1 {
-		total += v
+}
+
+func (r *Report) Add(ss []string, date time.Time, w float64) error {
+	n := r.weights.GetOrCreate(ss)
+	if n.Value.Weights == nil {
+		n.Value.Weights = make(map[time.Time]float64)
+		n.Value.Leaf = true
 	}
-	for com, v := range d.Performance.V1 {
-		ss := r.universe.Locate(com)
-		n := r.weights.GetOrCreate(ss)
-		if n.Value.Weights == nil {
-			n.Value.Weights = make(map[time.Time]float64)
-			n.Value.Leaf = true
-		}
-		n.Value.Weights[d.Date] = v / total
-	}
+	n.Value.Weights[date] = w
+	r.dates.Add(date)
 	return nil
 }
 
@@ -67,32 +78,33 @@ func (r *Report) PropagateWeights() {
 			n.Value.Weights = make(map[time.Time]float64)
 		}
 		for _, ch := range n.Children {
-			for _, date := range r.partition.EndDates() {
-				n.Value.Weights[date] += ch.Value.Weights[date]
+			for date, w := range ch.Value.Weights {
+				n.Value.Weights[date] += w
 			}
 		}
 	})
 }
 
 type Renderer struct {
-	OmitCommodities bool
-	table           *table.Table
-	report          *Report
+	table  *table.Table
+	report *Report
+	dates  []time.Time
 }
 
 func (rn *Renderer) Render(rep *Report) *table.Table {
 	rep.weights.Sort(multimap.SortAlpha)
 	rep.PropagateWeights()
 
-	rn.table = table.New(1, rep.partition.Size())
+	rn.dates = rep.dates.Sorted(compare.Time)
+	rn.table = table.New(1, len(rn.dates))
 	rn.report = rep
 
 	rn.table.AddSeparatorRow()
 	rn.renderHeader()
 	rn.table.AddSeparatorRow()
 
-	for _, n := range rep.weights.Sorted {
-		rn.renderNode(n, 0)
+	for _, node := range rep.weights.Sorted {
+		rn.renderNode(node, 0)
 	}
 	rn.table.AddSeparatorRow()
 
@@ -102,24 +114,22 @@ func (rn *Renderer) Render(rep *Report) *table.Table {
 func (rn *Renderer) renderHeader() {
 	row := rn.table.AddRow()
 	row.AddText("Commodity", table.Center)
-	for _, d := range rn.report.partition.EndDates() {
-		row.AddText(d.Format("2006-01-02"), table.Center)
+	for _, date := range rn.dates {
+		row.AddText(date.Format("2006-01-02"), table.Center)
 	}
 }
 
 func (rn *Renderer) renderNode(n *Node, indent int) {
 	row := rn.table.AddRow()
 	row.AddIndented(n.Segment, indent)
-	for _, date := range rn.report.partition.EndDates() {
-		if w, ok := n.Value.Weights[date]; ok && w != 0 {
-			row.AddPercent(w)
+	for _, date := range rn.dates {
+		if weight, ok := n.Value.Weights[date]; ok && weight != 0 {
+			row.AddPercent(weight)
 		} else {
 			row.AddEmpty()
 		}
 	}
-	for _, ch := range n.Sorted {
-		if !ch.Value.Leaf || !rn.OmitCommodities {
-			rn.renderNode(ch, indent+2)
-		}
+	for _, child := range n.Sorted {
+		rn.renderNode(child, indent+2)
 	}
 }

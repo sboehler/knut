@@ -64,7 +64,9 @@ type weightsRunner struct {
 	color     bool
 	digits    int32
 
-	omitCommodities bool
+	omitCommodities    bool
+	mapping            flags.MappingFlag
+	sortAlphabetically bool
 
 	universe string
 
@@ -78,9 +80,11 @@ func (r *weightsRunner) setupFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(&r.commodities, "commodity", "filter commodities with a regex")
 	r.period.Setup(cmd, date.Period{End: date.Today()})
 	r.interval.Setup(cmd, date.Once)
+	cmd.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	cmd.Flags().IntVar(&r.last, "last", 0, "last n periods")
 	cmd.Flags().BoolVar(&r.csv, "csv", false, "render csv")
 	cmd.Flags().BoolVar(&r.omitCommodities, "omit-commodities", false, "don't render commodities")
+	cmd.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
 	cmd.Flags().Int32Var(&r.digits, "digits", 0, "round to number of digits")
 	cmd.Flags().BoolVarP(&r.thousands, "thousands", "k", false, "show numbers in units of 1000")
 	cmd.Flags().BoolVar(&r.color, "color", true, "print output in color")
@@ -130,12 +134,15 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 			OmitCommodities: r.omitCommodities,
 			Universe:        universe,
 			Partition:       partition,
+			Mapping:         r.mapping.Value(),
 		}.Execute(j, rep),
 	)
 	if err != nil {
 		return err
 	}
-	var reportRenderer weights.Renderer
+	reportRenderer := weights.Renderer{
+		SortAlphabetically: r.sortAlphabetically,
+	}
 	var tableRenderer Renderer
 	if r.csv {
 		tableRenderer = &table.CSVRenderer{}

@@ -1,6 +1,7 @@
 package weights
 
 import (
+	"strings"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
@@ -10,12 +11,14 @@ import (
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/performance"
+	"github.com/sboehler/knut/lib/model/account"
 )
 
 type Query struct {
 	OmitCommodities bool
 	Partition       date.Partition
 	Universe        performance.Universe
+	Mapping         account.Mapping
 }
 
 func (q Query) Execute(j *journal.Journal, r *Report) journal.DayFn {
@@ -33,8 +36,12 @@ func (q Query) Execute(j *journal.Journal, r *Report) journal.DayFn {
 		}
 		for com, v := range d.Performance.V1 {
 			ss := q.Universe.Locate(com)
+			level, ok := q.Mapping.Level(strings.Join(ss, ":"))
 			if q.OmitCommodities {
 				ss = ss[:len(ss)-1]
+			}
+			if ok && level < len(ss) {
+				ss = ss[:level]
 			}
 			r.Add(ss, d.Date, v/total)
 		}
@@ -47,6 +54,7 @@ type Node = multimap.Node[Value]
 type Value struct {
 	Leaf    bool
 	Weights map[time.Time]float64
+	Weight  float64
 }
 
 type Report struct {
@@ -67,7 +75,7 @@ func (r *Report) Add(ss []string, date time.Time, w float64) error {
 		n.Value.Weights = make(map[time.Time]float64)
 		n.Value.Leaf = true
 	}
-	n.Value.Weights[date] = w
+	n.Value.Weights[date] += w
 	r.dates.Add(date)
 	return nil
 }
@@ -85,15 +93,34 @@ func (r *Report) PropagateWeights() {
 	})
 }
 
+func (r *Report) SortWeighted() {
+	r.weights.PostOrder(func(n *Node) {
+		var total float64
+		for _, w := range n.Value.Weights {
+			total += w
+		}
+		n.Value.Weight = -total
+	})
+	r.weights.Sort(func(n1, n2 *Node) compare.Order {
+		return compare.Ordered(n1.Value.Weight, n2.Value.Weight)
+	})
+}
+
 type Renderer struct {
+	SortAlphabetically bool
+
 	table  *table.Table
 	report *Report
 	dates  []time.Time
 }
 
 func (rn *Renderer) Render(rep *Report) *table.Table {
-	rep.weights.Sort(multimap.SortAlpha)
 	rep.PropagateWeights()
+	if rn.SortAlphabetically {
+		rep.weights.Sort(multimap.SortAlpha)
+	} else {
+		rep.SortWeighted()
+	}
 
 	rn.dates = rep.dates.Sorted(compare.Time)
 	rn.table = table.New(1, len(rn.dates))

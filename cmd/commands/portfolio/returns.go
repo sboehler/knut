@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/performance"
@@ -49,21 +48,18 @@ func CreateReturnsCommand() *cobra.Command {
 }
 
 type returnsRunner struct {
+	flags.Multiperiod
 	cpuprofile            string
 	valuation             flags.CommodityFlag
 	accounts, commodities flags.RegexFlag
-	period                flags.PeriodFlag
-	interval              flags.IntervalFlags
 }
 
 func (r *returnsRunner) setupFlags(cmd *cobra.Command) {
+	r.Multiperiod.Setup(cmd)
 	cmd.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
 	cmd.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	cmd.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
 	cmd.Flags().Var(&r.commodities, "commodity", "filter commodities with a regex")
-	r.period.Setup(cmd, date.Period{End: date.Today()})
-	r.interval.Setup(cmd, date.Once)
-
 }
 
 func (r *returnsRunner) run(cmd *cobra.Command, args []string) {
@@ -92,7 +88,7 @@ func (r *returnsRunner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), 0)
+	partition := r.Multiperiod.Partition(j.Period())
 	calculator := &performance.Calculator{
 		Context:         reg,
 		Valuation:       valuation,

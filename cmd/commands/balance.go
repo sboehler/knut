@@ -23,7 +23,6 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/amounts"
-	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/common/table"
@@ -55,17 +54,14 @@ func CreateBalanceCommand() *cobra.Command {
 }
 
 type balanceRunner struct {
+	flags.Multiperiod
+
 	// internal
 	cpuprofile string
 
 	// journal structure
 	close     bool
 	valuation flags.CommodityFlag
-
-	// alignment
-	period   flags.PeriodFlag
-	last     int
-	interval flags.IntervalFlags
 
 	// mapping
 	mapping flags.MappingFlag
@@ -103,14 +99,12 @@ func (r *balanceRunner) run(cmd *cobra.Command, args []string) {
 }
 
 func (r *balanceRunner) setupFlags(c *cobra.Command) {
+	r.Multiperiod.Setup(c)
 	c.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
-	r.period.Setup(c, date.Period{End: date.Today()})
-	c.Flags().IntVar(&r.last, "last", 0, "last n periods")
 	c.Flags().BoolVarP(&r.diff, "diff", "d", false, "diff")
 	c.Flags().BoolVar(&r.close, "close", true, "close")
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	c.Flags().VarP(&r.showCommodities, "show-commodities", "s", "<regex>")
-	r.interval.Setup(c, date.Once)
 	c.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	c.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
 	c.Flags().VarP(&r.remap, "remap", "r", "<regex>")
@@ -131,7 +125,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), r.last)
+	partition := r.Multiperiod.Partition(j.Period())
 	rep := balance.NewReport(reg, partition)
 	_, err = j.Process(
 		journal.ComputePrices(valuation),

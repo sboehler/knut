@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sboehler/knut/cmd/flags"
-	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
@@ -51,13 +50,10 @@ func CreateWeightsCommand() *cobra.Command {
 }
 
 type weightsRunner struct {
+	flags.Multiperiod
+
 	valuation             flags.CommodityFlag
 	accounts, commodities flags.RegexFlag
-
-	// alignment
-	period   flags.PeriodFlag
-	last     int
-	interval flags.IntervalFlags
 
 	// formatting
 	thousands bool
@@ -74,14 +70,13 @@ type weightsRunner struct {
 }
 
 func (r *weightsRunner) setupFlags(cmd *cobra.Command) {
+	r.Multiperiod.Setup(cmd)
 	cmd.Flags().StringVarP(&r.universe, "universe", "", "", "universe file")
 	cmd.Flags().VarP(&r.valuation, "val", "v", "valuate in the given commodity")
 	cmd.Flags().Var(&r.accounts, "account", "filter accounts with a regex")
 	cmd.Flags().Var(&r.commodities, "commodity", "filter commodities with a regex")
-	r.period.Setup(cmd, date.Period{End: date.Today()})
-	r.interval.Setup(cmd, date.Once)
+
 	cmd.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
-	cmd.Flags().IntVar(&r.last, "last", 0, "last n periods")
 	cmd.Flags().BoolVar(&r.csv, "csv", false, "render csv")
 	cmd.Flags().BoolVar(&r.omitCommodities, "omit-commodities", false, "don't render commodities")
 	cmd.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
@@ -117,7 +112,7 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), r.last)
+	partition := r.Multiperiod.Partition(j.Period())
 	calculator := &performance.Calculator{
 		Context:         reg,
 		Valuation:       valuation,

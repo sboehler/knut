@@ -23,7 +23,6 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/amounts"
-	"github.com/sboehler/knut/lib/common/date"
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/common/table"
@@ -56,13 +55,12 @@ func CreateRegisterCmd() *cobra.Command {
 }
 
 type registerRunner struct {
+	flags.Multiperiod
+
 	// internal
 	cpuprofile string
 
 	// transformations
-	period                        flags.PeriodFlag
-	last                          int
-	interval                      flags.IntervalFlags
 	showCommodities               bool
 	showSource                    bool
 	showDescriptions              bool
@@ -94,10 +92,8 @@ func (r *registerRunner) run(cmd *cobra.Command, args []string) {
 }
 
 func (r *registerRunner) setupFlags(c *cobra.Command) {
+	r.Multiperiod.Setup(c)
 	c.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
-	r.period.Setup(c, date.Period{End: date.Today()})
-	c.Flags().IntVar(&r.last, "last", 0, "last n periods")
-	r.interval.Setup(c, date.Daily)
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "s", false, "Sort accounts alphabetically")
 	c.Flags().BoolVarP(&r.showCommodities, "show-commodities", "c", false, "Show commodities")
 	c.Flags().BoolVarP(&r.showDescriptions, "show-descriptions", "d", false, "Show descriptions")
@@ -129,7 +125,7 @@ func (r registerRunner) execute(cmd *cobra.Command, args []string) error {
 	if r.showSource {
 		am = account.Remap(reg.Accounts(), r.remap.Regex())
 	}
-	partition := date.NewPartition(r.period.Value().Clip(j.Period()), r.interval.Value(), r.last)
+	partition := r.Multiperiod.Partition(j.Period())
 	rep := register.NewReport(reg)
 	_, err = j.Process(
 		journal.Sort(),

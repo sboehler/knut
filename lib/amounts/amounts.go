@@ -23,134 +23,132 @@ type Key struct {
 	Description    string
 }
 
-func DateKey(d time.Time) Key {
-	return Key{Date: d}
+func DateKey(date time.Time) Key {
+	return Key{Date: date}
 }
 
-func DateCommodityKey(d time.Time, c *model.Commodity) Key {
-	return Key{Date: d, Commodity: c}
+func DateCommodityKey(date time.Time, commodity *model.Commodity) Key {
+	return Key{Date: date, Commodity: commodity}
 }
 
-func CommodityKey(c *model.Commodity) Key {
-	return Key{Commodity: c}
+func CommodityKey(commodity *model.Commodity) Key {
+	return Key{Commodity: commodity}
 }
 
-func AccountKey(a *model.Account) Key {
-	return Key{Account: a}
+func AccountKey(account *model.Account) Key {
+	return Key{Account: account}
 }
 
-func AccountCommodityKey(a *model.Account, c *model.Commodity) Key {
-	return Key{Account: a, Commodity: c}
+func AccountCommodityKey(account *model.Account, commodity *model.Commodity) Key {
+	return Key{Account: account, Commodity: commodity}
 }
 
 // Amounts keeps track of amounts by account and commodity.
 type Amounts map[Key]decimal.Decimal
 
 // Amount returns the amount for the given key.
-func (am Amounts) Amount(k Key) decimal.Decimal {
-	return am[k]
+func (am Amounts) Amount(key Key) decimal.Decimal {
+	return am[key]
 }
 
-func (am Amounts) Add(k Key, d decimal.Decimal) {
-	am[k] = am[k].Add(d)
+func (am Amounts) Add(key Key, value decimal.Decimal) {
+	am[key] = am[key].Add(value)
 }
 
 // Clone clones these amounts.
 func (am Amounts) Clone() Amounts {
 	clone := make(Amounts)
-	for ca, v := range am {
-		clone[ca] = v
+	for key, value := range am {
+		clone[key] = value
 	}
 	return clone
 }
 
 // Minus mutably subtracts.
-func (am Amounts) Minus(a Amounts) Amounts {
-	for ca, v := range a {
-		am[ca] = am[ca].Sub(v)
+func (am Amounts) Minus(other Amounts) {
+	for key, value := range other {
+		am[key] = am[key].Sub(value)
 	}
-	return am
 }
 
 // Plus mutably adds.
-func (am Amounts) Plus(a Amounts) Amounts {
-	for ca, v := range a {
-		am[ca] = am[ca].Add(v)
+func (am Amounts) Plus(other Amounts) {
+	for key, value := range other {
+		am[key] = am[key].Add(value)
 	}
-	return am
 }
 
 func (am Amounts) Index(cmp compare.Compare[Key]) []Key {
-	res := make([]Key, 0, len(am))
+	index := make([]Key, 0, len(am))
 	for k := range am {
-		res = append(res, k)
+		index = append(index, k)
 	}
 	if cmp != nil {
-		compare.Sort(res, cmp)
+		compare.Sort(index, cmp)
 	}
-	return res
+	return index
 }
 
 func (am Amounts) Commodities() set.Set[*model.Commodity] {
-	cs := set.New[*model.Commodity]()
-	for k := range am {
-		cs.Add(k.Commodity)
+	commodities := set.New[*model.Commodity]()
+	for key := range am {
+		commodities.Add(key.Commodity)
 	}
-	return cs
+	return commodities
 }
 
 func (am Amounts) CommoditiesSorted() []*model.Commodity {
-	cs := am.Commodities()
-	return dict.SortedKeys(cs, commodity.Compare)
+	commodities := am.Commodities()
+	return dict.SortedKeys(commodities, commodity.Compare)
 }
 
 func (am Amounts) Dates() set.Set[time.Time] {
-	cs := set.New[time.Time]()
+	res := set.New[time.Time]()
 	for k := range am {
-		cs.Add(k.Date)
+		res.Add(k.Date)
 	}
-	return cs
-}
-
-func (am Amounts) DatesSorted() []time.Time {
-	cs := am.Dates()
-	return dict.SortedKeys(cs, compare.Time)
-}
-
-func (am Amounts) SumBy(f func(k Key) bool, m func(k Key) Key) Amounts {
-	res := make(Amounts)
-	am.SumIntoBy(res, f, m)
 	return res
 }
 
-func (am Amounts) SumIntoBy(as Amounts, f func(k Key) bool, m func(k Key) Key) {
-	if f == nil {
-		f = filter.AllowAll[Key]
+func (am Amounts) DatesSorted() []time.Time {
+	dates := am.Dates()
+	return dict.SortedKeys(dates, compare.Time)
+}
+
+func (am Amounts) SumBy(pred func(k Key) bool, mapr func(k Key) Key) Amounts {
+	res := make(Amounts)
+	am.SumIntoBy(res, pred, mapr)
+	return res
+}
+
+func (am Amounts) SumIntoBy(dest Amounts, pred func(k Key) bool, mapr func(k Key) Key) {
+	if pred == nil {
+		pred = filter.AllowAll[Key]
 	}
-	if m == nil {
-		m = mapper.Identity[Key]
+	if mapr == nil {
+		mapr = mapper.Identity[Key]
 	}
-	for k, v := range am {
-		if !f(k) {
+	for key, value := range am {
+		if !pred(key) {
 			continue
 		}
-		kn := m(k)
-		as[kn] = as[kn].Add(v)
+		mappedKey := mapr(key)
+		dest[mappedKey] = dest[mappedKey].Add(value)
 	}
-	for k, v := range as {
-		if v.IsZero() {
-			delete(as, k)
+	for key, value := range dest {
+		if value.IsZero() {
+			delete(dest, key)
 		}
 	}
 }
 
-func (am Amounts) SumOver(f func(k Key) bool) decimal.Decimal {
+func (am Amounts) SumOver(pred func(k Key) bool) decimal.Decimal {
 	var res decimal.Decimal
-	for k, v := range am {
-		if !f(k) {
+	for key, value := range am {
+		if !pred(key) {
 			continue
 		}
-		res = res.Add(v)
+		res = res.Add(value)
 	}
 	return res
 }
@@ -187,36 +185,36 @@ func (km KeyMapper) Build() mapper.Mapper[Key] {
 	}
 }
 
-func FilterDates(f filter.Filter[time.Time]) filter.Filter[Key] {
-	return func(k Key) bool { return f(k.Date) }
+func FilterDates(pred filter.Filter[time.Time]) filter.Filter[Key] {
+	return func(k Key) bool { return pred(k.Date) }
 }
 
-func FilterCommodity(rx []*regexp.Regexp) filter.Filter[Key] {
-	if len(rx) == 0 {
+func FilterCommodity(regexes []*regexp.Regexp) filter.Filter[Key] {
+	if len(regexes) == 0 {
 		return filter.AllowAll[Key]
 	}
-	f := filter.ByName[*model.Commodity](rx)
+	f := filter.ByName[*model.Commodity](regexes)
 	return func(k Key) bool {
 		return f(k.Commodity)
 	}
 }
 
-func FilterAccount(r []*regexp.Regexp) filter.Filter[Key] {
-	if r == nil {
+func FilterAccount(regexes []*regexp.Regexp) filter.Filter[Key] {
+	if regexes == nil {
 		return filter.AllowAll[Key]
 	}
-	f := filter.ByName[*model.Account](r)
+	pred := filter.ByName[*model.Account](regexes)
 	return func(k Key) bool {
-		return f(k.Account)
+		return pred(k.Account)
 	}
 }
 
-func FilterOther(r []*regexp.Regexp) filter.Filter[Key] {
-	if r == nil {
+func FilterOther(regexes []*regexp.Regexp) filter.Filter[Key] {
+	if regexes == nil {
 		return filter.AllowAll[Key]
 	}
-	f := filter.ByName[*model.Account](r)
+	pred := filter.ByName[*model.Account](regexes)
 	return func(k Key) bool {
-		return f(k.Other)
+		return pred(k.Other)
 	}
 }

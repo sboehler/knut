@@ -24,8 +24,8 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
+	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
@@ -137,7 +137,7 @@ func (r registerRunner) execute(cmd *cobra.Command, args []string) error {
 		journal.Balance(reg, valuation),
 		journal.Filter(partition),
 		journal.Query{
-			Filter: filter.And(
+			Predicate: predicate.And(
 				amounts.FilterAccount(r.accounts.Regex()),
 				amounts.FilterOther(r.others.Regex()),
 				amounts.FilterCommodity(r.commodities.Regex()),

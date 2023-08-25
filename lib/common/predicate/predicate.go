@@ -1,15 +1,15 @@
-package filter
+package predicate
 
 import (
 	"github.com/sboehler/knut/lib/common/regex"
 )
 
-type Filter[T any] func(T) bool
+type Predicate[T any] func(T) bool
 
-func And[T any](fs ...Filter[T]) Filter[T] {
+func And[T any](predicates ...Predicate[T]) Predicate[T] {
 	return func(t T) bool {
-		for _, f := range fs {
-			if !f(t) {
+		for _, pred := range predicates {
+			if !pred(t) {
 				return false
 			}
 		}
@@ -17,7 +17,7 @@ func And[T any](fs ...Filter[T]) Filter[T] {
 	}
 }
 
-func AllowAll[T any](_ T) bool {
+func True[T any](_ T) bool {
 	return true
 }
 
@@ -25,16 +25,16 @@ type Named interface {
 	Name() string
 }
 
-func ByName[T Named](rxs regex.Regexes) Filter[T] {
+func ByName[T Named](rxs regex.Regexes) Predicate[T] {
 	if len(rxs) == 0 {
-		return AllowAll[T]
+		return True[T]
 	}
 	return func(t T) bool {
 		return rxs.MatchString(t.Name())
 	}
 }
 
-func Or[T any](fs ...Filter[T]) Filter[T] {
+func Or[T any](fs ...Predicate[T]) Predicate[T] {
 	return func(t T) bool {
 		for _, f := range fs {
 			if f(t) {
@@ -45,7 +45,7 @@ func Or[T any](fs ...Filter[T]) Filter[T] {
 	}
 }
 
-func Not[T any](f Filter[T]) Filter[T] {
+func Not[T any](f Predicate[T]) Predicate[T] {
 	return func(t T) bool {
 		return !f(t)
 	}

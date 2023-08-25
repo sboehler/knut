@@ -23,7 +23,7 @@ import (
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/common/filter"
+	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/performance"
@@ -121,8 +121,8 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 	calculator := &performance.Calculator{
 		Context:         reg,
 		Valuation:       valuation,
-		AccountFilter:   filter.ByName[*model.Account](r.accounts.Regex()),
-		CommodityFilter: filter.ByName[*model.Commodity](r.commodities.Regex()),
+		AccountFilter:   predicate.ByName[*model.Account](r.accounts.Regex()),
+		CommodityFilter: predicate.ByName[*model.Commodity](r.commodities.Regex()),
 	}
 	j.Fill(partition.EndDates()...)
 	rep := weights.NewReport()

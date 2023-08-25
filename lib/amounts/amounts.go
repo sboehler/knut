@@ -6,8 +6,8 @@ import (
 
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/dict"
-	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
+	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/commodity"
@@ -123,7 +123,7 @@ func (am Amounts) SumBy(pred func(k Key) bool, mapr func(k Key) Key) Amounts {
 
 func (am Amounts) SumIntoBy(dest Amounts, pred func(k Key) bool, mapr func(k Key) Key) {
 	if pred == nil {
-		pred = filter.AllowAll[Key]
+		pred = predicate.True[Key]
 	}
 	if mapr == nil {
 		mapr = mapper.Identity[Key]
@@ -185,35 +185,35 @@ func (km KeyMapper) Build() mapper.Mapper[Key] {
 	}
 }
 
-func FilterDates(pred filter.Filter[time.Time]) filter.Filter[Key] {
+func FilterDates(pred predicate.Predicate[time.Time]) predicate.Predicate[Key] {
 	return func(k Key) bool { return pred(k.Date) }
 }
 
-func FilterCommodity(regexes []*regexp.Regexp) filter.Filter[Key] {
+func FilterCommodity(regexes []*regexp.Regexp) predicate.Predicate[Key] {
 	if len(regexes) == 0 {
-		return filter.AllowAll[Key]
+		return predicate.True[Key]
 	}
-	f := filter.ByName[*model.Commodity](regexes)
+	f := predicate.ByName[*model.Commodity](regexes)
 	return func(k Key) bool {
 		return f(k.Commodity)
 	}
 }
 
-func FilterAccount(regexes []*regexp.Regexp) filter.Filter[Key] {
+func FilterAccount(regexes []*regexp.Regexp) predicate.Predicate[Key] {
 	if regexes == nil {
-		return filter.AllowAll[Key]
+		return predicate.True[Key]
 	}
-	pred := filter.ByName[*model.Account](regexes)
+	pred := predicate.ByName[*model.Account](regexes)
 	return func(k Key) bool {
 		return pred(k.Account)
 	}
 }
 
-func FilterOther(regexes []*regexp.Regexp) filter.Filter[Key] {
+func FilterOther(regexes []*regexp.Regexp) predicate.Predicate[Key] {
 	if regexes == nil {
-		return filter.AllowAll[Key]
+		return predicate.True[Key]
 	}
-	pred := filter.ByName[*model.Account](regexes)
+	pred := predicate.ByName[*model.Account](regexes)
 	return func(k Key) bool {
 		return pred(k.Other)
 	}

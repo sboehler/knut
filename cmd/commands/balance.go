@@ -24,8 +24,8 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
+	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
@@ -148,7 +148,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 				Commodity: mapper.Identity[*model.Commodity],
 				Valuation: commodity.Map(valuation != nil),
 			}.Build(),
-			Filter: filter.And(
+			Predicate: predicate.And(
 				amounts.FilterAccount(r.accounts.Regex()),
 				amounts.FilterCommodity(r.commodities.Regex()),
 			),

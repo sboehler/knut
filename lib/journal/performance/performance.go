@@ -6,7 +6,7 @@ import (
 
 	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/common/filter"
+	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
@@ -17,8 +17,8 @@ import (
 type Calculator struct {
 	Context         *registry.Registry
 	Valuation       *model.Commodity
-	AccountFilter   filter.Filter[*model.Account]
-	CommodityFilter filter.Filter[*model.Commodity]
+	AccountFilter   predicate.Predicate[*model.Account]
+	CommodityFilter predicate.Predicate[*model.Commodity]
 }
 
 // ComputeValues computes portfolio performance.

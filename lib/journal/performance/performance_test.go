@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/common/filter"
+	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/posting"
@@ -283,7 +283,7 @@ func TestComputeFlows(t *testing.T) {
 				Transactions: []*model.Transaction{test.trx},
 			}
 			calc := Calculator{
-				AccountFilter: filter.ByName[*model.Account]([]*regexp.Regexp{
+				AccountFilter: predicate.ByName[*model.Account]([]*regexp.Regexp{
 					regexp.MustCompile("Assets:Portfolio"),
 				}),
 				Valuation: chf,

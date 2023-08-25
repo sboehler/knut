@@ -7,8 +7,8 @@ import (
 	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/common/date"
-	"github.com/sboehler/knut/lib/common/filter"
 	"github.com/sboehler/knut/lib/common/mapper"
+	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
@@ -280,13 +280,13 @@ type Collection interface {
 
 type Query struct {
 	Mapper    mapper.Mapper[amounts.Key]
-	Filter    filter.Filter[amounts.Key]
+	Predicate predicate.Predicate[amounts.Key]
 	Valuation *model.Commodity
 }
 
 func (query Query) Execute(c Collection) DayFn {
-	if query.Filter == nil {
-		query.Filter = filter.AllowAll[amounts.Key]
+	if query.Predicate == nil {
+		query.Predicate = predicate.True[amounts.Key]
 	}
 	if query.Mapper == nil {
 		query.Mapper = mapper.Identity[amounts.Key]
@@ -306,7 +306,7 @@ func (query Query) Execute(c Collection) DayFn {
 					Valuation:   query.Valuation,
 					Description: t.Description,
 				}
-				if query.Filter(kc) {
+				if query.Predicate(kc) {
 					c.Insert(query.Mapper(kc), amount)
 				}
 			}

@@ -52,14 +52,18 @@ func New() Client {
 func (c *Client) Fetch(sym string, t0, t1 time.Time) ([]Quote, error) {
 	u, err := createURL(c.url, sym, t0, t1)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating URL for symbol %s: %w", sym, err)
 	}
 	resp, err := http.Get(u.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error fetching data from URL %s: %w", u.String(), err)
 	}
 	defer resp.Body.Close()
-	return decodeResponse(resp.Body)
+	quote, err := decodeResponse(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding response for symbol %s: %w", sym, err)
+	}
+	return quote, nil
 }
 
 // createURL creates a URL for the given root URL and parameters.

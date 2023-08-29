@@ -26,7 +26,6 @@ import (
 	"github.com/dimchansky/utfbom"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/cmd/importer"
@@ -113,22 +112,17 @@ func (p *Parser) parse() error {
 	p.reader.Comma = ';'
 	p.reader.FieldsPerRecord = -1
 
-	if _, err := p.readHeader("Buchungsart:"); err != nil {
+	kv, err := p.readKeyValues()
+	if err != nil {
 		return err
 	}
-	if _, err := p.readHeader("Konto:"); err != nil {
-		return err
-	}
-	if s, err := p.readHeader("Währung:"); err != nil {
-		return err
-	} else {
+	if s, ok := kv["Währung:"]; ok {
 		sym := strings.Trim(s, "=\"")
 		if p.currency, err = p.journal.Registry.GetCommodity(sym); err != nil {
 			return err
 		}
-	}
-	if err := p.readHeaders(); err != nil {
-		return err
+	} else {
+		p.currency = p.journal.Registry.Commodity("CHF")
 	}
 	for {
 		ok, err := p.readBookingLine()
@@ -150,20 +144,18 @@ func (p *Parser) parse() error {
 	}
 }
 
-func (p *Parser) readHeader(header ...string) (string, error) {
-	rec, err := p.reader.Read()
-	if err != nil {
-		return "", err
+func (p *Parser) readKeyValues() (map[string]string, error) {
+	res := make(map[string]string)
+	for {
+		rec, err := p.reader.Read()
+		if err != nil {
+			return nil, err
+		}
+		if len(rec) != 2 {
+			return res, nil
+		}
+		res[rec[0]] = rec[1]
 	}
-	if !slices.Contains(header, rec[0]) {
-		return "", fmt.Errorf("got %q, want one of %#v", rec[0], header)
-	}
-	return rec[1], nil
-}
-
-func (p *Parser) readHeaders() error {
-	_, err := p.reader.Read()
-	return err
 }
 
 type bookingField int

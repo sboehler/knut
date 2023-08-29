@@ -61,16 +61,12 @@ type runner struct {
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
-	var (
-		ctx     = registry.New()
-		account *model.Commodity
-		err     error
-	)
-
-	if account, err = r.account.Value(ctx); err != nil {
+	reg := registry.New()
+	account, err := r.account.Value(reg)
+	if err != nil {
 		return err
 	}
-	commodity, err := ctx.GetCommodity("CHF")
+	commodity, err := reg.GetCommodity("CHF")
 	if err != nil {
 		return err
 	}
@@ -80,8 +76,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	var resp response
 	json.Unmarshal(b, &resp)
-
-	j := journal.New(ctx)
+	j := journal.New(reg)
 	for _, dv := range resp.DailyValues {
 		d, err := time.Parse("2006-01-02", dv.Date)
 		if err != nil {

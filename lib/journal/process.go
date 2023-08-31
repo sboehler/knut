@@ -63,7 +63,7 @@ func ComputePrices(v *model.Commodity) DayFn {
 }
 
 // Balance balances the journal.
-func Balance(reg *model.Registry, v *model.Commodity) DayFn {
+func Balance(reg *model.Registry, valuation *model.Commodity) DayFn {
 	quantities, values := make(amounts.Amounts), make(amounts.Amounts)
 	accounts := set.New[*model.Account]()
 
@@ -126,7 +126,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 	valuateTransactions := func(d *Day) error {
 		for _, t := range d.Transactions {
 			for _, posting := range t.Postings {
-				if v != posting.Commodity {
+				if valuation != posting.Commodity {
 					v, err := d.Normalized.Valuate(posting.Commodity, posting.Quantity)
 					if err != nil {
 						return err
@@ -145,7 +145,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 
 	valuateGains := func(d *Day) error {
 		for pos, qty := range quantities {
-			if pos.Commodity == v {
+			if pos.Commodity == valuation {
 				continue
 			}
 			if !pos.Account.IsAL() {
@@ -188,7 +188,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 		if err := processAssertions(d); err != nil {
 			return err
 		}
-		if v != nil {
+		if valuation != nil {
 			if err := valuateTransactions(d); err != nil {
 				return err
 			}

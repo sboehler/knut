@@ -75,7 +75,9 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	var resp response
-	json.Unmarshal(b, &resp)
+	if err := json.Unmarshal(b, &resp); err != nil {
+		return err
+	}
 	j := journal.New(reg)
 	for _, dv := range resp.DailyValues {
 		d, err := time.Parse("2006-01-02", dv.Date)

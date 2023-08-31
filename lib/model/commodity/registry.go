@@ -92,7 +92,7 @@ func isValidCommodity(s string) bool {
 	return true
 }
 
-func Map(t bool) func(*Commodity) *Commodity {
+func IdentityIf(t bool) func(*Commodity) *Commodity {
 	if t {
 		return mapper.Identity[*Commodity]
 	}

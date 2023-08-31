@@ -19,7 +19,7 @@ func Combine[T any](ms ...Mapper[T]) Mapper[T] {
 	}
 }
 
-func If[T any](p bool) Mapper[T] {
+func IdentityIf[T any](p bool) Mapper[T] {
 	if p {
 		return Identity[T]
 	}

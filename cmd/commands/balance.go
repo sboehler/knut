@@ -140,7 +140,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 					account.Shorten(reg.Accounts(), r.mapping.Value()),
 				),
 				Commodity: mapper.Identity[*model.Commodity],
-				Valuation: commodity.Map(valuation != nil),
+				Valuation: commodity.IdentityIf(valuation != nil),
 			}.Build(),
 			Predicate: predicate.And(
 				amounts.FilterAccount(r.accounts.Regex()),

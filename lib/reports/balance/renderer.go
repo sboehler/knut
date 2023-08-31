@@ -66,7 +66,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 
 	totalAL, totalEIE := r.Totals(amounts.KeyMapper{
 		Date:      mapper.Identity[time.Time],
-		Commodity: commodity.Map(rn.Valuation == nil),
+		Commodity: commodity.IdentityIf(rn.Valuation == nil),
 	}.Build())
 
 	for _, n := range r.AL.Sorted {
@@ -94,7 +94,7 @@ func (rn *Renderer) renderNode(t *table.Table, indent int, neg bool, n *Node) {
 		showCommodities := rn.Valuation == nil || rn.CommodityDetails.MatchString(n.Value.Account.Name())
 		vals = n.Value.Amounts.SumBy(nil, amounts.KeyMapper{
 			Date:      mapper.Identity[time.Time],
-			Commodity: commodity.Map(showCommodities),
+			Commodity: commodity.IdentityIf(showCommodities),
 		}.Build())
 	}
 	if n.Segment != "" {

@@ -107,6 +107,14 @@ func (as *Registry) Create(a syntax.Account) (*Account, error) {
 	return as.Get(a.Extract())
 }
 
+func (as *Registry) MustGet(name string) *Account {
+	a, err := as.Get(name)
+	if err != nil {
+		panic(err)
+	}
+	return a
+}
+
 func isValidSegment(s string) bool {
 	if len(s) == 0 {
 		return false

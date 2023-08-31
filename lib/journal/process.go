@@ -224,7 +224,7 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 		// j.Day creates the entry for the given date as a side effect.
 		closingDays.Add(j.Day(d))
 	}
-	equityAccount := j.Registry.Account("Equity:Equity")
+	equityAccount := j.Registry.Accounts().MustGet("Equity:Equity")
 	return func(d *Day) error {
 		if closingDays.Has(d) {
 			for k, quantity := range quantities {

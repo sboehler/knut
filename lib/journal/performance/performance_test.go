@@ -22,12 +22,12 @@ func TestComputeFlows(t *testing.T) {
 	usd := ctx.Commodity("USD")
 	gbp := ctx.Commodity("GBP")
 	aapl := ctx.Commodity("AAPL")
-	portfolio := ctx.Account("Assets:Portfolio")
-	acc1 := ctx.Account("Assets:Acc1")
-	acc2 := ctx.Account("Assets:Acc2")
-	dividend := ctx.Account("Income:Dividends")
-	expense := ctx.Account("Expenses:Investments")
-	equity := ctx.Account("Equity:Equity")
+	portfolio := ctx.Accounts().MustGet("Assets:Portfolio")
+	acc1 := ctx.Accounts().MustGet("Assets:Acc1")
+	acc2 := ctx.Accounts().MustGet("Assets:Acc2")
+	dividend := ctx.Accounts().MustGet("Income:Dividends")
+	expense := ctx.Accounts().MustGet("Expenses:Investments")
+	equity := ctx.Accounts().MustGet("Equity:Equity")
 
 	chf.IsCurrency = true
 	usd.IsCurrency = true

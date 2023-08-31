@@ -44,15 +44,6 @@ func (reg Registry) GetAccount(name string) (*Account, error) {
 	return reg.accounts.Get(name)
 }
 
-// Account returns a commodity or panics.
-func (reg Registry) Account(name string) *Account {
-	c, err := reg.GetAccount(name)
-	if err != nil {
-		panic(err)
-	}
-	return c
-}
-
 // GetCommodity returns a commodity.
 func (reg Registry) GetCommodity(name string) (*Commodity, error) {
 	return reg.commodities.Get(name)
@@ -69,15 +60,15 @@ func (reg Registry) Commodity(name string) *Commodity {
 
 // TBDAccount returns the TBD account.
 func (reg Registry) TBDAccount() *Account {
-	return reg.Account("Expenses:TBD")
+	return reg.Accounts().MustGet("Expenses:TBD")
 }
 
 // ValuationAccountFor returns the valuation account which corresponds to
 // the given Asset or Liability account.
 func (reg Registry) ValuationAccountFor(a *Account) *Account {
 	suffix := a.Split()[1:]
-	segments := append(reg.Account("Income").Split(), suffix...)
-	return reg.Account(strings.Join(segments, ":"))
+	segments := append(reg.Accounts().MustGet("Income").Split(), suffix...)
+	return reg.Accounts().MustGet(strings.Join(segments, ":"))
 }
 
 // Accounts returns the accounts.

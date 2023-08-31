@@ -181,7 +181,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
-			Credit:    p.context.TBDAccount(),
+			Credit:    p.context.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: chf,
 			Quantity:  quantity,
@@ -269,7 +269,7 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 		Date:        date,
 		Description: r[rfBeschreibung],
 		Postings: posting.Builder{
-			Credit:    p.context.TBDAccount(),
+			Credit:    p.context.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: chf,
 			Quantity:  amount,

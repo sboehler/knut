@@ -198,7 +198,7 @@ func (p *parser) parseBooking(r []string) error {
 		Date:        date,
 		Description: words,
 		Postings: posting.Builder{
-			Credit:    p.journal.Registry.TBDAccount(),
+			Credit:    p.journal.Registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: commodity,
 			Quantity:  quantity,

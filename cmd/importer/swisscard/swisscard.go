@@ -158,7 +158,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		Description: desc,
 		Postings: posting.Builder{
 			Credit:    p.account,
-			Debit:     p.journal.Registry.TBDAccount(),
+			Debit:     p.journal.Registry.Accounts().TBDAccount(),
 			Commodity: chf,
 			Quantity:  quantity,
 		}.Build(),

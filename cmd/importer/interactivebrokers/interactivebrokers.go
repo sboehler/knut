@@ -435,7 +435,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
-			Credit:    p.journal.Registry.TBDAccount(),
+			Credit:    p.journal.Registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: currency,
 			Quantity:  quantity,

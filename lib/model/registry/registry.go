@@ -15,8 +15,6 @@
 package registry
 
 import (
-	"strings"
-
 	"github.com/sboehler/knut/lib/model/account"
 	"github.com/sboehler/knut/lib/model/commodity"
 )
@@ -56,19 +54,6 @@ func (reg Registry) Commodity(name string) *Commodity {
 		panic(err)
 	}
 	return c
-}
-
-// TBDAccount returns the TBD account.
-func (reg Registry) TBDAccount() *Account {
-	return reg.Accounts().MustGet("Expenses:TBD")
-}
-
-// ValuationAccountFor returns the valuation account which corresponds to
-// the given Asset or Liability account.
-func (reg Registry) ValuationAccountFor(a *Account) *Account {
-	suffix := a.Split()[1:]
-	segments := append(reg.Accounts().MustGet("Income").Split(), suffix...)
-	return reg.Accounts().MustGet(strings.Join(segments, ":"))
 }
 
 // Accounts returns the accounts.

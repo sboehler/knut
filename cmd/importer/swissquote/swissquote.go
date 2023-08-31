@@ -395,7 +395,7 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{
-			Credit:    p.journal.Registry.TBDAccount(),
+			Credit:    p.journal.Registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: r.currency,
 			Quantity:  r.netQuantity,
@@ -427,7 +427,7 @@ func (p *parser) parseCatchall(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{
-			Credit:    p.journal.Registry.TBDAccount(),
+			Credit:    p.journal.Registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: r.currency,
 			Quantity:  r.netQuantity,

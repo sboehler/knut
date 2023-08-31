@@ -172,7 +172,7 @@ func (p *parser) parseBooking() error {
 	}
 	postings := posting.Builders{
 		{
-			Credit:    p.journal.Registry.TBDAccount(),
+			Credit:    p.journal.Registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: c,
 			Quantity:  quantity,

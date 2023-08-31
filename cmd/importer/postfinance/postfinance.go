@@ -189,7 +189,7 @@ func (p *Parser) readBookingLine() (bool, error) {
 		Date:        date,
 		Description: strings.TrimSpace(rec[bfAvisierungstext]),
 		Postings: posting.Builder{
-			Credit:    p.journal.Registry.TBDAccount(),
+			Credit:    p.journal.Registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: p.currency,
 			Quantity:  quantity,

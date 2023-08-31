@@ -217,13 +217,13 @@ func (p *parser) parseBooking(r []string) error {
 		}
 		t.Postings = posting.Builders{
 			{
-				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
+				Credit:    p.journal.Registry.Accounts().ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Quantity:  quantity,
 			},
 			{
-				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
+				Credit:    p.journal.Registry.Accounts().ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Quantity:  otherQuantity,
@@ -236,13 +236,13 @@ func (p *parser) parseBooking(r []string) error {
 		}
 		t.Postings = posting.Builders{
 			{
-				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
+				Credit:    p.journal.Registry.Accounts().ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Quantity:  quantity,
 			},
 			{
-				Credit:    p.journal.Registry.ValuationAccountFor(p.account),
+				Credit:    p.journal.Registry.Accounts().ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Quantity:  otherAmount.Neg(),
@@ -251,7 +251,7 @@ func (p *parser) parseBooking(r []string) error {
 	default:
 		t.Postings = posting.Builder{
 
-			Credit:    p.journal.Registry.TBDAccount(),
+			Credit:    p.journal.Registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: p.currency,
 			Quantity:  quantity,

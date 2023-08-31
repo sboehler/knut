@@ -159,7 +159,7 @@ func Balance(reg *model.Registry, v *model.Commodity) DayFn {
 			if gain.IsZero() {
 				continue
 			}
-			credit := reg.ValuationAccountFor(pos.Account)
+			credit := reg.Accounts().ValuationAccountFor(pos.Account)
 			d.Transactions = append(d.Transactions, transaction.Builder{
 				Date:        d.Date,
 				Description: fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity.Name(), pos.Account.Name()),

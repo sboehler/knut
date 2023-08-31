@@ -147,7 +147,7 @@ func (p *parser) readBooking() error {
 		Description: fmt.Sprintf("%s / %s / %s / %s", r[beschreibung], r[kartennummer], r[kategorie], r[debitKredit]),
 		Postings: posting.Builder{
 			Credit:    p.account,
-			Debit:     p.journal.Registry.TBDAccount(),
+			Debit:     p.journal.Registry.Accounts().TBDAccount(),
 			Commodity: c,
 			Quantity:  quantity,
 		}.Build(),

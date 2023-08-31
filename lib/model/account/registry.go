@@ -206,5 +206,17 @@ func (as *Registry) SwapType(a *Account) *Account {
 	defer as.mutex.Unlock()
 	as.swaps[a] = sw
 	return sw
+}
 
+// TBDAccount returns the TBD account.
+func (as *Registry) TBDAccount() *Account {
+	return as.MustGet("Expenses:TBD")
+}
+
+// ValuationAccountFor returns the valuation account which corresponds to
+// the given Asset or Liability account.
+func (as *Registry) ValuationAccountFor(a *Account) *Account {
+	suffix := a.Split()[1:]
+	segments := append(as.MustGet("Income").Split(), suffix...)
+	return as.MustGet(strings.Join(segments, ":"))
 }

@@ -159,23 +159,45 @@ func (cf MappingFlag) String() string {
 
 // Type implements pflag.Value.
 func (cf MappingFlag) Type() string {
-	return "<level>,<regex>"
+	return "<level>[:<suffix>],<regex>"
 }
 
 // Set implements pflag.Value.
 func (cf *MappingFlag) Set(v string) error {
 	s := strings.SplitN(v, ",", 2)
-	l, err := strconv.Atoi(s[0])
-	if err != nil {
-		return fmt.Errorf("expected integer level, got %q (error: %v)", s[0], err)
+	if len(s) == 0 || len(s) > 2 {
+		return fmt.Errorf("expected <level>:[:<suffix>],<regex>, got %q", v)
 	}
-	var regex *regexp.Regexp
+	var (
+		level, suffix int
+		regex         *regexp.Regexp
+		err           error
+	)
+	switch nn := strings.Split(s[0], ":"); len(nn) {
+	case 1:
+		if level, err = strconv.Atoi(nn[0]); err != nil {
+			return fmt.Errorf("expected integer, got %q (error: %v)", s[0], err)
+		}
+	case 2:
+		if level, err = strconv.Atoi(nn[0]); err != nil {
+			return fmt.Errorf("expected two integers separated by ':', got %q (error: %v)", s[0], err)
+		}
+		if suffix, err = strconv.Atoi(nn[1]); err != nil {
+			return fmt.Errorf("expected two integers separated by ':', got %q (error: %v)", s[0], err)
+		}
+	default:
+		return fmt.Errorf("expected <level>:[:<suffix>], got %s", s[0])
+	}
 	if len(s) == 2 {
 		if regex, err = regexp.Compile(s[1]); err != nil {
 			return err
 		}
 	}
-	cf.m = append(cf.m, account.Rule{Level: l, Regex: regex})
+	cf.m = append(cf.m, account.Rule{
+		Level:  level,
+		Suffix: suffix,
+		Regex:  regex,
+	})
 	return nil
 }
 

@@ -60,7 +60,6 @@ type weightsRunner struct {
 	color     bool
 	digits    int32
 
-	omitCommodities    bool
 	mapping            flags.MappingFlag
 	sortAlphabetically bool
 
@@ -78,7 +77,6 @@ func (r *weightsRunner) setupFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	cmd.Flags().BoolVar(&r.csv, "csv", false, "render csv")
-	cmd.Flags().BoolVar(&r.omitCommodities, "omit-commodities", false, "don't render commodities")
 	cmd.Flags().VarP(&r.mapping, "map", "m", "<level>,<regex>")
 	cmd.Flags().Int32Var(&r.digits, "digits", 0, "round to number of digits")
 	cmd.Flags().BoolVarP(&r.thousands, "thousands", "k", false, "show numbers in units of 1000")
@@ -126,10 +124,9 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 		journal.Balance(reg, valuation),
 		calculator.ComputeValues(),
 		weights.Query{
-			OmitCommodities: r.omitCommodities,
-			Universe:        universe,
-			Partition:       partition,
-			Mapping:         r.mapping.Value(),
+			Universe:  universe,
+			Partition: partition,
+			Mapping:   r.mapping.Value(),
 		}.Execute(j, rep),
 	)
 	if err != nil {

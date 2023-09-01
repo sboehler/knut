@@ -15,10 +15,9 @@ import (
 )
 
 type Query struct {
-	OmitCommodities bool
-	Partition       date.Partition
-	Universe        performance.Universe
-	Mapping         account.Mapping
+	Partition date.Partition
+	Universe  performance.Universe
+	Mapping   account.Mapping
 }
 
 func (q Query) Execute(j *journal.Journal, r *Report) journal.DayFn {
@@ -36,12 +35,9 @@ func (q Query) Execute(j *journal.Journal, r *Report) journal.DayFn {
 		}
 		for com, v := range d.Performance.V1 {
 			ss := q.Universe.Locate(com)
-			level, ok := q.Mapping.Level(strings.Join(ss, ":"))
-			if q.OmitCommodities {
-				ss = ss[:len(ss)-1]
-			}
-			if ok && level < len(ss) {
-				ss = ss[:level]
+			level, suffix, ok := q.Mapping.Level(strings.Join(ss, ":"))
+			if ok && level < len(ss)-suffix {
+				ss = append(ss[:level], ss[len(ss)-suffix:]...)
 			}
 			r.Add(ss, d.Date, v/total)
 		}

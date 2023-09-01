@@ -109,22 +109,23 @@ func Compare(a1, a2 *Account) compare.Order {
 
 // Rule is a rule to shorten accounts which match the given regex.
 type Rule struct {
-	Level int
-	Regex *regexp.Regexp
+	Level  int
+	Suffix int
+	Regex  *regexp.Regexp
 }
 
 func (rule Rule) String() string {
 	return fmt.Sprintf("%d,%v", rule.Level, rule.Regex)
 }
 
-func (rule Rule) Match(s string) (int, bool) {
+func (rule Rule) Match(s string) (int, int, bool) {
 	if rule.Regex == nil {
-		return rule.Level, true
+		return rule.Level, rule.Suffix, true
 	}
 	if rule.Regex.MatchString(s) {
-		return rule.Level, true
+		return rule.Level, rule.Suffix, true
 	}
-	return 0, false
+	return 0, 0, false
 }
 
 // Mapping is a set of mapping rules.
@@ -139,13 +140,13 @@ func (m Mapping) String() string {
 }
 
 // Level returns the Level to which an account should be shortened.
-func (m Mapping) Level(s string) (int, bool) {
+func (m Mapping) Level(s string) (int, int, bool) {
 	for _, rule := range m {
-		if l, ok := rule.Match(s); ok {
-			return l, ok
+		if level, suffix, ok := rule.Match(s); ok {
+			return level, suffix, ok
 		}
 	}
-	return 0, false
+	return 0, 0, false
 }
 
 func Shorten(reg *Registry, m Mapping) mapper.Mapper[*Account] {
@@ -153,14 +154,26 @@ func Shorten(reg *Registry, m Mapping) mapper.Mapper[*Account] {
 		return mapper.Identity[*Account]
 	}
 	return func(a *Account) *Account {
-		level, ok := m.Level(a.name)
+		level, suffix, ok := m.Level(a.name)
 		if !ok {
 			return a
 		}
-		if level >= a.level {
+		if level == 0 {
+			return nil
+		}
+		if suffix >= a.level {
 			return a
 		}
-		return reg.NthParent(a, a.level-level)
+		if level > a.level-suffix {
+			return a
+		}
+		if suffix == 0 {
+			return reg.NthParent(a, a.level-level)
+		}
+		splitPos := a.level - suffix
+		ss := a.Split()
+		pref, suff := ss[:splitPos], ss[splitPos:]
+		return reg.MustGet(strings.Join(append(pref[:level], suff...), ":"))
 	}
 }
 

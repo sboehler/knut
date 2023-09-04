@@ -38,11 +38,11 @@ type Registry struct {
 // NewRegistry creates a new thread-safe collection of accounts.
 func NewRegistry() *Registry {
 	accounts := map[Type]*Account{
-		ASSETS:      {accountType: ASSETS, name: "Assets", level: 1},
-		LIABILITIES: {accountType: LIABILITIES, name: "Liabilities", level: 1},
-		EQUITY:      {accountType: EQUITY, name: "Equity", level: 1},
-		INCOME:      {accountType: INCOME, name: "Income", level: 1},
-		EXPENSES:    {accountType: EXPENSES, name: "Expenses", level: 1},
+		ASSETS:      {accountType: ASSETS, name: "Assets", segments: []string{"Assets"}},
+		LIABILITIES: {accountType: LIABILITIES, name: "Liabilities", segments: []string{"Liabilities"}},
+		EQUITY:      {accountType: EQUITY, name: "Equity", segments: []string{"Equity"}},
+		INCOME:      {accountType: INCOME, name: "Income", segments: []string{"Income"}},
+		EXPENSES:    {accountType: EXPENSES, name: "Expenses", segments: []string{"Expenses"}},
 	}
 	index := make(map[string]*Account)
 	for _, account := range accounts {
@@ -92,7 +92,7 @@ func (as *Registry) Get(name string) (*Account, error) {
 			acc := &Account{
 				accountType: at,
 				name:        n,
-				level:       i + 1,
+				segments:    strings.Split(n, ":"),
 			}
 			as.parents[acc] = parent
 			dict.GetDefault(as.children, parent, set.New[*Account]).Add(acc)
@@ -185,7 +185,7 @@ func (as *Registry) TBDAccount() *Account {
 // ValuationAccountFor returns the valuation account which corresponds to
 // the given Asset or Liability account.
 func (as *Registry) ValuationAccountFor(a *Account) *Account {
-	suffix := a.Split()[1:]
-	segments := append(as.MustGet("Income").Split(), suffix...)
+	suffix := a.Segments()[1:]
+	segments := append(as.MustGet("Income").Segments(), suffix...)
 	return as.MustGet(strings.Join(segments, ":"))
 }

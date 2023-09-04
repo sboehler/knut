@@ -57,12 +57,12 @@ var types = map[string]Type{
 type Account struct {
 	accountType Type
 	name        string
-	level       int
+	segments    []string
 }
 
-// Split returns the account name split into segments.
-func (a *Account) Split() []string {
-	return strings.Split(a.name, ":")
+// Segments returns the account name split into segments.
+func (a *Account) Segments() []string {
+	return a.segments
 }
 
 // Name returns the name of this account.
@@ -90,7 +90,7 @@ func (a Account) String() string {
 }
 
 func (a Account) Level() int {
-	return a.level
+	return len(a.segments)
 }
 
 func Compare(a1, a2 *Account) compare.Order {
@@ -155,17 +155,17 @@ func Shorten(reg *Registry, m Mapping) mapper.Mapper[*Account] {
 		if level == 0 {
 			return nil
 		}
-		if suffix >= a.level {
+		ss := a.Segments()
+		if suffix >= len(ss) {
 			return a
 		}
-		if level > a.level-suffix {
+		if level > len(ss)-suffix {
 			return a
 		}
 		if suffix == 0 {
-			return reg.NthParent(a, a.level-level)
+			return reg.NthParent(a, a.Level()-level)
 		}
-		splitPos := a.level - suffix
-		ss := a.Split()
+		splitPos := a.Level() - suffix
 		pref, suff := ss[:splitPos], ss[splitPos:]
 		return reg.MustGet(strings.Join(append(pref[:level], suff...), ":"))
 	}

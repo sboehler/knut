@@ -40,9 +40,9 @@ func (r *Report) Insert(k amounts.Key, v decimal.Decimal) {
 	}
 	var n *Node
 	if k.Account.IsAL() {
-		n = r.AL.GetOrCreate(k.Account.Split())
+		n = r.AL.GetOrCreate(k.Account.Segments())
 	} else {
-		n = r.EIE.GetOrCreate(k.Account.Split())
+		n = r.EIE.GetOrCreate(k.Account.Segments())
 	}
 	if n.Value.Account == nil {
 		n.Value.Account = k.Account

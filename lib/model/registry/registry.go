@@ -37,11 +37,6 @@ func New() *Registry {
 	}
 }
 
-// GetAccount returns an account.
-func (reg Registry) GetAccount(name string) (*Account, error) {
-	return reg.accounts.Get(name)
-}
-
 // GetCommodity returns a commodity.
 func (reg Registry) GetCommodity(name string) (*Commodity, error) {
 	return reg.commodities.Get(name)

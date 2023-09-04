@@ -158,7 +158,7 @@ func Shorten(reg *Registry, m Mapping) mapper.Mapper[*Account] {
 		if suffix >= a.level {
 			return a
 		}
-		if level > a.level-suffix {
+		if suffix+level > a.level {
 			return a
 		}
 		if suffix == 0 {

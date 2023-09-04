@@ -133,36 +133,6 @@ func (as *Registry) Parent(a *Account) *Account {
 	return as.parents[a]
 }
 
-// Ancestors returns the chain of ancestors of a, including a.
-func (as *Registry) Ancestors(a *Account) []*Account {
-	as.mutex.RLock()
-	defer as.mutex.RUnlock()
-	return as.ancestors(a)
-}
-
-func (as *Registry) ancestors(a *Account) []*Account {
-	var res []*Account
-	if p := as.parents[a]; p != nil {
-		res = as.ancestors(p)
-	}
-	return append(res, a)
-}
-
-// Children returns the children of this account.
-func (as *Registry) Children(a *Account) []*Account {
-	as.mutex.RLock()
-	defer as.mutex.RUnlock()
-	ch := as.children[a]
-	if ch == nil {
-		return nil
-	}
-	res := make([]*Account, 0, len(ch))
-	for c := range ch {
-		res = append(res, c)
-	}
-	return res
-}
-
 func (as *Registry) NthParent(a *Account, n int) *Account {
 	as.mutex.RLock()
 	defer as.mutex.RUnlock()

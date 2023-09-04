@@ -38,11 +38,11 @@ type Registry struct {
 // NewRegistry creates a new thread-safe collection of accounts.
 func NewRegistry() *Registry {
 	accounts := map[Type]*Account{
-		ASSETS:      {accountType: ASSETS, name: "Assets", segment: "Assets", level: 1},
-		LIABILITIES: {accountType: LIABILITIES, name: "Liabilities", segment: "Liabilities", level: 1},
-		EQUITY:      {accountType: EQUITY, name: "Equity", segment: "Equity", level: 1},
-		INCOME:      {accountType: INCOME, name: "Income", segment: "Income", level: 1},
-		EXPENSES:    {accountType: EXPENSES, name: "Expenses", segment: "Expenses", level: 1},
+		ASSETS:      {accountType: ASSETS, name: "Assets", level: 1},
+		LIABILITIES: {accountType: LIABILITIES, name: "Liabilities", level: 1},
+		EQUITY:      {accountType: EQUITY, name: "Equity", level: 1},
+		INCOME:      {accountType: INCOME, name: "Income", level: 1},
+		EXPENSES:    {accountType: EXPENSES, name: "Expenses", level: 1},
 	}
 	index := make(map[string]*Account)
 	for _, account := range accounts {
@@ -92,7 +92,6 @@ func (as *Registry) Get(name string) (*Account, error) {
 			acc := &Account{
 				accountType: at,
 				name:        n,
-				segment:     segments[i],
 				level:       i + 1,
 			}
 			as.parents[acc] = parent

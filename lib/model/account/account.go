@@ -57,7 +57,6 @@ var types = map[string]Type{
 type Account struct {
 	accountType Type
 	name        string
-	segment     string
 	level       int
 }
 
@@ -69,11 +68,6 @@ func (a *Account) Split() []string {
 // Name returns the name of this account.
 func (a Account) Name() string {
 	return a.name
-}
-
-// Segment returns the name of this account.
-func (a Account) Segment() string {
-	return a.segment
 }
 
 // Type returns the account type.

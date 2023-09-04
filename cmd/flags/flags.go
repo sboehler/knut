@@ -228,9 +228,9 @@ func (cf CommodityFlag) String() string {
 }
 
 // Value returns the commodity.
-func (cf CommodityFlag) Value(ctx *model.Registry) (*model.Commodity, error) {
+func (cf CommodityFlag) Value(reg *model.Registry) (*model.Commodity, error) {
 	if cf.val != "" {
-		return ctx.GetCommodity(cf.val)
+		return reg.Commodities().Get(cf.val)
 	}
 	return nil, nil
 }

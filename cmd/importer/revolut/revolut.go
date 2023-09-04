@@ -149,7 +149,7 @@ func (p *parser) parseHeader(r []string) error {
 		return fmt.Errorf("could not extract currency from header field: %q", r[bfPaidOut])
 	}
 	var err error
-	p.currency, err = p.journal.Registry.GetCommodity(groups[1])
+	p.currency, err = p.journal.Registry.Commodities().Get(groups[1])
 	return err
 }
 
@@ -271,7 +271,7 @@ func (p *parser) parseCombiField(f string) (*model.Commodity, decimal.Decimal, e
 		otherAmount    decimal.Decimal
 		err            error
 	)
-	if otherCommodity, err = p.journal.Registry.GetCommodity(fs[0]); err != nil {
+	if otherCommodity, err = p.journal.Registry.Commodities().Get(fs[0]); err != nil {
 		return nil, decimal.Decimal{}, err
 	}
 	if otherAmount, err = parseDecimal(fs[1]); err != nil {

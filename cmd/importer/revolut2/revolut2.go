@@ -162,7 +162,7 @@ func (p *parser) parseBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid started date in row %v: %w", r, err)
 	}
-	c, err := p.journal.Registry.GetCommodity(r[bfCurrency])
+	c, err := p.journal.Registry.Commodities().Get(r[bfCurrency])
 	if err != nil {
 		return fmt.Errorf("invalid commodity in row %v: %v", r, err)
 	}

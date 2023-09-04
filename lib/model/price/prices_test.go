@@ -12,8 +12,8 @@ import (
 
 func TestPrices(t *testing.T) {
 	reg := registry.New()
-	com1 := reg.Commodity("COM1")
-	com2 := reg.Commodity("COM2")
+	com1 := reg.Commodities().MustGet("COM1")
+	com2 := reg.Commodities().MustGet("COM2")
 
 	tests := []struct {
 		desc  string
@@ -55,9 +55,9 @@ func TestPrices(t *testing.T) {
 
 func TestNormalize(t *testing.T) {
 	reg := registry.New()
-	com1 := reg.Commodity("COM1")
-	com2 := reg.Commodity("COM2")
-	com3 := reg.Commodity("COM3")
+	com1 := reg.Commodities().MustGet("COM1")
+	com2 := reg.Commodities().MustGet("COM2")
+	com3 := reg.Commodities().MustGet("COM3")
 
 	tests := []struct {
 		desc   string

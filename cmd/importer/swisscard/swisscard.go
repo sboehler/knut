@@ -150,7 +150,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if quantity, err = decimal.NewFromString(replacer.Replace(r[3])); err != nil {
 		return false, err
 	}
-	if chf, err = p.journal.Registry.GetCommodity("CHF"); err != nil {
+	if chf, err = p.journal.Registry.Commodities().Get("CHF"); err != nil {
 		return false, err
 	}
 	p.journal.AddTransaction(transaction.Builder{

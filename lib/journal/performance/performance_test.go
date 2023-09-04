@@ -18,10 +18,10 @@ import (
 func TestComputeFlows(t *testing.T) {
 
 	ctx := registry.New()
-	chf := ctx.Commodity("CHF")
-	usd := ctx.Commodity("USD")
-	gbp := ctx.Commodity("GBP")
-	aapl := ctx.Commodity("AAPL")
+	chf := ctx.Commodities().MustGet("CHF")
+	usd := ctx.Commodities().MustGet("USD")
+	gbp := ctx.Commodities().MustGet("GBP")
+	aapl := ctx.Commodities().MustGet("AAPL")
 	portfolio := ctx.Accounts().MustGet("Assets:Portfolio")
 	acc1 := ctx.Accounts().MustGet("Assets:Acc1")
 	acc2 := ctx.Accounts().MustGet("Assets:Acc2")

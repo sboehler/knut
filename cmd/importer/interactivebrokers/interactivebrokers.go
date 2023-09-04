@@ -192,7 +192,7 @@ func (p *parser) parseBaseCurrency(r []string) (bool, error) {
 		return false, nil
 	}
 	var err error
-	if p.baseCurrency, err = p.journal.Registry.GetCommodity(r[aiFieldValue]); err != nil {
+	if p.baseCurrency, err = p.journal.Registry.Commodities().Get(r[aiFieldValue]); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -263,10 +263,10 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 		qty, price, proceeds, fee decimal.Decimal
 		err                       error
 	)
-	if currency, err = p.journal.Registry.GetCommodity(r[tfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.Commodities().Get(r[tfCurrency]); err != nil {
 		return false, err
 	}
-	if stock, err = p.journal.Registry.GetCommodity(r[tfSymbol]); err != nil {
+	if stock, err = p.journal.Registry.Commodities().Get(r[tfSymbol]); err != nil {
 		return false, err
 	}
 	date, err = parseDateFromDateTime(r[tfDateTime])
@@ -335,10 +335,10 @@ func (p *parser) parseForex(r []string) (bool, error) {
 		qty, price, proceeds, fee decimal.Decimal
 		err                       error
 	)
-	if currency, err = p.journal.Registry.GetCommodity(r[tfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.Commodities().Get(r[tfCurrency]); err != nil {
 		return false, err
 	}
-	if stock, err = p.journal.Registry.GetCommodity(strings.SplitN(r[tfSymbol], ".", 2)[0]); err != nil {
+	if stock, err = p.journal.Registry.Commodities().Get(strings.SplitN(r[tfSymbol], ".", 2)[0]); err != nil {
 		return false, err
 	}
 	if date, err = parseDateFromDateTime(r[tfDateTime]); err != nil {
@@ -417,7 +417,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 		quantity decimal.Decimal
 		err      error
 	)
-	if currency, err = p.journal.Registry.GetCommodity(r[dwfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.Commodities().Get(r[dwfCurrency]); err != nil {
 		return false, err
 	}
 	if date, err = parseDate(r[dwfSettleDate]); err != nil {
@@ -470,7 +470,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 		symbol             string
 		err                error
 	)
-	if currency, err = p.journal.Registry.GetCommodity(r[dfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.Commodities().Get(r[dfCurrency]); err != nil {
 		return false, err
 	}
 	if date, err = parseDate(r[dfDate]); err != nil {
@@ -482,7 +482,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if symbol, err = parseDividendSymbol(r[dfDescription]); err != nil {
 		return false, err
 	}
-	if security, err = p.journal.Registry.GetCommodity(symbol); err != nil {
+	if security, err = p.journal.Registry.Commodities().Get(symbol); err != nil {
 		return false, err
 	}
 	p.journal.AddTransaction(transaction.Builder{
@@ -535,7 +535,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 		symbol             string
 		err                error
 	)
-	if currency, err = p.journal.Registry.GetCommodity(r[wtfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.Commodities().Get(r[wtfCurrency]); err != nil {
 		return false, err
 	}
 	if date, err = parseDate(r[wtfDate]); err != nil {
@@ -547,7 +547,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if symbol, err = parseDividendSymbol(r[wtfDescription]); err != nil {
 		return false, err
 	}
-	if security, err = p.journal.Registry.GetCommodity(symbol); err != nil {
+	if security, err = p.journal.Registry.Commodities().Get(symbol); err != nil {
 		return false, err
 	}
 	p.journal.AddTransaction(transaction.Builder{
@@ -576,7 +576,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 		desc     = r[dfDescription]
 		err      error
 	)
-	if currency, err = p.journal.Registry.GetCommodity(r[dfCurrency]); err != nil {
+	if currency, err = p.journal.Registry.Commodities().Get(r[dfCurrency]); err != nil {
 		return false, err
 	}
 	if date, err = parseDate(r[dfDate]); err != nil {
@@ -633,7 +633,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 		quantity decimal.Decimal
 		err      error
 	)
-	if symbol, err = p.journal.Registry.GetCommodity(r[opfSymbol]); err != nil {
+	if symbol, err = p.journal.Registry.Commodities().Get(r[opfSymbol]); err != nil {
 		return false, err
 	}
 	if quantity, err = decimal.NewFromString(r[opfQuantity]); err != nil {
@@ -679,7 +679,7 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 		amount decimal.Decimal
 		err    error
 	)
-	if symbol, err = p.journal.Registry.GetCommodity(r[fbfDescription]); err != nil {
+	if symbol, err = p.journal.Registry.Commodities().Get(r[fbfDescription]); err != nil {
 		return false, err
 	}
 	if amount, err = parseRoundedDecimal(r[fbfQuantity]); err != nil {

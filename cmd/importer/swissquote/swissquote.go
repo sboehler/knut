@@ -204,7 +204,7 @@ func (p *parser) lineToRecord(l []string) (*record, error) {
 		return nil, err
 	}
 	if len(l[fSymbol]) > 0 {
-		if r.symbol, err = p.journal.Registry.GetCommodity(l[fSymbol]); err != nil {
+		if r.symbol, err = p.journal.Registry.Commodities().Get(l[fSymbol]); err != nil {
 			return nil, err
 		}
 	}
@@ -226,7 +226,7 @@ func (p *parser) lineToRecord(l []string) (*record, error) {
 	if r.balance, err = parseDecimal(l[fSaldo]); err != nil {
 		return nil, err
 	}
-	if r.currency, err = p.journal.Registry.GetCommodity(l[fWährung]); err != nil {
+	if r.currency, err = p.journal.Registry.Commodities().Get(l[fWährung]); err != nil {
 		return nil, err
 	}
 	return &r, nil

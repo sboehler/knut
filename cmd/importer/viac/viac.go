@@ -66,7 +66,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	commodity, err := reg.GetCommodity("CHF")
+	commodity, err := reg.Commodities().Get("CHF")
 	if err != nil {
 		return err
 	}

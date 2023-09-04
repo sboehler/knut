@@ -37,20 +37,6 @@ func New() *Registry {
 	}
 }
 
-// GetCommodity returns a commodity.
-func (reg Registry) GetCommodity(name string) (*Commodity, error) {
-	return reg.commodities.Get(name)
-}
-
-// Commodity returns a commodity or panics.
-func (reg Registry) Commodity(name string) *Commodity {
-	c, err := reg.GetCommodity(name)
-	if err != nil {
-		panic(err)
-	}
-	return c
-}
-
 // Accounts returns the accounts.
 func (reg Registry) Accounts() *account.Registry {
 	return reg.accounts

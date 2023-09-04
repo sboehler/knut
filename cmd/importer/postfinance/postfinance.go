@@ -118,11 +118,11 @@ func (p *Parser) parse() error {
 	}
 	if s, ok := kv["Währung:"]; ok {
 		sym := strings.Trim(s, "=\"")
-		if p.currency, err = p.journal.Registry.GetCommodity(sym); err != nil {
+		if p.currency, err = p.journal.Registry.Commodities().Get(sym); err != nil {
 			return err
 		}
 	} else {
-		p.currency = p.journal.Registry.Commodity("CHF")
+		p.currency = p.journal.Registry.Commodities().MustGet("CHF")
 	}
 	for {
 		ok, err := p.readBookingLine()

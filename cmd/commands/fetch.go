@@ -131,7 +131,7 @@ func (r *fetchRunner) readFile(ctx *registry.Registry, filepath string) (res map
 	return prices, nil
 }
 
-func (r *fetchRunner) fetchPrices(ctx *registry.Registry, cfg fetchConfig, t0, t1 time.Time, results map[time.Time]*model.Price) error {
+func (r *fetchRunner) fetchPrices(reg *registry.Registry, cfg fetchConfig, t0, t1 time.Time, results map[time.Time]*model.Price) error {
 	var (
 		c                 = yahoo.New()
 		quotes            []yahoo.Quote
@@ -141,10 +141,10 @@ func (r *fetchRunner) fetchPrices(ctx *registry.Registry, cfg fetchConfig, t0, t
 	if quotes, err = c.Fetch(cfg.Symbol, t0, t1); err != nil {
 		return err
 	}
-	if commodity, err = ctx.GetCommodity(cfg.Commodity); err != nil {
+	if commodity, err = reg.Commodities().Get(cfg.Commodity); err != nil {
 		return err
 	}
-	if target, err = ctx.GetCommodity(cfg.TargetCommodity); err != nil {
+	if target, err = reg.Commodities().Get(cfg.TargetCommodity); err != nil {
 		return err
 	}
 	for _, quote := range quotes {

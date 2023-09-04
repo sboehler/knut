@@ -60,6 +60,14 @@ func (cs *Registry) Get(name string) (*Commodity, error) {
 	return res, nil
 }
 
+func (cs *Registry) MustGet(name string) *Commodity {
+	com, err := cs.Get(name)
+	if err != nil {
+		panic(err)
+	}
+	return com
+}
+
 func (as *Registry) Create(a syntax.Commodity) (*Commodity, error) {
 	return as.Get(a.Extract())
 }

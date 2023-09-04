@@ -79,8 +79,8 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	p := parser{
-		context: ctx,
-		account: account,
+		registry: ctx,
+		account:  account,
 	}
 	var trx []*model.Transaction
 	if trx, err = p.parse(reader); err != nil {
@@ -96,8 +96,8 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 }
 
 type parser struct {
-	context *registry.Registry
-	account *model.Account
+	registry *registry.Registry
+	account  *model.Account
 
 	// internal variables
 	reader       *csv.Reader
@@ -174,14 +174,14 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if quantity, err = parseAmount(r[bfBelastungCHF], r[bfGutschriftCHF]); err != nil {
 		return false, err
 	}
-	if chf, err = p.context.GetCommodity("CHF"); err != nil {
+	if chf, err = p.registry.Commodities().Get("CHF"); err != nil {
 		return false, err
 	}
 	p.transactions = append(p.transactions, transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
-			Credit:    p.context.Accounts().TBDAccount(),
+			Credit:    p.registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: chf,
 			Quantity:  quantity,
@@ -262,14 +262,14 @@ func (p *parser) parseRounding(r []string) (bool, error) {
 	if amount, err = parseAmount(r[rfBelastungCHF], r[rfGutschriftCHF]); err != nil {
 		return false, err
 	}
-	if chf, err = p.context.GetCommodity("CHF"); err != nil {
+	if chf, err = p.registry.Commodities().Get("CHF"); err != nil {
 		return false, err
 	}
 	p.transactions = append(p.transactions, transaction.Builder{
 		Date:        date,
 		Description: r[rfBeschreibung],
 		Postings: posting.Builder{
-			Credit:    p.context.Accounts().TBDAccount(),
+			Credit:    p.registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: chf,
 			Quantity:  amount,

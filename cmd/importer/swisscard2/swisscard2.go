@@ -137,7 +137,7 @@ func (p *parser) readBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid date in record %v: %w", r, err)
 	}
-	c := p.journal.Registry.Commodity(r[währung])
+	c := p.journal.Registry.Commodities().MustGet(r[währung])
 	quantity, err := decimal.NewFromString(r[betrag])
 	if err != nil {
 		return fmt.Errorf("invalid amount in record %v: %w", r, err)

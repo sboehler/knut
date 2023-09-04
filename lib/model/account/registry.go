@@ -21,7 +21,6 @@ import (
 	"unicode"
 
 	"github.com/sboehler/knut/lib/common/dict"
-	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/syntax"
 )
 
@@ -30,7 +29,6 @@ type Registry struct {
 	mutex    sync.RWMutex
 	index    map[string]*Account
 	accounts map[Type]*Account
-	children map[*Account]set.Set[*Account]
 	parents  map[*Account]*Account
 	swaps    map[*Account]*Account
 }
@@ -52,7 +50,6 @@ func NewRegistry() *Registry {
 		accounts: accounts,
 		index:    index,
 		parents:  make(map[*Account]*Account),
-		children: make(map[*Account]set.Set[*Account]),
 		swaps:    make(map[*Account]*Account),
 	}
 }
@@ -95,7 +92,6 @@ func (as *Registry) Get(name string) (*Account, error) {
 				segments:    strings.Split(n, ":"),
 			}
 			as.parents[acc] = parent
-			dict.GetDefault(as.children, parent, set.New[*Account]).Add(acc)
 			return acc
 		})
 	}

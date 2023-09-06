@@ -20,7 +20,7 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/sboehler/knut/lib/common/dict"
+	"github.com/sboehler/knut/lib/common/multimap"
 	"github.com/sboehler/knut/lib/syntax"
 )
 
@@ -28,30 +28,22 @@ import (
 type Registry struct {
 	mutex    sync.RWMutex
 	index    map[string]*Account
-	accounts map[Type]*Account
-	parents  map[*Account]*Account
+	accounts *multimap.Node[*Account]
 	swaps    map[*Account]*Account
 }
 
 // NewRegistry creates a new thread-safe collection of accounts.
 func NewRegistry() *Registry {
-	accounts := map[Type]*Account{
-		ASSETS:      {accountType: ASSETS, name: "Assets", segments: []string{"Assets"}},
-		LIABILITIES: {accountType: LIABILITIES, name: "Liabilities", segments: []string{"Liabilities"}},
-		EQUITY:      {accountType: EQUITY, name: "Equity", segments: []string{"Equity"}},
-		INCOME:      {accountType: INCOME, name: "Income", segments: []string{"Income"}},
-		EXPENSES:    {accountType: EXPENSES, name: "Expenses", segments: []string{"Expenses"}},
-	}
-	index := make(map[string]*Account)
-	for _, account := range accounts {
-		index[account.name] = account
-	}
-	return &Registry{
-		accounts: accounts,
-		index:    index,
-		parents:  make(map[*Account]*Account),
+	reg := &Registry{
+		accounts: multimap.New[*Account](""),
+		index:    make(map[string]*Account),
 		swaps:    make(map[*Account]*Account),
 	}
+	for _, t := range types {
+		reg.Get(t.String())
+	}
+
+	return reg
 }
 
 // Get returns an account.
@@ -62,44 +54,58 @@ func (as *Registry) Get(name string) (*Account, error) {
 	if ok {
 		return res, nil
 	}
+	return as.getOrCreatePath(strings.Split(name, ":"))
+}
+
+// Get returns an account.
+func (as *Registry) GetPath(segments []string) (*Account, error) {
+	as.mutex.RLock()
+	res, ok := as.accounts.GetPath(segments)
+	as.mutex.RUnlock()
+	if ok {
+		return res.Value, nil
+	}
+	return as.getOrCreatePath(segments)
+}
+
+func (as *Registry) getOrCreatePath(segments []string) (*Account, error) {
 	as.mutex.Lock()
 	defer as.mutex.Unlock()
-	// check if the account has been created in the meantime
-	if a, ok := as.index[name]; ok {
-		return a, nil
+	if res, ok := as.accounts.GetPath(segments); ok {
+		return res.Value, nil
 	}
-	segments := strings.Split(name, ":")
-	if len(segments) < 2 {
-		return nil, fmt.Errorf("invalid account name: %q", name)
+	if len(segments) == 0 {
+		return nil, fmt.Errorf("invalid account: %s", segments)
 	}
 	head, tail := segments[0], segments[1:]
-	at, ok := types[head]
+	accountType, ok := types[head]
 	if !ok {
-		return nil, fmt.Errorf("account name %q has an invalid account type %q", name, segments[0])
+		return nil, fmt.Errorf("account %s has an invalid account type %s", segments, head)
 	}
 	for _, s := range tail {
 		if !isValidSegment(s) {
-			return nil, fmt.Errorf("account name %q has an invalid segment %q", name, s)
+			return nil, fmt.Errorf("account  %s has an invalid segment %q", segments, s)
 		}
 	}
-	var parent *Account
-	for i := range segments {
-		n := strings.Join(segments[:i+1], ":")
-		parent = dict.GetDefault(as.index, n, func() *Account {
-			acc := &Account{
-				accountType: at,
-				name:        n,
-				segments:    strings.Split(n, ":"),
-			}
-			as.parents[acc] = parent
-			return acc
-		})
+	current := as.accounts
+	for i, segment := range segments {
+		if ch, ok := current.Get(segment); ok {
+			current = ch
+			continue
+		}
+		var err error
+		if current, err = current.Create(segment); err != nil {
+			return nil, err
+		}
+		name := strings.Join(segments[:i+1], ":")
+		current.Value = &Account{
+			accountType: accountType,
+			name:        name,
+			segments:    strings.Split(name, ":"),
+		}
+		as.index[name] = current.Value
 	}
-	return parent, nil
-}
-
-func (as *Registry) Create(a syntax.Account) (*Account, error) {
-	return as.Get(a.Extract())
+	return current.Value, nil
 }
 
 func (as *Registry) MustGet(name string) *Account {
@@ -108,6 +114,18 @@ func (as *Registry) MustGet(name string) *Account {
 		panic(err)
 	}
 	return a
+}
+
+func (as *Registry) MustGetPath(ss []string) *Account {
+	res, err := as.GetPath(ss)
+	if err != nil {
+		panic(fmt.Sprintf("account %s not found: %v", ss, err))
+	}
+	return res
+}
+
+func (as *Registry) Create(a syntax.Account) (*Account, error) {
+	return as.Get(a.Extract())
 }
 
 func isValidSegment(s string) bool {
@@ -122,29 +140,6 @@ func isValidSegment(s string) bool {
 	return true
 }
 
-// Parent returns the parent of this account.
-func (as *Registry) Parent(a *Account) *Account {
-	as.mutex.RLock()
-	defer as.mutex.RUnlock()
-	return as.parents[a]
-}
-
-func (as *Registry) NthParent(a *Account, n int) *Account {
-	as.mutex.RLock()
-	defer as.mutex.RUnlock()
-	if n <= 0 {
-		return a
-	}
-	var ok bool
-	for i := 0; i < n; i++ {
-		a, ok = as.parents[a]
-		if !ok {
-			return nil
-		}
-	}
-	return a
-}
-
 func (as *Registry) SwapType(a *Account) *Account {
 	as.mutex.RLock()
 	sw, ok := as.swaps[a]
@@ -155,13 +150,13 @@ func (as *Registry) SwapType(a *Account) *Account {
 	n := a.name
 	switch a.Type() {
 	case ASSETS:
-		n = as.accounts[LIABILITIES].name + strings.TrimPrefix(n, as.accounts[ASSETS].name)
+		n = LIABILITIES.String() + strings.TrimPrefix(n, ASSETS.String())
 	case LIABILITIES:
-		n = as.accounts[ASSETS].name + strings.TrimPrefix(n, as.accounts[LIABILITIES].name)
+		n = ASSETS.String() + strings.TrimPrefix(n, LIABILITIES.String())
 	case INCOME:
-		n = as.accounts[EXPENSES].name + strings.TrimPrefix(n, as.accounts[INCOME].name)
+		n = EXPENSES.String() + strings.TrimPrefix(n, INCOME.String())
 	case EXPENSES:
-		n = as.accounts[INCOME].name + strings.TrimPrefix(n, as.accounts[EXPENSES].name)
+		n = INCOME.String() + strings.TrimPrefix(n, EXPENSES.String())
 	}
 	sw, err := as.Get(n)
 	if err != nil {
@@ -181,7 +176,6 @@ func (as *Registry) TBDAccount() *Account {
 // ValuationAccountFor returns the valuation account which corresponds to
 // the given Asset or Liability account.
 func (as *Registry) ValuationAccountFor(a *Account) *Account {
-	suffix := a.Segments()[1:]
-	segments := append(as.MustGet("Income").Segments(), suffix...)
+	segments := append(as.MustGet("Income").Segments(), a.Segments()[1:]...)
 	return as.MustGet(strings.Join(segments, ":"))
 }

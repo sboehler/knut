@@ -93,9 +93,14 @@ func setAccounts(reg *account.Registry, n *Node) {
 	var acc *account.Account
 	for _, ch := range n.Children {
 		setAccounts(reg, ch)
-		if acc == nil {
-			acc = reg.Parent(ch.Value.Account)
+		if acc != nil {
+			continue
 		}
+		if ch.Value.Account.Level() == 1 {
+			continue
+		}
+		ss := ch.Value.Account.Segments()
+		acc = reg.MustGetPath(ss[:len(ss)-1])
 	}
 	if n.Value.Account == nil {
 		n.Value.Account = acc

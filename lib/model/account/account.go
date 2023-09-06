@@ -155,19 +155,16 @@ func Shorten(reg *Registry, m Mapping) mapper.Mapper[*Account] {
 		if level == 0 {
 			return nil
 		}
-		ss := a.Segments()
-		if suffix >= len(ss) {
+		if suffix >= a.Level() {
 			return a
 		}
-		if level > len(ss)-suffix {
+		if level > a.Level()-suffix {
 			return a
-		}
-		if suffix == 0 {
-			return reg.NthParent(a, a.Level()-level)
 		}
 		splitPos := a.Level() - suffix
+		ss := a.Segments()
 		pref, suff := ss[:splitPos], ss[splitPos:]
-		return reg.MustGet(strings.Join(append(pref[:level], suff...), ":"))
+		return reg.MustGetPath(append(pref[:level], suff...))
 	}
 }
 

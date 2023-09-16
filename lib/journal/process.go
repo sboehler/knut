@@ -64,8 +64,10 @@ func ComputePrices(v *model.Commodity) DayFn {
 
 // Balance balances the journal.
 func Balance(reg *model.Registry, valuation *model.Commodity) DayFn {
-	quantities, values := make(amounts.Amounts), make(amounts.Amounts)
+	quantities := make(amounts.Amounts)
 	accounts := set.New[*model.Account]()
+
+	var prevPrices price.NormalizedPrices
 
 	processOpenings := func(d *Day) error {
 		for _, o := range d.Openings {
@@ -126,18 +128,15 @@ func Balance(reg *model.Registry, valuation *model.Commodity) DayFn {
 	valuateTransactions := func(d *Day) error {
 		for _, t := range d.Transactions {
 			for _, posting := range t.Postings {
-				if valuation != posting.Commodity {
-					v, err := d.Normalized.Valuate(posting.Commodity, posting.Quantity)
-					if err != nil {
-						return err
-					}
-					posting.Value = v
-				} else {
+				if valuation == posting.Commodity {
 					posting.Value = posting.Quantity
+					continue
 				}
-				if posting.Account.IsAL() {
-					values.Add(amounts.AccountCommodityKey(posting.Account, posting.Commodity), posting.Value)
+				v, err := d.Normalized.Valuate(posting.Commodity, posting.Quantity)
+				if err != nil {
+					return err
 				}
+				posting.Value = v
 			}
 		}
 		return nil
@@ -151,15 +150,22 @@ func Balance(reg *model.Registry, valuation *model.Commodity) DayFn {
 			if !pos.Account.IsAL() {
 				continue
 			}
-			value, err := d.Normalized.Valuate(pos.Commodity, qty)
-			if err != nil {
-				return fmt.Errorf("no valuation found for commodity %s", pos.Commodity.Name())
-			}
-			gain := value.Sub(values[pos])
-			if gain.IsZero() {
+			if qty.IsZero() {
 				continue
 			}
+			prevPrice, err := prevPrices.Price(pos.Commodity)
+			if err != nil {
+				return err
+			}
+			currentPrice, err := d.Normalized.Price(pos.Commodity)
+			if err != nil {
+				return err
+			}
+			gain := price.Multiply(currentPrice.Sub(prevPrice), qty)
 			credit := reg.Accounts().ValuationAccountFor(pos.Account)
+			if !accounts.Has(credit) {
+				accounts.Add(credit)
+			}
 			d.Transactions = append(d.Transactions, transaction.Builder{
 				Date:        d.Date,
 				Description: fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity.Name(), pos.Account.Name()),
@@ -171,14 +177,21 @@ func Balance(reg *model.Registry, valuation *model.Commodity) DayFn {
 				}.Build(),
 				Targets: []*model.Commodity{pos.Commodity},
 			}.Build())
-			values.Add(pos, gain)
-			values.Add(amounts.AccountCommodityKey(credit, pos.Commodity), gain.Neg())
 		}
+		prevPrices = d.Normalized
 		return nil
 
 	}
 
 	return func(d *Day) error {
+		if valuation != nil {
+			if err := valuateTransactions(d); err != nil {
+				return err
+			}
+			if err := valuateGains(d); err != nil {
+				return err
+			}
+		}
 		if err := processOpenings(d); err != nil {
 			return err
 		}
@@ -187,14 +200,6 @@ func Balance(reg *model.Registry, valuation *model.Commodity) DayFn {
 		}
 		if err := processAssertions(d); err != nil {
 			return err
-		}
-		if valuation != nil {
-			if err := valuateTransactions(d); err != nil {
-				return err
-			}
-			if err := valuateGains(d); err != nil {
-				return err
-			}
 		}
 		if err := processClosings(d); err != nil {
 			return err

@@ -54,7 +54,7 @@ func (ps Prices) normalize(c *commodity.Commodity, res NormalizedPrices) {
 		if _, done := res[neighbor]; done {
 			continue
 		}
-		res[neighbor] = multiply(price, res[c])
+		res[neighbor] = Multiply(price, res[c])
 		ps.normalize(neighbor, res)
 	}
 }
@@ -67,15 +67,23 @@ func NewNormalizedPrices() NormalizedPrices {
 	return make(NormalizedPrices)
 }
 
+func (np NormalizedPrices) Price(c *commodity.Commodity) (decimal.Decimal, error) {
+	price, ok := np[c]
+	if !ok {
+		return decimal.Zero, fmt.Errorf("no price found for %v in %v", c, np)
+	}
+	return price, nil
+}
+
 // Valuate valuates the given amount.
 func (np NormalizedPrices) Valuate(c *commodity.Commodity, a decimal.Decimal) (decimal.Decimal, error) {
 	price, ok := np[c]
 	if !ok {
 		return decimal.Zero, fmt.Errorf("no price found for %v in %v", c, np)
 	}
-	return multiply(a, price), nil
+	return Multiply(a, price), nil
 }
 
-func multiply(n1, n2 decimal.Decimal) decimal.Decimal {
+func Multiply(n1, n2 decimal.Decimal) decimal.Decimal {
 	return n1.Mul(n2).Truncate(8)
 }

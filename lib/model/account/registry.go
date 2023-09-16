@@ -133,9 +133,13 @@ func isValidSegment(s string) bool {
 		return false
 	}
 	for _, c := range s {
-		if !(unicode.IsLetter(c) || unicode.IsDigit(c)) {
-			return false
+		if unicode.IsLetter(c) {
+			continue
 		}
+		if unicode.IsDigit(c) {
+			continue
+		}
+		return false
 	}
 	return true
 }

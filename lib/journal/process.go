@@ -161,7 +161,11 @@ func Balance(reg *model.Registry, valuation *model.Commodity) DayFn {
 			if err != nil {
 				return err
 			}
-			gain := price.Multiply(currentPrice.Sub(prevPrice), qty)
+			delta := currentPrice.Sub(prevPrice)
+			if delta.IsZero() {
+				continue
+			}
+			gain := price.Multiply(delta, qty)
 			credit := reg.Accounts().ValuationAccountFor(pos.Account)
 			if !accounts.Has(credit) {
 				accounts.Add(credit)

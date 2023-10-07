@@ -67,22 +67,31 @@ func (calc *Calculator) ComputeValues() func(d *journal.Day) error {
 type pcv = map[*model.Commodity]float64
 
 func (calc *Calculator) ComputeFlows() journal.DayFn {
-	return func(day *journal.Day) error {
-		var portfolioFlows float64
-		if day.Performance == nil {
-			day.Performance = new(journal.Performance)
-		}
-		for _, trx := range day.Transactions {
+	var portfolioFlows float64
+	var performance *journal.Performance
 
+	proc := journal.Processor{
+
+		DayStart: func(d *journal.Day) error {
+			portfolioFlows = 0
+			if d.Performance != nil {
+				performance = d.Performance
+			} else {
+				performance = new(journal.Performance)
+			}
+			return nil
+		},
+
+		Transaction: func(t *model.Transaction) error {
 			// We make the convention that flows per transaction and commodity are
 			// either positive or negative, but not both.
 			var flows, internalFlows pcv
 
 			// tgts contains the commodities among which the performance effects of this
 			// transaction should be split: non-currencies > currencies > valuation currency.
-			tgts := pickTargets(calc.Valuation, trx.Targets)
+			tgts := pickTargets(calc.Valuation, t.Targets)
 
-			for _, p := range trx.Postings {
+			for _, p := range t.Postings {
 
 				if !calc.isPortfolioAccount(p.Account) {
 					// not a portfolio booking - no performance impact.
@@ -119,13 +128,20 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 				}
 			}
 
-			split(flows, &day.Performance.Inflow, &day.Performance.Outflow)
-			split(internalFlows, &day.Performance.InternalInflow, &day.Performance.InternalOutflow)
-		}
-		day.Performance.PortfolioInflow = math.Max(0, portfolioFlows)
-		day.Performance.PortfolioOutflow = math.Min(0, portfolioFlows)
-		return nil
+			split(flows, &performance.Inflow, &performance.Outflow)
+			split(internalFlows, &performance.InternalInflow, &performance.InternalOutflow)
+			return nil
+		},
+
+		DayEnd: func(d *journal.Day) error {
+			performance.PortfolioInflow = math.Max(0, portfolioFlows)
+			performance.PortfolioOutflow = math.Min(0, portfolioFlows)
+			d.Performance = performance
+			return nil
+		},
 	}
+
+	return proc.Process
 }
 
 func split(flows pcv, in, out *pcv) {

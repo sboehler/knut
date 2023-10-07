@@ -227,15 +227,18 @@ func Perf(j *journal.Journal, part date.Partition) journal.DayFn {
 		ds.Add(j.Day(d))
 	}
 	running := 1.0
-	return func(d *journal.Day) error {
-		if !part.Contains(d.Date) {
+	proc := journal.Processor{
+		DayEnd: func(d *journal.Day) error {
+			if !part.Contains(d.Date) {
+				return nil
+			}
+			running *= Performance(d.Performance)
+			if ds.Has(d) {
+				fmt.Printf("%v: %0.1f%%\n", d.Date, 100*(running-1))
+				running = 1.0
+			}
 			return nil
-		}
-		running *= Performance(d.Performance)
-		if ds.Has(d) {
-			fmt.Printf("%v: %0.1f%%\n", d.Date, 100*(running-1))
-			running = 1.0
-		}
-		return nil
+		},
 	}
+	return proc.Process
 }

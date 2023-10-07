@@ -48,18 +48,22 @@ func ComputePrices(v *model.Commodity) DayFn {
 	}
 	var previous price.NormalizedPrices
 	prc := make(price.Prices)
-	return func(day *Day) error {
-		if len(day.Prices) == 0 {
-			day.Normalized = previous
-		} else {
-			for _, p := range day.Prices {
-				prc.Insert(p.Commodity, p.Price, p.Target)
+	proc := Processor{
+		Price: func(p *model.Price) error {
+			prc.Insert(p.Commodity, p.Price, p.Target)
+			return nil
+		},
+		DayEnd: func(d *Day) error {
+			if len(d.Prices) == 0 {
+				d.Normalized = previous
+			} else {
+				d.Normalized = prc.Normalize(v)
+				previous = d.Normalized
 			}
-			day.Normalized = prc.Normalize(v)
-			previous = day.Normalized
-		}
-		return nil
+			return nil
+		},
 	}
+	return proc.Process
 }
 
 // Balance balances the journal.
@@ -196,12 +200,15 @@ func Valuate(reg *model.Registry, valuation *model.Commodity) DayFn {
 }
 
 func Filter(part date.Partition) DayFn {
-	return func(d *Day) error {
-		if !part.Contains(d.Date) {
-			d.Transactions = nil
-		}
-		return nil
+	proc := Processor{
+		DayEnd: func(d *Day) error {
+			if !part.Contains(d.Date) {
+				d.Transactions = nil
+			}
+			return nil
+		},
 	}
+	return proc.Process
 }
 
 // Balance balances the journal.
@@ -217,15 +224,13 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 		closingDays.Add(j.Day(d))
 	}
 	equityAccount := j.Registry.Accounts().MustGet("Equity:Equity")
-	return func(d *Day) error {
-		if closingDays.Has(d) {
+
+	closer := Processor{
+		DayStart: func(d *Day) error {
+			if !closingDays.Has(d) {
+				return nil
+			}
 			for k, quantity := range quantities {
-				if k.Account.IsAL() {
-					continue
-				}
-				if k.Account == equityAccount {
-					continue
-				}
 				if quantity.IsZero() && values[k].IsZero() {
 					continue
 				}
@@ -241,29 +246,32 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 					}.Build(),
 				}.Build())
 			}
-		}
-		for _, t := range d.Transactions {
-			for _, p := range t.Postings {
-				if p.Account.IsAL() {
-					continue
-				}
-				if p.Account == equityAccount {
-					continue
-				}
-				quantities.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Quantity)
-				values.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Value)
+			return nil
+		},
+		Posting: func(_ *model.Transaction, p *model.Posting) error {
+			if p.Account.IsAL() {
+				return nil
 			}
-		}
-		return nil
+			if p.Account == equityAccount {
+				return nil
+			}
+			quantities.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Quantity)
+			values.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Value)
+			return nil
+		},
 	}
+	return closer.Process
 }
 
 // Sort sorts the directives in this day.
 func Sort() DayFn {
-	return func(d *Day) error {
-		compare.Sort(d.Transactions, transaction.Compare)
-		return nil
+	proc := Processor{
+		DayEnd: func(d *Day) error {
+			compare.Sort(d.Transactions, transaction.Compare)
+			return nil
+		},
 	}
+	return proc.Process
 }
 
 type Collection interface {
@@ -283,26 +291,25 @@ func (query Query) Execute(c Collection) DayFn {
 	if query.Mapper == nil {
 		query.Mapper = mapper.Identity[amounts.Key]
 	}
-	return func(d *Day) error {
-		for _, t := range d.Transactions {
-			for _, b := range t.Postings {
-				amount := b.Quantity
-				if query.Valuation != nil {
-					amount = b.Value
-				}
-				kc := amounts.Key{
-					Date:        t.Date,
-					Account:     b.Account,
-					Other:       b.Other,
-					Commodity:   b.Commodity,
-					Valuation:   query.Valuation,
-					Description: t.Description,
-				}
-				if query.Predicate(kc) {
-					c.Insert(query.Mapper(kc), amount)
-				}
+	querier := Processor{
+		Posting: func(t *model.Transaction, b *model.Posting) error {
+			amount := b.Quantity
+			if query.Valuation != nil {
+				amount = b.Value
 			}
-		}
-		return nil
+			kc := amounts.Key{
+				Date:        t.Date,
+				Account:     b.Account,
+				Other:       b.Other,
+				Commodity:   b.Commodity,
+				Valuation:   query.Valuation,
+				Description: t.Description,
+			}
+			if query.Predicate(kc) {
+				c.Insert(query.Mapper(kc), amount)
+			}
+			return nil
+		},
 	}
+	return querier.Process
 }

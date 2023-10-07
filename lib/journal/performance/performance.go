@@ -82,31 +82,31 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 			// transaction should be split: non-currencies > currencies > valuation currency.
 			tgts := pickTargets(calc.Valuation, trx.Targets)
 
-			for _, pst := range trx.Postings {
+			for _, p := range trx.Postings {
 
-				if !calc.isPortfolioAccount(pst.Account) {
+				if !calc.isPortfolioAccount(p.Account) {
 					// not a portfolio booking - no performance impact.
 					continue
 				}
 
-				if calc.isPortfolioAccount(pst.Other) {
+				if calc.isPortfolioAccount(p.Other) {
 					// transfer between portfolio accounts - no performance impact.
 					continue
 				}
 
-				if len(tgts) == 1 && tgts[0] == pst.Commodity {
+				if len(tgts) == 1 && tgts[0] == p.Commodity {
 					// performance effect on native commodity
 					continue
 				}
 
-				value, _ := pst.Value.Float64()
+				value, _ := p.Value.Float64()
 				if tgts == nil {
 					// regular flow into or out of the portfolio
-					get(&flows)[pst.Commodity] += value
+					get(&flows)[p.Commodity] += value
 					continue
 				}
 				intf := get(&internalFlows)
-				intf[pst.Commodity] += value
+				intf[p.Commodity] += value
 				if len(tgts) == 0 {
 					// performance effect on portfolio, not allocated to a specific commodity
 					portfolioFlows -= value

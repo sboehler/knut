@@ -25,38 +25,42 @@ type Calculator struct {
 func (calc *Calculator) ComputeValues() func(d *journal.Day) error {
 	var prev pcv
 	values := make(amounts.Amounts)
-	return func(d *journal.Day) error {
-		if d.Performance == nil {
-			d.Performance = new(journal.Performance)
-		}
-		d.Performance.V0 = prev
 
-		for _, t := range d.Transactions {
-			for _, p := range t.Postings {
-				if !calc.CommodityFilter(p.Commodity) {
-					continue
-				}
-				if !calc.isPortfolioAccount(p.Account) {
-					continue
-				}
-				k := amounts.CommodityKey(p.Commodity)
-				values.Add(k, p.Value)
-				if values[k].IsZero() {
-					delete(values, k)
-				}
+	proc := journal.Processor{
+
+		DayStart: func(d *journal.Day) error {
+			if d.Performance == nil {
+				d.Performance = new(journal.Performance)
 			}
-		}
-		if len(values) == 0 {
+			d.Performance.V0 = prev
 			return nil
-		}
-		prev = nil
-		for k, v := range values {
-			f, _ := v.Float64()
-			get(&prev)[k.Commodity] += f
-		}
-		d.Performance.V1 = prev
-		return nil
+		},
+
+		Posting: func(_ *model.Transaction, p *model.Posting) error {
+			if !calc.CommodityFilter(p.Commodity) {
+				return nil
+			}
+			if !calc.isPortfolioAccount(p.Account) {
+				return nil
+			}
+			k := amounts.CommodityKey(p.Commodity)
+			values.Add(k, p.Value)
+			if values[k].IsZero() {
+				delete(values, k)
+			}
+			return nil
+		},
+		DayEnd: func(d *journal.Day) error {
+			prev = nil
+			for k, v := range values {
+				f, _ := v.Float64()
+				get(&prev)[k.Commodity] += f
+			}
+			d.Performance.V1 = prev
+			return nil
+		},
 	}
+	return proc.Process
 }
 
 // pcv is a per-commodity value.

@@ -20,28 +20,30 @@ type Query struct {
 	Mapping   account.Mapping
 }
 
-func (q Query) Execute(j *journal.Journal, r *Report) journal.DayFn {
+func (q Query) Execute(j *journal.Journal, r *Report) *journal.Processor {
 	days := set.New[*journal.Day]()
 	for _, d := range q.Partition.EndDates() {
 		days.Add(j.Day(d))
 	}
-	return func(d *journal.Day) error {
-		if !days.Has(d) {
-			return nil
-		}
-		var total float64
-		for _, v := range d.Performance.V1 {
-			total += v
-		}
-		for com, v := range d.Performance.V1 {
-			ss := q.Universe.Locate(com)
-			level, suffix, ok := q.Mapping.Level(strings.Join(ss, ":"))
-			if ok && level < len(ss)-suffix {
-				ss = append(ss[:level], ss[len(ss)-suffix:]...)
+	return &journal.Processor{
+		DayEnd: func(d *journal.Day) error {
+			if !days.Has(d) {
+				return nil
 			}
-			r.Add(ss, d.Date, v/total)
-		}
-		return nil
+			var total float64
+			for _, v := range d.Performance.V1 {
+				total += v
+			}
+			for com, v := range d.Performance.V1 {
+				ss := q.Universe.Locate(com)
+				level, suffix, ok := q.Mapping.Level(strings.Join(ss, ":"))
+				if ok && level < len(ss)-suffix {
+					ss = append(ss[:level], ss[len(ss)-suffix:]...)
+				}
+				r.Add(ss, d.Date, v/total)
+			}
+			return nil
+		},
 	}
 }
 

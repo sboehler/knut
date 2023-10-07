@@ -101,7 +101,13 @@ func (j *Journal) Period() date.Period {
 	return date.Period{Start: j.min, End: j.max}
 }
 
-func (j *Journal) Process(fs ...func(*Day) error) ([]*Day, error) {
+func (j *Journal) Process(ps ...*Processor) ([]*Day, error) {
+	var fs []func(*Day) error
+	for _, proc := range ps {
+		if proc != nil {
+			fs = append(fs, proc.Process)
+		}
+	}
 	return cpr.Seq(context.Background(), j.Sorted(), fs...)
 }
 

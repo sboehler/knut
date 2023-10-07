@@ -289,7 +289,7 @@ func TestComputeFlows(t *testing.T) {
 				Valuation: chf,
 			}
 
-			calc.ComputeFlows()(day)
+			calc.ComputeFlows().Process(day)
 
 			if diff := cmp.Diff(test.want, day.Performance); diff != "" {
 				t.Fatalf("unexpected diff (-want, +got):\n%s", diff)

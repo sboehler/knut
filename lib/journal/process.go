@@ -18,12 +18,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type DayFn = func(*Day) error
-
-func NoOp[T any](_ T) error {
-	return nil
-}
-
 // Error is a processing error, with a reference to a directive with
 // a source location.
 type Error struct {
@@ -42,13 +36,13 @@ func (be Error) Error() string {
 }
 
 // ComputePrices updates prices.
-func ComputePrices(v *model.Commodity) DayFn {
+func ComputePrices(v *model.Commodity) *Processor {
 	if v == nil {
-		return NoOp[*Day]
+		return nil
 	}
 	var previous price.NormalizedPrices
 	prc := make(price.Prices)
-	proc := Processor{
+	return &Processor{
 		Price: func(p *model.Price) error {
 			prc.Insert(p.Commodity, p.Price, p.Target)
 			return nil
@@ -63,15 +57,14 @@ func ComputePrices(v *model.Commodity) DayFn {
 			return nil
 		},
 	}
-	return proc.Process
 }
 
 // Balance balances the journal.
-func Check(reg *model.Registry, valuation *model.Commodity) DayFn {
+func Check(reg *model.Registry, valuation *model.Commodity) *Processor {
 	quantities := make(amounts.Amounts)
 	accounts := set.New[*model.Account]()
 
-	checker := Processor{
+	return &Processor{
 
 		Open: func(o *model.Open) error {
 			if accounts.Has(o.Account) {
@@ -119,16 +112,15 @@ func Check(reg *model.Registry, valuation *model.Commodity) DayFn {
 			return nil
 		},
 	}
-	return checker.Process
 }
 
 // Balance balances the journal.
-func Valuate(reg *model.Registry, valuation *model.Commodity) DayFn {
+func Valuate(reg *model.Registry, valuation *model.Commodity) *Processor {
 
 	var prevPrices, prices price.NormalizedPrices
 	quantities := make(amounts.Amounts)
 
-	valuator := Processor{
+	return &Processor{
 
 		DayStart: func(d *Day) error {
 			prices = d.Normalized
@@ -196,11 +188,10 @@ func Valuate(reg *model.Registry, valuation *model.Commodity) DayFn {
 			return nil
 		},
 	}
-	return valuator.Process
 }
 
-func Filter(part date.Partition) DayFn {
-	proc := Processor{
+func Filter(part date.Partition) *Processor {
+	return &Processor{
 		DayEnd: func(d *Day) error {
 			if !part.Contains(d.Date) {
 				d.Transactions = nil
@@ -208,13 +199,12 @@ func Filter(part date.Partition) DayFn {
 			return nil
 		},
 	}
-	return proc.Process
 }
 
 // Balance balances the journal.
-func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
+func CloseAccounts(j *Journal, enable bool, partition date.Partition) *Processor {
 	if !enable {
-		return func(d *Day) error { return nil }
+		return nil
 	}
 
 	quantities, values := make(amounts.Amounts), make(amounts.Amounts)
@@ -225,7 +215,7 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 	}
 	equityAccount := j.Registry.Accounts().MustGet("Equity:Equity")
 
-	closer := Processor{
+	return &Processor{
 		DayStart: func(d *Day) error {
 			if !closingDays.Has(d) {
 				return nil
@@ -260,18 +250,16 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) DayFn {
 			return nil
 		},
 	}
-	return closer.Process
 }
 
 // Sort sorts the directives in this day.
-func Sort() DayFn {
-	proc := Processor{
+func Sort() *Processor {
+	return &Processor{
 		DayEnd: func(d *Day) error {
 			compare.Sort(d.Transactions, transaction.Compare)
 			return nil
 		},
 	}
-	return proc.Process
 }
 
 type Collection interface {
@@ -284,14 +272,14 @@ type Query struct {
 	Valuation *model.Commodity
 }
 
-func (query Query) Execute(c Collection) DayFn {
+func (query Query) Execute(c Collection) *Processor {
 	if query.Predicate == nil {
 		query.Predicate = predicate.True[amounts.Key]
 	}
 	if query.Mapper == nil {
 		query.Mapper = mapper.Identity[amounts.Key]
 	}
-	querier := Processor{
+	return &Processor{
 		Posting: func(t *model.Transaction, b *model.Posting) error {
 			amount := b.Quantity
 			if query.Valuation != nil {
@@ -311,5 +299,4 @@ func (query Query) Execute(c Collection) DayFn {
 			return nil
 		},
 	}
-	return querier.Process
 }

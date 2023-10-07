@@ -22,11 +22,11 @@ type Calculator struct {
 }
 
 // ComputeValues computes portfolio performance.
-func (calc *Calculator) ComputeValues() func(d *journal.Day) error {
+func (calc *Calculator) ComputeValues() *journal.Processor {
 	var prev pcv
 	values := make(amounts.Amounts)
 
-	proc := journal.Processor{
+	return &journal.Processor{
 
 		DayStart: func(d *journal.Day) error {
 			if d.Performance == nil {
@@ -60,17 +60,16 @@ func (calc *Calculator) ComputeValues() func(d *journal.Day) error {
 			return nil
 		},
 	}
-	return proc.Process
 }
 
 // pcv is a per-commodity value.
 type pcv = map[*model.Commodity]float64
 
-func (calc *Calculator) ComputeFlows() journal.DayFn {
+func (calc *Calculator) ComputeFlows() *journal.Processor {
 	var portfolioFlows float64
 	var performance *journal.Performance
 
-	proc := journal.Processor{
+	return &journal.Processor{
 
 		DayStart: func(d *journal.Day) error {
 			portfolioFlows = 0
@@ -140,8 +139,6 @@ func (calc *Calculator) ComputeFlows() journal.DayFn {
 			return nil
 		},
 	}
-
-	return proc.Process
 }
 
 func split(flows pcv, in, out *pcv) {
@@ -221,13 +218,13 @@ func Performance(dpv *journal.Performance) float64 {
 	return (v1 - outflow) / (v0 + inflow)
 }
 
-func Perf(j *journal.Journal, part date.Partition) journal.DayFn {
+func Perf(j *journal.Journal, part date.Partition) *journal.Processor {
 	ds := set.New[*journal.Day]()
 	for _, d := range part.EndDates() {
 		ds.Add(j.Day(d))
 	}
 	running := 1.0
-	proc := journal.Processor{
+	return &journal.Processor{
 		DayEnd: func(d *journal.Day) error {
 			if !part.Contains(d.Date) {
 				return nil
@@ -240,5 +237,4 @@ func Perf(j *journal.Journal, part date.Partition) journal.DayFn {
 			return nil
 		},
 	}
-	return proc.Process
 }

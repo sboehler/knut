@@ -269,3 +269,78 @@ func Print(w io.Writer, j *Journal) error {
 	}
 	return nil
 }
+
+type Processor struct {
+	DayStart    func(*Day) error
+	Price       func(*model.Price) error
+	Open        func(*model.Open) error
+	Transaction func(*model.Transaction) error
+	Posting     func(*model.Transaction, *model.Posting) error
+	Assertion   func(*model.Assertion) error
+	Close       func(*model.Close) error
+	DayEnd      func(*Day) error
+}
+
+func (proc *Processor) Process(d *Day) error {
+	if proc.DayStart != nil {
+		if err := proc.DayStart(d); err != nil {
+			return err
+		}
+	}
+	if proc.Price != nil {
+		for _, p := range d.Prices {
+			if err := proc.Price(p); err != nil {
+				return err
+			}
+		}
+	}
+	if proc.Open != nil {
+		for _, o := range d.Openings {
+			if err := proc.Open(o); err != nil {
+				return err
+			}
+		}
+	}
+	if proc.Transaction != nil {
+		for _, t := range d.Transactions {
+			if err := proc.Transaction(t); err != nil {
+				return err
+			}
+			if proc.Posting != nil {
+				for _, p := range t.Postings {
+					if err := proc.Posting(t, p); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	} else if proc.Posting != nil {
+		for _, t := range d.Transactions {
+			for _, p := range t.Postings {
+				if err := proc.Posting(t, p); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if proc.Assertion != nil {
+		for _, a := range d.Assertions {
+			if err := proc.Assertion(a); err != nil {
+				return err
+			}
+		}
+	}
+	if proc.Close != nil {
+		for _, a := range d.Closings {
+			if err := proc.Close(a); err != nil {
+				return err
+			}
+		}
+	}
+	if proc.DayEnd != nil {
+		if err := proc.DayEnd(d); err != nil {
+			return err
+		}
+	}
+	return nil
+}

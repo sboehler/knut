@@ -79,7 +79,8 @@ func (r *transcodeRunner) execute(cmd *cobra.Command, args []string) (errors err
 	ds, err := j.Process(
 		journal.Sort(),
 		journal.ComputePrices(valuation),
-		journal.Balance(reg, valuation),
+		journal.Check(reg, valuation),
+		journal.Valuate(reg, valuation),
 	)
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer func() { err = multierr.Append(err, w.Flush()) }()

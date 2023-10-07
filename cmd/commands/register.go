@@ -130,7 +130,8 @@ func (r registerRunner) execute(cmd *cobra.Command, args []string) error {
 	_, err = j.Process(
 		journal.Sort(),
 		journal.ComputePrices(valuation),
-		journal.Balance(reg, valuation),
+		journal.Check(reg, valuation),
+		journal.Valuate(reg, valuation),
 		journal.Filter(partition),
 		journal.Query{
 			Predicate: predicate.And(

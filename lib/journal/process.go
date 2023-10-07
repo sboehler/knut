@@ -63,51 +63,42 @@ func ComputePrices(v *model.Commodity) DayFn {
 }
 
 // Balance balances the journal.
-func Balance(reg *model.Registry, valuation *model.Commodity) DayFn {
+func Check(reg *model.Registry, valuation *model.Commodity) DayFn {
 	quantities := make(amounts.Amounts)
 	accounts := set.New[*model.Account]()
 
-	var prevPrices price.NormalizedPrices
+	checker := Processor{
 
-	processOpenings := func(d *Day) error {
-		for _, o := range d.Openings {
+		Open: func(o *model.Open) error {
 			if accounts.Has(o.Account) {
 				return Error{o, "account is already open"}
 			}
 			accounts.Add(o.Account)
-		}
-		return nil
-	}
+			return nil
+		},
 
-	processTransactions := func(d *Day) error {
-		for _, t := range d.Transactions {
-			for _, p := range t.Postings {
-				if !accounts.Has(p.Account) {
-					return Error{t, fmt.Sprintf("account %s is not open", p.Account)}
-				}
-				if p.Account.IsAL() {
-					quantities.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Quantity)
-				}
+		Posting: func(t *model.Transaction, p *model.Posting) error {
+			if !accounts.Has(p.Account) {
+				return Error{t, fmt.Sprintf("account %s is not open", p.Account)}
 			}
-		}
-		return nil
-	}
+			if p.Account.IsAL() {
+				quantities.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Quantity)
+			}
+			return nil
+		},
 
-	processAssertions := func(d *Day) error {
-		for _, a := range d.Assertions {
+		Assertion: func(a *model.Assertion) error {
 			if !accounts.Has(a.Account) {
 				return Error{a, "account is not open"}
 			}
 			position := amounts.AccountCommodityKey(a.Account, a.Commodity)
-			if va, ok := quantities[position]; !ok || !va.Equal(a.Quantity) {
-				return Error{a, fmt.Sprintf("failed assertion: account has position: %s %s", va, position.Commodity.Name())}
+			if qty, ok := quantities[position]; !ok || !qty.Equal(a.Quantity) {
+				return Error{a, fmt.Sprintf("failed assertion: account has position: %s %s", qty, position.Commodity.Name())}
 			}
-		}
-		return nil
-	}
+			return nil
+		},
 
-	processClosings := func(d *Day) error {
-		for _, c := range d.Closings {
+		Close: func(c *model.Close) error {
 			for pos, amount := range quantities {
 				if pos.Account != c.Account {
 					continue
@@ -121,95 +112,87 @@ func Balance(reg *model.Registry, valuation *model.Commodity) DayFn {
 				return Error{c, "account is not open"}
 			}
 			accounts.Remove(c.Account)
-		}
-		return nil
+			return nil
+		},
 	}
+	return checker.Process
+}
 
-	valuateTransactions := func(d *Day) error {
-		for _, t := range d.Transactions {
-			for _, posting := range t.Postings {
-				if valuation == posting.Commodity {
-					posting.Value = posting.Quantity
+// Balance balances the journal.
+func Valuate(reg *model.Registry, valuation *model.Commodity) DayFn {
+
+	var prevPrices, prices price.NormalizedPrices
+	quantities := make(amounts.Amounts)
+
+	valuator := Processor{
+
+		DayStart: func(d *Day) error {
+			prices = d.Normalized
+
+			for pos, qty := range quantities {
+				if pos.Commodity == valuation {
 					continue
 				}
-				v, err := d.Normalized.Valuate(posting.Commodity, posting.Quantity)
+				if !pos.Account.IsAL() {
+					continue
+				}
+				if qty.IsZero() {
+					continue
+				}
+				prevPrice, err := prevPrices.Price(pos.Commodity)
 				if err != nil {
 					return err
 				}
-				posting.Value = v
+				currentPrice, err := prices.Price(pos.Commodity)
+				if err != nil {
+					return err
+				}
+				delta := currentPrice.Sub(prevPrice)
+				if delta.IsZero() {
+					continue
+				}
+				gain := price.Multiply(delta, qty)
+				credit := reg.Accounts().ValuationAccountFor(pos.Account)
+				d.Transactions = append(d.Transactions, transaction.Builder{
+					Date:        d.Date,
+					Description: fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity.Name(), pos.Account.Name()),
+					Postings: posting.Builder{
+						Credit:    credit,
+						Debit:     pos.Account,
+						Commodity: pos.Commodity,
+						Value:     gain,
+					}.Build(),
+					Targets: []*model.Commodity{pos.Commodity},
+				}.Build())
 			}
-		}
-		return nil
-	}
+			return nil
+		},
 
-	valuateGains := func(d *Day) error {
-		for pos, qty := range quantities {
-			if pos.Commodity == valuation {
-				continue
+		Posting: func(_ *model.Transaction, p *model.Posting) error {
+			if p.Quantity.IsZero() {
+				return nil
 			}
-			if !pos.Account.IsAL() {
-				continue
+			if p.Account.IsAL() {
+				quantities.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Quantity)
 			}
-			if qty.IsZero() {
-				continue
+			v := p.Quantity
+			if valuation != p.Commodity {
+				var err error
+				v, err = prices.Valuate(p.Commodity, p.Quantity)
+				if err != nil {
+					return err
+				}
 			}
-			prevPrice, err := prevPrices.Price(pos.Commodity)
-			if err != nil {
-				return err
-			}
-			currentPrice, err := d.Normalized.Price(pos.Commodity)
-			if err != nil {
-				return err
-			}
-			delta := currentPrice.Sub(prevPrice)
-			if delta.IsZero() {
-				continue
-			}
-			gain := price.Multiply(delta, qty)
-			credit := reg.Accounts().ValuationAccountFor(pos.Account)
-			if !accounts.Has(credit) {
-				accounts.Add(credit)
-			}
-			d.Transactions = append(d.Transactions, transaction.Builder{
-				Date:        d.Date,
-				Description: fmt.Sprintf("Adjust value of %s in account %s", pos.Commodity.Name(), pos.Account.Name()),
-				Postings: posting.Builder{
-					Credit:    credit,
-					Debit:     pos.Account,
-					Commodity: pos.Commodity,
-					Value:     gain,
-				}.Build(),
-				Targets: []*model.Commodity{pos.Commodity},
-			}.Build())
-		}
-		prevPrices = d.Normalized
-		return nil
+			p.Value = v
+			return nil
+		},
 
+		DayEnd: func(d *Day) error {
+			prevPrices = d.Normalized
+			return nil
+		},
 	}
-
-	return func(d *Day) error {
-		if valuation != nil {
-			if err := valuateTransactions(d); err != nil {
-				return err
-			}
-			if err := valuateGains(d); err != nil {
-				return err
-			}
-		}
-		if err := processOpenings(d); err != nil {
-			return err
-		}
-		if err := processTransactions(d); err != nil {
-			return err
-		}
-		if err := processAssertions(d); err != nil {
-			return err
-		}
-		if err := processClosings(d); err != nil {
-			return err
-		}
-		return nil
-	}
+	return valuator.Process
 }
 
 func Filter(part date.Partition) DayFn {

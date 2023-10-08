@@ -116,7 +116,22 @@ func (p *Printer) printPrice(pr *model.Price) (int, error) {
 }
 
 func (p *Printer) printAssertion(a *model.Assertion) (int, error) {
-	return fmt.Fprintf(p, "%s balance %s %s %s", a.Date.Format("2006-01-02"), a.Account, a.Quantity, a.Commodity.Name())
+	start := p.count
+	if _, err := fmt.Fprintf(p, "%s balance", a.Date.Format("2006-01-02")); err != nil {
+		return p.count - start, err
+	}
+	if len(a.Balances) == 1 {
+		if _, err := fmt.Fprintf(p, " %s %s %s", a.Balances[0].Account, a.Balances[0].Quantity, a.Balances[0].Commodity.Name()); err != nil {
+			return p.count - start, err
+		}
+	} else {
+		for _, bal := range a.Balances {
+			if _, err := fmt.Fprintf(p, "\n%s %s %s", bal.Account, bal.Quantity, bal.Commodity.Name()); err != nil {
+				return p.count - start, err
+			}
+		}
+	}
+	return p.count - start, nil
 }
 
 // Initialize initializes the padding of this printer.

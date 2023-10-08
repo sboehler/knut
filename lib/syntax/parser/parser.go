@@ -178,22 +178,56 @@ func (p *Parser) parseAssertion(date directives.Date) (directives.Assertion, err
 		assertion = directives.Assertion{Date: date}
 		err       error
 	)
-	if assertion.Account, err = p.parseAccount(); err != nil {
-		return directives.SetRange(&assertion, p.Range()), p.Annotate(err)
-	}
-	if _, err := p.readWhitespace1(); err != nil {
-		return directives.SetRange(&assertion, p.Range()), p.Annotate(err)
-	}
-	if assertion.Quantity, err = p.parseDecimal(); err != nil {
-		return directives.SetRange(&assertion, p.Range()), p.Annotate(err)
-	}
-	if _, err := p.readWhitespace1(); err != nil {
-		return directives.SetRange(&assertion, p.Range()), p.Annotate(err)
-	}
-	if assertion.Commodity, err = p.parseCommodity(); err != nil {
-		err = p.Annotate(err)
+	if isNewline(p.Current()) {
+		if _, err := p.readRestOfWhitespaceLine(); err != nil {
+			return directives.SetRange(&assertion, p.Range()), p.Annotate(err)
+		}
+		for {
+			bal, err := p.parseBalance()
+			assertion.Balances = append(assertion.Balances, bal)
+			if err != nil {
+				return directives.SetRange(&assertion, p.Range()), p.Annotate(err)
+			}
+			if _, err := p.readRestOfWhitespaceLine(); err != nil {
+				return directives.SetRange(&assertion, p.Range()), p.Annotate(err)
+			}
+			if isWhitespaceOrNewline(p.Current()) || p.Current() == scanner.EOF {
+				break
+			}
+		}
+	} else {
+		bal, err := p.parseBalance()
+		assertion.Balances = append(assertion.Balances, bal)
+		if err != nil {
+			return directives.SetRange(&assertion, p.Range()), p.Annotate(err)
+		}
 	}
 	return directives.SetRange(&assertion, p.Range()), err
+}
+
+func (p *Parser) parseBalance() (directives.Balance, error) {
+	p.RangeStart("parsing balance subdirective")
+	defer p.RangeEnd()
+	var (
+		balance = directives.Balance{}
+		err     error
+	)
+	if balance.Account, err = p.parseAccount(); err != nil {
+		return directives.SetRange(&balance, p.Range()), p.Annotate(err)
+	}
+	if _, err := p.readWhitespace1(); err != nil {
+		return directives.SetRange(&balance, p.Range()), p.Annotate(err)
+	}
+	if balance.Quantity, err = p.parseDecimal(); err != nil {
+		return directives.SetRange(&balance, p.Range()), p.Annotate(err)
+	}
+	if _, err := p.readWhitespace1(); err != nil {
+		return directives.SetRange(&balance, p.Range()), p.Annotate(err)
+	}
+	if balance.Commodity, err = p.parseCommodity(); err != nil {
+		err = p.Annotate(err)
+	}
+	return directives.SetRange(&balance, p.Range()), err
 }
 
 func (p *Parser) parsePrice(date directives.Date) (directives.Price, error) {

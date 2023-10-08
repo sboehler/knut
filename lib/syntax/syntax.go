@@ -47,6 +47,8 @@ type Close = directives.Close
 
 type Assertion = directives.Assertion
 
+type Balance = directives.Balance
+
 type Price = directives.Price
 
 type Include = directives.Include

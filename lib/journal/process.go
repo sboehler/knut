@@ -84,7 +84,7 @@ func Check(reg *model.Registry, valuation *model.Commodity) *Processor {
 			return nil
 		},
 
-		Assertion: func(a *model.Assertion) error {
+		Balance: func(a *model.Balance) error {
 			if !accounts.Has(a.Account) {
 				return Error{a, "account is not open"}
 			}

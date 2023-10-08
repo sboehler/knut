@@ -1316,11 +1316,42 @@ func TestParseDirective(t *testing.T) {
 					return directives.Directive{
 						Range: Range{End: 28, Text: s},
 						Directive: directives.Assertion{
-							Range:     Range{End: 28, Text: s},
-							Date:      directives.Date{Range: directives.Range{End: 10, Text: s}},
-							Account:   directives.Account{Range: directives.Range{Start: 19, End: 22, Text: s}},
-							Quantity:  directives.Decimal{Range: directives.Range{Start: 23, End: 24, Text: s}},
-							Commodity: directives.Commodity{Range: Range{Start: 25, End: 28, Text: s}},
+							Range: Range{End: 28, Text: s},
+							Date:  directives.Date{Range: directives.Range{End: 10, Text: s}},
+							Balances: []directives.Balance{
+								{
+									Range:     Range{Start: 19, End: 28, Text: s},
+									Account:   directives.Account{Range: directives.Range{Start: 19, End: 22, Text: s}},
+									Quantity:  directives.Decimal{Range: directives.Range{Start: 23, End: 24, Text: s}},
+									Commodity: directives.Commodity{Range: Range{Start: 25, End: 28, Text: s}},
+								},
+							},
+						},
+					}
+				},
+			},
+			{
+				text: "2023-04-03 balance\nB:A 1 USD\nB:A 1 EUR",
+				want: func(s string) directives.Directive {
+					return directives.Directive{
+						Range: Range{End: 38, Text: s},
+						Directive: directives.Assertion{
+							Range: Range{End: 38, Text: s},
+							Date:  directives.Date{Range: directives.Range{End: 10, Text: s}},
+							Balances: []directives.Balance{
+								{
+									Range:     Range{Start: 19, End: 28, Text: s},
+									Account:   directives.Account{Range: directives.Range{Start: 19, End: 22, Text: s}},
+									Quantity:  directives.Decimal{Range: directives.Range{Start: 23, End: 24, Text: s}},
+									Commodity: directives.Commodity{Range: Range{Start: 25, End: 28, Text: s}},
+								},
+								{
+									Range:     Range{Start: 29, End: 38, Text: s},
+									Account:   directives.Account{Range: directives.Range{Start: 29, End: 32, Text: s}},
+									Quantity:  directives.Decimal{Range: directives.Range{Start: 33, End: 34, Text: s}},
+									Commodity: directives.Commodity{Range: Range{Start: 35, End: 38, Text: s}},
+								},
+							},
 						},
 					}
 				},

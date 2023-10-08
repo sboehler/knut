@@ -173,10 +173,14 @@ func (p *parser) parseBooking(r []string) error {
 			return err
 		}
 		p.journal.AddAssertion(&model.Assertion{
-			Date:      date,
-			Account:   p.account,
-			Quantity:  balance,
-			Commodity: p.currency,
+			Date: date,
+			Balances: []model.Balance{
+				{
+					Account:   p.account,
+					Quantity:  balance,
+					Commodity: p.currency,
+				},
+			},
 		})
 		p.date = date
 	}

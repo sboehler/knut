@@ -139,6 +139,19 @@ func TestPrintFile(t *testing.T) {
 			want: lines(`2022-03-03 balance XYZ:ABC -80.23 CHF`),
 		},
 		{
+			desc: "print multi assertion",
+			text: lines(
+				`2022-03-03  balance`,
+				`XYZ:ABC   -80.23 CHF`,
+				`ABC:XYZ  100        USD`,
+			),
+			want: lines(
+				`2022-03-03 balance`,
+				`XYZ:ABC -80.23 CHF`,
+				`ABC:XYZ 100 USD`,
+			),
+		},
+		{
 			desc: "print assertions",
 			text: lines(
 				`2022-03-03  balance    XYZ:ABC:1      -80.23 CHF`,

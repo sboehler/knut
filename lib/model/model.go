@@ -27,6 +27,7 @@ type Open = open.Open
 type Close = cls.Close
 type Price = price.Price
 type Assertion = assertion.Assertion
+type Balance = assertion.Balance
 
 type Registry = registry.Registry
 

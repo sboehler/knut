@@ -118,7 +118,20 @@ func (p *Printer) printInclude(i directives.Include) (int, error) {
 }
 
 func (p *Printer) printAssertion(a directives.Assertion) (int, error) {
-	return fmt.Fprintf(p, "%s balance %s %s %s", a.Date.Extract(), a.Account.Extract(), a.Quantity.Extract(), a.Commodity.Extract())
+	start := p.count
+	if _, err := fmt.Fprintf(p, "%s balance", a.Date.Extract()); err != nil {
+		return p.count - start, err
+	}
+	if len(a.Balances) == 1 {
+		return fmt.Fprintf(p, " %s %s %s", a.Balances[0].Account.Extract(), a.Balances[0].Quantity.Extract(), a.Balances[0].Commodity.Extract())
+	} else {
+		for _, bal := range a.Balances {
+			if _, err := fmt.Fprintf(p, "\n%s %s %s", bal.Account.Extract(), bal.Quantity.Extract(), bal.Commodity.Extract()); err != nil {
+				return p.count - start, err
+			}
+		}
+	}
+	return p.count - start, nil
 }
 
 func (p *Printer) PrintFile(f directives.File) (int, error) {

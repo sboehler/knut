@@ -107,7 +107,12 @@ type Close struct {
 
 type Assertion struct {
 	Range
-	Date      Date
+	Date     Date
+	Balances []Balance
+}
+
+type Balance struct {
+	Range
 	Account   Account
 	Quantity  Decimal
 	Commodity Commodity

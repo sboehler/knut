@@ -640,10 +640,14 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 		return false, err
 	}
 	p.journal.AddAssertion(&model.Assertion{
-		Date:      p.dateTo,
-		Account:   p.account,
-		Commodity: symbol,
-		Quantity:  quantity,
+		Date: p.dateTo,
+		Balances: []model.Balance{
+			{
+				Account:   p.account,
+				Commodity: symbol,
+				Quantity:  quantity,
+			},
+		},
 	})
 	return true, nil
 }
@@ -686,10 +690,14 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 		return false, err
 	}
 	p.journal.AddAssertion(&model.Assertion{
-		Date:      p.dateTo,
-		Account:   p.account,
-		Commodity: symbol,
-		Quantity:  amount,
+		Date: p.dateTo,
+		Balances: []model.Balance{
+			{
+				Account:   p.account,
+				Commodity: symbol,
+				Quantity:  amount,
+			},
+		},
 	})
 	return true, nil
 }

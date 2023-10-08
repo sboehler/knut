@@ -208,10 +208,14 @@ func (p *parser) parseBooking() error {
 func (p *parser) addBalances() {
 	for k, bal := range p.balance {
 		p.journal.AddAssertion(&model.Assertion{
-			Date:      k.Date,
-			Commodity: k.Commodity,
-			Quantity:  bal,
-			Account:   p.account,
+			Date: k.Date,
+			Balances: []model.Balance{
+				{
+					Commodity: k.Commodity,
+					Quantity:  bal,
+					Account:   p.account,
+				},
+			},
 		})
 	}
 }

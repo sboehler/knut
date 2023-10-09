@@ -2,14 +2,33 @@ package check
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/set"
 	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/assertion"
 	"golang.org/x/exp/slices"
 )
+
+// Error is a processing error, with a reference to a directive with
+// a source location.
+type Error struct {
+	Directive model.Directive
+	Msg       string
+}
+
+func (be Error) Error() string {
+	var s strings.Builder
+	s.WriteString(be.Msg)
+	s.WriteRune('\n')
+	s.WriteRune('\n')
+	p := printer.New(&s)
+	p.PrintDirectiveLn(be.Directive)
+	return s.String()
+}
 
 type Checker struct {
 	Write bool
@@ -25,7 +44,7 @@ func (ch *Checker) Assertions() []*model.Assertion {
 
 func (ch *Checker) open(o *model.Open) error {
 	if ch.accounts.Has(o.Account) {
-		return journal.Error{Directive: o, Msg: "account is already open"}
+		return Error{Directive: o, Msg: "account is already open"}
 	}
 	ch.accounts.Add(o.Account)
 	return nil
@@ -33,7 +52,7 @@ func (ch *Checker) open(o *model.Open) error {
 
 func (ch *Checker) posting(t *model.Transaction, p *model.Posting) error {
 	if !ch.accounts.Has(p.Account) {
-		return journal.Error{Directive: t, Msg: fmt.Sprintf("account %s is not open", p.Account)}
+		return Error{Directive: t, Msg: fmt.Sprintf("account %s is not open", p.Account)}
 	}
 	if p.Account.IsAL() {
 		ch.quantities.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Quantity)
@@ -41,13 +60,13 @@ func (ch *Checker) posting(t *model.Transaction, p *model.Posting) error {
 	return nil
 }
 
-func (ch *Checker) balance(a *model.Balance) error {
-	if !ch.accounts.Has(a.Account) {
-		return journal.Error{Directive: a, Msg: "account is not open"}
+func (ch *Checker) balance(a *model.Assertion, bal *model.Balance) error {
+	if !ch.accounts.Has(bal.Account) {
+		return Error{Directive: a, Msg: "account is not open"}
 	}
-	position := amounts.AccountCommodityKey(a.Account, a.Commodity)
-	if qty, ok := ch.quantities[position]; !ok || !qty.Equal(a.Quantity) {
-		return journal.Error{Directive: a, Msg: fmt.Sprintf("failed assertion: account has position: %s %s", qty, position.Commodity.Name())}
+	position := amounts.AccountCommodityKey(bal.Account, bal.Commodity)
+	if qty, ok := ch.quantities[position]; !ok || !qty.Equal(bal.Quantity) {
+		return Error{Directive: a, Msg: fmt.Sprintf("failed assertion: %s has position: %s %s", position.Account.Name(), qty, position.Commodity.Name())}
 	}
 	return nil
 }
@@ -58,12 +77,12 @@ func (ch *Checker) close(c *model.Close) error {
 			continue
 		}
 		if !amount.IsZero() {
-			return journal.Error{Directive: c, Msg: fmt.Sprintf("account has nonzero position: %s %s", amount, pos.Commodity.Name())}
+			return Error{Directive: c, Msg: fmt.Sprintf("account has nonzero position: %s %s", amount, pos.Commodity.Name())}
 		}
 		delete(ch.quantities, pos)
 	}
 	if !ch.accounts.Has(c.Account) {
-		return journal.Error{Directive: c, Msg: "account is not open"}
+		return Error{Directive: c, Msg: "account is not open"}
 	}
 	ch.accounts.Remove(c.Account)
 	return nil

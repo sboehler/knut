@@ -2,7 +2,6 @@ package journal
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/sboehler/knut/lib/amounts"
 	"github.com/sboehler/knut/lib/common/compare"
@@ -10,30 +9,12 @@ import (
 	"github.com/sboehler/knut/lib/common/mapper"
 	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/common/set"
-	"github.com/sboehler/knut/lib/journal/printer"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/posting"
 	"github.com/sboehler/knut/lib/model/price"
 	"github.com/sboehler/knut/lib/model/transaction"
 	"github.com/shopspring/decimal"
 )
-
-// Error is a processing error, with a reference to a directive with
-// a source location.
-type Error struct {
-	Directive model.Directive
-	Msg       string
-}
-
-func (be Error) Error() string {
-	var s strings.Builder
-	s.WriteString(be.Msg)
-	s.WriteRune('\n')
-	s.WriteRune('\n')
-	p := printer.New(&s)
-	p.PrintDirectiveLn(be.Directive)
-	return s.String()
-}
 
 // ComputePrices updates prices.
 func ComputePrices(v *model.Commodity) *Processor {

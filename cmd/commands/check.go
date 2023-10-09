@@ -51,7 +51,7 @@ type checkRunner struct {
 func (r *checkRunner) run(cmd *cobra.Command, args []string) {
 
 	if err := r.execute(cmd, args); err != nil {
-		fmt.Fprintf(cmd.ErrOrStderr(), "%+v\n", err)
+		fmt.Fprintf(cmd.ErrOrStderr(), "%s\n", err.Error())
 		os.Exit(1)
 	}
 }

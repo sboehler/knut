@@ -283,7 +283,7 @@ type Processor struct {
 	Transaction func(*model.Transaction) error
 	Posting     func(*model.Transaction, *model.Posting) error
 	Assertion   func(*model.Assertion) error
-	Balance     func(*model.Balance) error
+	Balance     func(*model.Assertion, *model.Balance) error
 	Close       func(*model.Close) error
 	DayEnd      func(*Day) error
 }
@@ -337,7 +337,7 @@ func (proc *Processor) Process(d *Day) error {
 			}
 			if proc.Balance != nil {
 				for i := range a.Balances {
-					if err := proc.Balance(&a.Balances[i]); err != nil {
+					if err := proc.Balance(a, &a.Balances[i]); err != nil {
 						return err
 					}
 				}
@@ -346,7 +346,7 @@ func (proc *Processor) Process(d *Day) error {
 	} else if proc.Balance != nil {
 		for _, a := range d.Assertions {
 			for i := range a.Balances {
-				if err := proc.Balance(&a.Balances[i]); err != nil {
+				if err := proc.Balance(a, &a.Balances[i]); err != nil {
 					return err
 				}
 			}

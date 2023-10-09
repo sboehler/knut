@@ -62,7 +62,7 @@ func (r *printRunner) execute(cmd *cobra.Command, args []string) (errors error) 
 	if err != nil {
 		return err
 	}
-	if _, err := j.Process(journal.Check(reg, nil)); err != nil {
+	if _, err := j.Process(journal.Check(reg)); err != nil {
 		return err
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())

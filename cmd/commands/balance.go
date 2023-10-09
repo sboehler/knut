@@ -129,7 +129,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 	rep := balance.NewReport(reg, partition)
 	_, err = j.Process(
 		journal.ComputePrices(valuation),
-		journal.Check(reg, valuation),
+		journal.Check(reg),
 		journal.Valuate(reg, valuation),
 		journal.Filter(partition),
 		journal.CloseAccounts(j, r.close, partition),

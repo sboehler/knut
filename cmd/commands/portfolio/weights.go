@@ -121,7 +121,7 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 	rep := weights.NewReport()
 	_, err = j.Process(
 		journal.ComputePrices(valuation),
-		journal.Check(reg, valuation),
+		journal.Check(reg),
 		journal.Valuate(reg, valuation),
 		calculator.ComputeValues(),
 		weights.Query{

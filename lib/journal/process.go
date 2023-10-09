@@ -60,7 +60,7 @@ func ComputePrices(v *model.Commodity) *Processor {
 }
 
 // Balance balances the journal.
-func Check(reg *model.Registry, valuation *model.Commodity) *Processor {
+func Check(reg *model.Registry) *Processor {
 	quantities := make(amounts.Amounts)
 	accounts := set.New[*model.Account]()
 

@@ -97,7 +97,7 @@ func (r *returnsRunner) execute(cmd *cobra.Command, args []string) error {
 	}
 	_, err = j.Process(
 		journal.ComputePrices(valuation),
-		journal.Check(reg, valuation),
+		journal.Check(reg),
 		journal.Valuate(reg, valuation),
 		calculator.ComputeValues(),
 		calculator.ComputeFlows(),

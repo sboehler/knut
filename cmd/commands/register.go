@@ -27,6 +27,7 @@ import (
 	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/common/table"
 	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/check"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/account"
 	"github.com/sboehler/knut/lib/model/commodity"
@@ -130,7 +131,7 @@ func (r registerRunner) execute(cmd *cobra.Command, args []string) error {
 	_, err = j.Process(
 		journal.Sort(),
 		journal.ComputePrices(valuation),
-		journal.Check(reg),
+		check.Check(),
 		journal.Valuate(reg, valuation),
 		journal.Filter(partition),
 		journal.Query{

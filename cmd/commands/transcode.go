@@ -22,6 +22,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/beancount"
+	"github.com/sboehler/knut/lib/journal/check"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/registry"
 
@@ -79,7 +80,7 @@ func (r *transcodeRunner) execute(cmd *cobra.Command, args []string) (errors err
 	ds, err := j.Process(
 		journal.Sort(),
 		journal.ComputePrices(valuation),
-		journal.Check(reg),
+		check.Check(),
 		journal.Valuate(reg, valuation),
 	)
 	w := bufio.NewWriter(cmd.OutOrStdout())

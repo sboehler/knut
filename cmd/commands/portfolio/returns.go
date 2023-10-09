@@ -24,6 +24,7 @@ import (
 	"github.com/sboehler/knut/cmd/flags"
 	"github.com/sboehler/knut/lib/common/predicate"
 	"github.com/sboehler/knut/lib/journal"
+	"github.com/sboehler/knut/lib/journal/check"
 	"github.com/sboehler/knut/lib/journal/performance"
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/registry"
@@ -97,7 +98,7 @@ func (r *returnsRunner) execute(cmd *cobra.Command, args []string) error {
 	}
 	_, err = j.Process(
 		journal.ComputePrices(valuation),
-		journal.Check(reg),
+		check.Check(),
 		journal.Valuate(reg, valuation),
 		calculator.ComputeValues(),
 		calculator.ComputeFlows(),

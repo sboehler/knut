@@ -30,6 +30,7 @@ func CreateCmd(version string) *cobra.Command {
 		Version: version,
 	}
 	c.AddCommand(commands.CreateBalanceCommand())
+	c.AddCommand(commands.CreateCheckCommand())
 	c.AddCommand(commands.CreateCompletionCommand(c))
 	c.AddCommand(commands.CreateFormatCommand())
 	c.AddCommand(commands.CreateImportCommand())

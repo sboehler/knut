@@ -15,7 +15,6 @@
 package commands
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 
@@ -26,47 +25,51 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// CreatePrintCommand creates the command.
-func CreatePrintCommand() *cobra.Command {
-	var r printRunner
+// CreateCheckCommand creates the command.
+func CreateCheckCommand() *cobra.Command {
+
+	var r checkRunner
 
 	// Cmd is the balance command.
-	cmd := &cobra.Command{
-		Use:   "print",
-		Short: "print the journal",
-		Long:  `Print the given journal.`,
-
-		Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
-
-		Run: r.run,
+	c := &cobra.Command{
+		Use:   "check",
+		Short: "check the journal",
+		Long:  `Check the journal.`,
+		Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+		Run:   r.run,
 	}
-	r.setupFlags(cmd)
-	return cmd
+	r.setupFlags(c)
+	return c
 }
 
-type printRunner struct {
+type checkRunner struct {
+	write bool
 }
 
-func (r *printRunner) setupFlags(c *cobra.Command) {
-}
+func (r *checkRunner) run(cmd *cobra.Command, args []string) {
 
-func (r *printRunner) run(cmd *cobra.Command, args []string) {
 	if err := r.execute(cmd, args); err != nil {
-		fmt.Fprintln(cmd.ErrOrStderr(), err)
+		fmt.Fprintf(cmd.ErrOrStderr(), "%#v\n", err)
 		os.Exit(1)
 	}
 }
 
-func (r *printRunner) execute(cmd *cobra.Command, args []string) (errors error) {
+func (r *checkRunner) setupFlags(c *cobra.Command) {
+	c.Flags().BoolVar(&r.write, "write", false, "write")
+}
+
+func (r checkRunner) execute(cmd *cobra.Command, args []string) error {
 	reg := registry.New()
+
 	j, err := journal.FromPath(cmd.Context(), reg, args[0])
 	if err != nil {
 		return err
 	}
-	if _, err := j.Process(check.Check()); err != nil {
+	_, err = j.Process(
+		check.Check(),
+	)
+	if err != nil {
 		return err
 	}
-	w := bufio.NewWriter(cmd.OutOrStdout())
-	defer w.Flush()
-	return journal.Print(w, j)
+	return nil
 }

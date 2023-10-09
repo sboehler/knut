@@ -21,17 +21,17 @@ import (
 // Error is a processing error, with a reference to a directive with
 // a source location.
 type Error struct {
-	directive model.Directive
-	msg       string
+	Directive model.Directive
+	Msg       string
 }
 
 func (be Error) Error() string {
 	var s strings.Builder
-	s.WriteString(be.msg)
+	s.WriteString(be.Msg)
 	s.WriteRune('\n')
 	s.WriteRune('\n')
 	p := printer.New(&s)
-	p.PrintDirectiveLn(be.directive)
+	p.PrintDirectiveLn(be.Directive)
 	return s.String()
 }
 
@@ -54,61 +54,6 @@ func ComputePrices(v *model.Commodity) *Processor {
 				d.Normalized = prc.Normalize(v)
 				previous = d.Normalized
 			}
-			return nil
-		},
-	}
-}
-
-// Balance balances the journal.
-func Check(reg *model.Registry) *Processor {
-	quantities := make(amounts.Amounts)
-	accounts := set.New[*model.Account]()
-
-	return &Processor{
-
-		Open: func(o *model.Open) error {
-			if accounts.Has(o.Account) {
-				return Error{o, "account is already open"}
-			}
-			accounts.Add(o.Account)
-			return nil
-		},
-
-		Posting: func(t *model.Transaction, p *model.Posting) error {
-			if !accounts.Has(p.Account) {
-				return Error{t, fmt.Sprintf("account %s is not open", p.Account)}
-			}
-			if p.Account.IsAL() {
-				quantities.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Quantity)
-			}
-			return nil
-		},
-
-		Balance: func(a *model.Balance) error {
-			if !accounts.Has(a.Account) {
-				return Error{a, "account is not open"}
-			}
-			position := amounts.AccountCommodityKey(a.Account, a.Commodity)
-			if qty, ok := quantities[position]; !ok || !qty.Equal(a.Quantity) {
-				return Error{a, fmt.Sprintf("failed assertion: account has position: %s %s", qty, position.Commodity.Name())}
-			}
-			return nil
-		},
-
-		Close: func(c *model.Close) error {
-			for pos, amount := range quantities {
-				if pos.Account != c.Account {
-					continue
-				}
-				if !amount.IsZero() {
-					return Error{c, fmt.Sprintf("account has nonzero position: %s %s", amount, pos.Commodity.Name())}
-				}
-				delete(quantities, pos)
-			}
-			if !accounts.Has(c.Account) {
-				return Error{c, "account is not open"}
-			}
-			accounts.Remove(c.Account)
 			return nil
 		},
 	}

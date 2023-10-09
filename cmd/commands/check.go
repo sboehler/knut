@@ -15,11 +15,13 @@
 package commands
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 
 	"github.com/sboehler/knut/lib/journal"
 	"github.com/sboehler/knut/lib/journal/check"
+	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/registry"
 
 	"github.com/spf13/cobra"
@@ -49,7 +51,7 @@ type checkRunner struct {
 func (r *checkRunner) run(cmd *cobra.Command, args []string) {
 
 	if err := r.execute(cmd, args); err != nil {
-		fmt.Fprintf(cmd.ErrOrStderr(), "%#v\n", err)
+		fmt.Fprintf(cmd.ErrOrStderr(), "%+v\n", err)
 		os.Exit(1)
 	}
 }
@@ -58,18 +60,35 @@ func (r *checkRunner) setupFlags(c *cobra.Command) {
 	c.Flags().BoolVar(&r.write, "write", false, "write")
 }
 
-func (r checkRunner) execute(cmd *cobra.Command, args []string) error {
+func (r *checkRunner) execute(cmd *cobra.Command, args []string) error {
 	reg := registry.New()
 
 	j, err := journal.FromPath(cmd.Context(), reg, args[0])
 	if err != nil {
 		return err
 	}
+	var checker check.Checker
+
 	_, err = j.Process(
-		check.Check(),
+		checker.Check(r.write),
 	)
 	if err != nil {
 		return err
 	}
+	if r.write {
+		out := bufio.NewWriter(os.Stdout)
+		defer out.Flush()
+		return r.writeFile(reg, checker.Assertions())
+	}
 	return nil
+}
+
+func (r *checkRunner) writeFile(reg *registry.Registry, assertions []*model.Assertion) error {
+	out := bufio.NewWriter(os.Stdout)
+	defer out.Flush()
+	j := journal.New(reg)
+	for _, a := range assertions {
+		j.AddAssertion(a)
+	}
+	return journal.Print(out, j)
 }

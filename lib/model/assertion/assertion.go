@@ -3,6 +3,7 @@ package assertion
 import (
 	"time"
 
+	"github.com/sboehler/knut/lib/common/compare"
 	"github.com/sboehler/knut/lib/model/account"
 	"github.com/sboehler/knut/lib/model/commodity"
 	"github.com/sboehler/knut/lib/model/registry"
@@ -56,4 +57,14 @@ func Create(reg *registry.Registry, a *syntax.Assertion) (*Assertion, error) {
 		Date:     date,
 		Balances: balances,
 	}, nil
+}
+
+func CompareBalance(x, y Balance) compare.Order {
+	if x.Account != y.Account {
+		return account.Compare(x.Account, y.Account)
+	}
+	if x.Commodity != y.Commodity {
+		return commodity.Compare(x.Commodity, y.Commodity)
+	}
+	return compare.Decimal(x.Quantity, y.Quantity)
 }

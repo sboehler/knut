@@ -31,7 +31,8 @@ func (be Error) Error() string {
 }
 
 type Checker struct {
-	Write bool
+	Write   bool
+	NoCheck bool
 
 	quantities amounts.Amounts
 	accounts   set.Set[*model.Account]
@@ -65,6 +66,9 @@ func (ch *Checker) balance(a *model.Assertion, bal *model.Balance) error {
 		return Error{Directive: a, Msg: "account is not open"}
 	}
 	position := amounts.AccountCommodityKey(bal.Account, bal.Commodity)
+	if ch.NoCheck {
+		return nil
+	}
 	if qty, ok := ch.quantities[position]; !ok || !qty.Equal(bal.Quantity) {
 		return Error{Directive: a, Msg: fmt.Sprintf("failed assertion: %s has position: %s %s", position.Account.Name(), qty, position.Commodity.Name())}
 	}
@@ -108,13 +112,13 @@ func (ch *Checker) dayEnd(d *journal.Day) error {
 	return nil
 }
 
-func (ch *Checker) Check(create bool) *journal.Processor {
+func (ch *Checker) Check() *journal.Processor {
 	ch.quantities = make(amounts.Amounts)
 	ch.accounts = set.New[*model.Account]()
 	ch.assertions = nil
 
 	var dayEnd func(*journal.Day) error
-	if create {
+	if ch.Write {
 		dayEnd = ch.dayEnd
 	}
 
@@ -130,5 +134,5 @@ func (ch *Checker) Check(create bool) *journal.Processor {
 // Checker checks the journal (with default options).
 func Check() *journal.Processor {
 	var checker Checker
-	return checker.Check(false)
+	return checker.Check()
 }

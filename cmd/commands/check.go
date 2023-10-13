@@ -45,7 +45,8 @@ func CreateCheckCommand() *cobra.Command {
 }
 
 type checkRunner struct {
-	write bool
+	write   bool
+	noCheck bool
 }
 
 func (r *checkRunner) run(cmd *cobra.Command, args []string) {
@@ -57,7 +58,8 @@ func (r *checkRunner) run(cmd *cobra.Command, args []string) {
 }
 
 func (r *checkRunner) setupFlags(c *cobra.Command) {
-	c.Flags().BoolVar(&r.write, "write", false, "write")
+	c.Flags().BoolVar(&r.write, "write", false, "create a complete set of assertions")
+	c.Flags().BoolVar(&r.noCheck, "no-check", false, "do not check assertions")
 }
 
 func (r *checkRunner) execute(cmd *cobra.Command, args []string) error {
@@ -67,10 +69,13 @@ func (r *checkRunner) execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	var checker check.Checker
+	checker := check.Checker{
+		Write:   r.write,
+		NoCheck: r.noCheck,
+	}
 
 	_, err = j.Process(
-		checker.Check(r.write),
+		checker.Check(),
 	)
 	if err != nil {
 		return err

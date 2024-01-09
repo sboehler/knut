@@ -125,8 +125,11 @@ func (p *Printer) printAssertion(a directives.Assertion) (int, error) {
 	if len(a.Balances) == 1 {
 		return fmt.Fprintf(p, " %s %s %s", a.Balances[0].Account.Extract(), a.Balances[0].Quantity.Extract(), a.Balances[0].Commodity.Extract())
 	} else {
+		if _, err := io.WriteString(p, "\n"); err != nil {
+			return p.count - start, err
+		}
 		for _, bal := range a.Balances {
-			if _, err := fmt.Fprintf(p, "\n%s %s %s", bal.Account.Extract(), bal.Quantity.Extract(), bal.Commodity.Extract()); err != nil {
+			if _, err := fmt.Fprintf(p, "%s %s %s\n", bal.Account.Extract(), bal.Quantity.Extract(), bal.Commodity.Extract()); err != nil {
 				return p.count - start, err
 			}
 		}

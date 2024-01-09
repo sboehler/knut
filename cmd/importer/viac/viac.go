@@ -108,7 +108,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 }
 
 type response struct {
-	DailyValues []dailyValue `json:"dailyValues"`
+	DailyValues []dailyValue `json:"dailyWealth"`
 }
 
 type dailyValue struct {

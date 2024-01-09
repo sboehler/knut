@@ -149,6 +149,7 @@ func TestPrintFile(t *testing.T) {
 				`2022-03-03 balance`,
 				`XYZ:ABC -80.23 CHF`,
 				`ABC:XYZ 100 USD`,
+				``,
 			),
 		},
 		{

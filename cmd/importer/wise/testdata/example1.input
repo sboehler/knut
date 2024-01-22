@@ -1,0 +1,5 @@
+ID,Status,Direction,"Created on","Finished on","Source fee amount","Source fee currency","Target fee amount","Target fee currency","Source name","Source amount (after fees)","Source currency","Target name","Target amount (after fees)","Target currency","Exchange rate",Reference,Batch
+"CARD_TRANSACTION-12",COMPLETED,OUT,"2024-01-11 15:20:30","2024-01-11 15:20:30",0.06,CHF,,,"Rocky Balboa",12.25,CHF,Linkt,21.53,AUD,1.75685000,,
+TRANSFER-13,COMPLETED,IN,"2023-12-06 02:48:20","2023-12-07 01:33:37",0.00,CHF,,,"Rocky Balboa",2000.0,CHF,"Rocky Balboa",2000.0,CHF,1.0,,
+"BALANCE_TRANSACTION-14",COMPLETED,NEUTRAL,"2023-09-25 19:49:24","2023-09-25 19:49:24",54.95,CHF,,,"Rocky Balboa",11945.05,CHF,"Rocky Balboa",21960.02,NZD,1.83842000,,
+"CARD_TRANSACTION-15",COMPLETED,OUT,"2023-11-27 02:29:25","2023-11-27 02:29:25",0.00,NZD,,,"Rocky Balboa",26.01,NZD,"Lake Taupo Resort",26.01,NZD,1.00000000,,

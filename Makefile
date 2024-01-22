@@ -12,7 +12,7 @@ coverage:
 	go test -race -covermode=atomic -coverprofile=coverage.out ./...
 
 test-update:
-	go test ./... --update
+	go test ./... --update || true
 
 clean:
 	rm -f ./knut

@@ -42,6 +42,9 @@ func ComputePrices(v *model.Commodity) *Processor {
 
 // Balance balances the journal.
 func Valuate(reg *model.Registry, valuation *model.Commodity) *Processor {
+	if valuation == nil {
+		return nil
+	}
 
 	var prevPrices, prices price.NormalizedPrices
 	quantities := make(amounts.Amounts)

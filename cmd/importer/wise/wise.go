@@ -193,6 +193,10 @@ func (p *parser) parseBooking() error {
 		return fmt.Errorf("invalid started date in row %v: %w", r, err)
 	}
 
+	if r[cStatus] == "CANCELLED" {
+		return nil
+	}
+
 	var bookings posting.Builders
 	bookings, err = p.parseFee(bookings, r[cSourceFeeAmount], r[cSourceFeeCurrency])
 	if err != nil {
@@ -237,26 +241,47 @@ func (p *parser) parseBooking() error {
 		}.Build()
 		p.journal.AddTransaction(t)
 		bookings = nil
-	}
-	switch r[cDirection] {
-	case "OUT":
-		bookings = append(bookings, posting.Builder{
-			Credit:    p.account,
-			Debit:     p.journal.Registry.Accounts().TBDAccount(),
-			Quantity:  targetAmount,
-			Commodity: targetCommodity,
-		})
-	case "IN":
-		bookings = append(bookings, posting.Builder{
-			Credit:    p.journal.Registry.Accounts().TBDAccount(),
-			Debit:     p.account,
-			Quantity:  targetAmount,
-			Commodity: targetCommodity,
-		})
-	case "NEUTRAL":
-		return nil
-	default:
-		return fmt.Errorf("invalid direction: %s", r[cDirection])
+		switch r[cDirection] {
+		case "OUT":
+			bookings = append(bookings, posting.Builder{
+				Credit:    p.account,
+				Debit:     p.journal.Registry.Accounts().TBDAccount(),
+				Quantity:  targetAmount,
+				Commodity: targetCommodity,
+			})
+		case "IN":
+			bookings = append(bookings, posting.Builder{
+				Credit:    p.journal.Registry.Accounts().TBDAccount(),
+				Debit:     p.account,
+				Quantity:  targetAmount,
+				Commodity: targetCommodity,
+			})
+		case "NEUTRAL":
+			return nil
+		default:
+			return fmt.Errorf("invalid direction: %s", r[cDirection])
+		}
+	} else {
+		switch r[cDirection] {
+		case "OUT":
+			bookings = append(bookings, posting.Builder{
+				Credit:    p.account,
+				Debit:     p.journal.Registry.Accounts().TBDAccount(),
+				Quantity:  sourceAmount,
+				Commodity: sourceCommodity,
+			})
+		case "IN":
+			bookings = append(bookings, posting.Builder{
+				Credit:    p.journal.Registry.Accounts().TBDAccount(),
+				Debit:     p.account,
+				Quantity:  sourceAmount,
+				Commodity: sourceCommodity,
+			})
+		case "NEUTRAL":
+			return nil
+		default:
+			return fmt.Errorf("invalid direction: %s", r[cDirection])
+		}
 	}
 
 	p.journal.AddTransaction(transaction.Builder{

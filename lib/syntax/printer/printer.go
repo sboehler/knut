@@ -134,14 +134,13 @@ func (p *Printer) printAssertion(a directives.Assertion) error {
 	if len(a.Balances) == 1 {
 		_, err := fmt.Fprintf(p, " %s %s %s", a.Balances[0].Account.Extract(), a.Balances[0].Quantity.Extract(), a.Balances[0].Commodity.Extract())
 		return err
-	} else {
-		if _, err := io.WriteString(p, "\n"); err != nil {
+	}
+	if _, err := io.WriteString(p, "\n"); err != nil {
+		return err
+	}
+	for _, bal := range a.Balances {
+		if _, err := fmt.Fprintf(p, "%s %s %s\n", bal.Account.Extract(), bal.Quantity.Extract(), bal.Commodity.Extract()); err != nil {
 			return err
-		}
-		for _, bal := range a.Balances {
-			if _, err := fmt.Fprintf(p, "%s %s %s\n", bal.Account.Extract(), bal.Quantity.Extract(), bal.Commodity.Extract()); err != nil {
-				return err
-			}
 		}
 	}
 	return nil
@@ -163,14 +162,16 @@ func (p *Printer) PrintFile(f directives.File) (int, error) {
 // Initialize initializes the padding of this printer.
 func (p *Printer) Initialize(directive []directives.Directive) {
 	for _, d := range directive {
-		if t, ok := d.Directive.(directives.Transaction); ok {
-			for _, b := range t.Bookings {
-				if l := utf8.RuneCountInString(b.Credit.Extract()); l > p.padding {
-					p.padding = l
-				}
-				if l := utf8.RuneCountInString(b.Debit.Extract()); l > p.padding {
-					p.padding = l
-				}
+		t, ok := d.Directive.(directives.Transaction)
+		if !ok {
+			continue
+		}
+		for _, b := range t.Bookings {
+			if l := utf8.RuneCountInString(b.Credit.Extract()); l > p.padding {
+				p.padding = l
+			}
+			if l := utf8.RuneCountInString(b.Debit.Extract()); l > p.padding {
+				p.padding = l
 			}
 		}
 	}

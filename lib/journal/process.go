@@ -196,17 +196,17 @@ type Collection interface {
 }
 
 type Query struct {
-	Mapper    mapper.Mapper[amounts.Key]
-	Predicate predicate.Predicate[amounts.Key]
+	Select    mapper.Mapper[amounts.Key]
+	Where     predicate.Predicate[amounts.Key]
 	Valuation *model.Commodity
 }
 
-func (query Query) Execute(c Collection) *Processor {
-	if query.Predicate == nil {
-		query.Predicate = predicate.True[amounts.Key]
+func (query Query) Into(c Collection) *Processor {
+	if query.Where == nil {
+		query.Where = predicate.True[amounts.Key]
 	}
-	if query.Mapper == nil {
-		query.Mapper = mapper.Identity[amounts.Key]
+	if query.Select == nil {
+		query.Select = mapper.Identity[amounts.Key]
 	}
 	return &Processor{
 		Posting: func(t *model.Transaction, b *model.Posting) error {
@@ -214,7 +214,7 @@ func (query Query) Execute(c Collection) *Processor {
 			if query.Valuation != nil {
 				amount = b.Value
 			}
-			kc := amounts.Key{
+			key := amounts.Key{
 				Date:        t.Date,
 				Account:     b.Account,
 				Other:       b.Other,
@@ -222,8 +222,8 @@ func (query Query) Execute(c Collection) *Processor {
 				Valuation:   query.Valuation,
 				Description: t.Description,
 			}
-			if query.Predicate(kc) {
-				c.Insert(query.Mapper(kc), amount)
+			if query.Where(key) {
+				c.Insert(query.Select(key), amount)
 			}
 			return nil
 		},

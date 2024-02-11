@@ -138,7 +138,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 		journal.Filter(partition),
 		journal.CloseAccounts(j, r.close, partition),
 		journal.Query{
-			Mapper: amounts.KeyMapper{
+			Select: amounts.KeyMapper{
 				Date: partition.Align(),
 				Account: mapper.Combine(
 					account.Remap(reg.Accounts(), r.remap.Regex()),
@@ -147,12 +147,12 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 				Commodity: mapper.Identity[*model.Commodity],
 				Valuation: commodity.IdentityIf(valuation != nil),
 			}.Build(),
-			Predicate: predicate.And(
-				amounts.FilterAccount(r.accounts.Regex()),
-				amounts.FilterCommodity(r.commodities.Regex()),
+			Where: predicate.And(
+				amounts.AccountMatches(r.accounts.Regex()),
+				amounts.CommodityMatches(r.commodities.Regex()),
 			),
 			Valuation: valuation,
-		}.Execute(rep),
+		}.Into(rep),
 	)
 	if err != nil {
 		return err

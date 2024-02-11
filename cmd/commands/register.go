@@ -135,12 +135,7 @@ func (r registerRunner) execute(cmd *cobra.Command, args []string) error {
 		journal.Valuate(reg, valuation),
 		journal.Filter(partition),
 		journal.Query{
-			Predicate: predicate.And(
-				amounts.FilterAccount(r.accounts.Regex()),
-				amounts.FilterOther(r.others.Regex()),
-				amounts.FilterCommodity(r.commodities.Regex()),
-			),
-			Mapper: amounts.KeyMapper{
+			Select: amounts.KeyMapper{
 				Date:    partition.Align(),
 				Account: am,
 				Other: mapper.Combine(
@@ -148,11 +143,16 @@ func (r registerRunner) execute(cmd *cobra.Command, args []string) error {
 					account.Shorten(reg.Accounts(), r.mapping.Value()),
 				),
 				Commodity:   commodity.IdentityIf(r.showCommodities),
-				Valuation:   commodity.IdentityIf(valuation != nil),
+				Valuation:   mapper.Identity[*commodity.Commodity],
 				Description: mapper.IdentityIf[string](r.showDescriptions),
 			}.Build(),
+			Where: predicate.And(
+				amounts.AccountMatches(r.accounts.Regex()),
+				amounts.OtherAccountMatches(r.others.Regex()),
+				amounts.CommodityMatches(r.commodities.Regex()),
+			),
 			Valuation: valuation,
-		}.Execute(rep),
+		}.Into(rep),
 	)
 	if err != nil {
 		return err

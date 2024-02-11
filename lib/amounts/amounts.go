@@ -189,7 +189,7 @@ func FilterDates(pred predicate.Predicate[time.Time]) predicate.Predicate[Key] {
 	return func(k Key) bool { return pred(k.Date) }
 }
 
-func FilterCommodity(regexes []*regexp.Regexp) predicate.Predicate[Key] {
+func CommodityMatches(regexes []*regexp.Regexp) predicate.Predicate[Key] {
 	if len(regexes) == 0 {
 		return predicate.True[Key]
 	}
@@ -199,7 +199,7 @@ func FilterCommodity(regexes []*regexp.Regexp) predicate.Predicate[Key] {
 	}
 }
 
-func FilterAccount(regexes []*regexp.Regexp) predicate.Predicate[Key] {
+func AccountMatches(regexes []*regexp.Regexp) predicate.Predicate[Key] {
 	if regexes == nil {
 		return predicate.True[Key]
 	}
@@ -209,7 +209,7 @@ func FilterAccount(regexes []*regexp.Regexp) predicate.Predicate[Key] {
 	}
 }
 
-func FilterOther(regexes []*regexp.Regexp) predicate.Predicate[Key] {
+func OtherAccountMatches(regexes []*regexp.Regexp) predicate.Predicate[Key] {
 	if regexes == nil {
 		return predicate.True[Key]
 	}

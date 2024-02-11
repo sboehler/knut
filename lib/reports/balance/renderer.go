@@ -136,11 +136,7 @@ func (rn *Renderer) render(t *table.Table, indent int, name string, neg bool, va
 			if neg {
 				v = v.Neg()
 			}
-			if v.IsZero() {
-				row.AddEmpty()
-			} else {
-				row.AddDecimal(v)
-			}
+			row.AddDecimal(v)
 		}
 	}
 }

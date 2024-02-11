@@ -17,6 +17,7 @@ package commands
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -81,6 +82,7 @@ type balanceRunner struct {
 	thousands bool
 	color     bool
 	digits    int32
+	csv       bool
 }
 
 func (r *balanceRunner) run(cmd *cobra.Command, args []string) {
@@ -103,6 +105,7 @@ func (r *balanceRunner) setupFlags(c *cobra.Command) {
 	r.Multiperiod.Setup(c)
 	c.Flags().StringVar(&r.cpuprofile, "cpuprofile", "", "file to write profile")
 	c.Flags().BoolVarP(&r.diff, "diff", "d", false, "diff")
+	c.Flags().BoolVarP(&r.csv, "csv", "", false, "csv")
 	c.Flags().BoolVar(&r.close, "close", true, "close")
 	c.Flags().BoolVarP(&r.sortAlphabetically, "sort", "a", false, "Sort accounts alphabetically")
 	c.Flags().VarP(&r.showCommodities, "show-commodities", "s", "<regex>")
@@ -160,12 +163,21 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 		SortAlphabetically: r.sortAlphabetically,
 		Diff:               r.diff,
 	}
-	tableRenderer := table.TextRenderer{
-		Color:     r.color,
-		Thousands: r.thousands,
-		Round:     r.digits,
+	var tableRenderer Renderer
+	if r.csv {
+		tableRenderer = &table.CSVRenderer{}
+	} else {
+		tableRenderer = &table.TextRenderer{
+			Color:     r.color,
+			Thousands: r.thousands,
+			Round:     r.digits,
+		}
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
 	return tableRenderer.Render(reportRenderer.Render(rep), out)
+}
+
+type Renderer interface {
+	Render(*table.Table, io.Writer) error
 }

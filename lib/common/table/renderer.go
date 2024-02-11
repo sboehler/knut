@@ -130,7 +130,7 @@ func (r *TextRenderer) renderCell(c cell, l int, w io.Writer) error {
 		case t.n.LessThan(decimal.Zero):
 			_, err = red.Fprintf(w, "%*s", l, s)
 		case t.n.Equal(decimal.Zero):
-			_, err = fmt.Fprintf(w, "%*s", l, s)
+			_, err = fmt.Fprintf(w, "%*s", l, "")
 		case t.n.GreaterThan(decimal.Zero):
 			_, err = green.Fprintf(w, "%*s", l, s)
 		}

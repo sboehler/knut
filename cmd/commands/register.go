@@ -138,7 +138,7 @@ func (r registerRunner) execute(cmd *cobra.Command, args []string) error {
 			Select: amounts.KeyMapper{
 				Date:    partition.Align(),
 				Account: am,
-				Other: mapper.Combine(
+				Other: mapper.Sequence(
 					account.Remap(reg.Accounts(), r.remap.Regex()),
 					account.Shorten(reg.Accounts(), r.mapping.Value()),
 				),

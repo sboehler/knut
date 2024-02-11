@@ -130,17 +130,17 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	partition := r.Multiperiod.Partition(j.Period())
-	rep := balance.NewReport(reg, partition)
+	report := balance.NewReport(reg, partition)
 	_, err = j.Process(
-		journal.ComputePrices(valuation),
 		check.Check(),
+		journal.ComputePrices(valuation),
 		journal.Valuate(reg, valuation),
 		journal.Filter(partition),
 		journal.CloseAccounts(j, r.close, partition),
 		journal.Query{
 			Select: amounts.KeyMapper{
 				Date: partition.Align(),
-				Account: mapper.Combine(
+				Account: mapper.Sequence(
 					account.Remap(reg.Accounts(), r.remap.Regex()),
 					account.Shorten(reg.Accounts(), r.mapping.Value()),
 				),
@@ -152,7 +152,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 				amounts.CommodityMatches(r.commodities.Regex()),
 			),
 			Valuation: valuation,
-		}.Into(rep),
+		}.Into(report),
 	)
 	if err != nil {
 		return err
@@ -175,7 +175,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return tableRenderer.Render(reportRenderer.Render(rep), out)
+	return tableRenderer.Render(reportRenderer.Render(report), out)
 }
 
 type Renderer interface {

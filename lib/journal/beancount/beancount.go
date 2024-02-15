@@ -30,7 +30,7 @@ import (
 )
 
 // Transcode transcodes the given journal to beancount.
-func Transcode(w io.Writer, j *journal.Journal2, c *model.Commodity) error {
+func Transcode(w io.Writer, j *journal.Journal, c *model.Commodity) error {
 	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c.Name()); err != nil {
 		return err
 	}

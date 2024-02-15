@@ -69,7 +69,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		f   *bufio.Reader
 		err error
 	)
-	j := journal.New()
+	builder := journal.New()
 	for _, path := range args {
 		if f, err = flags.OpenFile(path); err != nil {
 			return err
@@ -77,7 +77,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		p := parser{
 			registry: reg,
 			reader:   csv.NewReader(f),
-			journal:  j,
+			builder:  builder,
 		}
 		if p.account, err = r.account.Value(reg.Accounts()); err != nil {
 			return err
@@ -91,14 +91,14 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return journal.Print(out, j)
+	return journal.Print(out, builder.Build())
 }
 
 type parser struct {
 	registry            *model.Registry
 	reader              *csv.Reader
 	account, feeAccount *model.Account
-	journal             *journal.Journal
+	builder             *journal.Builder
 	balance             amounts.Amounts
 }
 
@@ -198,7 +198,7 @@ func (p *parser) parseBooking() error {
 		Description: r[bfDescription],
 		Postings:    postings.Build(),
 	}.Build()
-	p.journal.Add(t)
+	p.builder.Add(t)
 	bal, err := decimal.NewFromString(r[bfBalance])
 	if err != nil {
 		return fmt.Errorf("invalid balance in row %v: %v", r, err)
@@ -209,7 +209,7 @@ func (p *parser) parseBooking() error {
 
 func (p *parser) addBalances() {
 	for k, bal := range p.balance {
-		p.journal.Add(&model.Assertion{
+		p.builder.Add(&model.Assertion{
 			Date: k.Date,
 			Balances: []model.Balance{
 				{

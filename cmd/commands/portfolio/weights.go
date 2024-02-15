@@ -120,7 +120,7 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 	}
 	j.Days(partition.EndDates())
 	rep := weights.NewReport()
-	_, err = j.Process(
+	err = j.Build().Process(
 		journal.ComputePrices(valuation),
 		check.Check(),
 		journal.Valuate(reg, valuation),

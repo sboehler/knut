@@ -104,14 +104,14 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return journal.Print(out, j)
+	return journal.Print(out, j.Build())
 }
 
 type parser struct {
 	registry                            *model.Registry
 	reader                              *csv.Reader
 	account, feeAccount, tradingAccount *model.Account
-	journal                             *journal.Journal
+	journal                             *journal.Builder
 	balance                             amounts.Amounts
 }
 

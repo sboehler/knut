@@ -85,7 +85,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	p := parser{
 		registry: reg,
 		reader:   csv.NewReader(f),
-		journal:  journal.New(),
+		builder:  journal.New(),
 	}
 	if p.account, err = r.account.Value(reg.Accounts()); err != nil {
 		return err
@@ -110,13 +110,13 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return journal.Print(out, p.journal)
+	return journal.Print(out, p.builder.Build())
 }
 
 type parser struct {
 	registry *model.Registry
 	reader   *csv.Reader
-	journal  *journal.Journal
+	builder  *journal.Builder
 	last     *record
 
 	account, dividend, tax, fee, interest, trading *model.Account
@@ -262,7 +262,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	if proceeds.IsPositive() {
 		qty = qty.Neg()
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        r.date,
 		Description: desc,
 		Postings: posting.Builders{
@@ -308,7 +308,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		return true, nil
 	}
 	desc := fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netQuantity, p.last.currency.Name(), r.trxType, r.netQuantity, r.currency.Name())
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        r.date,
 		Description: desc,
 		Postings: posting.Builders{
@@ -356,7 +356,7 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 			Quantity:  r.fee,
 		})
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        r.date,
 		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol.Name(), r.name, r.isin),
 		Postings:    postings.Build(),
@@ -369,7 +369,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 	if r.trxType != "Depotgebühren" {
 		return false, nil
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{
@@ -393,7 +393,7 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 	if !w.Has(r.trxType) {
 		return false, nil
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{
@@ -410,7 +410,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 	if r.trxType != "Zins" {
 		return false, nil
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{
@@ -425,7 +425,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 }
 
 func (p *parser) parseCatchall(r *record) (bool, error) {
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{

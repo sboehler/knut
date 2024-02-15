@@ -81,7 +81,7 @@ func (r *runner) runE(cmd *cobra.Command, args []string) error {
 	p := Parser{
 		registry: reg,
 		reader:   csv.NewReader(utfbom.SkipOnly(reader)),
-		journal:  journal.New(),
+		builder:  journal.New(),
 	}
 	if p.account, err = r.accountFlag.Value(reg.Accounts()); err != nil {
 		return err
@@ -91,7 +91,7 @@ func (r *runner) runE(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return journal.Print(out, p.journal)
+	return journal.Print(out, p.builder.Build())
 }
 
 func init() {
@@ -103,7 +103,7 @@ type Parser struct {
 	registry *model.Registry
 	reader   *csv.Reader
 	account  *model.Account
-	journal  *journal.Journal
+	builder  *journal.Builder
 
 	currency *model.Commodity
 }
@@ -187,7 +187,7 @@ func (p *Parser) readBookingLine() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        date,
 		Description: strings.TrimSpace(rec[bfAvisierungstext]),
 		Postings: posting.Builder{

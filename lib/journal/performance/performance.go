@@ -218,7 +218,7 @@ func Performance(dpv *journal.Performance) float64 {
 	return (v1 - outflow) / (v0 + inflow)
 }
 
-func Perf(j *journal.Journal, part date.Partition) *journal.Processor {
+func Perf(j *journal.Builder, part date.Partition) *journal.Processor {
 	ds := set.FromSlice(j.Days(part.EndDates()))
 	running := 1.0
 	return &journal.Processor{

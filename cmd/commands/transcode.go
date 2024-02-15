@@ -27,7 +27,6 @@ import (
 	"github.com/sboehler/knut/lib/model/registry"
 
 	"github.com/spf13/cobra"
-	"go.uber.org/multierr"
 )
 
 // CreateTranscodeCommand creates the command.
@@ -77,14 +76,18 @@ func (r *transcodeRunner) execute(cmd *cobra.Command, args []string) (errors err
 	if err != nil {
 		return err
 	}
-	j, err := b.Process(
+	j := b.Build()
+	err = j.Process(
 		journal.Sort(),
 		journal.ComputePrices(valuation),
 		check.Check(),
 		journal.Valuate(reg, valuation),
 	)
+	if err != nil {
+		return err
+	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
-	defer func() { err = multierr.Append(err, w.Flush()) }()
+	defer w.Flush()
 
 	return beancount.Transcode(w, j, valuation)
 }

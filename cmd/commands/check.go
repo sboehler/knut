@@ -74,7 +74,7 @@ func (r *checkRunner) execute(cmd *cobra.Command, args []string) error {
 		NoCheck: r.noCheck,
 	}
 
-	_, err = j.Process(
+	err = j.Build().Process(
 		checker.Check(),
 	)
 	if err != nil {
@@ -95,5 +95,5 @@ func (r *checkRunner) writeFile(assertions []*model.Assertion) error {
 	for _, a := range assertions {
 		j.Add(a)
 	}
-	return journal.Print(out, j)
+	return journal.Print(out, j.Build())
 }

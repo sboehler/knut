@@ -32,15 +32,15 @@ import (
 	"github.com/sourcegraph/conc/pool"
 )
 
-// Journal represents an unprocessed
-type Journal struct {
+// Builder represents an unprocessed
+type Builder struct {
 	days     map[time.Time]*Day
 	min, max time.Time
 }
 
 // New creates a new Journal.
-func New() *Journal {
-	return &Journal{
+func New() *Builder {
+	return &Builder{
 		days: make(map[time.Time]*Day),
 		min:  date.Date(9999, 12, 31),
 		max:  time.Time{},
@@ -48,15 +48,17 @@ func New() *Journal {
 }
 
 // Day returns the Day for the given date.
-func (j *Journal) Day(d time.Time) *Day {
+func (j *Builder) Day(d time.Time) *Day {
 	return dict.GetDefault(j.days, d, func() *Day { return &Day{Date: d} })
 }
 
-func (j *Journal) Sorted() []*Day {
-	return dict.SortedValues(j.days, CompareDays)
+func (j *Builder) Build() *Journal {
+	return &Journal{
+		Days: dict.SortedValues(j.days, CompareDays),
+	}
 }
 
-func (j *Journal) Add(d model.Directive) error {
+func (j *Builder) Add(d model.Directive) error {
 	switch t := d.(type) {
 
 	case *model.Price:
@@ -94,27 +96,11 @@ func (j *Journal) Add(d model.Directive) error {
 	return nil
 }
 
-func (j *Journal) Period() date.Period {
+func (j *Builder) Period() date.Period {
 	return date.Period{Start: j.min, End: j.max}
 }
 
-func (j *Journal) Process(ps ...*Processor) (*Journal2, error) {
-	var fs []func(*Day) error
-	for _, proc := range ps {
-		if proc != nil {
-			fs = append(fs, proc.Process)
-		}
-	}
-	ds, err := cpr.Seq(context.Background(), j.Sorted(), fs...)
-	if err != nil {
-		return nil, err
-	}
-	return &Journal2{
-		Days: ds,
-	}, nil
-}
-
-func (j *Journal) Days(dates []time.Time) []*Day {
+func (j *Builder) Days(dates []time.Time) []*Day {
 	var res []*Day
 	for _, d := range dates {
 		res = append(res, j.Day(d))
@@ -122,7 +108,7 @@ func (j *Journal) Days(dates []time.Time) []*Day {
 	return res
 }
 
-func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, error) {
+func FromPath(ctx context.Context, reg *model.Registry, path string) (*Builder, error) {
 	syntaxCh, worker1 := syntax.ParseFileRecursively(path)
 	modelCh, worker2 := model.FromStream(reg, syntaxCh)
 	journalCh, worker3 := FromModelStream(modelCh)
@@ -136,8 +122,8 @@ func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, 
 	return <-journalCh, nil
 }
 
-func FromModelStream(modelCh <-chan []model.Directive) (<-chan *Journal, func(context.Context) error) {
-	return cpr.FanIn(func(ctx context.Context, ch chan<- *Journal) error {
+func FromModelStream(modelCh <-chan []model.Directive) (<-chan *Builder, func(context.Context) error) {
+	return cpr.FanIn(func(ctx context.Context, ch chan<- *Builder) error {
 		j := New()
 		err := cpr.ForEach(ctx, modelCh, func(directives []model.Directive) error {
 			for _, d := range directives {
@@ -154,11 +140,11 @@ func FromModelStream(modelCh <-chan []model.Directive) (<-chan *Journal, func(co
 	})
 }
 
-type Journal2 struct {
+type Journal struct {
 	Days []*Day
 }
 
-func (j *Journal2) Process(ps ...*Processor) error {
+func (j *Journal) Process(ps ...*Processor) error {
 	var fs []func(*Day) error
 	for _, proc := range ps {
 		if proc != nil {
@@ -227,14 +213,14 @@ func Print(w io.Writer, j *Journal) error {
 			return nil
 		},
 	}
-	j2, err := j.Process(
+	err := j.Process(
 		Sort(),
 		paddingUpdater,
 	)
 	if err != nil {
 		return err
 	}
-	for _, day := range j2.Days {
+	for _, day := range j.Days {
 		for _, pr := range day.Prices {
 			if _, err := p.PrintDirectiveLn(pr); err != nil {
 				return err

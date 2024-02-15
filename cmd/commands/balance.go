@@ -131,7 +131,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 	}
 	partition := r.Multiperiod.Partition(j.Period())
 	report := balance.NewReport(reg, partition)
-	_, err = j.Process(
+	err = j.Build().Process(
 		check.Check(),
 		journal.ComputePrices(valuation),
 		journal.Valuate(reg, valuation),

@@ -76,7 +76,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	p := parser{
 		registry: reg,
 		reader:   csv.NewReader(f),
-		journal:  journal.New(),
+		builder:  journal.New(),
 		account:  account,
 	}
 	if err = p.parse(); err != nil {
@@ -84,14 +84,14 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer w.Flush()
-	return journal.Print(w, p.journal)
+	return journal.Print(w, p.builder.Build())
 }
 
 type parser struct {
 	registry *model.Registry
 	reader   *csv.Reader
 	account  *model.Account
-	journal  *journal.Journal
+	builder  *journal.Builder
 }
 
 func (p *parser) parse() error {
@@ -144,7 +144,7 @@ func (p *parser) readBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid amount in record %v: %w", r, err)
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        d,
 		Description: fmt.Sprintf("%s / %s / %s / %s", r[beschreibung], r[kartennummer], r[kategorie], r[debitKredit]),
 		Postings: posting.Builder{

@@ -164,7 +164,7 @@ func (r *fetchRunner) writeFile(prices map[time.Time]*model.Price, filepath stri
 		j.Add(price)
 	}
 	var buf bytes.Buffer
-	err := journal.Print(&buf, j)
+	err := journal.Print(&buf, j.Build())
 	if err != nil {
 		return err
 	}

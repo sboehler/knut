@@ -20,7 +20,7 @@ type Query struct {
 	Mapping   account.Mapping
 }
 
-func (q Query) Execute(j *journal.Journal, r *Report) *journal.Processor {
+func (q Query) Execute(j *journal.Builder, r *Report) *journal.Processor {
 	days := set.FromSlice(j.Days(q.Partition.EndDates()))
 	return &journal.Processor{
 		DayEnd: func(d *journal.Day) error {

@@ -96,7 +96,7 @@ func (r *returnsRunner) execute(cmd *cobra.Command, args []string) error {
 		AccountFilter:   predicate.ByName[*model.Account](r.accounts.Regex()),
 		CommodityFilter: predicate.ByName[*model.Commodity](r.commodities.Regex()),
 	}
-	_, err = j.Process(
+	err = j.Build().Process(
 		journal.ComputePrices(valuation),
 		check.Check(),
 		journal.Valuate(reg, valuation),

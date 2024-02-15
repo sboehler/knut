@@ -131,7 +131,7 @@ func Filter(part date.Partition) *Processor {
 }
 
 // Balance balances the journal.
-func CloseAccounts(j *Journal, reg *model.Registry, enable bool, partition date.Partition) *Processor {
+func CloseAccounts(j *Builder, reg *model.Registry, enable bool, partition date.Partition) *Processor {
 	if !enable {
 		return nil
 	}

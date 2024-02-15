@@ -118,7 +118,7 @@ func (r registerRunner) execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	r.showCommodities = r.showCommodities || valuation == nil
-	j, err := journal.FromPath(ctx, reg, args[0])
+	b, err := journal.FromPath(ctx, reg, args[0])
 	if err != nil {
 		return err
 	}
@@ -126,9 +126,10 @@ func (r registerRunner) execute(cmd *cobra.Command, args []string) error {
 	if r.showSource {
 		am = account.Remap(reg.Accounts(), r.remap.Regex())
 	}
-	partition := r.Multiperiod.Partition(j.Period())
+	partition := r.Multiperiod.Partition(b.Period())
 	rep := register.NewReport(reg)
-	_, err = j.Process(
+	j := b.Build()
+	err = j.Process(
 		journal.Sort(),
 		journal.ComputePrices(valuation),
 		check.Check(),

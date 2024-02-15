@@ -86,7 +86,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	p := parser{
 		registry: reg,
 		reader:   csv.NewReader(f),
-		journal:  journal.New(),
+		builder:  journal.New(),
 	}
 	if p.account, err = r.accountFlag.Value(reg.Accounts()); err != nil {
 		return err
@@ -111,13 +111,13 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return journal.Print(out, p.journal)
+	return journal.Print(out, p.builder.Build())
 }
 
 type parser struct {
 	registry         *model.Registry
 	reader           *csv.Reader
-	journal          *journal.Journal
+	builder          *journal.Builder
 	baseCurrency     *model.Commodity
 	dateFrom, dateTo time.Time
 
@@ -292,7 +292,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builders{
@@ -385,7 +385,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 			Quantity:  fee,
 		})
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings:    postings.Build(),
@@ -433,7 +433,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Withdraw %s %s", quantity, currency.Name())
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
@@ -487,7 +487,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if security, err = p.registry.Commodities().Get(symbol); err != nil {
 		return false, err
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
@@ -552,7 +552,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if security, err = p.registry.Commodities().Get(symbol); err != nil {
 		return false, err
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
@@ -587,7 +587,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	if quantity, err = parseDecimal(r[dfAmount]); err != nil {
 		return false, err
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
@@ -641,7 +641,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 	if quantity, err = decimal.NewFromString(r[opfQuantity]); err != nil {
 		return false, err
 	}
-	p.journal.Add(&model.Assertion{
+	p.builder.Add(&model.Assertion{
 		Date: p.dateTo,
 		Balances: []model.Balance{
 			{
@@ -691,7 +691,7 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 	if amount, err = parseRoundedDecimal(r[fbfQuantity]); err != nil {
 		return false, err
 	}
-	p.journal.Add(&model.Assertion{
+	p.builder.Add(&model.Assertion{
 		Date: p.dateTo,
 		Balances: []model.Balance{
 			{

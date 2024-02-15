@@ -77,7 +77,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	p := parser{
 		registry: reg,
 		reader:   csv.NewReader(charmap.ISO8859_1.NewDecoder().Reader(f)),
-		journal:  journal.New(),
+		builder:  journal.New(),
 	}
 
 	if p.account, err = r.account.Value(reg.Accounts()); err != nil {
@@ -88,14 +88,14 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()
-	return journal.Print(out, p.journal)
+	return journal.Print(out, p.builder.Build())
 }
 
 type parser struct {
 	registry *model.Registry
 	reader   *csv.Reader
 	account  *model.Account
-	journal  *journal.Journal
+	builder  *journal.Builder
 }
 
 func (p *parser) parse() error {
@@ -196,7 +196,7 @@ func (p *parser) parseBooking(r []string) error {
 	if commodity, err = p.registry.Commodities().Get(currency); err != nil {
 		return err
 	}
-	p.journal.Add(transaction.Builder{
+	p.builder.Add(transaction.Builder{
 		Date:        date,
 		Description: words,
 		Postings: posting.Builder{

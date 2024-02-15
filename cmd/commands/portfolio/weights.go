@@ -118,7 +118,7 @@ func (r *weightsRunner) execute(cmd *cobra.Command, args []string) error {
 		AccountFilter:   predicate.ByName[*model.Account](r.accounts.Regex()),
 		CommodityFilter: predicate.ByName[*model.Commodity](r.commodities.Regex()),
 	}
-	j.Days(partition.EndDates()...)
+	j.Days(partition.EndDates())
 	rep := weights.NewReport()
 	_, err = j.Process(
 		journal.ComputePrices(valuation),

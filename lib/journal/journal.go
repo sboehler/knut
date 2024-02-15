@@ -114,7 +114,7 @@ func (j *Journal) Process(ps ...*Processor) (*Journal2, error) {
 	}, nil
 }
 
-func (j *Journal) Days(dates ...time.Time) []*Day {
+func (j *Journal) Days(dates []time.Time) []*Day {
 	var res []*Day
 	for _, d := range dates {
 		res = append(res, j.Day(d))

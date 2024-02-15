@@ -30,7 +30,7 @@ import (
 )
 
 // Transcode transcodes the given journal to beancount.
-func Transcode(w io.Writer, j []*journal.Day, c *model.Commodity) error {
+func Transcode(w io.Writer, j *journal.Journal2, c *model.Commodity) error {
 	if _, err := fmt.Fprintf(w, `option "operating_currency" "%s"`, c.Name()); err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func Transcode(w io.Writer, j []*journal.Day, c *model.Commodity) error {
 	}
 	p := printer.New(w)
 	openValAccounts := set.New[*model.Account]()
-	for _, day := range j {
+	for _, day := range j.Days {
 		for _, open := range day.Openings {
 			if _, err := p.PrintDirective(open); err != nil {
 				return err

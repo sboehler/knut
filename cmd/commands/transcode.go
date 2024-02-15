@@ -73,11 +73,11 @@ func (r *transcodeRunner) execute(cmd *cobra.Command, args []string) (errors err
 	if valuation, err = r.valuation.Value(reg); err != nil {
 		return err
 	}
-	j, err := journal.FromPath(cmd.Context(), reg, args[0])
+	b, err := journal.FromPath(cmd.Context(), reg, args[0])
 	if err != nil {
 		return err
 	}
-	ds, err := j.Process(
+	j, err := b.Process(
 		journal.Sort(),
 		journal.ComputePrices(valuation),
 		check.Check(),
@@ -86,5 +86,5 @@ func (r *transcodeRunner) execute(cmd *cobra.Command, args []string) (errors err
 	w := bufio.NewWriter(cmd.OutOrStdout())
 	defer func() { err = multierr.Append(err, w.Flush()) }()
 
-	return beancount.Transcode(w, ds, valuation)
+	return beancount.Transcode(w, j, valuation)
 }

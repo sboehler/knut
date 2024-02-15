@@ -35,7 +35,7 @@ import (
 // Journal represents an unprocessed
 type Journal struct {
 	Registry *model.Registry
-	Days     map[time.Time]*Day
+	days     map[time.Time]*Day
 	min, max time.Time
 }
 
@@ -43,7 +43,7 @@ type Journal struct {
 func New(reg *model.Registry) *Journal {
 	return &Journal{
 		Registry: reg,
-		Days:     make(map[time.Time]*Day),
+		days:     make(map[time.Time]*Day),
 		min:      date.Date(9999, 12, 31),
 		max:      time.Time{},
 	}
@@ -51,11 +51,11 @@ func New(reg *model.Registry) *Journal {
 
 // Day returns the Day for the given date.
 func (j *Journal) Day(d time.Time) *Day {
-	return dict.GetDefault(j.Days, d, func() *Day { return &Day{Date: d} })
+	return dict.GetDefault(j.days, d, func() *Day { return &Day{Date: d} })
 }
 
 func (j *Journal) Sorted() []*Day {
-	return dict.SortedValues(j.Days, CompareDays)
+	return dict.SortedValues(j.days, CompareDays)
 }
 
 func (j *Journal) Add(d model.Directive) error {
@@ -100,14 +100,20 @@ func (j *Journal) Period() date.Period {
 	return date.Period{Start: j.min, End: j.max}
 }
 
-func (j *Journal) Process(ps ...*Processor) ([]*Day, error) {
+func (j *Journal) Process(ps ...*Processor) (*Journal2, error) {
 	var fs []func(*Day) error
 	for _, proc := range ps {
 		if proc != nil {
 			fs = append(fs, proc.Process)
 		}
 	}
-	return cpr.Seq(context.Background(), j.Sorted(), fs...)
+	ds, err := cpr.Seq(context.Background(), j.Sorted(), fs...)
+	if err != nil {
+		return nil, err
+	}
+	return &Journal2{
+		Days: ds,
+	}, nil
 }
 
 func (j *Journal) Fill(dates ...time.Time) {
@@ -146,6 +152,10 @@ func FromModelStream(reg *model.Registry, modelCh <-chan []model.Directive) (<-c
 		}
 		return cpr.Push(ctx, ch, j)
 	})
+}
+
+type Journal2 struct {
+	Days []*Day
 }
 
 // Day groups all commands for a given date.
@@ -200,16 +210,20 @@ func (p Performance) String() string {
 // PrintJournal prints a journal.
 func Print(w io.Writer, j *Journal) error {
 	p := printer.New(w)
-	days, err := j.Process(Sort())
+	paddingUpdater := &Processor{
+		Transaction: func(t *model.Transaction) error {
+			p.UpdatePadding(t)
+			return nil
+		},
+	}
+	j2, err := j.Process(
+		Sort(),
+		paddingUpdater,
+	)
 	if err != nil {
 		return err
 	}
-	for _, day := range days {
-		for _, t := range day.Transactions {
-			p.UpdatePadding(t)
-		}
-	}
-	for _, day := range days {
+	for _, day := range j2.Days {
 		for _, pr := range day.Prices {
 			if _, err := p.PrintDirectiveLn(pr); err != nil {
 				return err

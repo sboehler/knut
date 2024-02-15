@@ -137,11 +137,7 @@ func CloseAccounts(j *Journal, reg *model.Registry, enable bool, partition date.
 	}
 
 	quantities, values := make(amounts.Amounts), make(amounts.Amounts)
-	closingDays := set.New[*Day]()
-	for _, d := range partition.StartDates() {
-		// j.Day creates the entry for the given date as a side effect.
-		closingDays.Add(j.Day(d))
-	}
+	closingDays := set.FromSlice(j.Days(partition.StartDates()...))
 	equityAccount := reg.Accounts().MustGet("Equity:Equity")
 
 	return &Processor{

@@ -21,10 +21,7 @@ type Query struct {
 }
 
 func (q Query) Execute(j *journal.Journal, r *Report) *journal.Processor {
-	days := set.New[*journal.Day]()
-	for _, d := range q.Partition.EndDates() {
-		days.Add(j.Day(d))
-	}
+	days := set.FromSlice(j.Days(q.Partition.EndDates()...))
 	return &journal.Processor{
 		DayEnd: func(d *journal.Day) error {
 			if !days.Has(d) {

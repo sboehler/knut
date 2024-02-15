@@ -219,10 +219,7 @@ func Performance(dpv *journal.Performance) float64 {
 }
 
 func Perf(j *journal.Journal, part date.Partition) *journal.Processor {
-	ds := set.New[*journal.Day]()
-	for _, d := range part.EndDates() {
-		ds.Add(j.Day(d))
-	}
+	ds := set.FromSlice(j.Days(part.EndDates()...))
 	running := 1.0
 	return &journal.Processor{
 		DayEnd: func(d *journal.Day) error {

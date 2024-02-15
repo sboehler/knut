@@ -8,8 +8,20 @@ func New[T comparable]() Set[T] {
 	return make(Set[T])
 }
 
+func FromSlice[T comparable](ts []T) Set[T] {
+	s := make(Set[T], len(ts))
+	s.AddAll(ts...)
+	return s
+}
+
 func (set Set[T]) Add(t T) {
 	set[t] = struct{}{}
+}
+
+func (set Set[T]) AddAll(ts ...T) {
+	for _, t := range ts {
+		set.Add(t)
+	}
 }
 
 func (set Set[T]) Has(t T) bool {

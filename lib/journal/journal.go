@@ -114,10 +114,12 @@ func (j *Journal) Process(ps ...*Processor) (*Journal2, error) {
 	}, nil
 }
 
-func (j *Journal) Fill(dates ...time.Time) {
+func (j *Journal) Days(dates ...time.Time) []*Day {
+	var res []*Day
 	for _, d := range dates {
-		j.Day(d)
+		res = append(res, j.Day(d))
 	}
+	return res
 }
 
 func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, error) {
@@ -154,6 +156,17 @@ func FromModelStream(modelCh <-chan []model.Directive) (<-chan *Journal, func(co
 
 type Journal2 struct {
 	Days []*Day
+}
+
+func (j *Journal2) Process(ps ...*Processor) error {
+	var fs []func(*Day) error
+	for _, proc := range ps {
+		if proc != nil {
+			fs = append(fs, proc.Process)
+		}
+	}
+	_, err := cpr.Seq(context.Background(), j.Days, fs...)
+	return err
 }
 
 // Day groups all commands for a given date.

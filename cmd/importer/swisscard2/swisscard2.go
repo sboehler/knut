@@ -142,7 +142,7 @@ func (p *parser) readBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid amount in record %v: %w", r, err)
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        d,
 		Description: fmt.Sprintf("%s / %s / %s / %s", r[beschreibung], r[kartennummer], r[kategorie], r[debitKredit]),
 		Postings: posting.Builder{

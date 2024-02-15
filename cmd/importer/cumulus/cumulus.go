@@ -88,7 +88,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	}
 	j := journal.New(ctx)
 	for _, trx := range trx {
-		j.AddTransaction(trx)
+		j.Add(trx)
 	}
 	out := bufio.NewWriter(cmd.OutOrStdout())
 	defer out.Flush()

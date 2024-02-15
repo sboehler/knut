@@ -172,7 +172,7 @@ func (p *parser) parseBooking(r []string) error {
 		if err != nil {
 			return err
 		}
-		p.journal.AddAssertion(&model.Assertion{
+		p.journal.Add(&model.Assertion{
 			Date: date,
 			Balances: []model.Balance{
 				{
@@ -261,7 +261,7 @@ func (p *parser) parseBooking(r []string) error {
 			Quantity:  quantity,
 		}.Build()
 	}
-	p.journal.AddTransaction(t.Build())
+	p.journal.Add(t.Build())
 	return nil
 }
 

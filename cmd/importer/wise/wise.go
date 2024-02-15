@@ -239,7 +239,7 @@ func (p *parser) parseBooking() error {
 			Description: fmt.Sprintf("%s / convert %s %s to %s %s", repl.Replace(r[cID]), sourceAmount.String(), sourceCommodity.String(), targetAmount.String(), targetCommodity.String()),
 			Postings:    bookings.Build(),
 		}.Build()
-		p.journal.AddTransaction(t)
+		p.journal.Add(t)
 		bookings = nil
 		switch r[cDirection] {
 		case "OUT":
@@ -284,7 +284,7 @@ func (p *parser) parseBooking() error {
 		}
 	}
 
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        date,
 		Description: fmt.Sprintf("%s / %s", repl.Replace(r[cID]), r[cTargetName]),
 		Postings:    bookings.Build(),

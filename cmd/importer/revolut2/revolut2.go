@@ -196,7 +196,7 @@ func (p *parser) parseBooking() error {
 		Description: r[bfDescription],
 		Postings:    postings.Build(),
 	}.Build()
-	p.journal.AddTransaction(t)
+	p.journal.Add(t)
 	bal, err := decimal.NewFromString(r[bfBalance])
 	if err != nil {
 		return fmt.Errorf("invalid balance in row %v: %v", r, err)
@@ -207,7 +207,7 @@ func (p *parser) parseBooking() error {
 
 func (p *parser) addBalances() {
 	for k, bal := range p.balance {
-		p.journal.AddAssertion(&model.Assertion{
+		p.journal.Add(&model.Assertion{
 			Date: k.Date,
 			Balances: []model.Balance{
 				{

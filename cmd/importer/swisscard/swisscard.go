@@ -153,7 +153,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if chf, err = p.journal.Registry.Commodities().Get("CHF"); err != nil {
 		return false, err
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        d,
 		Description: desc,
 		Postings: posting.Builder{

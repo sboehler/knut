@@ -290,7 +290,7 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Sell %s %s @ %s %s", qty, stock.Name(), price, currency.Name())
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builders{
@@ -383,7 +383,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 			Quantity:  fee,
 		})
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings:    postings.Build(),
@@ -431,7 +431,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	} else {
 		desc = fmt.Sprintf("Withdraw %s %s", quantity, currency.Name())
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
@@ -485,7 +485,7 @@ func (p *parser) parseDividend(r []string) (bool, error) {
 	if security, err = p.journal.Registry.Commodities().Get(symbol); err != nil {
 		return false, err
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
@@ -550,7 +550,7 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	if security, err = p.journal.Registry.Commodities().Get(symbol); err != nil {
 		return false, err
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
@@ -585,7 +585,7 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	if quantity, err = parseDecimal(r[dfAmount]); err != nil {
 		return false, err
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
@@ -639,7 +639,7 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 	if quantity, err = decimal.NewFromString(r[opfQuantity]); err != nil {
 		return false, err
 	}
-	p.journal.AddAssertion(&model.Assertion{
+	p.journal.Add(&model.Assertion{
 		Date: p.dateTo,
 		Balances: []model.Balance{
 			{
@@ -689,7 +689,7 @@ func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
 	if amount, err = parseRoundedDecimal(r[fbfQuantity]); err != nil {
 		return false, err
 	}
-	p.journal.AddAssertion(&model.Assertion{
+	p.journal.Add(&model.Assertion{
 		Date: p.dateTo,
 		Balances: []model.Balance{
 			{

@@ -93,7 +93,7 @@ func (r *checkRunner) writeFile(reg *registry.Registry, assertions []*model.Asse
 	defer out.Flush()
 	j := journal.New(reg)
 	for _, a := range assertions {
-		j.AddAssertion(a)
+		j.Add(a)
 	}
 	return journal.Print(out, j)
 }

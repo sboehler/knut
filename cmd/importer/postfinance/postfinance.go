@@ -185,7 +185,7 @@ func (p *Parser) readBookingLine() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        date,
 		Description: strings.TrimSpace(rec[bfAvisierungstext]),
 		Postings: posting.Builder{

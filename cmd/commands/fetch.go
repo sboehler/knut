@@ -161,7 +161,7 @@ func (r *fetchRunner) fetchPrices(reg *registry.Registry, cfg fetchConfig, t0, t
 func (r *fetchRunner) writeFile(ctx *registry.Registry, prices map[time.Time]*model.Price, filepath string) error {
 	j := journal.New(ctx)
 	for _, price := range prices {
-		j.AddPrice(price)
+		j.Add(price)
 	}
 	var buf bytes.Buffer
 	err := journal.Print(&buf, j)

@@ -260,7 +260,7 @@ func (p *parser) parseTrade(r *record) (bool, error) {
 	if proceeds.IsPositive() {
 		qty = qty.Neg()
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        r.date,
 		Description: desc,
 		Postings: posting.Builders{
@@ -306,7 +306,7 @@ func (p *parser) parseForex(r *record) (bool, error) {
 		return true, nil
 	}
 	desc := fmt.Sprintf("%s %s %s / %s %s %s", p.last.trxType, p.last.netQuantity, p.last.currency.Name(), r.trxType, r.netQuantity, r.currency.Name())
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        r.date,
 		Description: desc,
 		Postings: posting.Builders{
@@ -354,7 +354,7 @@ func (p *parser) parseDividend(r *record) (bool, error) {
 			Quantity:  r.fee,
 		})
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        r.date,
 		Description: fmt.Sprintf("%s %s %s %s", r.trxType, r.symbol.Name(), r.name, r.isin),
 		Postings:    postings.Build(),
@@ -367,7 +367,7 @@ func (p *parser) parseCustodyFees(r *record) (bool, error) {
 	if r.trxType != "Depotgebühren" {
 		return false, nil
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{
@@ -391,7 +391,7 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 	if !w.Has(r.trxType) {
 		return false, nil
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{
@@ -408,7 +408,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 	if r.trxType != "Zins" {
 		return false, nil
 	}
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{
@@ -423,7 +423,7 @@ func (p *parser) parseInterestIncome(r *record) (bool, error) {
 }
 
 func (p *parser) parseCatchall(r *record) (bool, error) {
-	p.journal.AddTransaction(transaction.Builder{
+	p.journal.Add(transaction.Builder{
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{

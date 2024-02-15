@@ -94,7 +94,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		if a.IsZero() {
 			continue
 		}
-		j.AddPrice(&model.Price{
+		j.Add(&model.Price{
 			Date:      d,
 			Commodity: account,
 			Price:     a.Round(2),

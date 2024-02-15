@@ -58,43 +58,42 @@ func (j *Journal) Sorted() []*Day {
 	return dict.SortedValues(j.Days, CompareDays)
 }
 
-// AddOpen adds an Open directive.
-func (j *Journal) AddOpen(o *model.Open) {
-	d := j.Day(o.Date)
-	d.Openings = append(d.Openings, o)
-}
+func (j *Journal) Add(d model.Directive) error {
+	switch t := d.(type) {
 
-// AddPrice adds an Price directive.
-func (j *Journal) AddPrice(p *model.Price) {
-	d := j.Day(p.Date)
-	if j.max.Before(d.Date) {
-		j.max = d.Date
+	case *model.Price:
+		d := j.Day(t.Date)
+		if j.max.Before(d.Date) {
+			j.max = d.Date
+		}
+		d.Prices = append(d.Prices, t)
+
+	case *model.Open:
+		d := j.Day(t.Date)
+		d.Openings = append(d.Openings, t)
+
+	case *model.Transaction:
+		d := j.Day(t.Date)
+		if j.max.Before(d.Date) {
+			j.max = d.Date
+		}
+		if j.min.After(t.Date) {
+			j.min = d.Date
+		}
+		d.Transactions = append(d.Transactions, t)
+
+	case *model.Assertion:
+		d := j.Day(t.Date)
+		d.Assertions = append(d.Assertions, t)
+
+	case *model.Close:
+		d := j.Day(t.Date)
+		d.Closings = append(d.Closings, t)
+
+	default:
+		return fmt.Errorf("unknown: %v (%T)", t, t)
 	}
-	d.Prices = append(d.Prices, p)
-}
-
-// AddTransaction adds an Transaction directive.
-func (j *Journal) AddTransaction(t *model.Transaction) {
-	d := j.Day(t.Date)
-	if j.max.Before(d.Date) {
-		j.max = d.Date
-	}
-	if j.min.After(t.Date) {
-		j.min = d.Date
-	}
-	d.Transactions = append(d.Transactions, t)
-}
-
-// AddAssertion adds an Assertion directive.
-func (j *Journal) AddAssertion(a *model.Assertion) {
-	d := j.Day(a.Date)
-	d.Assertions = append(d.Assertions, a)
-}
-
-// AddClose adds an Close directive.
-func (j *Journal) AddClose(c *model.Close) {
-	d := j.Day(c.Date)
-	d.Closings = append(d.Closings, c)
+	return nil
 }
 
 func (j *Journal) Period() date.Period {
@@ -136,24 +135,8 @@ func FromModelStream(reg *model.Registry, modelCh <-chan []model.Directive) (<-c
 		j := New(reg)
 		err := cpr.ForEach(ctx, modelCh, func(directives []model.Directive) error {
 			for _, d := range directives {
-				switch t := d.(type) {
-				case *model.Price:
-					j.AddPrice(t)
-
-				case *model.Open:
-					j.AddOpen(t)
-
-				case *model.Transaction:
-					j.AddTransaction(t)
-
-				case *model.Assertion:
-					j.AddAssertion(t)
-
-				case *model.Close:
-					j.AddClose(t)
-
-				default:
-					return fmt.Errorf("unknown: %v (%T)", t, t)
+				if err := j.Add(d); err != nil {
+					return err
 				}
 			}
 			return nil

@@ -65,23 +65,24 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = registry.New()
+		reg = registry.New()
 		f   *bufio.Reader
 		err error
 	)
-	j := journal.New(ctx)
+	j := journal.New()
 	for _, path := range args {
 		if f, err = flags.OpenFile(path); err != nil {
 			return err
 		}
 		p := parser{
-			reader:  csv.NewReader(f),
-			journal: j,
+			registry: reg,
+			reader:   csv.NewReader(f),
+			journal:  j,
 		}
-		if p.account, err = r.account.Value(ctx.Accounts()); err != nil {
+		if p.account, err = r.account.Value(reg.Accounts()); err != nil {
 			return err
 		}
-		if p.feeAccount, err = r.feeAccount.Value(ctx.Accounts()); err != nil {
+		if p.feeAccount, err = r.feeAccount.Value(reg.Accounts()); err != nil {
 			return err
 		}
 		if err = p.parse(); err != nil {
@@ -94,6 +95,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 }
 
 type parser struct {
+	registry            *model.Registry
 	reader              *csv.Reader
 	account, feeAccount *model.Account
 	journal             *journal.Journal
@@ -162,7 +164,7 @@ func (p *parser) parseBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid started date in row %v: %w", r, err)
 	}
-	c, err := p.journal.Registry.Commodities().Get(r[bfCurrency])
+	c, err := p.registry.Commodities().Get(r[bfCurrency])
 	if err != nil {
 		return fmt.Errorf("invalid commodity in row %v: %v", r, err)
 	}
@@ -172,7 +174,7 @@ func (p *parser) parseBooking() error {
 	}
 	postings := posting.Builders{
 		{
-			Credit:    p.journal.Registry.Accounts().TBDAccount(),
+			Credit:    p.registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: c,
 			Quantity:  quantity,

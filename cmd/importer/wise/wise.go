@@ -75,26 +75,27 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = registry.New()
+		reg = registry.New()
 		f   *bufio.Reader
 		err error
 	)
-	j := journal.New(ctx)
+	j := journal.New()
 	for _, path := range args {
 		if f, err = flags.OpenFile(path); err != nil {
 			return err
 		}
 		p := parser{
-			reader:  csv.NewReader(f),
-			journal: j,
+			registry: reg,
+			reader:   csv.NewReader(f),
+			journal:  j,
 		}
-		if p.account, err = r.account.Value(ctx.Accounts()); err != nil {
+		if p.account, err = r.account.Value(reg.Accounts()); err != nil {
 			return err
 		}
-		if p.feeAccount, err = r.feeAccount.Value(ctx.Accounts()); err != nil {
+		if p.feeAccount, err = r.feeAccount.Value(reg.Accounts()); err != nil {
 			return err
 		}
-		if p.tradingAccount, err = r.tradingAccount.Value(ctx.Accounts()); err != nil {
+		if p.tradingAccount, err = r.tradingAccount.Value(reg.Accounts()); err != nil {
 			return err
 		}
 		if err = p.parse(); err != nil {
@@ -107,6 +108,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 }
 
 type parser struct {
+	registry                            *model.Registry
 	reader                              *csv.Reader
 	account, feeAccount, tradingAccount *model.Account
 	journal                             *journal.Journal
@@ -172,7 +174,7 @@ func (p *parser) parseFee(bs posting.Builders, feeAmount string, feeCurrency str
 		if err != nil || amount.IsZero() {
 			return bs, err
 		}
-		commodity := p.journal.Registry.Commodities().MustGet(feeCurrency)
+		commodity := p.registry.Commodities().MustGet(feeCurrency)
 		bs = append(bs, posting.Builder{
 			Credit:    p.account,
 			Debit:     p.feeAccount,
@@ -214,8 +216,8 @@ func (p *parser) parseBooking() error {
 	if err != nil {
 		return err
 	}
-	sourceCommodity := p.journal.Registry.Commodities().MustGet(r[cSourceCurrency])
-	targetCommodity := p.journal.Registry.Commodities().MustGet(r[cTargetCurrency])
+	sourceCommodity := p.registry.Commodities().MustGet(r[cSourceCurrency])
+	targetCommodity := p.registry.Commodities().MustGet(r[cTargetCurrency])
 
 	repl := strings.NewReplacer("-", " ", "_", " ")
 
@@ -245,13 +247,13 @@ func (p *parser) parseBooking() error {
 		case "OUT":
 			bookings = append(bookings, posting.Builder{
 				Credit:    p.account,
-				Debit:     p.journal.Registry.Accounts().TBDAccount(),
+				Debit:     p.registry.Accounts().TBDAccount(),
 				Quantity:  targetAmount,
 				Commodity: targetCommodity,
 			})
 		case "IN":
 			bookings = append(bookings, posting.Builder{
-				Credit:    p.journal.Registry.Accounts().TBDAccount(),
+				Credit:    p.registry.Accounts().TBDAccount(),
 				Debit:     p.account,
 				Quantity:  targetAmount,
 				Commodity: targetCommodity,
@@ -266,13 +268,13 @@ func (p *parser) parseBooking() error {
 		case "OUT":
 			bookings = append(bookings, posting.Builder{
 				Credit:    p.account,
-				Debit:     p.journal.Registry.Accounts().TBDAccount(),
+				Debit:     p.registry.Accounts().TBDAccount(),
 				Quantity:  sourceAmount,
 				Commodity: sourceCommodity,
 			})
 		case "IN":
 			bookings = append(bookings, posting.Builder{
-				Credit:    p.journal.Registry.Accounts().TBDAccount(),
+				Credit:    p.registry.Accounts().TBDAccount(),
 				Debit:     p.account,
 				Quantity:  sourceAmount,
 				Commodity: sourceCommodity,

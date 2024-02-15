@@ -34,18 +34,16 @@ import (
 
 // Journal represents an unprocessed
 type Journal struct {
-	Registry *model.Registry
 	days     map[time.Time]*Day
 	min, max time.Time
 }
 
 // New creates a new Journal.
-func New(reg *model.Registry) *Journal {
+func New() *Journal {
 	return &Journal{
-		Registry: reg,
-		days:     make(map[time.Time]*Day),
-		min:      date.Date(9999, 12, 31),
-		max:      time.Time{},
+		days: make(map[time.Time]*Day),
+		min:  date.Date(9999, 12, 31),
+		max:  time.Time{},
 	}
 }
 
@@ -125,7 +123,7 @@ func (j *Journal) Fill(dates ...time.Time) {
 func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, error) {
 	syntaxCh, worker1 := syntax.ParseFileRecursively(path)
 	modelCh, worker2 := model.FromStream(reg, syntaxCh)
-	journalCh, worker3 := FromModelStream(reg, modelCh)
+	journalCh, worker3 := FromModelStream(modelCh)
 	p := pool.New().WithErrors().WithFirstError().WithContext(ctx)
 	p.Go(worker1)
 	p.Go(worker2)
@@ -136,9 +134,9 @@ func FromPath(ctx context.Context, reg *model.Registry, path string) (*Journal, 
 	return <-journalCh, nil
 }
 
-func FromModelStream(reg *model.Registry, modelCh <-chan []model.Directive) (<-chan *Journal, func(context.Context) error) {
+func FromModelStream(modelCh <-chan []model.Directive) (<-chan *Journal, func(context.Context) error) {
 	return cpr.FanIn(func(ctx context.Context, ch chan<- *Journal) error {
-		j := New(reg)
+		j := New()
 		err := cpr.ForEach(ctx, modelCh, func(directives []model.Directive) error {
 			for _, d := range directives {
 				if err := j.Add(d); err != nil {

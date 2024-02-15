@@ -75,7 +75,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = registry.New()
+		reg = registry.New()
 		f   *bufio.Reader
 		err error
 	)
@@ -83,25 +83,26 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	p := parser{
-		reader:  csv.NewReader(f),
-		journal: journal.New(ctx),
+		registry: reg,
+		reader:   csv.NewReader(f),
+		journal:  journal.New(),
 	}
-	if p.account, err = r.account.Value(ctx.Accounts()); err != nil {
+	if p.account, err = r.account.Value(reg.Accounts()); err != nil {
 		return err
 	}
-	if p.dividend, err = r.dividend.Value(ctx.Accounts()); err != nil {
+	if p.dividend, err = r.dividend.Value(reg.Accounts()); err != nil {
 		return err
 	}
-	if p.interest, err = r.interest.Value(ctx.Accounts()); err != nil {
+	if p.interest, err = r.interest.Value(reg.Accounts()); err != nil {
 		return err
 	}
-	if p.tax, err = r.tax.Value(ctx.Accounts()); err != nil {
+	if p.tax, err = r.tax.Value(reg.Accounts()); err != nil {
 		return err
 	}
-	if p.fee, err = r.fee.Value(ctx.Accounts()); err != nil {
+	if p.fee, err = r.fee.Value(reg.Accounts()); err != nil {
 		return err
 	}
-	if p.trading, err = r.trading.Value(ctx.Accounts()); err != nil {
+	if p.trading, err = r.trading.Value(reg.Accounts()); err != nil {
 		return err
 	}
 	if err = p.parse(); err != nil {
@@ -113,9 +114,10 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 }
 
 type parser struct {
-	reader  *csv.Reader
-	journal *journal.Journal
-	last    *record
+	registry *model.Registry
+	reader   *csv.Reader
+	journal  *journal.Journal
+	last     *record
 
 	account, dividend, tax, fee, interest, trading *model.Account
 }
@@ -204,7 +206,7 @@ func (p *parser) lineToRecord(l []string) (*record, error) {
 		return nil, err
 	}
 	if len(l[fSymbol]) > 0 {
-		if r.symbol, err = p.journal.Registry.Commodities().Get(l[fSymbol]); err != nil {
+		if r.symbol, err = p.registry.Commodities().Get(l[fSymbol]); err != nil {
 			return nil, err
 		}
 	}
@@ -226,7 +228,7 @@ func (p *parser) lineToRecord(l []string) (*record, error) {
 	if r.balance, err = parseDecimal(l[fSaldo]); err != nil {
 		return nil, err
 	}
-	if r.currency, err = p.journal.Registry.Commodities().Get(l[fWährung]); err != nil {
+	if r.currency, err = p.registry.Commodities().Get(l[fWährung]); err != nil {
 		return nil, err
 	}
 	return &r, nil
@@ -395,7 +397,7 @@ func (p *parser) parseMoneyTransfer(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{
-			Credit:    p.journal.Registry.Accounts().TBDAccount(),
+			Credit:    p.registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: r.currency,
 			Quantity:  r.netQuantity,
@@ -427,7 +429,7 @@ func (p *parser) parseCatchall(r *record) (bool, error) {
 		Date:        r.date,
 		Description: r.trxType,
 		Postings: posting.Builder{
-			Credit:    p.journal.Registry.Accounts().TBDAccount(),
+			Credit:    p.registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: r.currency,
 			Quantity:  r.netQuantity,

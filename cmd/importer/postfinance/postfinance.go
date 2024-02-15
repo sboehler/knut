@@ -72,17 +72,18 @@ func (r *runner) run(cmd *cobra.Command, args []string) {
 func (r *runner) runE(cmd *cobra.Command, args []string) error {
 	var (
 		reader *bufio.Reader
-		ctx    = registry.New()
+		reg    = registry.New()
 		err    error
 	)
 	if reader, err = flags.OpenFile(args[0]); err != nil {
 		return err
 	}
 	p := Parser{
-		reader:  csv.NewReader(utfbom.SkipOnly(reader)),
-		journal: journal.New(ctx),
+		registry: reg,
+		reader:   csv.NewReader(utfbom.SkipOnly(reader)),
+		journal:  journal.New(),
 	}
-	if p.account, err = r.accountFlag.Value(ctx.Accounts()); err != nil {
+	if p.account, err = r.accountFlag.Value(reg.Accounts()); err != nil {
 		return err
 	}
 	if err = p.parse(); err != nil {
@@ -99,9 +100,10 @@ func init() {
 
 // Parser is a parser for account statements
 type Parser struct {
-	reader  *csv.Reader
-	account *model.Account
-	journal *journal.Journal
+	registry *model.Registry
+	reader   *csv.Reader
+	account  *model.Account
+	journal  *journal.Journal
 
 	currency *model.Commodity
 }
@@ -118,11 +120,11 @@ func (p *Parser) parse() error {
 	}
 	if s, ok := kv["Währung:"]; ok {
 		sym := strings.Trim(s, "=\"")
-		if p.currency, err = p.journal.Registry.Commodities().Get(sym); err != nil {
+		if p.currency, err = p.registry.Commodities().Get(sym); err != nil {
 			return err
 		}
 	} else {
-		p.currency = p.journal.Registry.Commodities().MustGet("CHF")
+		p.currency = p.registry.Commodities().MustGet("CHF")
 	}
 	for {
 		ok, err := p.readBookingLine()
@@ -189,7 +191,7 @@ func (p *Parser) readBookingLine() (bool, error) {
 		Date:        date,
 		Description: strings.TrimSpace(rec[bfAvisierungstext]),
 		Postings: posting.Builder{
-			Credit:    p.journal.Registry.Accounts().TBDAccount(),
+			Credit:    p.registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: p.currency,
 			Quantity:  quantity,

@@ -86,7 +86,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if trx, err = p.parse(reader); err != nil {
 		return err
 	}
-	j := journal.New(ctx)
+	j := journal.New()
 	for _, trx := range trx {
 		j.Add(trx)
 	}

@@ -131,7 +131,7 @@ func Filter(part date.Partition) *Processor {
 }
 
 // Balance balances the journal.
-func CloseAccounts(j *Journal, enable bool, partition date.Partition) *Processor {
+func CloseAccounts(j *Journal, reg *model.Registry, enable bool, partition date.Partition) *Processor {
 	if !enable {
 		return nil
 	}
@@ -142,7 +142,7 @@ func CloseAccounts(j *Journal, enable bool, partition date.Partition) *Processor
 		// j.Day creates the entry for the given date as a side effect.
 		closingDays.Add(j.Day(d))
 	}
-	equityAccount := j.Registry.Accounts().MustGet("Equity:Equity")
+	equityAccount := reg.Accounts().MustGet("Equity:Equity")
 
 	return &Processor{
 		DayStart: func(d *Day) error {

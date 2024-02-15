@@ -67,7 +67,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = registry.New()
+		reg = registry.New()
 		f   *bufio.Reader
 		err error
 	)
@@ -75,10 +75,11 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	p := parser{
-		reader:  csv.NewReader(f),
-		journal: journal.New(ctx),
+		registry: reg,
+		reader:   csv.NewReader(f),
+		journal:  journal.New(),
 	}
-	if p.account, err = r.account.Value(ctx.Accounts()); err != nil {
+	if p.account, err = r.account.Value(reg.Accounts()); err != nil {
 		return err
 	}
 	if err = p.parse(); err != nil {
@@ -90,9 +91,10 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 }
 
 type parser struct {
-	reader  *csv.Reader
-	account *model.Account
-	journal *journal.Journal
+	registry *model.Registry
+	reader   *csv.Reader
+	account  *model.Account
+	journal  *journal.Journal
 }
 
 func (p *parser) parse() error {
@@ -150,7 +152,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 	if quantity, err = decimal.NewFromString(replacer.Replace(r[3])); err != nil {
 		return false, err
 	}
-	if chf, err = p.journal.Registry.Commodities().Get("CHF"); err != nil {
+	if chf, err = p.registry.Commodities().Get("CHF"); err != nil {
 		return false, err
 	}
 	p.journal.Add(transaction.Builder{
@@ -158,7 +160,7 @@ func (p *parser) parseBooking(r []string) (bool, error) {
 		Description: desc,
 		Postings: posting.Builder{
 			Credit:    p.account,
-			Debit:     p.journal.Registry.Accounts().TBDAccount(),
+			Debit:     p.registry.Accounts().TBDAccount(),
 			Commodity: chf,
 			Quantity:  quantity,
 		}.Build(),

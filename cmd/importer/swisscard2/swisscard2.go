@@ -64,19 +64,20 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 }
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
-	ctx := registry.New()
+	reg := registry.New()
 	f, err := flags.OpenFile(args[0])
 	if err != nil {
 		return err
 	}
-	account, err := r.account.Value(ctx.Accounts())
+	account, err := r.account.Value(reg.Accounts())
 	if err != nil {
 		return err
 	}
 	p := parser{
-		reader:  csv.NewReader(f),
-		journal: journal.New(ctx),
-		account: account,
+		registry: reg,
+		reader:   csv.NewReader(f),
+		journal:  journal.New(),
+		account:  account,
 	}
 	if err = p.parse(); err != nil {
 		return err
@@ -87,9 +88,10 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 }
 
 type parser struct {
-	reader  *csv.Reader
-	account *model.Account
-	journal *journal.Journal
+	registry *model.Registry
+	reader   *csv.Reader
+	account  *model.Account
+	journal  *journal.Journal
 }
 
 func (p *parser) parse() error {
@@ -137,7 +139,7 @@ func (p *parser) readBooking() error {
 	if err != nil {
 		return fmt.Errorf("invalid date in record %v: %w", r, err)
 	}
-	c := p.journal.Registry.Commodities().MustGet(r[währung])
+	c := p.registry.Commodities().MustGet(r[währung])
 	quantity, err := decimal.NewFromString(r[betrag])
 	if err != nil {
 		return fmt.Errorf("invalid amount in record %v: %w", r, err)
@@ -147,7 +149,7 @@ func (p *parser) readBooking() error {
 		Description: fmt.Sprintf("%s / %s / %s / %s", r[beschreibung], r[kartennummer], r[kategorie], r[debitKredit]),
 		Postings: posting.Builder{
 			Credit:    p.account,
-			Debit:     p.journal.Registry.Accounts().TBDAccount(),
+			Debit:     p.registry.Accounts().TBDAccount(),
 			Commodity: c,
 			Quantity:  quantity,
 		}.Build(),

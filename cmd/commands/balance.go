@@ -136,7 +136,7 @@ func (r balanceRunner) execute(cmd *cobra.Command, args []string) error {
 		journal.ComputePrices(valuation),
 		journal.Valuate(reg, valuation),
 		journal.Filter(partition),
-		journal.CloseAccounts(j, r.close, partition),
+		journal.CloseAccounts(j, reg, r.close, partition),
 		journal.Query{
 			Select: amounts.KeyMapper{
 				Date: partition.Align(),

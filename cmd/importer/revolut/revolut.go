@@ -66,7 +66,7 @@ func (r *runner) setupFlags(cmd *cobra.Command) {
 
 func (r *runner) run(cmd *cobra.Command, args []string) error {
 	var (
-		ctx = registry.New()
+		reg = registry.New()
 		f   *bufio.Reader
 		err error
 	)
@@ -74,10 +74,11 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	p := parser{
-		reader:  csv.NewReader(f),
-		journal: journal.New(ctx),
+		registry: reg,
+		reader:   csv.NewReader(f),
+		journal:  journal.New(),
 	}
-	if p.account, err = r.account.Value(ctx.Accounts()); err != nil {
+	if p.account, err = r.account.Value(reg.Accounts()); err != nil {
 		return err
 	}
 	if err = p.parse(); err != nil {
@@ -89,6 +90,7 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 }
 
 type parser struct {
+	registry *model.Registry
 	reader   *csv.Reader
 	account  *model.Account
 	journal  *journal.Journal
@@ -149,7 +151,7 @@ func (p *parser) parseHeader(r []string) error {
 		return fmt.Errorf("could not extract currency from header field: %q", r[bfPaidOut])
 	}
 	var err error
-	p.currency, err = p.journal.Registry.Commodities().Get(groups[1])
+	p.currency, err = p.registry.Commodities().Get(groups[1])
 	return err
 }
 
@@ -221,13 +223,13 @@ func (p *parser) parseBooking(r []string) error {
 		}
 		t.Postings = posting.Builders{
 			{
-				Credit:    p.journal.Registry.Accounts().ValuationAccountFor(p.account),
+				Credit:    p.registry.Accounts().ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Quantity:  quantity,
 			},
 			{
-				Credit:    p.journal.Registry.Accounts().ValuationAccountFor(p.account),
+				Credit:    p.registry.Accounts().ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Quantity:  otherQuantity,
@@ -240,13 +242,13 @@ func (p *parser) parseBooking(r []string) error {
 		}
 		t.Postings = posting.Builders{
 			{
-				Credit:    p.journal.Registry.Accounts().ValuationAccountFor(p.account),
+				Credit:    p.registry.Accounts().ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: p.currency,
 				Quantity:  quantity,
 			},
 			{
-				Credit:    p.journal.Registry.Accounts().ValuationAccountFor(p.account),
+				Credit:    p.registry.Accounts().ValuationAccountFor(p.account),
 				Debit:     p.account,
 				Commodity: otherCommodity,
 				Quantity:  otherAmount.Neg(),
@@ -255,7 +257,7 @@ func (p *parser) parseBooking(r []string) error {
 	default:
 		t.Postings = posting.Builder{
 
-			Credit:    p.journal.Registry.Accounts().TBDAccount(),
+			Credit:    p.registry.Accounts().TBDAccount(),
 			Debit:     p.account,
 			Commodity: p.currency,
 			Quantity:  quantity,
@@ -275,7 +277,7 @@ func (p *parser) parseCombiField(f string) (*model.Commodity, decimal.Decimal, e
 		otherAmount    decimal.Decimal
 		err            error
 	)
-	if otherCommodity, err = p.journal.Registry.Commodities().Get(fs[0]); err != nil {
+	if otherCommodity, err = p.registry.Commodities().Get(fs[0]); err != nil {
 		return nil, decimal.Decimal{}, err
 	}
 	if otherAmount, err = parseDecimal(fs[1]); err != nil {

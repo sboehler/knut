@@ -83,15 +83,15 @@ func (r *checkRunner) execute(cmd *cobra.Command, args []string) error {
 	if r.write {
 		out := bufio.NewWriter(os.Stdout)
 		defer out.Flush()
-		return r.writeFile(reg, checker.Assertions())
+		return r.writeFile(checker.Assertions())
 	}
 	return nil
 }
 
-func (r *checkRunner) writeFile(reg *registry.Registry, assertions []*model.Assertion) error {
+func (r *checkRunner) writeFile(assertions []*model.Assertion) error {
 	out := bufio.NewWriter(os.Stdout)
 	defer out.Flush()
-	j := journal.New(reg)
+	j := journal.New()
 	for _, a := range assertions {
 		j.Add(a)
 	}

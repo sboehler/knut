@@ -29,12 +29,10 @@ func ComputePrices(v *model.Commodity) *Processor {
 			return nil
 		},
 		DayEnd: func(d *Day) error {
-			if len(d.Prices) == 0 {
-				d.Normalized = previous
-			} else {
-				d.Normalized = prc.Normalize(v)
-				previous = d.Normalized
+			if len(d.Prices) > 0 {
+				previous = prc.Normalize(v)
 			}
+			d.Normalized = previous
 			return nil
 		},
 	}
@@ -100,13 +98,13 @@ func Valuate(reg *model.Registry, valuation *model.Commodity) *Processor {
 			if p.Account.IsAL() {
 				quantities.Add(amounts.AccountCommodityKey(p.Account, p.Commodity), p.Quantity)
 			}
-			v := p.Quantity
-			if valuation != p.Commodity {
-				var err error
-				v, err = prices.Valuate(p.Commodity, p.Quantity)
-				if err != nil {
-					return err
-				}
+			if valuation == p.Commodity {
+				p.Value = p.Quantity
+				return nil
+			}
+			v, err := prices.Valuate(p.Commodity, p.Quantity)
+			if err != nil {
+				return err
 			}
 			p.Value = v
 			return nil
@@ -135,10 +133,10 @@ func CloseAccounts(j *Builder, reg *model.Registry, enable bool, partition date.
 	if !enable {
 		return nil
 	}
-
-	quantities, values := make(amounts.Amounts), make(amounts.Amounts)
 	closingDays := set.FromSlice(j.Days(partition.StartDates()))
 	equityAccount := reg.Accounts().MustGet("Equity:Equity")
+
+	quantities, values := make(amounts.Amounts), make(amounts.Amounts)
 
 	return &Processor{
 		DayStart: func(d *Day) error {

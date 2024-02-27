@@ -8,3 +8,5 @@ coverage.out
 .vscode
 node_modules
 web/build
+.envrc
+.direnv

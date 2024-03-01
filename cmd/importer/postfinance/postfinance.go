@@ -167,6 +167,8 @@ const (
 	bfAvisierungstext
 	bfGutschriftInCHF
 	bfLastschriftInCHF
+	bfLabel
+	bfKategorie
 	bfValuta
 	bfSaldoInCHF
 )
@@ -176,7 +178,8 @@ func (p *Parser) readBookingLine() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if len(rec) < 5 || len(rec) > 6 {
+	if len(rec) < 7 || len(rec) > 8 {
+		fmt.Println(len(rec), rec)
 		return false, nil
 	}
 	date, err := time.Parse("02.01.2006", rec[bfBuchungsdatum])
@@ -187,9 +190,14 @@ func (p *Parser) readBookingLine() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	desc := strings.Join([]string{
+		strings.TrimSpace(rec[bfAvisierungstext]),
+		strings.TrimSpace(rec[bfKategorie]),
+		strings.TrimSpace(rec[bfLabel]),
+	}, " ")
 	p.builder.Add(transaction.Builder{
 		Date:        date,
-		Description: strings.TrimSpace(rec[bfAvisierungstext]),
+		Description: strings.TrimSpace(desc),
 		Postings: posting.Builder{
 			Credit:    p.registry.Accounts().TBDAccount(),
 			Debit:     p.account,

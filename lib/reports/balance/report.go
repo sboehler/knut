@@ -107,13 +107,20 @@ func setAccounts(reg *account.Registry, n *Node) {
 	}
 }
 
-func (r *Report) Totals(m mapper.Mapper[amounts.Key]) (amounts.Amounts, amounts.Amounts) {
-	al, eie := make(amounts.Amounts), make(amounts.Amounts)
+func (r *Report) Totals(m mapper.Mapper[amounts.Key]) (amounts.Amounts, amounts.Amounts, amounts.Amounts) {
+	al, result, eie := make(amounts.Amounts), make(amounts.Amounts), make(amounts.Amounts)
 	r.AL.PostOrder(func(n *Node) {
 		n.Value.Amounts.SumIntoBy(al, nil, m)
 	})
 	r.EIE.PostOrder(func(n *Node) {
+		if n.Value.Account != nil {
+			if n.Value.Account.Type() == account.INCOME || n.Value.Account.Type() == account.EXPENSES {
+				n.Value.Amounts.SumIntoBy(result, nil, m)
+			}
+		}
+	})
+	r.EIE.PostOrder(func(n *Node) {
 		n.Value.Amounts.SumIntoBy(eie, nil, m)
 	})
-	return al, eie
+	return al, result, eie
 }

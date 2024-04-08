@@ -64,7 +64,7 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 	}
 	tbl.AddSeparatorRow()
 
-	totalAL, totalEIE := r.Totals(amounts.KeyMapper{
+	totalAL, totalResult, totalEIE := r.Totals(amounts.KeyMapper{
 		Date:      mapper.Identity[time.Time],
 		Commodity: commodity.IdentityIf(rn.Valuation == nil),
 	}.Build())
@@ -73,12 +73,15 @@ func (rn *Renderer) Render(r *Report) *table.Table {
 		rn.renderNode(tbl, 0, false, n)
 		tbl.AddEmptyRow()
 	}
+
 	rn.render(tbl, 0, "Total (A+L)", false, totalAL)
 	tbl.AddSeparatorRow()
 	for _, n := range r.EIE.Sorted {
 		rn.renderNode(tbl, 0, true, n)
 		tbl.AddEmptyRow()
 	}
+	rn.render(tbl, 0, "Result (I+E)", true, totalResult)
+	tbl.AddEmptyRow()
 	rn.render(tbl, 0, "Total (E+I+E)", true, totalEIE)
 	tbl.AddSeparatorRow()
 	totalAL.Plus(totalEIE)

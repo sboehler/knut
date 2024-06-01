@@ -222,9 +222,9 @@ func (p *Parser) readDisclaimer() error {
 func parseAmount(gutschrift, lastschrift string) (decimal.Decimal, error) {
 	switch {
 	case len(gutschrift) > 0 && len(lastschrift) == 0:
-		return decimal.NewFromString(gutschrift)
+		return decimal.NewFromString(strings.ReplaceAll(gutschrift, "'", ""))
 	case len(gutschrift) == 0 && len(lastschrift) > 0:
-		return decimal.NewFromString(lastschrift)
+		return decimal.NewFromString(strings.ReplaceAll(lastschrift, "'", ""))
 	default:
 		return decimal.Zero, fmt.Errorf("invalid amount fields %q %q", gutschrift, lastschrift)
 	}

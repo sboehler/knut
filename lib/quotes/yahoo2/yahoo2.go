@@ -12,23 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package yahoo implements fetching pricing data from Yahoo!. The method
-// in this packages stopped working around 2024-09-11, see package yahoo2
-// for an updated version that uses a different API.
-package yahoo
+package yahoo2
 
 import (
-	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"path"
-	"strconv"
 	"time"
 )
 
-const yahooURL string = "https://query1.finance.yahoo.com/v7/finance/download"
+const yahooURL string = "https://query2.finance.yahoo.com/v8/finance/chart"
 
 // Quote represents a quote on a given day.
 type Quote struct {
@@ -64,7 +60,7 @@ func (c *Client) Fetch(sym string, t0, t1 time.Time) ([]Quote, error) {
 	defer resp.Body.Close()
 	quote, err := decodeResponse(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding response for symbol %s: %w", sym, err)
+		return nil, fmt.Errorf("error decoding response for symbol %s (url: %s): %w", sym, u, err)
 	}
 	return quote, nil
 }
@@ -87,72 +83,64 @@ func createURL(rootURL, sym string, t0, t1 time.Time) (*url.URL, error) {
 
 // decodeResponse takes a reader for the response and returns
 // the parsed quotes.
-func decodeResponse(r io.ReadCloser) ([]Quote, error) {
-	csvReader := csv.NewReader(r)
-	csvReader.FieldsPerRecord = 7
-	// skip header
-	if _, err := csvReader.Read(); err != nil {
+func decodeResponse(r io.Reader) ([]Quote, error) {
+	d := json.NewDecoder(r)
+	var body jbody
+	if err := d.Decode(&body); err != nil {
 		return nil, err
 	}
-	// read lines
-	var res []Quote
-	for {
-		r, err := csvReader.Read()
-		if err == io.EOF {
-			return res, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		quote, ok, err := recordToQuote(r)
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
-			continue
-		}
-		res = append(res, quote)
+	result := body.Chart.Result[0]
+	loc, err := time.LoadLocation(result.Meta.ExchangeTimezoneName)
+	if err != nil {
+		return nil, fmt.Errorf("unknown time zone: %s", result.Meta.ExchangeTimezoneName)
 	}
+	var res []Quote
+	for i, ts := range body.Chart.Result[0].Timestamp {
+		date := time.Unix(int64(ts), 0).In(loc)
+		q := Quote{
+			Date:     time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC),
+			Open:     result.Indicators.Quote[0].Open[i],
+			Close:    result.Indicators.Quote[0].Close[i],
+			High:     result.Indicators.Quote[0].High[i],
+			Low:      result.Indicators.Quote[0].Low[i],
+			AdjClose: result.Indicators.Adjclose[0].Adjclose[i],
+			Volume:   result.Indicators.Quote[0].Volume[i],
+		}
+		res = append(res, q)
+	}
+	return res, nil
 }
 
-// recordToQuote decodes one line of the response CSV.
-func recordToQuote(r []string) (Quote, bool, error) {
-	var (
-		quote Quote
-		err   error
-	)
-	for _, item := range r {
-		if item == "null" {
-			return quote, false, nil
-		}
-	}
-	quote.Date, err = time.Parse("2006-01-02", r[0])
-	if err != nil {
-		return quote, false, err
-	}
-	quote.Open, err = strconv.ParseFloat(r[1], 64)
-	if err != nil {
-		return quote, false, err
-	}
-	quote.High, err = strconv.ParseFloat(r[2], 64)
-	if err != nil {
-		return quote, false, err
-	}
-	quote.Low, err = strconv.ParseFloat(r[3], 64)
-	if err != nil {
-		return quote, false, err
-	}
-	quote.Close, err = strconv.ParseFloat(r[4], 64)
-	if err != nil {
-		return quote, false, err
-	}
-	quote.AdjClose, err = strconv.ParseFloat(r[5], 64)
-	if err != nil {
-		return quote, false, err
-	}
-	quote.Volume, err = strconv.Atoi(r[6])
-	if err != nil {
-		return quote, false, err
-	}
-	return quote, true, nil
+type jbody struct {
+	Chart jchart `json:"chart"`
+}
+type jchart struct {
+	Result []jresult `json:"result"`
+}
+
+type jresult struct {
+	Meta       jmeta       `json:"meta"`
+	Timestamp  []int       `json:"timestamp"`
+	Indicators jindicators `json:"indicators"`
+}
+
+type jmeta struct {
+	ExchangeTimezoneName string `json:"exchangeTimezoneName"`
+}
+
+type jindicators struct {
+	Quote    []jquote    `json:"quote"`
+	Adjclose []jadjclose `json:"adjclose"`
+}
+
+type jquote struct {
+	Volume []int     `json:"volume"`
+	High   []float64 `json:"high"`
+	Close  []float64 `json:"close"`
+	Low    []float64 `json:"low"`
+	Open   []float64 `json:"open"`
+}
+
+type jadjclose struct {
+	Adjclose []float64 `json:"adjclose"`
 }

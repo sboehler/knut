@@ -25,7 +25,7 @@ import (
 	"github.com/sboehler/knut/lib/model"
 	"github.com/sboehler/knut/lib/model/price"
 	"github.com/sboehler/knut/lib/model/registry"
-	"github.com/sboehler/knut/lib/quotes/yahoo"
+	"github.com/sboehler/knut/lib/quotes/yahoo2"
 	"github.com/sboehler/knut/lib/syntax"
 	"github.com/shopspring/decimal"
 	"github.com/sourcegraph/conc/pool"
@@ -62,7 +62,7 @@ func (r *fetchRunner) run(cmd *cobra.Command, args []string) {
 
 const fetchConcurrency = 5
 
-func (r *fetchRunner) execute(cmd *cobra.Command, args []string) error {
+func (r *fetchRunner) execute(_ *cobra.Command, args []string) error {
 	reg := registry.New()
 	configs, err := r.readConfig(args[0])
 	if err != nil {
@@ -133,13 +133,13 @@ func (r *fetchRunner) readFile(ctx *registry.Registry, filepath string) (res map
 
 func (r *fetchRunner) fetchPrices(reg *registry.Registry, cfg fetchConfig, t0, t1 time.Time, results map[time.Time]*model.Price) error {
 	var (
-		c                 = yahoo.New()
-		quotes            []yahoo.Quote
+		c                 = yahoo2.New()
+		quotes            []yahoo2.Quote
 		commodity, target *model.Commodity
 		err               error
 	)
 	if quotes, err = c.Fetch(cfg.Symbol, t0, t1); err != nil {
-		return err
+		return fmt.Errorf("error fetching symbol %s: %v", cfg.Symbol, err)
 	}
 	if commodity, err = reg.Commodities().Get(cfg.Commodity); err != nil {
 		return err

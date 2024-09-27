@@ -25,9 +25,9 @@ $ knut balance --color=false -v CHF --months --from 2020-01-01 --to 2020-04-01 d
 |   Salary      |      5,000 |      5,000 |            |            |
 |               |            |            |            |            |
 | Expenses      |            |            |            |            |
+|   Rent        |     -2,000 |     -2,000 |            |            |
 |   Fees        |         -4 |            |            |            |
 |   Groceries   |       -200 |       -673 |            |            |
-|   Rent        |     -2,000 |     -2,000 |            |            |
 |               |            |            |            |            |
 | Total (E+I+E) |      2,825 |      5,046 |      4,983 |      4,946 |
 +---------------+------------+------------+------------+------------+
@@ -73,6 +73,7 @@ Usage:
 
 Available Commands:
   balance     create a balance sheet
+  check       check the journal
   completion  output shell completion code [bash|zsh]
   fetch       Fetch quotes from Yahoo! Finance
   format      Format the given journal
@@ -124,9 +125,9 @@ $ knut balance --color=false doc/example.knut --to 2020-04-01
 |   Salary      | CHF  |     10,000 |
 |               |      |            |
 | Expenses      |      |            |
+|   Rent        | CHF  |     -4,000 |
 |   Fees        | USD  |         -4 |
 |   Groceries   | CHF  |       -873 |
-|   Rent        | CHF  |     -4,000 |
 |               |      |            |
 | Total (E+I+E) | AAPL |         12 |
 |               | CHF  |     14,158 |
@@ -163,9 +164,9 @@ $ knut balance --color=false -v CHF --months --to 2020-04-01 doc/example.knut
 |   Salary      |            |      5,000 |      5,000 |            |            |
 |               |            |            |            |            |            |
 | Expenses      |            |            |            |            |            |
-|   Groceries   |            |       -200 |       -673 |            |            |
 |   Rent        |            |     -2,000 |     -2,000 |            |            |
 |   Fees        |            |         -4 |            |            |            |
+|   Groceries   |            |       -200 |       -673 |            |            |
 |               |            |            |            |            |            |
 | Total (E+I+E) |     10,000 |     12,825 |     15,046 |     14,983 |     14,946 |
 +---------------+------------+------------+------------+------------+------------+
@@ -197,9 +198,9 @@ $ knut balance --color=false -v USD --months --to 2020-04-01 doc/example.knut
 |   Salary      |            |      5,157 |      5,103 |            |            |
 |               |            |            |            |            |            |
 | Expenses      |            |            |            |            |            |
-|   Groceries   |            |       -207 |       -690 |            |            |
 |   Rent        |            |     -2,067 |     -2,063 |            |            |
 |   Fees        |            |         -4 |            |            |            |
+|   Groceries   |            |       -207 |       -690 |            |            |
 |               |            |            |            |            |            |
 | Total (E+I+E) |     10,324 |     13,230 |     15,532 |     15,608 |     15,544 |
 +---------------+------------+------------+------------+------------+------------+

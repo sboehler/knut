@@ -1144,7 +1144,7 @@ func TestParseTransaction(t *testing.T) {
 		},
 		desc: "p.parseTransaction()",
 		fn: func(p *Parser) (directives.Transaction, error) {
-			return p.parseTransaction(directives.Date{}, directives.Addons{})
+			return p.parseTransaction(p.Scanner.Scope(""), directives.Date{}, directives.Addons{})
 		},
 	}.run(t)
 }

@@ -160,9 +160,11 @@ func TestParseFile(t *testing.T) {
 								Directive: directives.Transaction{
 									Range: directives.Range{End: 48, Text: s},
 									Date:  directives.Date{Range: Range{End: 10, Text: s}},
-									Description: directives.QuotedString{
-										Range:   Range{Start: 11, End: 25, Text: s},
-										Content: Range{Start: 12, End: 24, Text: s},
+									Description: []directives.QuotedString{
+										{
+											Range:   Range{Start: 11, End: 25, Text: s},
+											Content: Range{Start: 12, End: 24, Text: s},
+										},
 									},
 									Bookings: []directives.Booking{
 										{
@@ -1035,6 +1037,43 @@ func TestParseQuotedString(t *testing.T) {
 	}.run(t)
 }
 
+func TestParseDescriptionLine(t *testing.T) {
+	parserTest[directives.QuotedString]{
+		desc: "p.parseDescriptionLine()",
+		fn:   func(p *Parser) (directives.QuotedString, error) { return p.parseDescriptionLine() },
+		tests: []testcase[directives.QuotedString]{
+			{
+				text: "| foobar\n",
+				want: func(s string) directives.QuotedString {
+					return directives.QuotedString{
+						Range:   Range{End: 9, Text: s},
+						Content: Range{Start: 2, End: 8, Text: s},
+					}
+				},
+			},
+			{
+				text: "| foobar",
+				want: func(s string) directives.QuotedString {
+					return directives.QuotedString{
+						Range:   Range{End: 8, Text: s},
+						Content: Range{Start: 2, End: 8, Text: s},
+					}
+				},
+				err: func(s string) error {
+					return directives.Error{
+						Message: "while parsing description line",
+						Range:   Range{End: 8, Text: s},
+						Wrapped: directives.Error{
+							Range:   Range{Start: 8, End: 8, Text: s},
+							Message: "unexpected end of file, want `\n`",
+						},
+					}
+				},
+			},
+		},
+	}.run(t)
+}
+
 func TestParseTransaction(t *testing.T) {
 	parserTest[directives.Transaction]{
 		tests: []testcase[directives.Transaction]{
@@ -1043,9 +1082,11 @@ func TestParseTransaction(t *testing.T) {
 				want: func(t string) directives.Transaction {
 					return directives.Transaction{
 						Range: Range{End: 16, Text: t},
-						Description: directives.QuotedString{
-							Range:   Range{End: 5, Text: t},
-							Content: Range{Start: 1, End: 4, Text: t},
+						Description: []directives.QuotedString{
+							{
+								Range:   Range{End: 5, Text: t},
+								Content: Range{Start: 1, End: 4, Text: t},
+							},
 						},
 						Bookings: []directives.Booking{
 							{
@@ -1064,9 +1105,11 @@ func TestParseTransaction(t *testing.T) {
 				want: func(t string) directives.Transaction {
 					return directives.Transaction{
 						Range: Range{End: 26, Text: t},
-						Description: directives.QuotedString{
-							Range:   Range{End: 5, Text: t},
-							Content: Range{Start: 1, End: 4, Text: t},
+						Description: []directives.QuotedString{
+							{
+								Range:   Range{End: 5, Text: t},
+								Content: Range{Start: 1, End: 4, Text: t},
+							},
 						},
 						Bookings: []directives.Booking{
 							{
@@ -1092,9 +1135,11 @@ func TestParseTransaction(t *testing.T) {
 				want: func(t string) directives.Transaction {
 					return directives.Transaction{
 						Range: Range{End: 15, Text: t},
-						Description: directives.QuotedString{
-							Range:   Range{End: 5, Text: t},
-							Content: Range{Start: 1, End: 4, Text: t},
+						Description: []directives.QuotedString{
+							{
+								Range:   Range{End: 5, Text: t},
+								Content: Range{Start: 1, End: 4, Text: t},
+							},
 						},
 						Bookings: []directives.Booking{
 							{
@@ -1113,9 +1158,11 @@ func TestParseTransaction(t *testing.T) {
 				want: func(t string) directives.Transaction {
 					return directives.Transaction{
 						Range: Range{End: 9, Text: t},
-						Description: directives.QuotedString{
-							Range:   Range{End: 5, Text: t},
-							Content: Range{Start: 1, End: 4, Text: t},
+						Description: []directives.QuotedString{
+							{
+								Range:   Range{End: 5, Text: t},
+								Content: Range{Start: 1, End: 4, Text: t},
+							},
 						},
 						Bookings: []directives.Booking{
 							{
@@ -1161,9 +1208,11 @@ func TestParseDirective(t *testing.T) {
 						Directive: directives.Transaction{
 							Range: Range{End: 45, Text: s},
 							Date:  directives.Date{Range: directives.Range{Start: 18, End: 28, Text: s}},
-							Description: directives.QuotedString{
-								Range:   Range{Start: 29, End: 34, Text: s},
-								Content: Range{Start: 30, End: 33, Text: s},
+							Description: []directives.QuotedString{
+								{
+									Range:   Range{Start: 29, End: 34, Text: s},
+									Content: Range{Start: 30, End: 33, Text: s},
+								},
 							},
 							Bookings: []directives.Booking{
 								{
@@ -1196,9 +1245,11 @@ func TestParseDirective(t *testing.T) {
 						Directive: directives.Transaction{
 							Range: Range{End: 27, Text: s},
 							Date:  directives.Date{Range: directives.Range{End: 10, Text: s}},
-							Description: directives.QuotedString{
-								Range:   Range{Start: 11, End: 16, Text: s},
-								Content: Range{Start: 12, End: 15, Text: s},
+							Description: []directives.QuotedString{
+								{
+									Range:   Range{Start: 11, End: 16, Text: s},
+									Content: Range{Start: 12, End: 15, Text: s},
+								},
 							},
 							Bookings: []directives.Booking{
 								{
@@ -1243,9 +1294,11 @@ func TestParseDirective(t *testing.T) {
 						Directive: directives.Transaction{
 							Range: Range{End: 15, Text: s},
 							Date:  directives.Date{Range: directives.Range{End: 10, Text: s}},
-							Description: directives.QuotedString{
-								Range:   directives.Range{Start: 11, End: 15, Text: s},
-								Content: directives.Range{Start: 12, End: 15, Text: s},
+							Description: []directives.QuotedString{
+								{
+									Range:   directives.Range{Start: 11, End: 15, Text: s},
+									Content: directives.Range{Start: 12, End: 15, Text: s},
+								},
 							},
 						},
 					}
@@ -1381,7 +1434,7 @@ func TestParseDirective(t *testing.T) {
 
 func TestParseRestOfWhitespaceLine(t *testing.T) {
 	parserTest[Range]{
-		desc: "p.parseQuotedString()",
+		desc: "p.readRestOfWhitespaceLine()",
 		fn:   func(p *Parser) (Range, error) { return p.readRestOfWhitespaceLine() },
 		tests: []testcase[Range]{
 			{

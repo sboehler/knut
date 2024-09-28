@@ -88,7 +88,7 @@ type Addons struct {
 type Transaction struct {
 	Range
 	Date        Date
-	Description QuotedString
+	Description []QuotedString
 	Bookings    []Booking
 	Addons      Addons
 }
@@ -229,6 +229,8 @@ func (e Error) Error() string {
 	if e.Wrapped != nil {
 		s.WriteString(e.Wrapped.Error())
 		s.WriteString("\n")
+	} else {
+		s.WriteString(e.Text)
 	}
 	if len(e.Path) > 0 {
 		s.WriteString(e.Path)

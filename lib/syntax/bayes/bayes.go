@@ -127,7 +127,11 @@ func (m *Model) scoreCandidate(candidate string, tokens set.Set[token]) float64 
 }
 
 func tokenize(t *syntax.Transaction, b *syntax.Booking, other string) set.Set[token] {
-	tokens := append(strings.Fields(t.Description.Content.Extract()), b.Commodity.Extract(), b.Quantity.Extract(), other)
+	var tokens []string
+	tokens = append(tokens, b.Commodity.Extract(), b.Quantity.Extract(), other)
+	for _, d := range t.Description {
+		tokens = append(tokens, strings.Fields(d.Content.Extract())...)
+	}
 	result := set.New[token]()
 	for _, t := range tokens {
 		result.Add(token(strings.ToLower(t)))

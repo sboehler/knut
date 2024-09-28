@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sboehler/knut/lib/common/compare"
@@ -63,7 +64,11 @@ func Create(reg *registry.Registry, t *syntax.Transaction) ([]*Transaction, erro
 	if err != nil {
 		return nil, err
 	}
-	desc := t.Description.Content.Extract()
+	var ss []string
+	for _, content := range t.Description {
+		ss = append(ss, content.Content.Extract())
+	}
+	desc := strings.Join(ss, "\n")
 	postings, err := posting.Create(reg, t.Bookings)
 	if err != nil {
 		return nil, err

@@ -80,11 +80,13 @@ func (p *Printer) printTransaction(t directives.Transaction) error {
 			return err
 		}
 	}
-	if _, err := fmt.Fprintf(p, `%s "%s"`, t.Date.Extract(), t.Description.Content.Extract()); err != nil {
+	if _, err := fmt.Fprintf(p, "%s\n", t.Date.Extract()); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(p, "\n"); err != nil {
-		return err
+	for _, line := range t.Description {
+		if _, err := fmt.Fprintf(p, "| %s\n", line.Content.Extract()); err != nil {
+			return err
+		}
 	}
 	for _, po := range t.Bookings {
 		if err := p.printPosting(po); err != nil {

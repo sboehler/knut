@@ -88,7 +88,7 @@ func (p *Parser) parseDirective() (directives.Directive, error) {
 		if _, err := p.readWhitespace1(); err != nil {
 			return directives.SetRange(&dir, s.Range()), s.Annotate(err)
 		}
-		if p.Current() == '"' {
+		if p.Current() == '"' || p.Current() == '\n' {
 			if dir.Directive, err = p.parseTransaction(s, date, addons); err != nil {
 				return directives.SetRange(&dir, s.Range()), s.Annotate(err)
 			}
@@ -379,17 +379,49 @@ func (p *Parser) parseQuotedString() (directives.QuotedString, error) {
 	return directives.SetRange(&qs, s.Range()), nil
 }
 
-func (p *Parser) parseTransaction(s scanner.Scope, date directives.Date, addons directives.Addons) (directives.Transaction, error) {
-	s.UpdateDesc("parsing transaction")
+func (p *Parser) parseDescriptionLine() (directives.QuotedString, error) {
+	s := p.Scope("parsing description line")
 	var (
-		trx = directives.Transaction{Date: date, Addons: addons}
+		qs  directives.QuotedString
 		err error
 	)
-	if trx.Description, err = p.parseQuotedString(); err != nil {
-		return directives.SetRange(&trx, s.Range()), s.Annotate(err)
+	if _, err := p.ReadString("| "); err != nil {
+		return directives.SetRange(&qs, s.Range()), s.Annotate(err)
 	}
-	if _, err := p.readRestOfWhitespaceLine(); err != nil {
-		return directives.SetRange(&trx, s.Range()), s.Annotate(err)
+	if qs.Content, err = p.ReadWhile(func(r rune) bool { return r != '\n' }); err != nil {
+		return directives.SetRange(&qs, s.Range()), s.Annotate(err)
+	}
+	if _, err := p.ReadCharacter('\n'); err != nil {
+		return directives.SetRange(&qs, s.Range()), s.Annotate(err)
+	}
+	return directives.SetRange(&qs, s.Range()), nil
+}
+
+func (p *Parser) parseTransaction(s scanner.Scope, date directives.Date, addons directives.Addons) (directives.Transaction, error) {
+	s.UpdateDesc("parsing transaction")
+	trx := directives.Transaction{Date: date, Addons: addons}
+
+	switch p.Current() {
+	case '"':
+		desc, err := p.parseQuotedString()
+		trx.Description = []directives.QuotedString{desc}
+		if err != nil {
+			return directives.SetRange(&trx, s.Range()), s.Annotate(err)
+		}
+		if _, err := p.readRestOfWhitespaceLine(); err != nil {
+			return directives.SetRange(&trx, s.Range()), s.Annotate(err)
+		}
+	case '\n':
+		if _, err := p.Scanner.ReadCharacter('\n'); err != nil {
+			return directives.SetRange(&trx, s.Range()), s.Annotate(err)
+		}
+		for p.Current() == '|' {
+			line, err := p.parseDescriptionLine()
+			if err != nil {
+				return directives.SetRange(&trx, s.Range()), s.Annotate(err)
+			}
+			trx.Description = append(trx.Description, line)
+		}
 	}
 	for {
 		b, err := p.parseBooking()

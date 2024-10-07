@@ -25,8 +25,7 @@ func ComputePrices(v *model.Commodity) *Processor {
 	prc := make(price.Prices)
 	return &Processor{
 		Price: func(p *model.Price) error {
-			prc.Insert(p.Commodity, p.Price, p.Target)
-			return nil
+			return prc.Insert(p.Commodity, p.Price, p.Target)
 		},
 		DayEnd: func(d *Day) error {
 			if len(d.Prices) > 0 {

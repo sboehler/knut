@@ -106,7 +106,9 @@ func decodeResponse(r io.Reader) ([]Quote, error) {
 			AdjClose: result.Indicators.Adjclose[0].Adjclose[i],
 			Volume:   result.Indicators.Quote[0].Volume[i],
 		}
-		res = append(res, q)
+		if q.Close > 0 {
+			res = append(res, q)
+		}
 	}
 	return res, nil
 }

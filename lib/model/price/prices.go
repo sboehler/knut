@@ -31,9 +31,13 @@ type Prices map[*commodity.Commodity]NormalizedPrices
 var one = decimal.NewFromInt(1)
 
 // Insert inserts a new price.
-func (ps Prices) Insert(commodity *commodity.Commodity, price decimal.Decimal, target *commodity.Commodity) {
+func (ps Prices) Insert(commodity *commodity.Commodity, price decimal.Decimal, target *commodity.Commodity) error {
+	if price.IsZero() {
+		return fmt.Errorf("invalid price %s for commodity %s in %s", price.String(), commodity.Name(), target.Name())
+	}
 	ps.addPrice(target, commodity, price)
 	ps.addPrice(commodity, target, one.Div(price).Truncate(8))
+	return nil
 }
 
 func (ps Prices) addPrice(target, commodity *commodity.Commodity, price decimal.Decimal) {

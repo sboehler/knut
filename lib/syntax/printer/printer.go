@@ -194,3 +194,28 @@ func (p *Printer) Format(f directives.File) error {
 	_, err := p.Write([]byte(text[pos:]))
 	return err
 }
+
+func wrapLines(width int, text string) []string {
+	fields := strings.Fields(text)
+	var res []string
+	var b strings.Builder
+
+	for len(fields) > 0 {
+		lineLength := utf8.RuneCountInString(fields[0])
+		b.WriteString(fields[0])
+		fields = fields[1:]
+		for len(fields) > 0 {
+			fieldLength := utf8.RuneCountInString(fields[0])
+			if lineLength+fieldLength+1 > width {
+				break
+			}
+			lineLength += 1 + utf8.RuneCountInString(fields[0])
+			b.WriteRune(' ')
+			b.WriteString(fields[0])
+			fields = fields[1:]
+		}
+		res = append(res, b.String())
+		b.Reset()
+	}
+	return res
+}

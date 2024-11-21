@@ -265,3 +265,47 @@ func TestFormat(t *testing.T) {
 func lines(ss ...string) string {
 	return strings.Join(ss, "\n") + "\n"
 }
+
+func TestWrapLines(t *testing.T) {
+	tests := []struct {
+		width int
+		input string
+		want  []string
+	}{
+		{
+			width: 5,
+			input: "foo   bar baz",
+			want:  []string{"foo", "bar", "baz"},
+		},
+		{
+			width: 5,
+			input: "foo   barbarbar baz",
+			want:  []string{"foo", "barbarbar", "baz"},
+		},
+		{
+			width: 7,
+			input: "foo   bar baz",
+			want:  []string{"foo bar", "baz"},
+		},
+		{
+			width: 11,
+			input: "foo   bar baz",
+			want:  []string{"foo bar baz"},
+		},
+		{
+			width: 5,
+			input: "      ",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+
+			got := wrapLines(test.width, test.input)
+
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Fatalf("wrapLines(%d, %s) returned unexpected diff (-want/+got)\n%s", test.width, test.input, diff)
+			}
+		})
+	}
+}

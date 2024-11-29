@@ -96,7 +96,7 @@ type parser struct {
 
 func (p *parser) parse() error {
 	p.reader.TrimLeadingSpace = true
-	p.reader.FieldsPerRecord = 8
+	p.reader.FieldsPerRecord = 12
 
 	if err := p.readHeader(); err != nil {
 		return err
@@ -117,12 +117,16 @@ type column int
 const (
 	transaktionsdatum column = iota
 	beschreibung
+	Händler
 	kartennummer
 	währung
 	betrag
+	fremdwährung
+	betragInFremdwährung
 	debitKredit
 	status
-	kategorie
+	händlerKategorie
+	registrierteKategorie
 )
 
 func (p *parser) readHeader() error {
@@ -146,7 +150,7 @@ func (p *parser) readBooking() error {
 	}
 	p.builder.Add(transaction.Builder{
 		Date:        d,
-		Description: fmt.Sprintf("%s / %s / %s / %s", r[beschreibung], r[kartennummer], r[kategorie], r[debitKredit]),
+		Description: fmt.Sprintf("%s / %s / %s / %s / %s / %s", r[beschreibung], r[Händler], r[händlerKategorie], r[kartennummer], r[registrierteKategorie], r[debitKredit]),
 		Postings: posting.Builder{
 			Credit:    p.account,
 			Debit:     p.registry.Accounts().TBDAccount(),

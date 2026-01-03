@@ -41,6 +41,9 @@ const (
 	cExchangeRate
 	cReference
 	cBatch
+	cCreatedBy
+	cCategory
+	cNote
 )
 
 // CreateCmd creates the command.
@@ -118,7 +121,7 @@ type parser struct {
 func (p *parser) parse() error {
 	p.reader.TrimLeadingSpace = true
 	p.reader.Comma = ','
-	p.reader.FieldsPerRecord = 18
+	p.reader.FieldsPerRecord = 21
 	p.balance = make(amounts.Amounts)
 
 	if err := p.parseHeader(); err != nil {
@@ -159,6 +162,9 @@ func (p *parser) parseHeader() error {
 		"Exchange rate",
 		"Reference",
 		"Batch",
+		"Created by",
+		"Category",
+		"Note",
 	}
 	for i, want := range header {
 		if r[i] != want {
@@ -288,7 +294,7 @@ func (p *parser) parseBooking() error {
 
 	p.journal.Add(transaction.Builder{
 		Date:        date,
-		Description: fmt.Sprintf("%s / %s", repl.Replace(r[cID]), r[cTargetName]),
+		Description: fmt.Sprintf("%s / %s / %s", repl.Replace(r[cID]), r[cTargetName], r[cCategory]),
 		Postings:    bookings.Build(),
 	}.Build())
 	return nil

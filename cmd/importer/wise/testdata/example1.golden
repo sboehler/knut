@@ -3,17 +3,17 @@ Assets:Accounts:Wise Expenses:Fees             54.95 CHF
 Assets:Accounts:Wise Expenses:Trading       11945.05 CHF
 Expenses:Trading     Assets:Accounts:Wise   21960.02 NZD
 
-2023-11-27 "CARD TRANSACTION 15 / Lake Taupo Resort"
+2023-11-27 "CARD TRANSACTION 15 / Lake Taupo Resort / "
 Assets:Accounts:Wise Expenses:TBD              26.01 NZD
 
-2023-12-04 "CARD TRANSACTION 17 / Kaikoura"
+2023-12-04 "CARD TRANSACTION 17 / Kaikoura / "
 Assets:Accounts:Wise Expenses:Fees                 3 NZD
 Assets:Accounts:Wise Expenses:TBD                200 NZD
 
-2023-12-06 "TRANSFER 13 / Rocky Balboa"
+2023-12-06 "TRANSFER 13 / Rocky Balboa / "
 Expenses:TBD         Assets:Accounts:Wise       2000 CHF
 
-2024-01-11 "CARD TRANSACTION 12 / Linkt"
+2024-01-11 "CARD TRANSACTION 12 / Linkt / "
 Assets:Accounts:Wise Expenses:TBD              21.53 AUD
 
 2024-01-11 "CARD TRANSACTION 12 / convert 12.25 CHF to 21.53 AUD"

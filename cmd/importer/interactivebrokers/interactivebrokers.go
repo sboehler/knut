@@ -56,7 +56,7 @@ func init() {
 }
 
 type runner struct {
-	accountFlag, dividendFlag, taxFlag, feeFlag, interestFlag, tradingFlag flags.AccountFlag
+	accountFlag, dividendFlag, taxFlag, feeFlag, interestFlag, tradingFlag, transferFlag flags.AccountFlag
 }
 
 func (r *runner) setupFlags(c *cobra.Command) {
@@ -66,6 +66,7 @@ func (r *runner) setupFlags(c *cobra.Command) {
 	c.Flags().VarP(&r.taxFlag, "tax", "w", "account name of the withholding tax account")
 	c.Flags().VarP(&r.feeFlag, "fee", "f", "account name of the fee account")
 	c.Flags().VarP(&r.tradingFlag, "trading", "t", "account name of the trading gain / loss account")
+	c.Flags().VarP(&r.transferFlag, "transfer", "x", "account name of the transfer account")
 	c.MarkFlagRequired("account")
 	c.MarkFlagRequired("interest")
 	c.MarkFlagRequired("dividend")
@@ -106,6 +107,12 @@ func (r *runner) run(cmd *cobra.Command, args []string) error {
 	if p.trading, err = r.tradingFlag.Value(reg.Accounts()); err != nil {
 		return err
 	}
+	if p.transfer, err = r.transferFlag.Value(reg.Accounts()); err != nil {
+		return err
+	}
+	if p.transfer == nil {
+		p.transfer = p.registry.Accounts().TBDAccount()
+	}
 	if err = p.parse(); err != nil {
 		return err
 	}
@@ -120,8 +127,9 @@ type parser struct {
 	builder          *journal.Builder
 	baseCurrency     *model.Commodity
 	dateFrom, dateTo time.Time
+	hdr              []string
 
-	account, dividend, tax, fee, interest, trading *model.Account
+	account, dividend, tax, fee, interest, trading, transfer *model.Account
 }
 
 func (p *parser) parse() error {
@@ -140,56 +148,97 @@ func (p *parser) parse() error {
 	}
 }
 
+const (
+	lData    = "Data"
+	lSection = "Section"
+	lHeader  = "Header"
+)
+
 func (p *parser) readLine() error {
 	l, err := p.reader.Read()
 	if err != nil {
 		return err
 	}
-	if ok, err := p.parseBaseCurrency(l); ok || err != nil {
+	// remove byte order mark if present
+	ByteOrderMarkAsString := string('\uFEFF')
+	l[0] = strings.TrimPrefix(l[0], ByteOrderMarkAsString)
+
+	switch l[1] {
+	case lHeader:
+		p.hdr = l
+		return nil
+	case lData:
+		if l[0] != p.hdr[0] {
+			// ignoring invalid data
+			return nil
+		}
+	default:
+		return nil
+	}
+
+	fields := make(map[string]string)
+
+	for k, v := range p.hdr {
+		if v == "" {
+			continue
+		}
+		if k >= len(l) {
+			continue
+		}
+		if k == 0 {
+			fields[lSection] = l[k]
+			continue
+		}
+		if k == 1 {
+			fields[lHeader] = l[k]
+			continue
+		}
+		fields[v] = l[k]
+	}
+	if ok, err := p.parseBaseCurrency(fields); ok || err != nil {
 		return err
 	}
-	if ok, err := p.parseDate(l); ok || err != nil {
+	if ok, err := p.parseDate(fields); ok || err != nil {
 		return err
 	}
-	if ok, err := p.parseForex(l); ok || err != nil {
+	if ok, err := p.parseForex(fields); ok || err != nil {
 		return err
 	}
-	if ok, err := p.parseTrade(l); ok || err != nil {
+	if ok, err := p.parseTrade(fields); ok || err != nil {
 		return err
 	}
-	if ok, err := p.parseDepositOrWithdrawal(l); ok || err != nil {
+	if ok, err := p.parseDepositOrWithdrawal(fields); ok || err != nil {
 		return err
 	}
-	if ok, err := p.parseDividend(l); ok || err != nil {
+	if ok, err := p.parseDividend(fields); ok || err != nil {
 		return err
 	}
-	if ok, err := p.parseInterest(l); ok || err != nil {
+	if ok, err := p.parseInterest(fields); ok || err != nil {
 		return err
 	}
-	if ok, err := p.parseWithholdingTax(l); ok || err != nil {
+	if ok, err := p.parseWithholdingTax(fields); ok || err != nil {
 		return err
 	}
-	if ok, err := p.createAssertions(l); ok || err != nil {
+	if ok, err := p.parseFees(fields); ok || err != nil {
 		return err
 	}
-	if ok, err := p.createCurrencyAssertions(l); ok || err != nil {
+	if ok, err := p.createAssertions(fields); ok || err != nil {
+		return err
+	}
+	if ok, err := p.createCurrencyAssertions(fields); ok || err != nil {
 		return err
 	}
 	return nil
 }
 
-type accountInformationField int
-
 const (
-	aiAccountInformation accountInformationField = iota
-	aiHeader
-	aiFieldName
-	aiFieldValue
+	aiFieldName  = "Field Name"
+	aiFieldValue = "Field Value"
 )
 
-func (p *parser) parseBaseCurrency(r []string) (bool, error) {
-	if !(r[aiAccountInformation] == "Account Information" &&
-		r[aiHeader] == "Data" &&
+func (p *parser) parseBaseCurrency(r map[string]string) (bool, error) {
+	if !(r[lSection] == "Account Information" &&
+		r[lHeader] == "Data" &&
 		r[aiFieldName] == "Base Currency") {
 		return false, nil
 	}
@@ -200,18 +249,14 @@ func (p *parser) parseBaseCurrency(r []string) (bool, error) {
 	return true, nil
 }
 
-type statementField int
-
 const (
-	stfStatement statementField = iota
-	stfHeader
-	stfFieldName
-	stfFieldValue
+	stfFieldName  = "Field Name"
+	stfFieldValue = "Field Value"
 )
 
-func (p *parser) parseDate(r []string) (bool, error) {
-	if !(r[stfStatement] == "Statement" &&
-		r[stfHeader] == "Data" && r[stfFieldName] == "Period") {
+func (p *parser) parseDate(r map[string]string) (bool, error) {
+	if !(r[lSection] == "Statement" &&
+		r[lHeader] == "Data" && r[stfFieldName] == "Period") {
 		return false, nil
 	}
 	var (
@@ -229,33 +274,30 @@ func (p *parser) parseDate(r []string) (bool, error) {
 	return true, nil
 }
 
-type tradesField int
-
 const (
-	tfTrades tradesField = iota
-	tfHeader
-	tfDataDiscriminator
-	tfAssetCategory
-	tfCurrency
-	tfSymbol
-	tfDateTime
-	tfQuantity
-	tfTPrice
-	tfCPrice
-	tfProceeds
-	tfCommFee
-	tfBasis
-	tfRealizedPL
-	tfRealizedPLPct
-	tfMTMPL
-	tfCode
+	tfDataDiscriminator = "DataDiscriminator"
+	tfAssetCategory     = "Asset Category"
+	tfCurrency          = "Currency"
+	tfSymbol            = "Symbol"
+	tfDateTime          = "Date/Time"
+	tfQuantity          = "Quantity"
+	tfTPrice            = "T. Price"
+	tfCPrice            = "C. Price"
+	tfProceeds          = "Proceeds"
+	tfCommFee           = "Comm/Fee"
+	tfCommInCHF         = "Comm in CHF"
+	tfMTMInCHF          = "MTM in CHF"
+	tfCode              = "Code"
 )
 
-func (p *parser) parseTrade(r []string) (bool, error) {
-	if !(r[tfTrades] == "Trades" &&
-		r[tfHeader] == "Data" &&
+const stocksHeldWithIBUK = "Stocks - Held with Interactive Brokers (U.K.) Limited carried by Interactive Brokers LLC"
+
+func (p *parser) parseTrade(r map[string]string) (bool, error) {
+	if !(r[lSection] == "Trades" &&
+		r[lHeader] == "Data" &&
 		r[tfDataDiscriminator] == "Order" &&
-		r[tfAssetCategory] == "Stocks") {
+		(r[tfAssetCategory] == "Stocks" ||
+			r[tfAssetCategory] == stocksHeldWithIBUK)) {
 		return false, nil
 	}
 	var (
@@ -320,11 +362,14 @@ func (p *parser) parseTrade(r []string) (bool, error) {
 	return true, nil
 }
 
-func (p *parser) parseForex(r []string) (bool, error) {
-	if !(r[tfTrades] == "Trades" &&
-		r[tfHeader] == "Data" &&
+const forexHeldWithIBUK = "Forex - Held with Interactive Brokers (U.K.) Limited carried by Interactive Brokers LLC"
+
+func (p *parser) parseForex(r map[string]string) (bool, error) {
+	if !(r[lSection] == "Trades" &&
+		r[lHeader] == "Data" &&
 		r[tfDataDiscriminator] == "Order" &&
-		r[tfAssetCategory] == "Forex") {
+		(r[tfAssetCategory] == "Forex" ||
+			r[tfAssetCategory] == forexHeldWithIBUK)) {
 		return false, nil
 	}
 	if p.baseCurrency == nil {
@@ -355,7 +400,7 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	if proceeds, err = parseRoundedDecimal(r[tfProceeds]); err != nil {
 		return false, err
 	}
-	if fee, err = parseRoundedDecimal(r[tfCommFee]); err != nil {
+	if fee, err = parseRoundedDecimal(r[tfCommInCHF]); err != nil {
 		return false, err
 	}
 	if qty.IsPositive() {
@@ -394,20 +439,16 @@ func (p *parser) parseForex(r []string) (bool, error) {
 	return true, nil
 }
 
-type depositsWithdrawalsField int
-
 const (
-	dwfDepositsWithdrawals depositsWithdrawalsField = iota
-	dwfHeader
-	dwfCurrency
-	dwfSettleDate
-	dwfDescription
-	dwfAmount
+	dwfCurrency    = "Currency"
+	dwfSettleDate  = "Settle Date"
+	dwfDescription = "Description"
+	dwfAmount      = "Amount"
 )
 
-func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
-	if !(r[dwfDepositsWithdrawals] == "Deposits & Withdrawals" &&
-		r[dwfHeader] == "Data" &&
+func (p *parser) parseDepositOrWithdrawal(r map[string]string) (bool, error) {
+	if !(r[lSection] == "Deposits & Withdrawals" &&
+		r[lHeader] == "Data" &&
 		r[dwfCurrency] != "Total" &&
 		r[dwfSettleDate] != "") {
 		return false, nil
@@ -437,7 +478,7 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 		Date:        date,
 		Description: desc,
 		Postings: posting.Builder{
-			Credit:    p.registry.Accounts().TBDAccount(),
+			Credit:    p.transfer,
 			Debit:     p.account,
 			Commodity: currency,
 			Quantity:  quantity,
@@ -446,22 +487,17 @@ func (p *parser) parseDepositOrWithdrawal(r []string) (bool, error) {
 	return true, nil
 }
 
-type dividendsField int
-
 const (
-	dfDividends dividendsField = iota
-	dfHeader
-	dfCurrency
-	dfDate
-	dfDescription
-	dfAmount
+	dfCurrency    = "Currency"
+	dfDate        = "Date"
+	dfDescription = "Description"
+	dfAmount      = "Amount"
 )
 
-func (p *parser) parseDividend(r []string) (bool, error) {
-	if !(r[dfDividends] == "Dividends" &&
-		r[dfHeader] == "Data" &&
-		!strings.HasPrefix(r[dfCurrency], "Total") &&
-		len(r) == 6) {
+func (p *parser) parseDividend(r map[string]string) (bool, error) {
+	if !(r[lSection] == "Dividends" &&
+		r[lHeader] == "Data" &&
+		!strings.HasPrefix(r[dfCurrency], "Total")) {
 		return false, nil
 	}
 	var (
@@ -511,21 +547,17 @@ func parseDividendSymbol(s string) (string, error) {
 	return symbol, nil
 }
 
-type withholdingTaxField int
-
 const (
-	wtfWithholdingTax withholdingTaxField = iota
-	wtfHeader
-	wtfCurrency
-	wtfDate
-	wtfDescription
-	wtfAmount
-	wtfCode
+	wtfCurrency    = "Currency"
+	wtfDate        = "Date"
+	wtfDescription = "Description"
+	wtfAmount      = "Amount"
+	wtfCode        = "Code"
 )
 
-func (p *parser) parseWithholdingTax(r []string) (bool, error) {
-	if !(r[wtfWithholdingTax] == "Withholding Tax" &&
-		r[wtfHeader] == "Data" &&
+func (p *parser) parseWithholdingTax(r map[string]string) (bool, error) {
+	if !(r[lSection] == "Withholding Tax" &&
+		r[lHeader] == "Data" &&
 		!strings.HasPrefix(r[wtfCurrency], "Total")) {
 		return false, nil
 	}
@@ -566,9 +598,55 @@ func (p *parser) parseWithholdingTax(r []string) (bool, error) {
 	return true, nil
 }
 
+const (
+	ffSubtitle    = "Subtitle"
+	ffCurrency    = "Currency"
+	ffDate        = "Date"
+	ffDescription = "Description"
+	ffAmount      = "Amount"
+)
+
+func (p *parser) parseFees(r map[string]string) (bool, error) {
+	if !(r[lSection] == "Fees" &&
+		r[lHeader] == "Data" &&
+		r[ffSubtitle] == "Other Fees" &&
+		!strings.HasPrefix(r[ffCurrency], "Total")) {
+		return false, nil
+	}
+	var (
+		desc     = r[ffDescription]
+		currency *model.Commodity
+		date     time.Time
+		amount   decimal.Decimal
+		err      error
+	)
+	if currency, err = p.registry.Commodities().Get(r[ffCurrency]); err != nil {
+		return false, err
+	}
+	if date, err = parseDate(r[ffDate]); err != nil {
+		return false, err
+	}
+	if amount, err = parseDecimal(r[ffAmount]); err != nil {
+		return false, err
+	}
+	p.builder.Add(transaction.Builder{
+		Date:        date,
+		Description: desc,
+		Postings: posting.Builder{
+			Credit:    p.fee,
+			Debit:     p.account,
+			Commodity: currency,
+			Quantity:  amount,
+		}.Build(),
+	}.Build())
+	return true, nil
+}
+
 // Interest,Data,USD,2020-07-06,USD Debit Interest for Jun-2020,-0.73
-func (p *parser) parseInterest(r []string) (bool, error) {
-	if !(r[dfDividends] == "Interest" && r[dfHeader] == "Data" && !strings.HasPrefix(r[dfCurrency], "Total") && len(r) == 6) {
+func (p *parser) parseInterest(r map[string]string) (bool, error) {
+	if !(r[lSection] == "Interest" &&
+		r[lHeader] == "Data" &&
+		!strings.HasPrefix(r[dfCurrency], "Total")) {
 		return false, nil
 	}
 	var (
@@ -601,29 +679,25 @@ func (p *parser) parseInterest(r []string) (bool, error) {
 	return true, nil
 }
 
-type openPositionsField int
-
 const (
-	opfOpenPositions openPositionsField = iota
-	opfHeader
-	opfDataDiscriminator
-	opfAssetCategory
-	opfCurrency
-	opfSymbol
-	opfQuantity
-	opfMult
-	opfCostPrice
-	opfCostBasis
-	opfClosePrice
-	opfValue
-	opfUnrealizedPL
-	opfUnrealizedPLPct
-	opfCode
+	opfDataDiscriminator = "DataDiscriminator"
+	opfAssetCategory     = "Asset Category"
+	opfCurrency          = "Currency"
+	opfSymbol            = "Symbol"
+	opfQuantity          = "Quantity"
+	opfMult              = "Mult"
+	opfCostPrice         = "Cost Price"
+	opfCostBasis         = "Cost Basis"
+	opfClosePrice        = "Close Price"
+	opfValue             = "Value"
+	opfUnrealizedPL      = "Unrealized P/L"
+	opfUnrealizedPLPct   = "Unrealized P/L %"
+	opfCode              = "Code"
 )
 
-func (p *parser) createAssertions(r []string) (bool, error) {
-	if !(r[opfOpenPositions] == "Open Positions" &&
-		r[opfHeader] == "Data" &&
+func (p *parser) createAssertions(r map[string]string) (bool, error) {
+	if !(r[lSection] == "Open Positions" &&
+		r[lHeader] == "Data" &&
 		r[opfDataDiscriminator] == "Summary") {
 		return false, nil
 	}
@@ -654,27 +728,24 @@ func (p *parser) createAssertions(r []string) (bool, error) {
 	return true, nil
 }
 
-type forexBalancesField int
-
 const (
-	fbfForexBalances forexBalancesField = iota
-	fbfHeader
-	fbfAssetCategory
-	fbfCurrency
-	fbfDescription
-	fbfQuantity
-	fbfCostPrice
-	fbfCostBasisInCHF
-	fbfClosePrice
-	fbfValueInCHF
-	fbfUnrealizedPLInCHF
-	fbfCode
+	fbfAssetCategory     = "Asset Category"
+	fbfCurrency          = "Currency"
+	fbfDescription       = "Description"
+	fbfQuantity          = "Quantity"
+	fbfCostPrice         = "Cost Price"
+	fbfCostBasisInCHF    = "Cost Basis in CHF"
+	fbfClosePrice        = "Close Price"
+	fbfValueInCHF        = "Value in CHF"
+	fbfUnrealizedPLInCHF = "Unrealized P/L in CHF"
+	fbfCode              = "Code"
 )
 
-func (p *parser) createCurrencyAssertions(r []string) (bool, error) {
-	if !(r[fbfForexBalances] == "Forex Balances" &&
-		r[fbfHeader] == "Data" &&
-		r[fbfAssetCategory] == "Forex") {
+func (p *parser) createCurrencyAssertions(r map[string]string) (bool, error) {
+	if !(r[lSection] == "Forex Balances" &&
+		r[lHeader] == "Data" &&
+		(r[fbfAssetCategory] == "Forex" ||
+			r[fbfAssetCategory] == forexHeldWithIBUK)) {
 		return false, nil
 	}
 	if p.dateTo.IsZero() {
